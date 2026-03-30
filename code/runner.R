@@ -134,6 +134,14 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     for (j in seq_along(sample_sizes)) {
       n = sample_sizes[j]
 
+      # For active design, cts is the ZT template (length B). Expand to length n
+      # by repeating the template so each ZT gets floor(n/B) or ceil(n/B) replicates.
+      cts_n <- if (design == "active" && !is.null(cts) && length(cts) != n) {
+        sort(rep_len(cts, n))
+      } else {
+        cts
+      }
+
       # Simulate two-group data
       # Build call args; include empirical params only when using config objects
       sim_args <- list(
@@ -148,7 +156,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
         dp_shift_mode = dp_shift_mode,
         amp_diff = amp_diff,
         design = design,
-        cts = cts,
+        cts = cts_n,
         sim.seed = i * 1000,
         harmonics = harmonics
       )
