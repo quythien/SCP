@@ -139,10 +139,6 @@ opts_bio <- estCircadianParamTwoGroup(
   times_1         = tod_lun,
   times_2         = tod_cer,
   period          = 24,
-  prop_DP         = 0.10,
-  prop_DA         = 0.00,
-  phase_diff      = c(-6, 6),
-  amp_diff        = c(0.5, 2),
   min_rhythm_pval = RHYTHM_PVAL,
   verbose         = FALSE
 )
