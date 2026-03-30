@@ -1,11 +1,19 @@
 # Ignore everything
 *
 
-# Except code/ and examples/
+# Except code/, examples/, and doc/
 !code/
 !code/**
 !examples/
 !examples/**
+!doc/
+!doc/**
 
 # And this .gitignore itself
 !.gitignore
+
+# Common junk
+.DS_Store
+.Rhistory
+**/.DS_Store
+**/.Rhistory
