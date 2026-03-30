@@ -129,48 +129,16 @@ cat(sprintf("  ZT points (LUN): %s\n\n",
 # SECTION 3: ESTIMATE PARAMETERS
 # =====================================================================
 
-cat("Estimating circadian parameters from Baboon LUN pilot...\n")
+cat("Estimating circadian parameters from Baboon LUN vs CER (two-group)...\n")
 
-fit_lun  <- fitCosinorAll(mat_lun, times = tod_lun, period = 24)
-fit_cer  <- fitCosinorAll(mat_cer, times = tod_cer, period = 24)
-rhy_lun  <- !is.na(fit_lun$pvalue) & fit_lun$pvalue < RHYTHM_PVAL
-rhy_cer  <- !is.na(fit_cer$pvalue) & fit_cer$pvalue < RHYTHM_PVAL
-
-prop_DR_b <- mean(xor(rhy_lun, rhy_cer))
-prop_rhy_lun <- mean(rhy_lun)
-# DR genes must be rhythmic in at least one group; cap at LUN rhythmic fraction
-if (prop_DR_b > prop_rhy_lun) {
-  message(sprintf("prop_DR (%.1f%%) > prop_rhythmic_LUN (%.1f%%); capping at prop_rhythmic.",
-                  prop_DR_b * 100, prop_rhy_lun * 100))
-  prop_DR_b <- prop_rhy_lun
-}
-r_lun_med <- median(as.numeric(fit_lun$A[rhy_lun]) /
-                    as.numeric(fit_lun$sigma[rhy_lun]), na.rm = TRUE)
-rm(fit_cer)
-
-cat(sprintf("  LUN: prop_rhythmic=%.1f%%  r_median=%.2f\n",
-            mean(rhy_lun) * 100, r_lun_med))
-cat(sprintf("  prop_DR (LUN vs CER): %.1f%%\n\n", prop_DR_b * 100))
-
-# Signal summary
-writeLines(c(
-  "Baboon LUN vs CER — circadian signal summary",
-  sprintf("Design: active, B=%d ZT points, m=1 per ZT", length(unique(tod_lun))),
-  sprintf("LUN: prop_rhythmic=%.1f%%  r_median=%.2f  (p<%.2f)",
-          mean(rhy_lun)*100, r_lun_med, RHYTHM_PVAL),
-  sprintf("prop_DR (LUN vs CER): %.1f%%", prop_DR_b*100),
-  "",
-  "Context (active vs passive):",
-  "  Baboon LUN vs CER (active, this):    r~1.7,  prop_DR~41%, n80 expected ~24-36",
-  "  Human aging young vs old (passive):  r~0.5,  prop_DR~14%, n80 expected >300"
-), file.path(base_out, "signal_summary.txt"))
-
-# Base bio opts from pilot
-opts_bio <- estCircadianParam(
-  data            = mat_lun,
-  times           = tod_lun,
+# Use two-group estimation so prop_rhythmic is computed from the union of both
+# tissues, correctly accommodating genes that are rhythmic in CER but not LUN.
+opts_bio <- estCircadianParamTwoGroup(
+  data_1          = mat_lun,
+  data_2          = mat_cer,
+  times_1         = tod_lun,
+  times_2         = tod_cer,
   period          = 24,
-  prop_DR         = prop_DR_b,
   prop_DP         = 0.10,
   prop_DA         = 0.00,
   phase_diff      = c(-6, 6),
@@ -179,6 +147,30 @@ opts_bio <- estCircadianParam(
   verbose         = FALSE
 )
 opts_bio <- updateBioOptions(opts_bio, ngenes = NGENES_CORE)
+
+prop_DR_b <- opts_bio$prop_DR
+fit_lun   <- fitCosinorAll(mat_lun, times = tod_lun, period = 24)
+rhy_lun   <- !is.na(fit_lun$pvalue) & fit_lun$pvalue < RHYTHM_PVAL
+r_lun_med <- median(as.numeric(fit_lun$A[rhy_lun]) /
+                    as.numeric(fit_lun$sigma[rhy_lun]), na.rm = TRUE)
+rm(fit_lun)
+
+cat(sprintf("  LUN: prop_rhythmic=%.1f%%  r_median=%.2f\n",
+            mean(rhy_lun) * 100, r_lun_med))
+cat(sprintf("  prop_DR (LUN vs CER, two-group): %.1f%%\n\n", prop_DR_b * 100))
+
+# Signal summary
+writeLines(c(
+  "Baboon LUN vs CER — circadian signal summary",
+  sprintf("Design: active, B=%d ZT points, m=1 per ZT", length(unique(tod_lun))),
+  sprintf("LUN: prop_rhythmic=%.1f%%  r_median=%.2f  (p<%.2f)",
+          mean(rhy_lun)*100, r_lun_med, RHYTHM_PVAL),
+  sprintf("prop_DR (LUN vs CER, two-group): %.1f%%", prop_DR_b*100),
+  "",
+  "Context (active vs passive):",
+  "  Baboon LUN vs CER (active, this):    r~1.7,  prop_DR~41%, n80 expected ~24-36",
+  "  Human aging young vs old (passive):  r~0.5,  prop_DR~14%, n80 expected >300"
+), file.path(base_out, "signal_summary.txt"))
 
 # Design vector: full B=12 ZT coverage from pilot
 design_vec_full <- sort(unique(tod_lun))
