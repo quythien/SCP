@@ -71,7 +71,12 @@ DESIGN_VEC  <- PILOT_TIMES
 # SETUP
 # =====================================================================
 
-setwd("/Users/thienpham/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Projects/Circadian/Kyle/Circadian-analysis-main/R/v1/PowerSim")
+POWERSIM_ROOT <- {
+  env <- Sys.getenv("POWERSIM_ROOT", unset = "")
+  if (nzchar(env)) env else
+    "/Users/thienpham/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Projects/Circadian/Kyle/Circadian-analysis-main/R/v1/PowerSim"
+}
+setwd(POWERSIM_ROOT)
 old_wd <- setwd(file.path(getwd(), "code"))
 source("setup.R")
 setwd(old_wd)

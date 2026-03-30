@@ -9,7 +9,12 @@ NSIMS_VAL  <- if (SMOKE) 5L    else 50L
 NGENES_VAL <- if (SMOKE) 500L  else 5000L
 N_GRID_VAL <- if (SMOKE) c(20L, 40L) else c(20L, 40L, 60L, 80L, 100L)
 
-setwd("/Users/thienpham/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Projects/Circadian/Kyle/Circadian-analysis-main/R/v1/PowerSim")
+POWERSIM_ROOT <- {
+  env <- Sys.getenv("POWERSIM_ROOT", unset = "")
+  if (nzchar(env)) env else
+    "/Users/thienpham/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Projects/Circadian/Kyle/Circadian-analysis-main/R/v1/PowerSim"
+}
+setwd(POWERSIM_ROOT)
 source_dir <- file.path(getwd(), "code")
 old_wd <- setwd(source_dir)
 source("setup.R")
