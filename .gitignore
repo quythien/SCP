@@ -1,0 +1,11 @@
+# Ignore everything
+*
+
+# Except code/ and examples/
+!code/
+!code/**
+!examples/
+!examples/**
+
+# And this .gitignore itself
+!.gitignore
