@@ -222,9 +222,9 @@ compareDesignApproaches <- function(two_stage_result,
   nboot <- bootstrap_result$nboot
 
   n80_boot_vec <- sapply(seq_len(nboot), function(b) {
-    # Average over B (single-B case: this is just the column itself)
-    boot_pm_b <- rowMeans(bootstrap_result$boot_power[b, , , t_idx, drop = FALSE],
-                          na.rm = TRUE)
+    # Average over B for each N: apply over dim 2 (N) of the [1 x N x B x 1] slice
+    tmp <- bootstrap_result$boot_power[b, , , t_idx, drop = FALSE]
+    boot_pm_b <- apply(tmp, 2, mean, na.rm = TRUE)
     idx <- which(boot_pm_b >= target_power)
     if (length(idx) == 0) return(NA_real_)
     bootstrap_result$N_values[min(idx)]
