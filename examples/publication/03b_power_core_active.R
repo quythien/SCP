@@ -137,6 +137,13 @@ rhy_lun  <- !is.na(fit_lun$pvalue) & fit_lun$pvalue < RHYTHM_PVAL
 rhy_cer  <- !is.na(fit_cer$pvalue) & fit_cer$pvalue < RHYTHM_PVAL
 
 prop_DR_b <- mean(xor(rhy_lun, rhy_cer))
+prop_rhy_lun <- mean(rhy_lun)
+# DR genes must be rhythmic in at least one group; cap at LUN rhythmic fraction
+if (prop_DR_b > prop_rhy_lun) {
+  message(sprintf("prop_DR (%.1f%%) > prop_rhythmic_LUN (%.1f%%); capping at prop_rhythmic.",
+                  prop_DR_b * 100, prop_rhy_lun * 100))
+  prop_DR_b <- prop_rhy_lun
+}
 r_lun_med <- median(as.numeric(fit_lun$A[rhy_lun]) /
                     as.numeric(fit_lun$sigma[rhy_lun]), na.rm = TRUE)
 rm(fit_cer)
