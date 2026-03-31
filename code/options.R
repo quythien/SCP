@@ -277,7 +277,7 @@ CircadianBioOptions <- function(ngenes = 5000,
   # cannot be smaller than their combined fraction without contradicting the truth.
   # Silently inflating n_rhythmic_both in simulation.R to accommodate DP/DA would
   # produce a realized truth that does not match the requested scenario.
-  if (prop_rhythmic < total_diff) {
+  if (prop_rhythmic < total_diff - 1e-9) {
     stop(sprintf(
       "prop_rhythmic (%.3f) must be >= prop_DR + prop_DP + prop_DA (%.3f + %.3f + %.3f = %.3f).\n%s",
       prop_rhythmic, prop_DR, prop_DP, prop_DA, total_diff,
