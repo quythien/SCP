@@ -2,6 +2,73 @@
 
 ---
 
+## Session: 2026-03-31
+
+### New Scripts
+
+**`examples/publication/03c_power_core_mouse.R`**
+Companion to `03b_power_core_active.R` for the Mouse D1 vs D2 cell-type dataset.
+- Loads `data/mouse_clinicalinfo_03082021_rmOutliers.csv` + `data/mouse_D1D2_logCPMfiltered_counts.csv`
+- Uses `estCircadianParamTwoGroup(mat_d1, mat_d2)` — union rhythmic budget
+- Active design, B=6, m≈7–8 replicates per ZT
+- Sections: DR power (B=6), DP power (B=6), B vs m tradeoff (B=3 vs B=6)
+- N_GRID_CORE = c(24, 48, 72, 96, 120, 150)
+- Section 6 bootstrap parallelized: `mc.cores = 32L`
+- Env var: `POWERSIM_ROOT` only (data files are inside the repo)
+- Smoke: `POWERSIM_SMOKE=1 Rscript examples/publication/03c_power_core_mouse.R`
+
+---
+
+### Bug Fixes
+
+**`code/runner.R` — active design `cts` length mismatch**
+When `design="active"` and the pilot ZT template has fewer points than N (e.g., B=6 ZT template
+but N=48 subjects), `simCircadianDiff` requires `length(cts) == n1`. Previously caused hard error.
+Fix: added expansion step before calling the simulator:
+```r
+cts_n <- if (design == "active" && !is.null(cts) && length(cts) != n) {
+  sort(rep_len(cts, n))
+} else {
+  cts
+}
+```
+
+**`code/options.R` — floating-point tolerance in budget check**
+`prop_rhythmic < total_diff` failed spuriously when both were identical floats (e.g., 0.123 == 0.123).
+Fix: changed to `prop_rhythmic < total_diff - 1e-9` to absorb floating-point rounding.
+
+**`code/bootstrap_sim.R` — parallelized bootstrap draw loop**
+Sequential `for (b in seq_len(nboot))` was the bottleneck for Section 6 B-vs-m runs
+(50 draws × 20 inner sims × 6 N × 3 B × 5000 genes ≈ 200h sequential).
+Fix: replaced the loop with `parallel::mclapply`:
+```r
+boot_results <- parallel::mclapply(seq_len(nboot), function(b) {
+  # inner (n_idx, B_idx) loops — returns [n_N, n_B, n_tests] array
+}, mc.cores = mc.cores)
+```
+Added `mc.cores = 1L` parameter to `runBootstrapDesignGrid()`.
+`03b` and `03c` pass `mc.cores = 32L` for the server.
+
+---
+
+### Production Run Update (2026-03-31)
+
+6 screens now running:
+
+| Screen | Script | Config | Status |
+|---|---|---|---|
+| `active_core` | 03b (Baboon) | NGENES=5000, NSIMS=50 | Section 5 DP, n=24 |
+| `mouse_core` | 03c (Mouse D1D2) | NGENES=5000, NSIMS=50 | Section 4 DR, n=24 — just started |
+| `fourier` | 07 fourier robustness | NGENES=3000, NSIMS=20 | Section 1, B=4 harmonics |
+| `power_design` | 04 | NGENES=5000 | Section 3 bootstrap grid |
+| `bootstrap` | 08 | NGENES=3000 | mid-run |
+| `monitor` | background | — | — |
+
+Note: `mc.cores=32` in 03b/03c only activates when each script reaches Section 6
+(`runBootstrapDesignGrid`). Sections 4 and 5 are still sequential.
+
+---
+
 ## Session: 2026-03-30
 
 ### New Scripts

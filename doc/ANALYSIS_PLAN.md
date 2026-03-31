@@ -216,18 +216,19 @@ better (same point estimate, adds CI at modest computational cost).
 
 | Layer | Script | Status |
 |---|---|---|
-| Validation | `examples/publication/01_validation.R` | **Production running** (2026-03-30) |
-| Calibration | `examples/publication/02_calibration.R` | **Production running** (2026-03-30) |
-| Core pipeline — passive (human aging) | `examples/publication/03_power_core.R` | **Production running** (2026-03-30) |
-| Core pipeline — active (Baboon LUN vs CER) | `examples/publication/03b_power_core_active.R` | **Production running** (2026-03-30) |
-| Design grid | `examples/publication/04_power_design.R` | **Production running** (2026-03-30) |
-| Method comparison (DCP vs CircaCompare) | `examples/publication/05_method_comparison.R` | **Production running** (2026-03-30); est. 14–42h for CircaCompare |
+| Validation | `examples/publication/01_validation.R` | **Complete** (2026-03-30) — all PASS |
+| Calibration | `examples/publication/02_calibration.R` | **Complete** (2026-03-30) |
+| Core pipeline — passive (human aging) | `examples/publication/03_power_core.R` | **Complete** (2026-03-30) — DR 40% at n=100, DP 71.9% at n=100 |
+| Core pipeline — active (Baboon LUN vs CER) | `examples/publication/03b_power_core_active.R` | **Running** (2026-03-31) — Section 5 DP, parallelized Section 6 pending |
+| Core pipeline — active (Mouse D1 vs D2) | `examples/publication/03c_power_core_mouse.R` | **Running** (2026-03-31) — Section 4 DR; new script added 2026-03-31 |
+| Design grid | `examples/publication/04_power_design.R` | **Running** (2026-03-31) — Section 3 bootstrap grid |
+| Method comparison (DCP vs CircaCompare) | `examples/publication/05_method_comparison.R` | **Complete** (2026-03-30) — CircaCompare FDR inflated 8–19% vs DCP 2–5% |
 | Layer 1 — 4 datasets | `examples/exploratory/05_multi_dataset_DR.R` | Smoke-tested; all 4 sections complete |
 | Layer 1 — sex-stratified | `examples/exploratory/07_seney_sex_DR.R` | Smoke-tested; combined n80~300, male-only n80~200 |
 | Layer 1 — D1D2 only | `examples/exploratory/06_mouse_D1D2_DR.R` | Smoke-tested |
-| Layer 2 — Fourier robustness | `examples/exploratory/07_fourier_robustness.R` | **Production running** (2026-03-30) |
+| Layer 2 — Fourier robustness | `examples/exploratory/07_fourier_robustness.R` | **Running** (2026-03-31) — Section 1 (Mouse), B=4 harmonics |
 | Layer 3 — 2-stage vs bootstrap (synthetic) | `examples/publication/02_calibration.R` | Smoke-tested (synthetic pilot n=30) |
-| Layer 3 — 2-stage vs bootstrap (real data) | `examples/publication/08_two_stage_vs_bootstrap_realdata.R` | **Production running** (2026-03-30) |
+| Layer 3 — 2-stage vs bootstrap (real data) | `examples/publication/08_two_stage_vs_bootstrap_realdata.R` | **Running** (2026-03-31) |
 
 ---
 
@@ -239,7 +240,8 @@ better (same point estimate, adds CI at modest computational cost).
 4. ✓ `07_fourier_robustness.R`: written and running
 5. ✓ `08_two_stage_vs_bootstrap_realdata.R`: written and running
 6. ✓ `03b_power_core_active.R`: written, bug-fixed, running
-7. ✓ `05_method_comparison.R`: written, running (CircaCompare expected to finish in ~14–42h)
-8. ✓ **Production run launched** — all 8 scripts running in parallel screen sessions (2026-03-30)
-9. TODO: Collect and review output from all 8 production runs
-10. TODO: Decide whether `05_method_comparison.R` results warrant inclusion in paper or supplement
+7. ✓ `03c_power_core_mouse.R`: written, launched (2026-03-31)
+8. ✓ `05_method_comparison.R`: complete — CircaCompare FDR inflated; results support DCP choice
+9. ✓ **Production run** — all 9 scripts running or complete (2026-03-31)
+10. TODO: Collect and review output from 03b, 03c, 04, 07, 08 when complete
+11. TODO: Decide whether `05_method_comparison.R` (CircaCompare FDR result) goes in main paper or supplement
