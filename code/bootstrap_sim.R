@@ -180,7 +180,8 @@ runBootstrapDesignGrid <- function(pilot_data,
                                    boot.opts,
                                    analysis.opts,
                                    bio_diff.opts,
-                                   verbose = TRUE) {
+                                   verbose = TRUE,
+                                   mc.cores = 1L) {
 
   stopifnot(inherits(boot.opts, "CircadianBootstrapOptions"))
   stopifnot(inherits(analysis.opts, "CircadianAnalysisOptions"))
@@ -243,26 +244,15 @@ runBootstrapDesignGrid <- function(pilot_data,
   if (verbose) cat("Bootstrapping parameters...\n")
   boot_list <- bootstrapParams(param_df, nboot, seed = seed)
 
-  # Step 3: Sweep over (b, N, B)
-  # boot_power_arr[b, n_idx, B_idx, test_idx]
-  boot_power_arr <- array(NA_real_,
-    dim = c(nboot, n_N, n_B, n_tests),
-    dimnames = list(
-      paste0("boot", seq_len(nboot)),
-      paste0("N", N_values),
-      paste0("B", B_values),
-      all_tests
-    )
-  )
-
+  # Step 3: Sweep over (b, N, B) — bootstrap draws parallelized via mclapply.
+  # Each draw is independent (different seed); results combined into boot_power_arr.
   fdr_threshold <- min(analysis.opts$fdr_thresholds)
 
-  for (b in seq_len(nboot)) {
-    if (verbose && b %% max(1, floor(nboot / 10)) == 0) {
-      cat(sprintf("  Bootstrap draw %d / %d\n", b, nboot))
-    }
+  if (verbose) cat(sprintf("Running %d bootstrap draws (mc.cores=%d)...\n", nboot, mc.cores))
 
-    bio_b <- .buildBioFromBoot(boot_list[[b]], bio_diff.opts)
+  boot_results <- parallel::mclapply(seq_len(nboot), function(b) {
+    bio_b    <- .buildBioFromBoot(boot_list[[b]], bio_diff.opts)
+    result_b <- array(NA_real_, dim = c(n_N, n_B, n_tests))
 
     for (n_idx in seq_len(n_N)) {
       N <- N_values[n_idx]
@@ -270,24 +260,20 @@ runBootstrapDesignGrid <- function(pilot_data,
       for (B_idx in seq_len(n_B)) {
         B <- B_values[B_idx]
         m <- m_matrix[n_idx, B_idx]
-        if (is.na(m)) next   # skip invalid (N, B) pairs — B does not divide N exactly
+        if (is.na(m)) next
         actual_N <- B * m
 
-        # Build time points for active design
         if (design == "active") {
           time_pts <- .selectTimePoints(design_vector, B)
-          # Replicate m times each
-          cts_exp <- rep(time_pts, each = m)
+          cts_exp  <- rep(time_pts, each = m)
           if (length(cts_exp) != actual_N) {
             cts_exp <- rep(time_pts, times = ceiling(actual_N / length(time_pts)))[1:actual_N]
           }
         } else {
-          # Passive: design_vector is TOD distribution; sample N from it
           cts_exp <- design_vector
         }
 
-        # Override ngenes to match bootstrap draw
-        bio_b_n <- bio_b
+        bio_b_n        <- bio_b
         bio_b_n$ngenes <- nrow(boot_list[[b]])
 
         iter_design <- CircadianDesignOptions(
@@ -302,37 +288,49 @@ runBootstrapDesignGrid <- function(pilot_data,
           sim_out <- runSimsDiff(bio_b_n, iter_design, analysis.opts)
 
           for (t_idx in seq_len(n_tests)) {
-            tt <- all_tests[t_idx]
+            tt      <- all_tests[t_idx]
             fdr_key <- paste0("fdr_", tt)
-            fdr_arr <- sim_out[[fdr_key]]  # [genes, 1, nsims]
+            fdr_arr <- sim_out[[fdr_key]]
             if (is.null(fdr_arr)) next
 
-            # Marginal power: proportion of target genes detected
-            diff_type_key <- tt
             powers <- sapply(seq_len(nsims_inner), function(sim_i) {
-              fdr_vec <- fdr_arr[, 1, sim_i]
+              fdr_vec      <- fdr_arr[, 1, sim_i]
               diff_type_vec <- sim_out$diff_type[[sim_i]]
-              if (tt == "DR") {
-                target_idx <- diff_type_vec %in% c(2, 3)
+              target_idx <- if (tt == "DR") {
+                diff_type_vec %in% c(2, 3)
               } else if (tt == "DP") {
-                target_idx <- diff_type_vec == 4
+                diff_type_vec == 4
               } else if (tt == "DA") {
-                target_idx <- diff_type_vec == 5
+                diff_type_vec == 5
               } else {
-                target_idx <- rep(FALSE, length(fdr_vec))
+                rep(FALSE, length(fdr_vec))
               }
               n_target <- sum(target_idx)
               if (n_target == 0) return(NA_real_)
               sum(fdr_vec[target_idx] <= fdr_threshold, na.rm = TRUE) / n_target
             })
-            boot_power_arr[b, n_idx, B_idx, t_idx] <- mean(powers, na.rm = TRUE)
+            result_b[n_idx, B_idx, t_idx] <- mean(powers, na.rm = TRUE)
           }
-        }, error = function(e) {
-          if (verbose) {
-            warning(sprintf("  Bootstrap %d, N=%d, B=%d failed: %s", b, N, B, e$message))
-          }
-        })
+        }, error = function(e) NULL)  # NA stays in result_b on error
       }
+    }
+    result_b
+  }, mc.cores = mc.cores)
+
+  # Combine per-draw results into boot_power_arr[b, n_idx, B_idx, test_idx]
+  boot_power_arr <- array(NA_real_,
+    dim = c(nboot, n_N, n_B, n_tests),
+    dimnames = list(
+      paste0("boot", seq_len(nboot)),
+      paste0("N", N_values),
+      paste0("B", B_values),
+      all_tests
+    )
+  )
+  for (b in seq_len(nboot)) {
+    res <- boot_results[[b]]
+    if (!inherits(res, "error") && !is.null(res)) {
+      boot_power_arr[b, , , ] <- res
     }
   }
 

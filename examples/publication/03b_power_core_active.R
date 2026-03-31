@@ -284,7 +284,8 @@ bm_boot <- runBootstrapDesignGrid(
   boot.opts     = boot_opts,
   analysis.opts = opts_analysis,
   bio_diff.opts = bio_bm,
-  verbose       = TRUE
+  verbose       = TRUE,
+  mc.cores      = 32L
 )
 
 saveRDS(bm_boot, file.path(base_out, "bm_boot_grid.rds"))
