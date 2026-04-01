@@ -1,192 +1,272 @@
-# PowerSim: Simulation-Based Power Analysis for Circadian Rhythm Studies
+# PowerSim: Bootstrap-Based Power Analysis for Circadian Rhythm Studies
 
-A comprehensive R package for power analysis in circadian rhythm detection and comparison, combining CircaPower's circadian-specific approach with PROPER's simulation-based framework.
+A simulation framework for sample size and study design in circadian differential expression experiments. Supports both two-stage (plug-in) and bootstrap-based design, using real pilot RNA-seq data to estimate parameters empirically.
 
 ## Overview
 
-**Target Publication**: Statistics in Medicine (improvement over CircaPower)
+**Target Publication**: Statistics in Medicine
 
-**Two Scenarios**:
-1. **Single Condition**: Power to detect rhythmic genes
-2. **Two-Group Comparison**: Power to detect rhythm differences between conditions (NOVEL)
+**Core Questions Answered**:
+1. What N achieves 80% power? (`runBootstrapDesignGrid` bootstrap median)
+2. How uncertain is that n80 given noisy pilot data? (bootstrap 95% CI)
+3. Is more temporal coverage (B↑) or more replicates per ZT (m↑) better? (sweep `B_values`)
+4. How robust is the framework when the true waveform deviates from cosinor? (Fourier simulation)
 
-## Key Features
-
-- Semi-parametric simulation (like PROPER)
-- Multiple detection methods (cosinor, JTK, RAIN, RJMCMC)
-- Flexible noise models (Gaussian, t, negative binomial)
-- Stratified power by effect size
-- False discovery cost (FDC) metrics
-- Two-group comparison for amplitude, phase, and rhythmicity differences
+**Difference types detected**:
+- **DR** — Differential Rhythmicity: rhythmic in one group, flat in the other
+- **DP** — Differential Phase: same amplitude, shifted peak time
+- **DA** — Differential Amplitude: same phase, different peak-to-trough swing
 
 ## Installation
 
 ```r
-# From local directory
-devtools::install_local("PowerSim")
+# Source all code files directly (no package install needed)
+source_dir <- file.path(POWERSIM_ROOT, "code")
+old_wd <- setwd(source_dir); source("setup.R"); setwd(old_wd)
 ```
 
 ## Quick Start
 
-### Scenario 1: Single Condition
+### Prepare pilot data
 
 ```r
-# Estimate parameters from pilot data
-params = estimate_circadian_params(pilot_data, times)
-
-# Run power analysis
-results = power_single_condition(
-  params = params,
-  times = seq(0, 48, by = 4),
-  n_range = 1:6,
-  methods = c("cosinor"),
-  n_sim = 100
-)
-
-# Visualize
-plot_power_curves(results)
+# Input can be raw counts, CPM, or log2-normalized
+pilot_log <- prepCircadianData(expr_matrix, times = pilot_times, input_type = "log2")
+data_1 <- pilot_log$data[, group1_idx]
+data_2 <- pilot_log$data[, group2_idx]
+times_1 <- pilot_log$times[group1_idx]
+times_2 <- pilot_log$times[group2_idx]
 ```
 
-### Scenario 2: Two-Group Comparison
+### Estimate parameters from pilot (two-group)
 
 ```r
-# Estimate from two pilot datasets
-params_A = estimate_circadian_params(pilot_A, times)
-params_B = estimate_circadian_params(pilot_B, times)
+bio_diff <- estCircadianParamTwoGroup(
+  data_1 = data_1, data_2 = data_2,
+  times_1 = times_1, times_2 = times_2,
+  period = 24, min_rhythm_pval = 0.1, verbose = TRUE
+)
+# Reports: prop_DR, r_median per group, prop_rhythmic
+```
 
-# Power for detecting amplitude differences
-results = power_two_group(
-  params_A = params_A,
-  params_B = params_B,
-  times = seq(0, 48, by = 4),
-  diff_type = "amplitude",
-  delta_A = 0.3,
-  n_sim = 100
+### Bootstrap design grid (recommended)
+
+Answers Q1, Q2, and Q3 in a single call:
+
+```r
+boot_opts <- CircadianBootstrapOptions(
+  B_values     = c(4L, 8L, 12L),      # time point counts to sweep
+  N_values     = c(24L, 48L, 72L, 96L, 120L),
+  nboot        = 50L,                  # bootstrap draws
+  nsims_inner  = 20L,                  # sims per draw
+  design       = "active",             # "active" or "passive"
+  seed         = 42L
 )
 
-# Visualize
-plot_two_group_heatmap(results$power_matrix, n_A_range, n_B_range)
+boot_result <- runBootstrapDesignGrid(
+  pilot_data   = data_1,
+  pilot_times  = times_1,
+  boot.opts    = boot_opts,
+  bio_diff.opts = bio_diff,
+  analysis.opts = CircadianAnalysisOptions(alpha = 0.05, p.adjust.method = "BH"),
+  verbose      = TRUE
+)
+# Outputs: power median + 95% CI at each (N, B) combination; n80 with CI
 ```
+
+### Two-stage approach (alternative, no CI)
+
+```r
+design_opts <- CircadianDesignOptions(
+  sample_sizes = c(24L, 48L, 72L, 96L, 120L),
+  nsims        = 50L,
+  design       = "active",
+  cts          = seq(0, 22, by = 2),   # 12 ZT points
+  test_types   = "DR"
+)
+
+ts_result <- runTwoStagePower(
+  pilot_data    = data_1,
+  pilot_times   = times_1,
+  design.opts   = design_opts,
+  bio_diff.opts = bio_diff,
+  analysis.opts = CircadianAnalysisOptions(alpha = 0.05, p.adjust.method = "BH"),
+  test_type     = "DR", verbose = TRUE
+)
+```
+
+### Compare approaches
+
+```r
+comparison <- compareDesignApproaches(
+  two_stage_result  = ts_result,
+  bootstrap_result  = boot_result,
+  test_type         = "DR",
+  target_power      = 0.80
+)
+# comparison$n80_two_stage, $n80_boot_median, $n80_boot_lo, $n80_boot_hi
+plotDesignComparison(comparison, target_power = 0.80, panels = "A",
+                     output_file = "comparison.pdf")
+```
+
+---
+
+## Recommended Workflow
+
+```
+prepCircadianData()
+    ↓
+estCircadianParamTwoGroup()          ← empirical parameter estimation
+    ↓
+runBootstrapDesignGrid()             ← Q1 + Q2 + Q3 (recommended)
+    or
+runTwoStagePower()                   ← Q1 only, no CI (two-stage baseline)
+    ↓
+compareDesignApproaches()            ← side-by-side n80 + CI width
+    ↓
+plotDesignComparison()
+```
+
+**Why bootstrap over two-stage?**
+- Same point estimate (bootstrap median ≈ two-stage)
+- Adds honest uncertainty quantification via 95% CI
+- Small pilots (e.g., baboon n=12) → two-stage gives a single number with false precision; bootstrap reveals how wide the CI really is
+- Directly sweeps B in one call → answers B vs m tradeoff without extra scripts
+
+---
 
 ## File Structure
 
 ```
 PowerSim/
-├── README.md              # This file
-├── PLAN.md                # Overall project plan
-├── MAPPING.md             # PROPER → PowerSim mapping
-├── SIMULATION.md          # Semi-parametric simulation details
-├── R/
-│   ├── simulate_circadian.R   # Data simulation functions
-│   ├── power_single.R         # Scenario 1: Single condition
-│   ├── power_two_group.R      # Scenario 2: Two-group comparison
-│   ├── estimate_params.R      # Parameter estimation from pilot data
-│   └── utils.R                # Helper functions and visualization
-└── vignettes/                 # Tutorials (to be created)
+├── doc/
+│   ├── README.md            # This file
+│   ├── ANALYSIS_PLAN.md     # Publication plan, dataset table, script map
+│   └── CHANGES.md           # Session-by-session log
+├── code/
+│   ├── setup.R              # Loads all framework code
+│   ├── options.R            # CircadianBioOptions, CircadianDesignOptions, etc.
+│   ├── runner.R             # runPowerAnalysis, runBootstrapDesignGrid, runTwoStagePower
+│   ├── bootstrap_sim.R      # Bootstrap draw logic, compareDesignApproaches
+│   ├── estimation.R         # estCircadianParam, estCircadianParamTwoGroup
+│   ├── simulation.R         # simulate_circadian_data, simulate_two_group
+│   ├── detection.R          # DCP pipeline, runSimsDiff
+│   ├── fourier_sim.R        # runFourierDeviationPower
+│   ├── design_comparison.R  # plotDesignComparison
+│   └── utils.R              # Helpers, prepCircadianData, fitCosinorAll
+├── data/                    # Real pilot datasets (not committed)
+├── examples/
+│   ├── publication/         # Final publication scripts (01–08)
+│   └── exploratory/         # Layer 1 (05/06/07) and utility scripts
+└── output/                  # All results (not committed)
 ```
 
-## What We Borrow from PROPER
-
-1. **Semi-parametric simulation**: Resample parameters from pilot data
-2. **Stratified power**: Power by effect size strata
-3. **False discovery cost**: FP/TP ratio
-4. **Targeted power**: Power for "meaningful" effects only
-5. **Method comparison**: Evaluate multiple detection methods
-
-## What We Add Beyond CircaPower
-
-1. **Scenario 2**: Two-group comparison (NOVEL)
-2. **Method comparison**: Not limited to cosinor
-3. **Flexible noise**: Beyond Gaussian
-4. **Waveform robustness**: Beyond pure sinusoid
-5. **FDR context**: Multiple testing correction
-6. **Empirical estimation**: Data-driven parameter priors
+---
 
 ## Key Functions
 
-### Parameter Estimation
-
+### Data preparation
 ```r
-estimate_circadian_params(data, times, period = 24)
+prepCircadianData(data, times, input_type = c("log2", "counts", "cpm"), ...)
 ```
 
-Estimates distributions of:
-- M (mesor)
-- A (amplitude)
-- σ (noise)
-- r = A/σ (effect size)
-- φ (phase)
-
-### Simulation
-
+### Parameter estimation
 ```r
-simulate_circadian_data(G, n, times, params, noise_type, waveform)
-simulate_two_group(G, n_A, n_B, times, diff_type, delta_A, delta_phi)
+# Single group (rhythmicity power)
+estCircadianParam(data, times, period = 24, prop_DR = 0.1, min_rhythm_pval = 0.1, ...)
+
+# Two groups (DR/DP/DA power) — use this for real pilot data
+estCircadianParamTwoGroup(data_1, data_2, times_1, times_2, period = 24, min_rhythm_pval = 0.1, ...)
 ```
 
-### Power Analysis
+Both return a `CircadianBioOptions` object with empirical distributions of A, σ, r=A/σ, φ, mesor, and the proportions prop_DR/prop_DP/prop_DA estimated from the pilot.
 
+### Design specification
 ```r
-power_single_condition(params, times, n_range, methods, n_sim)
-power_two_group(params_A, params_B, times, n_A_range, n_B_range,
-                diff_type, test_type, n_sim)
+CircadianBootstrapOptions(B_values, N_values, nboot, nsims_inner, design, seed)
+CircadianDesignOptions(sample_sizes, nsims, design, cts, test_types)
+CircadianAnalysisOptions(alpha, p.adjust.method, fdr_thresholds, reference_n)
 ```
 
-### Power Assessment
-
+### Power analysis
 ```r
-stratified_power(pvals, ground_truth, effect_sizes, breaks)
-targeted_power(pvals, ground_truth, effect_sizes, min_effect)
-false_discovery_cost(TP, FP)
+runBootstrapDesignGrid(pilot_data, pilot_times, boot.opts, bio_diff.opts, analysis.opts, ...)
+runTwoStagePower(pilot_data, pilot_times, design.opts, bio_diff.opts, analysis.opts, ...)
+runPowerAnalysis(bio.opts, design.opts, analysis.opts, ...)   # single-group only
 ```
 
-## Effect Size Definition
+### Comparison and visualization
+```r
+compareDesignApproaches(two_stage_result, bootstrap_result, test_type, target_power)
+plotDesignComparison(comparison, target_power, panels, output_file)
+```
 
-We use **r = A/σ** (amplitude-to-noise ratio) as the effect size:
+### Fourier robustness (supplement)
+```r
+runFourierDeviationPower(bio_opts, design_opts, analysis_opts,
+                          harmonic_grid = expand.grid(alpha2 = c(0, 0.25, 0.5), alpha3 = 0),
+                          test_type = "DR", verbose = FALSE)
+# harmonic_grid: alpha2 = 2nd harmonic amplitude / fundamental amplitude
+#                alpha3 = 3rd harmonic amplitude / fundamental amplitude
+# alpha2 = 0 → pure cosinor; alpha2 = 1.0 → near square-wave
+```
 
-| r value | Interpretation |
-|---------|----------------|
-| r < 0.5 | Weak rhythm (hard to detect) |
-| 0.5 ≤ r < 1 | Moderate rhythm |
-| 1 ≤ r < 2 | Strong rhythm |
-| r ≥ 2 | Very strong rhythm |
+---
 
-## Two-Group Difference Types
+## Effect Size
 
-### 1. Amplitude Difference (ΔA)
-- H0: A_A = A_B
-- Test: Wald test or likelihood ratio test
+We use **r = A/σ** (amplitude-to-noise ratio):
 
-### 2. Phase Difference (Δφ)
-- H0: φ_A = φ_B
-- Test: Watson-Williams test (circular ANOVA)
+| r value | Interpretation | Typical n80 (active B=12) |
+|---------|----------------|--------------------------|
+| r < 0.5 | Weak rhythm | > 200 |
+| 0.5 ≤ r < 1 | Moderate rhythm | 80–200 |
+| 1 ≤ r < 2 | Strong rhythm | 24–80 |
+| r ≥ 2 | Very strong rhythm | < 24 |
 
-### 3. Rhythmicity Change
-- H0: Gene rhythmic in both or neither
-- Test: Compare individual rhythm p-values
+---
 
-### 4. Joint Test
-- H0: A_A = A_B AND φ_A = φ_B
-- Test: F-test comparing full vs reduced model
+## Difference Types
 
-## Validation
+| Type | Null hypothesis | Test |
+|------|----------------|------|
+| DR (Differential Rhythmicity) | Rhythmic in both or neither | DCP likelihood ratio |
+| DP (Differential Phase) | φ_A = φ_B | DCP phase component |
+| DA (Differential Amplitude) | A_A = A_B | DCP amplitude component |
 
-- Match CircaPower for Gaussian + sinusoid + single condition
-- Apply to real Young vs Old comparisons
-- Sensitivity to model misspecification
+All tests go through the DiffCircaPipeline (DCP) with BH FDR correction.
+
+---
+
+## Publication Scripts
+
+| Script | Purpose | Status |
+|--------|---------|--------|
+| `examples/publication/01_validation.R` | Framework validation | Complete |
+| `examples/publication/02_calibration.R` | Two-stage vs bootstrap (synthetic) | Complete |
+| `examples/publication/03_power_core.R` | Human aging passive design | Complete |
+| `examples/publication/03b_power_core_active.R` | Baboon LUN vs CER | Complete |
+| `examples/publication/03c_power_core_mouse.R` | Mouse D1 vs D2 | Complete |
+| `examples/publication/04_power_design.R` | Design grid (S3 complete) | Partial |
+| `examples/publication/05_method_comparison.R` | DCP vs CircaCompare | Complete |
+| `examples/publication/08a_bootstrap_baboon.R` | Two-stage vs bootstrap: Baboon | Run in parallel with 08b/c |
+| `examples/publication/08b_bootstrap_d1d2.R` | Two-stage vs bootstrap: D1D2 | Run in parallel with 08a/c |
+| `examples/publication/08c_bootstrap_seney.R` | Two-stage vs bootstrap: Seney | Run in parallel with 08a/b |
+| `examples/publication/08d_bootstrap_summary.R` | Summary figure (run after 08a/b/c) | Run after 08a/b/c complete |
+| `examples/exploratory/07a_fourier_mouse.R` | Fourier robustness: GSE54651 | Run in parallel with 07b/c |
+| `examples/exploratory/07b_fourier_baboon.R` | Fourier robustness: Baboon | Run in parallel with 07a/c |
+| `examples/exploratory/07c_fourier_d1d2.R` | Fourier robustness: D1D2 | Run in parallel with 07a/b |
+| `examples/exploratory/07d_fourier_summary.R` | Fourier summary figure | Run after 07a/b/c complete |
+| `examples/exploratory/07e_a_fourier_extreme_mouse.R` | Extreme harmonics: GSE54651 | Run in parallel with 07e_b/c |
+| `examples/exploratory/07e_b_fourier_extreme_baboon.R` | Extreme harmonics: Baboon | Run in parallel with 07e_a/c |
+| `examples/exploratory/07e_c_fourier_extreme_d1d2.R` | Extreme harmonics: D1D2 | Run in parallel with 07e_a/b |
+| `examples/exploratory/07e_d_fourier_extreme_summary.R` | Extreme harmonics summary | Run after 07e_a/b/c complete |
+
+---
 
 ## References
 
-1. PROPER: Wu H, Wang C, Wu Z. Comprehensive power evaluation for differential expression using RNA-seq. *Bioinformatics*. 2015.
-
-2. CircaPower: Zong X, et al. Experimental design and power calculation for circadian rhythm detection. *Bioinformatics*. 2023.
-
-3. Cosinor: Cornelissen G. Cosinor-based rhythmometry. *Theor Biol Med Model*. 2014.
-
-## License
-
-MIT
-
-## Contact
-
-[Your contact information]
+1. Wu H, Wang C, Wu Z. Comprehensive power evaluation for differential expression using RNA-seq. *Bioinformatics*. 2015. (PROPER framework)
+2. Zong X, et al. Experimental design and power calculation for circadian rhythm detection. *Bioinformatics*. 2023. (CircaPower)
+3. Cornelissen G. Cosinor-based rhythmometry. *Theor Biol Med Model*. 2014.
+4. Thaben PF, Westermark PO. Detecting rhythms in time series with RAIN. *J Biol Rhythms*. 2014.
