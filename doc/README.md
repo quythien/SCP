@@ -239,32 +239,6 @@ Priority ordering: DR is tested first; DP and DA are applied only to genes not c
 
 ---
 
-## Publication Scripts
-
-| Script | Purpose | Status |
-|--------|---------|--------|
-| `examples/publication/01_validation.R` | Framework validation | Complete |
-| `examples/publication/02_calibration.R` | Two-stage vs bootstrap (synthetic) | Complete |
-| `examples/publication/03_power_core.R` | Human aging passive design | Complete |
-| `examples/publication/03b_power_core_active.R` | Baboon LUN vs CER | Complete |
-| `examples/publication/03c_power_core_mouse.R` | Mouse D1 vs D2 | Complete |
-| `examples/publication/04_power_design.R` | Design grid (S3 complete) | Partial |
-| `examples/publication/05_method_comparison.R` | DCP vs CircaCompare | Complete |
-| `examples/publication/08a_bootstrap_baboon.R` | Two-stage vs bootstrap: Baboon | Run in parallel with 08b/c |
-| `examples/publication/08b_bootstrap_d1d2.R` | Two-stage vs bootstrap: D1D2 | Run in parallel with 08a/c |
-| `examples/publication/08c_bootstrap_seney.R` | Two-stage vs bootstrap: Seney | Run in parallel with 08a/b |
-| `examples/publication/08d_bootstrap_summary.R` | Summary figure (run after 08a/b/c) | Run after 08a/b/c complete |
-| `examples/exploratory/07a_fourier_mouse.R` | Fourier robustness: GSE54651 | Run in parallel with 07b/c |
-| `examples/exploratory/07b_fourier_baboon.R` | Fourier robustness: Baboon | Run in parallel with 07a/c |
-| `examples/exploratory/07c_fourier_d1d2.R` | Fourier robustness: D1D2 | Run in parallel with 07a/b |
-| `examples/exploratory/07d_fourier_summary.R` | Fourier summary figure | Run after 07a/b/c complete |
-| `examples/exploratory/07e_a_fourier_extreme_mouse.R` | Extreme harmonics: GSE54651 | Run in parallel with 07e_b/c |
-| `examples/exploratory/07e_b_fourier_extreme_baboon.R` | Extreme harmonics: Baboon | Run in parallel with 07e_a/c |
-| `examples/exploratory/07e_c_fourier_extreme_d1d2.R` | Extreme harmonics: D1D2 | Run in parallel with 07e_a/b |
-| `examples/exploratory/07e_d_fourier_extreme_summary.R` | Extreme harmonics summary | Run after 07e_a/b/c complete |
-
----
-
 ## References
 
 1. Wu H, Wang C, Wu Z. Comprehensive power evaluation for differential expression using RNA-seq. *Bioinformatics*. 2015. (PROPER framework)
