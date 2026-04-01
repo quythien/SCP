@@ -220,28 +220,41 @@ better (same point estimate, adds CI at modest computational cost).
 | Calibration | `examples/publication/02_calibration.R` | **Complete** (2026-03-30) |
 | Core pipeline — passive (human aging) | `examples/publication/03_power_core.R` | **Complete** (2026-03-30) — DR 40% at n=100, DP 71.9% at n=100 |
 | Core pipeline — active (Baboon LUN vs CER) | `examples/publication/03b_power_core_active.R` | **Running** (2026-03-31) — Section 5 DP, parallelized Section 6 pending |
-| Core pipeline — active (Mouse D1 vs D2) | `examples/publication/03c_power_core_mouse.R` | **Running** (2026-03-31) — Section 4 DR; new script added 2026-03-31 |
-| Design grid | `examples/publication/04_power_design.R` | **Running** (2026-03-31) — Section 3 bootstrap grid |
+| Core pipeline — active (Mouse D1 vs D2) | `examples/publication/03c_power_core_mouse.R` | **Complete** (2026-04-01) |
+| Design grid | `examples/publication/04_power_design.R` | **S3 Complete** (2026-04-01); S4 killed after 26h |
 | Method comparison (DCP vs CircaCompare) | `examples/publication/05_method_comparison.R` | **Complete** (2026-03-30) — CircaCompare FDR inflated 8–19% vs DCP 2–5% |
 | Layer 1 — 4 datasets | `examples/exploratory/05_multi_dataset_DR.R` | Smoke-tested; all 4 sections complete |
 | Layer 1 — sex-stratified | `examples/exploratory/07_seney_sex_DR.R` | Smoke-tested; combined n80~300, male-only n80~200 |
 | Layer 1 — D1D2 only | `examples/exploratory/06_mouse_D1D2_DR.R` | Smoke-tested |
-| Layer 2 — Fourier robustness | `examples/exploratory/07_fourier_robustness.R` | **Running** (2026-03-31) — Section 1 (Mouse), B=4 harmonics |
+| Layer 2 — Fourier robustness (standard) | `examples/exploratory/07_fourier_robustness.R` | **Complete** (2026-04-01) — cosinor robust at α₂≤0.5 |
+| Layer 2 — Fourier robustness (extreme) | `examples/exploratory/07e_fourier_extreme.R` | **TODO** — test α₂ up to 1.0 (near square-wave) |
 | Layer 3 — 2-stage vs bootstrap (synthetic) | `examples/publication/02_calibration.R` | Smoke-tested (synthetic pilot n=30) |
-| Layer 3 — 2-stage vs bootstrap (real data) | `examples/publication/08_two_stage_vs_bootstrap_realdata.R` | **Running** (2026-03-31) |
+| Layer 3 — 2-stage vs bootstrap (real data) | `examples/publication/08_two_stage_vs_bootstrap_realdata.R` | **Crashed S2** — relaunch as 08a/b/c |
+
+---
+
+## Key Results (2026-04-01)
+
+### B vs m tradeoff
+- **Baboon (r=1.7):** B=12 best but only ~1 pp over B=6; B=4 loses ~8 pp. n80≈60.
+- **Mouse D1D2 (r=0.66):** B=6 gives 2–3x more power than B=3. n80>150 for both.
+- **Lesson:** strong signal → B choice matters little above B=6. Weak signal → dense coverage critical.
+
+### Fourier robustness (cosinor assumption)
+- Power loss from pure sinusoid → α₂=0.5: only 2–9 pp. B advantage: 0–1 pp.
+- Framework is robust for typical bulk RNA-seq waveforms.
+- Extreme deviations (α₂>0.5) to be tested in 07e.
+
+### Passive design cost (04 Section 3)
+- Human aging passive: power 0.9% (N=24) → 32.1% (N=120) at FDR 1%.
+- n80 >> 300 — confirms passive design requires enormous N.
 
 ---
 
 ## Immediate Next Steps
 
-1. ✓ `05_multi_dataset_DR.R`: 4-dataset script complete (GSE54651, Baboon, Seney, D1D2)
-2. ✓ `07_seney_sex_DR.R`: sex-stratified Seney analysis (combined vs male vs female)
-3. ✓ `prepCircadianData()` integrated in all scripts; `POWERSIM_ROOT` / `DATA_HUMAN` env vars added
-4. ✓ `07_fourier_robustness.R`: written and running
-5. ✓ `08_two_stage_vs_bootstrap_realdata.R`: written and running
-6. ✓ `03b_power_core_active.R`: written, bug-fixed, running
-7. ✓ `03c_power_core_mouse.R`: written, launched (2026-03-31)
-8. ✓ `05_method_comparison.R`: complete — CircaCompare FDR inflated; results support DCP choice
-9. ✓ **Production run** — all 9 scripts running or complete (2026-03-31)
-10. TODO: Collect and review output from 03b, 03c, 04, 07, 08 when complete
-11. TODO: Decide whether `05_method_comparison.R` (CircaCompare FDR result) goes in main paper or supplement
+1. ✓ `03b`, `03c`, `07`, `04 S3`, `05`: all complete
+2. TODO: Relaunch 08 as `08a/b/c` (float bug fixed; split scripts ready)
+3. TODO: Launch `07e_fourier_extreme.R` — extreme waveform test
+4. TODO: Decide whether `05_method_comparison.R` goes in main paper or supplement
+5. TODO: Review all figures for publication quality

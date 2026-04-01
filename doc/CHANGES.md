@@ -2,6 +2,72 @@
 
 ---
 
+## Session: 2026-04-01
+
+### New Scripts
+
+**`examples/exploratory/07e_fourier_extreme.R`**
+Extends Fourier robustness analysis to extreme non-sinusoidal waveforms (α₂ up to 1.0).
+The standard 07a/b/c tests only go to α₂=0.5 (moderate deviation). This script tests
+α₂ ∈ {0, 0.25, 0.5, 0.75, 1.0} with α₃=0 to isolate the 2nd harmonic effect cleanly.
+Runs all 3 active datasets. Outputs per-dataset PDFs + cross-dataset comparison figure.
+Motivation: confirm whether cosinor robustness holds even at near-square-wave deviations.
+
+---
+
+### Completed Production Runs
+
+**`03b_power_core_active.R`** — COMPLETE
+- DR power (B=12): n80 ≈ 60 (baboon LUN vs CER, r=1.72, prop_DR=41%)
+- DP power (B=12): n80 > max(N grid)
+- B vs m tradeoff (B=4/6/12, N=24–96):
+  - B=12 consistently best, but advantage over B=6 is only ~1 pp
+  - B=4 loses ~8–9 pp vs B=12 at same N
+  - n80 ≈ 60 at B=12; all B values reach 80%+ power by N=60–72
+  - **Message:** with strong signal (r=1.7), B choice matters but gains diminish above B=6
+
+**`03c_power_core_mouse.R`** — COMPLETE
+- DR power (B=6): n80 > max(N=150)
+- DP power (B=6): n80 > max(N=150)
+- B vs m tradeoff (B=3 vs B=6, N=24–150):
+  - B=6 gives 2–3x more power than B=3 at every N
+  - N=150: B=3→18%, B=6→43% — dramatic difference
+  - **Message:** with weak signal (r=0.66), temporal coverage is critical; cannot compensate with more replicates per ZT
+
+**`07_fourier_robustness.R`** — COMPLETE
+- Standard harmonic grid (α₂ up to 0.5), 3 datasets
+- Key result: cosinor DCP is **robust to moderate waveform misspecification**
+  - Power loss from α₂=0 → α₂=0.5: only 2–9 pp across all datasets
+  - B advantage (high B vs low B) at worst case α₂=0.5: 0–1 pp — negligible
+  - D1D2 (r=0.66): noisy at low power; effect swamped by Monte Carlo variance
+- **Conclusion:** n80 recommendations hold even with non-sinusoidal waveforms typical of bulk RNA-seq
+
+**`04_power_design.R`** — Section 3 COMPLETE; Section 4 killed after 26h
+- Section 3 (bootstrap design grid, human aging passive, n=62 younger pilot):
+  - FDR 1%, B=4 fixed (passive), N=24–120
+  - Power: 0.9% (N=24) → 32.1% (N=120)
+  - n80 is far beyond N=120 for passive design — consistent with >300 estimate
+  - **Confirms passive design cost:** requires enormous N even at r~0.55
+- Section 4 (optional two-stage vs bootstrap illustration): killed — redundant with 02 and 08
+
+**`08_two_stage_vs_bootstrap_realdata.R`** — CRASHED on Section 2
+- Section 1 (baboon n=12): completed — two-stage n80=36, bootstrap median n80=48, CI width=2 pp
+- Section 2 (Mouse D1D2): crashed — same float tolerance bug as 07 (prop_rhythmic == total_diff)
+- Fix already in code (options.R tolerance patch). Needs relaunch as 08a/b/c (split scripts).
+
+---
+
+### Actions
+
+**`04_power_design.R` Section 4 killed** (2026-04-01)
+After 26h stuck at bootstrap draw 20/50 of the optional Section 4. Section 3 results preserved.
+
+**Split 07 and 08 into per-dataset parallel scripts** (committed 2026-03-31)
+07a/b/c/d and 08a/b/c/d allow ~3x speedup on next production run via parallel screens.
+Coordinate via `RUN_TAG` env var (default: today's date).
+
+---
+
 ## Session: 2026-03-31
 
 ### New Scripts
