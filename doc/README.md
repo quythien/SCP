@@ -228,13 +228,14 @@ We use **r = A/σ** (amplitude-to-noise ratio):
 
 ## Difference Types
 
-| Type | Null hypothesis | Test |
-|------|----------------|------|
-| DR (Differential Rhythmicity) | Rhythmic in both or neither | DCP likelihood ratio |
-| DP (Differential Phase) | φ_A = φ_B | DCP phase component |
-| DA (Differential Amplitude) | A_A = A_B | DCP amplitude component |
+| Type | Null hypothesis | DCP test |
+|------|----------------|----------|
+| DR (Differential Rhythmicity) | R²_A = R²_B (same rhythmicity fraction) | `LR_deltaR2()` — LR test on R² |
+| DP (Differential Phase) | φ_A = φ_B | `LRTest_diff_phase()` — LR test constraining equal phase |
+| DA (Differential Amplitude) | A_A = A_B | `LRTest_diff_amp()` — LR test constraining equal amplitude |
 
-All tests go through the DiffCircaPipeline (DCP) with BH FDR correction.
+All three use likelihood ratio tests from DiffCircaPipeline (DCP) with BH FDR correction.
+Priority ordering: DR is tested first; DP and DA are applied only to genes not classified DR.
 
 ---
 
