@@ -1,4 +1,4 @@
-# PowerSim — Analysis Plan for Publication
+# DCPower — Analysis Plan for Publication
 ## Date: 2026-03-19
 
 ---

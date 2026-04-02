@@ -1,6 +1,6 @@
-# PowerSim: Bootstrap-Based Power Analysis for Circadian Rhythm Studies
+# DCPower: Bootstrap-Based Power Analysis for Circadian Rhythm Studies
 
-PowerSim is an R framework for sample size planning and study design in **circadian differential expression** experiments. Given a small pilot RNA-seq dataset, it answers: *How many samples do I need, and how should I space my time points?*
+DCPower is an R framework for sample size planning and study design in **circadian differential expression** experiments. Given a small pilot RNA-seq dataset, it answers: *How many samples do I need, and how should I space my time points?*
 
 It supports both a fast two-stage (plug-in) approach and a bootstrap approach that additionally quantifies how much uncertainty in the sample size estimate comes from having a noisy pilot.
 
@@ -50,7 +50,7 @@ The key parameter is the amplitude-to-noise ratio **r = A/σ**:
 No package installation needed. Source the framework directly:
 
 ```r
-POWERSIM_ROOT <- "/path/to/PowerSim"   # set to your local path
+POWERSIM_ROOT <- "/path/to/DCPower"   # set to your local clone path
 setwd(POWERSIM_ROOT)
 source_dir <- file.path(getwd(), "code")
 old_wd <- setwd(source_dir); source("setup.R"); setwd(old_wd)
@@ -239,7 +239,7 @@ estCircadianParamTwoGroup(data_1, data_2, times_1, times_2,
 # Single group — use this for rhythmicity detection power only
 estCircadianParam(data, times, period = 24, prop_DR = 0.1, min_rhythm_pval = 0.1, ...)
 ```
-Both return a `CircadianBioOptions` object with per-gene empirical distributions of amplitude (A), noise (σ), effect size (r = A/σ), phase (φ), and the proportion of DR/DP/DA genes estimated from the pilot.
+Both return a `CircadianBioOptions` object with per-gene empirical distributions of amplitude (A), noise (σ), effect size (r = A/σ), phase (φ), and the proportion of DR/DP/DA genes estimated from the pilot. A and σ are stored as paired gene-level tuples (`sigma_rhythmic`) so that downstream simulation preserves the empirical r = A/σ distribution via joint sampling.
 
 ### Options objects
 ```r
@@ -283,7 +283,7 @@ runFourierDeviationPower(
 ## File Structure
 
 ```
-PowerSim/
+DCPower/
 ├── doc/
 │   ├── README.md          # This file
 │   ├── ANALYSIS_PLAN.md   # Publication datasets, research questions, script map
@@ -294,7 +294,7 @@ PowerSim/
 │   ├── runner.R           # runPowerAnalysis, runBootstrapDesignGrid, runTwoStagePower
 │   ├── bootstrap_sim.R    # Bootstrap logic, compareDesignApproaches
 │   ├── estimation.R       # estCircadianParam, estCircadianParamTwoGroup
-│   ├── simulation.R       # simulate_two_group, simulate_circadian_data
+│   ├── simulation.R       # simCircadianDiff — joint A-sigma sampling
 │   ├── detection.R        # DCP pipeline (DR/DP/DA likelihood ratio tests)
 │   ├── fourier_sim.R      # runFourierDeviationPower
 │   ├── design_comparison.R # plotDesignComparison
@@ -302,7 +302,24 @@ PowerSim/
 ├── data/                  # Pilot datasets (not committed — see ANALYSIS_PLAN.md)
 ├── examples/
 │   ├── publication/       # Reproducible scripts for all paper figures
+│   │   ├── fig1_bootstrap_comparison.R   # Fig 1: two-stage vs bootstrap (3-panel)
+│   │   ├── fig3_multi_dataset_dr_power.R # Fig 3: DR power across 4 datasets
+│   │   ├── 03b_power_core_active.R       # Baboon B vs m bootstrap grid
+│   │   ├── 03c_power_core_d1d2.R         # D1D2 B vs m bootstrap grid
+│   │   ├── 03d_bvsm_mouse_gse_only.R     # Mouse GSE B vs m + bm_tradeoff figure
+│   │   ├── 08a_bootstrap_baboon.R        # Bootstrap: Baboon LUN vs CER
+│   │   ├── 08b_bootstrap_d1d2.R          # Bootstrap: Mouse D1 vs D2
+│   │   ├── 08c_bootstrap_seney.R         # Bootstrap: Human PFC (Seney)
+│   │   ├── 08d_bootstrap_summary.R       # Summary: CI width across datasets
+│   │   ├── 08e_bootstrap_mouse_gse.R     # Bootstrap: Mouse LIV vs CER (GSE)
+│   │   └── auto_update_watcher.sh        # Watches for completed RDS and updates paper
 │   └── exploratory/       # Dataset-specific and sensitivity analyses
+├── paper/
+│   └── PowerSim/
+│       ├── PowerSim_Paper2.tex   # Main manuscript (working file)
+│       ├── supplementary.tex     # Supplementary material
+│       ├── references.bib        # Bibliography
+│       └── figures/              # All publication figures (PDF)
 └── output/                # All results (not committed)
 ```
 
