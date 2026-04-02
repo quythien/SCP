@@ -206,6 +206,7 @@ simCircadianDiff <- function(ngenes = 5000,
                            lOD2 = NULL,
                            amplitude,
                            amplitude2 = NULL,
+                           sigma_rhythmic = NULL,
                            prop_rhythmic = 0.25,
                            prop_DR = 0.1,
                            prop_DP = 0.2,
@@ -338,7 +339,14 @@ simCircadianDiff <- function(ngenes = 5000,
     # phi_g ~ Uniform(0, 24)  (no preferred peak time)
     phase1[rhythmic_idx] = runif(length(rhythmic_idx), 0, period)
     # Amplitude: resample from empirical vector if provided, else parametric default
-    if (!missing(amplitude)) {
+    if (!missing(amplitude) && !is.null(sigma_rhythmic) &&
+        length(sigma_rhythmic) == length(amplitude)) {
+      # Joint sampling: draw A and sigma from the same pilot gene to preserve
+      # empirical A-sigma correlation (avoids marginal sampling bias in r = A/sigma).
+      joint_idx <- sample(length(amplitude), length(rhythmic_idx), replace = TRUE)
+      amplitude1[rhythmic_idx] <- pmax(amplitude[joint_idx], 0.05)
+      sigma[rhythmic_idx]      <- pmax(sigma_rhythmic[joint_idx], 1e-6)
+    } else if (!missing(amplitude)) {
       amplitude1[rhythmic_idx] = pmax(sample(amplitude, length(rhythmic_idx), replace = TRUE), 0.05)
     } else {
       # A_g ~ max(LogNormal(mu=log(0.4), sd=0.5), 0.05)

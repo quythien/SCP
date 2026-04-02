@@ -25,7 +25,7 @@ NCORES      <- if (SMOKE) 2L  else 20L
 RHYTHM_PVAL <- 0.05
 
 B_MOUSE      <- 8L
-N_GRID_MOUSE <- if (SMOKE) c(12L, 24L, 36L) else c(12L, 24L, 36L, 48L, 60L, 72L, 96L)
+N_GRID_MOUSE <- if (SMOKE) c(16L, 24L, 48L) else c(16L, 24L, 32L, 48L, 64L, 72L, 96L)
 DATA_MOUSE   <- "data/mice_GSE54651_CPM.RData"
 
 RUN_TAG <- Sys.getenv("RUN_TAG", format(Sys.Date(), "%Y%m%d"))

@@ -382,8 +382,12 @@ estCircadianParam <- function(data, times, period = 24,
   sigma_valid <- params$raw$sigma[!is.na(params$raw$sigma) & params$raw$sigma > 0]
   lOD_emp <- log(sigma_valid)
 
-  # Amplitude: use rhythmic genes only
-  amp_emp <- params$raw$A[rhythmic_idx & !is.na(params$raw$A) & params$raw$A > 0]
+  # Amplitude and sigma: use rhythmic genes only, keeping them paired (same gene index)
+  # to preserve the empirical A-sigma correlation in downstream joint sampling.
+  rhythmic_valid <- rhythmic_idx & !is.na(params$raw$A) & params$raw$A > 0 &
+                    !is.na(params$raw$sigma) & params$raw$sigma > 0
+  amp_emp         <- params$raw$A[rhythmic_valid]
+  sigma_rhythmic_emp <- params$raw$sigma[rhythmic_valid]   # paired with amp_emp
 
   # Phase: use rhythmic genes
   phase_emp <- params$raw$phi[rhythmic_idx & !is.na(params$raw$phi)]
@@ -412,6 +416,7 @@ estCircadianParam <- function(data, times, period = 24,
     lBaselineExpr = lBaselineExpr_emp,
     lOD = lOD_emp,
     amplitude = amp_emp,
+    sigma_rhythmic = sigma_rhythmic_emp,
     phase = phase_emp,
     prop_DR = prop_DR,
     prop_DP = prop_DP,
@@ -572,8 +577,12 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   sigma_valid       <- p1$raw$sigma[!is.na(p1$raw$sigma) & p1$raw$sigma > 0]
   lOD_emp           <- log(sigma_valid)
   rhythmic_idx      <- p1$raw$is_rhythmic
-  amp_emp           <- p1$raw$A[rhythmic_idx & !is.na(p1$raw$A) & p1$raw$A > 0]
-  phase_emp         <- p1$raw$phi[rhythmic_idx & !is.na(p1$raw$phi)]
+  # Keep A and sigma paired from the same gene for joint sampling
+  rhythmic_valid    <- rhythmic_idx & !is.na(p1$raw$A) & p1$raw$A > 0 &
+                       !is.na(p1$raw$sigma) & p1$raw$sigma > 0
+  amp_emp            <- p1$raw$A[rhythmic_valid]
+  sigma_rhythmic_emp <- p1$raw$sigma[rhythmic_valid]
+  phase_emp          <- p1$raw$phi[rhythmic_idx & !is.na(p1$raw$phi)]
 
   # Group-2 distributions for fully symmetric two-group simulation -----------
   rhythmic_idx_2 <- p2$raw$is_rhythmic
@@ -626,14 +635,15 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   }
 
   opts <- CircadianBioOptions(
-    ngenes        = ngenes,
-    prop_rhythmic = prop_union_rhy,
-    period        = period,
-    lBaselineExpr = lBaselineExpr_emp,
-    lOD           = lOD_emp,
-    lOD2          = lOD_emp2,    # F̂_σ2: group-2 noise distribution
-    amplitude     = amp_emp,
-    amplitude2    = amp_emp2,    # F̂_A2: used for g2-only DR genes
+    ngenes         = ngenes,
+    prop_rhythmic  = prop_union_rhy,
+    period         = period,
+    lBaselineExpr  = lBaselineExpr_emp,
+    lOD            = lOD_emp,
+    lOD2           = lOD_emp2,    # F̂_σ2: group-2 noise distribution
+    amplitude      = amp_emp,
+    sigma_rhythmic = sigma_rhythmic_emp,
+    amplitude2     = amp_emp2,    # F̂_A2: used for g2-only DR genes
     cts2          = times_2,     # F̂_TOD2: group-2 sampling time distribution
     phase         = phase_emp,
     prop_DR       = prop_DR_emp,

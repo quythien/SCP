@@ -175,6 +175,9 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     if (!is.null(bio.opts$amplitude2)) {
       sim_args$amplitude2 <- bio.opts$amplitude2 * dr_amp_scale
     }
+    if (!is.null(bio.opts$sigma_rhythmic)) {
+      sim_args$sigma_rhythmic <- bio.opts$sigma_rhythmic * dr_sigma_scale
+    }
     if (!is.null(bio.opts$cts2)) {
       sim_args$cts2 <- bio.opts$cts2
     }

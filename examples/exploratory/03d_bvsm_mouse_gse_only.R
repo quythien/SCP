@@ -151,7 +151,6 @@ plot_bm_panel <- function(bm, title, col_hi, n80_line = TRUE) {
   m_approx <- pmax(1L, round(min(N)/B))
   legend("bottomright", legend=sprintf("B=%d (m~%d/ZT)", B, m_approx),
          col=cols, lwd=2, lty=seq_along(B), pch=pchs, bty="n", cex=0.85)
-  mtext("(bootstrap 95% CI)", side=3, line=0, cex=0.7, col="gray50")
 }
 
 plot_bm_panel(bm_boot,

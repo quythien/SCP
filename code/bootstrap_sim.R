@@ -101,9 +101,15 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
   if (prop_rhythmic < 0.01) prop_rhythmic <- 0.01
   if (prop_rhythmic > 0.99) prop_rhythmic <- 0.99
 
-  amplitude_vec <- boot_df$A[rhythmic_mask]
+  # Keep A and sigma paired from the same gene (joint sampling preserves A-sigma correlation)
+  rhythmic_valid <- rhythmic_mask & !is.na(boot_df$A) & boot_df$A > 0 &
+                    !is.na(boot_df$sigma) & boot_df$sigma > 0
+  amplitude_vec      <- boot_df$A[rhythmic_valid]
+  sigma_rhythmic_vec <- boot_df$sigma[rhythmic_valid]
+
   if (length(amplitude_vec) == 0 || all(is.na(amplitude_vec))) {
-    amplitude_vec <- pmax(rlnorm(max(10, nrow(boot_df)), log(0.4), 0.5), 0.05)
+    amplitude_vec      <- pmax(rlnorm(max(10, nrow(boot_df)), log(0.4), 0.5), 0.05)
+    sigma_rhythmic_vec <- NULL
   }
   amplitude_vec <- pmax(amplitude_vec[!is.na(amplitude_vec)], 0.05)
 
@@ -123,9 +129,10 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
     lOD           = lOD_vec,
     lOD_spec      = lOD_vec,
     lOD2          = NULL,
-    amplitude     = amplitude_vec,
+    amplitude      = amplitude_vec,
     amplitude_spec = amplitude_vec,
-    amplitude2    = NULL,
+    sigma_rhythmic = sigma_rhythmic_vec,
+    amplitude2     = NULL,
     cts2          = NULL,
     phase         = phase_vec,
     phase_spec    = phase_vec,

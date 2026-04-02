@@ -144,7 +144,7 @@ for (i in seq_along(datasets)) {
   abline(h = 80, lty = 2, col = "gray40")
   abline(h = c(20, 40, 60), lty = 3, col = "gray85")
 
-  # SE bars
+  # SE bars (T-bar style; SE is <0.3 pp for strong-signal datasets)
   arrows(N, pm - se, N, pm + se,
          angle = 90, code = 3, length = 0.05, col = d$col, lwd = 1.2)
 
@@ -162,8 +162,9 @@ for (i in seq_along(datasets)) {
       n80 <- N[idx]
     }
     abline(v = n80, lty = 2, col = adjustcolor(d$col, 0.6))
-    mtext(sprintf("n80~%d", round(n80)), side = 1, at = n80, line = 2.2,
-          cex = 0.65, col = d$col)
+    text(n80 + max(N) * 0.02, 10,
+         sprintf("n80~%d", round(n80)),
+         cex = 0.72, col = d$col, adj = 0, font = 2)
   }
 
   mtext(panel_labels[i], side = 3, adj = 0, font = 2, line = 0.5)
