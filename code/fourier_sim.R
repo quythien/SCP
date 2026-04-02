@@ -35,7 +35,8 @@ runFourierDeviationPower <- function(bio.opts,
                                      analysis.opts,
                                      harmonic_grid = NULL,
                                      test_type     = "DR",
-                                     verbose       = TRUE) {
+                                     verbose       = TRUE,
+                                     mc.cores      = 1L) {
 
   stopifnot(inherits(bio.opts,      "CircadianBioOptions"))
   stopifnot(inherits(design.opts,   "CircadianDesignOptions"))
@@ -67,81 +68,75 @@ runFourierDeviationPower <- function(bio.opts,
     cat(sprintf("  harmonic combinations: %d\n", n_harm))
     cat(sprintf("  nsims:        %d\n", nsims))
     cat(sprintf("  FDR threshold: %.0f%%\n", 100 * fdr_threshold))
+    cat(sprintf("  mc.cores:     %d\n", mc.cores))
   }
 
-  # power_arr[harm_idx, size_idx, sim_idx]
+  # Flatten (h_idx, s_idx) into a single combo grid for parallel dispatch
+  combo_grid <- expand.grid(h_idx = seq_len(n_harm), s_idx = seq_len(n_sizes))
+
+  run_one_combo <- function(ci) {
+    h_idx <- combo_grid$h_idx[ci]
+    s_idx <- combo_grid$s_idx[ci]
+    alpha2        <- harmonic_grid$alpha2[h_idx]
+    alpha3        <- harmonic_grid$alpha3[h_idx]
+    harmonics_vec <- c(alpha2, alpha3)
+    n             <- sample_sizes[s_idx]
+
+    cts_n <- if (!is.null(design.opts$cts) && design.opts$design == "active") {
+      B_pts <- design.opts$cts
+      m     <- n / length(B_pts)
+      rep(B_pts, each = round(m))
+    } else {
+      design.opts$cts
+    }
+
+    iter_design <- CircadianDesignOptions(
+      sample_sizes = n,
+      nsims        = nsims,
+      design       = design.opts$design,
+      cts          = cts_n,
+      test_types   = c(test_type)
+    )
+
+    tryCatch({
+      sim_out <- runSimsDiff(bio.opts, iter_design, analysis.opts,
+                             harmonics = harmonics_vec)
+      fdr_key <- paste0("fdr_", test_type)
+      fdr_arr <- sim_out[[fdr_key]]
+      if (is.null(fdr_arr)) return(rep(NA_real_, nsims))
+
+      vapply(seq_len(nsims), function(sim_i) {
+        fdr_vec   <- fdr_arr[, 1, sim_i]
+        diff_type <- sim_out$diff_type[[sim_i]]
+        target_idx <- switch(test_type,
+          DR = diff_type %in% c(2, 3),
+          DP = diff_type == 4,
+          DA = diff_type == 5,
+          rep(FALSE, length(fdr_vec))
+        )
+        n_target <- sum(target_idx)
+        if (n_target == 0) NA_real_
+        else sum(fdr_vec[target_idx] <= fdr_threshold, na.rm = TRUE) / n_target
+      }, numeric(1))
+
+    }, error = function(e) {
+      if (verbose) warning(sprintf("  Harmonic %d, N=%d failed: %s", h_idx, n, e$message))
+      rep(NA_real_, nsims)
+    })
+  }
+
+  combo_results <- parallel::mclapply(
+    seq_len(nrow(combo_grid)), run_one_combo,
+    mc.cores = mc.cores, mc.set.seed = TRUE
+  )
+
+  # Reassemble into power_arr[harm_idx, size_idx, sim_idx]
   power_arr <- array(NA_real_,
     dim      = c(n_harm, n_sizes, nsims),
     dimnames = list(harmonic_grid$label, paste0("N", sample_sizes), NULL)
   )
-
-  for (h_idx in seq_len(n_harm)) {
-    alpha2 <- harmonic_grid$alpha2[h_idx]
-    alpha3 <- harmonic_grid$alpha3[h_idx]
-    harmonics_vec <- c(alpha2, alpha3)
-
-    if (verbose) {
-      cat(sprintf("  Harmonic %d/%d: (α₂=%.2g, α₃=%.2g)\n",
-                  h_idx, n_harm, alpha2, alpha3))
-    }
-
-    for (s_idx in seq_len(n_sizes)) {
-      n <- sample_sizes[s_idx]
-
-      # Expand cts to per-sample schedule: active designs require length(cts)==n1
-      cts_n <- if (!is.null(design.opts$cts) && design.opts$design == "active") {
-        B_pts <- design.opts$cts
-        m     <- n / length(B_pts)
-        rep(B_pts, each = round(m))
-      } else {
-        design.opts$cts
-      }
-
-      iter_design <- CircadianDesignOptions(
-        sample_sizes = n,
-        nsims        = nsims,
-        design       = design.opts$design,
-        cts          = cts_n,
-        test_types   = c(test_type)
-      )
-
-      tryCatch({
-        sim_out <- runSimsDiff(bio.opts, iter_design, analysis.opts,
-                               harmonics = harmonics_vec)
-
-        fdr_key <- paste0("fdr_", test_type)
-        fdr_arr <- sim_out[[fdr_key]]  # [genes, 1, nsims]
-        if (is.null(fdr_arr)) next
-
-        for (sim_i in seq_len(nsims)) {
-          fdr_vec    <- fdr_arr[, 1, sim_i]
-          diff_type  <- sim_out$diff_type[[sim_i]]
-
-          if (test_type == "DR") {
-            target_idx <- diff_type %in% c(2, 3)
-          } else if (test_type == "DP") {
-            target_idx <- diff_type == 4
-          } else if (test_type == "DA") {
-            target_idx <- diff_type == 5
-          } else {
-            target_idx <- rep(FALSE, length(fdr_vec))
-          }
-
-          n_target <- sum(target_idx)
-          if (n_target == 0) {
-            power_arr[h_idx, s_idx, sim_i] <- NA_real_
-          } else {
-            power_arr[h_idx, s_idx, sim_i] <-
-              sum(fdr_vec[target_idx] <= fdr_threshold, na.rm = TRUE) / n_target
-          }
-        }
-
-      }, error = function(e) {
-        if (verbose) {
-          warning(sprintf("  Harmonic %d, N=%d failed: %s", h_idx, n, e$message))
-        }
-      })
-    }
+  for (ci in seq_len(nrow(combo_grid))) {
+    power_arr[combo_grid$h_idx[ci], combo_grid$s_idx[ci], ] <- combo_results[[ci]]
   }
 
   power_mean <- apply(power_arr, c(1, 2), mean, na.rm = TRUE)

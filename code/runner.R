@@ -552,8 +552,9 @@ runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
 #'
 #' @return List with 4D arrays [phase, size, stratum, sim] compatible with plotPhaseShiftWithSE()
 runPhaseShiftAnalysis <- function(bio.opts, design.opts, analysis.opts,
-                                  prop_DP = 0.15,
-                                  amp_diff = c(0.5, 2)) {
+                                  prop_DP  = 0.15,
+                                  amp_diff = c(0.5, 2),
+                                  mc.cores = 1L) {
 
   sample_sizes  <- design.opts$sample_sizes
   nsims         <- design.opts$nsims
@@ -565,29 +566,17 @@ runPhaseShiftAnalysis <- function(bio.opts, design.opts, analysis.opts,
   n_phase       <- length(phase_shifts)
   n_size        <- length(sample_sizes)
 
-  # 4D storage arrays [phase, size, stratum, sim]
-  ps_strat_power     <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
-  ps_strat_TD        <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
-  ps_strat_FD        <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
-  ps_strat_n_targets <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
-  ps_strat_n_nulls   <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
-  ps_strat_FDR       <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
-  ps_strat_alpha     <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
-  ps_strat_FDC       <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
+  cat(sprintf("  runPhaseShiftAnalysis: %d phases x %d N x %d sims | mc.cores=%d\n",
+              n_phase, n_size, nsims, mc.cores))
 
-  # 3D marginal arrays [phase, size, sim]
-  ps_marginal_power <- array(NA, dim = c(n_phase, n_size, nsims))
-  ps_marginal_FDR   <- array(NA, dim = c(n_phase, n_size, nsims))
-  ps_marginal_alpha <- array(NA, dim = c(n_phase, n_size, nsims))
-  ps_marginal_TD    <- array(NA, dim = c(n_phase, n_size, nsims))
-  ps_marginal_FD    <- array(NA, dim = c(n_phase, n_size, nsims))
+  # Flatten (phase, N) into a combo grid for parallel dispatch
+  combo_grid <- expand.grid(p = seq_along(phase_shifts), j = seq_along(sample_sizes))
 
-  total_scenarios <- n_phase * n_size * nsims
-  current_scenario <- 0
-
-  for (p in seq_along(phase_shifts)) {
+  run_one_phasexN <- function(ci) {
+    p           <- combo_grid$p[ci]
+    j           <- combo_grid$j[ci]
     phase_shift <- phase_shifts[p]
-    cat(sprintf("  >>> Phase shift: %.1f hours\n", phase_shift))
+    n           <- sample_sizes[j]
 
     opts_bio_ps <- updateBioOptions(bio.opts,
       prop_DR    = 0.00,
@@ -596,77 +585,127 @@ runPhaseShiftAnalysis <- function(bio.opts, design.opts, analysis.opts,
       phase_diff = c(-phase_shift, phase_shift),
       amp_diff   = amp_diff
     )
+    iter_design <- CircadianDesignOptions(
+      sample_sizes = c(n),
+      nsims        = nsims,
+      design       = design.opts$design,
+      cts          = design.opts$cts,
+      test_types   = c("DP")
+    )
 
-    for (j in seq_along(sample_sizes)) {
-      n <- sample_sizes[j]
-      cat(sprintf("    >>> n = %d\n", n))
+    sim_out <- tryCatch(
+      runSimsDiff(opts_bio_ps, iter_design, analysis.opts),
+      error = function(e) { warning(sprintf("phase=%.1f N=%d failed: %s", phase_shift, n, e$message)); NULL }
+    )
+    if (is.null(sim_out)) return(NULL)
 
-      iter_design <- CircadianDesignOptions(
-        sample_sizes = c(n),
-        nsims        = nsims,
-        design       = design.opts$design,
-        cts          = design.opts$cts,
-        test_types   = c("DP")
-      )
+    fdr_DP <- sim_out$fdr_DP[, 1, ]
 
-      sim_out <- runSimsDiff(opts_bio_ps, iter_design, analysis.opts)
-      fdr_DP <- sim_out$fdr_DP[, 1, ]
+    # Per-sim accumulators
+    strat_power     <- array(NA, dim = c(n_r_strata, nsims))
+    strat_TD        <- array(NA, dim = c(n_r_strata, nsims))
+    strat_FD        <- array(NA, dim = c(n_r_strata, nsims))
+    strat_n_targets <- array(NA, dim = c(n_r_strata, nsims))
+    strat_n_nulls   <- array(NA, dim = c(n_r_strata, nsims))
+    strat_FDR       <- array(NA, dim = c(n_r_strata, nsims))
+    strat_alpha     <- array(NA, dim = c(n_r_strata, nsims))
+    strat_FDC       <- array(NA, dim = c(n_r_strata, nsims))
+    marginal_power  <- rep(NA, nsims)
+    marginal_FDR    <- rep(NA, nsims)
+    marginal_alpha  <- rep(NA, nsims)
+    marginal_TD     <- rep(NA, nsims)
+    marginal_FD     <- rep(NA, nsims)
 
-      for (i in 1:nsims) {
-        current_scenario <- current_scenario + 1
-        if (current_scenario %% 100 == 0) {
-          cat(sprintf("      Progress: %d/%d scenarios\n", current_scenario, total_scenarios))
-        }
+    for (i in seq_len(nsims)) {
+      diff_type        <- sim_out$diff_type[[i]]
+      effectsize_phase <- sim_out$effectsize[[i]]$phase
+      effectsize_DR1   <- sim_out$effectsize[[i]]$DR1
+      effectsize_DR2   <- sim_out$effectsize[[i]]$DR2
 
-        diff_type        <- sim_out$diff_type[[i]]
-        effectsize_phase <- sim_out$effectsize[[i]]$phase
-        effectsize_DR1   <- sim_out$effectsize[[i]]$DR1
-        effectsize_DR2   <- sim_out$effectsize[[i]]$DR2
+      r_values    <- pmin(effectsize_DR1, effectsize_DR2)
+      is_DP       <- diff_type == 4
+      Zg          <- ifelse(is_DP, 1, 0)
+      Zg2         <- ifelse(is_DP & effectsize_phase >= target_effect, 1, 0)
+      r_for_strat <- r_values
+      r_for_strat[!is_DP] <- 0
+      xgr         <- cut(r_for_strat, breaks = r_strata, include.lowest = TRUE, labels = FALSE)
+      xgr[!is_DP] <- NA
+      discoveries <- fdr_DP[, i] <= 0.05
 
-        r_values <- pmin(effectsize_DR1, effectsize_DR2)
-        is_DP    <- diff_type == 4
-
-        Zg  <- ifelse(is_DP, 1, 0)
-        Zg2 <- ifelse(is_DP & effectsize_phase >= target_effect, 1, 0)
-
-        r_for_strat <- r_values
-        r_for_strat[!is_DP] <- 0
-        xgr <- cut(r_for_strat, breaks = r_strata, include.lowest = TRUE, labels = FALSE)
-        xgr[!is_DP] <- NA
-
-        discoveries <- fdr_DP[, i] <= 0.05
-
-        for (k in 1:n_r_strata) {
-          in_stratum <- xgr == k
-          TD    <- sum(discoveries & Zg2 == 1 & in_stratum, na.rm = TRUE)
-          FD    <- sum(discoveries & Zg == 0 & in_stratum, na.rm = TRUE)
-          n_tgt <- sum(Zg2 == 1 & in_stratum, na.rm = TRUE)
-          n_nul <- sum(Zg == 0 & !is.na(xgr) & in_stratum, na.rm = TRUE)
-          N_disc <- TD + FD
-
-          ps_strat_power[p, j, k, i]     <- if (n_tgt > 0) TD / n_tgt else NA
-          ps_strat_TD[p, j, k, i]        <- TD
-          ps_strat_FD[p, j, k, i]        <- FD
-          ps_strat_n_targets[p, j, k, i] <- n_tgt
-          ps_strat_n_nulls[p, j, k, i]   <- n_nul
-          ps_strat_FDR[p, j, k, i]       <- if (N_disc > 0) FD / N_disc else NA
-          ps_strat_alpha[p, j, k, i]     <- if (n_nul > 0) FD / n_nul else NA
-          ps_strat_FDC[p, j, k, i]       <- if (TD > 0) FD / TD else NA
-        }
-
-        # Marginal quantities (pooled across ALL genes, not strata)
-        total_TD_m  <- sum(discoveries & Zg2 == 1, na.rm = TRUE)
-        total_FD_m  <- sum(discoveries & Zg == 0, na.rm = TRUE)
-        total_tgt_m <- sum(Zg2 == 1, na.rm = TRUE)
-        total_nul_m <- sum(Zg == 0, na.rm = TRUE)
-        total_disc_m <- total_TD_m + total_FD_m
-        ps_marginal_power[p, j, i] <- if (total_tgt_m > 0) total_TD_m / total_tgt_m else NA
-        ps_marginal_FDR[p, j, i]   <- if (total_disc_m > 0) total_FD_m / total_disc_m else NA
-        ps_marginal_alpha[p, j, i] <- if (total_nul_m > 0) total_FD_m / total_nul_m else NA
-        ps_marginal_TD[p, j, i]    <- total_TD_m
-        ps_marginal_FD[p, j, i]    <- total_FD_m
+      for (k in seq_len(n_r_strata)) {
+        in_stratum <- xgr == k
+        TD     <- sum(discoveries & Zg2 == 1 & in_stratum, na.rm = TRUE)
+        FD     <- sum(discoveries & Zg  == 0 & in_stratum, na.rm = TRUE)
+        n_tgt  <- sum(Zg2 == 1 & in_stratum, na.rm = TRUE)
+        n_nul  <- sum(Zg  == 0 & !is.na(xgr) & in_stratum, na.rm = TRUE)
+        N_disc <- TD + FD
+        strat_power[k, i]     <- if (n_tgt  > 0) TD / n_tgt  else NA
+        strat_TD[k, i]        <- TD
+        strat_FD[k, i]        <- FD
+        strat_n_targets[k, i] <- n_tgt
+        strat_n_nulls[k, i]   <- n_nul
+        strat_FDR[k, i]       <- if (N_disc > 0) FD / N_disc else NA
+        strat_alpha[k, i]     <- if (n_nul  > 0) FD / n_nul  else NA
+        strat_FDC[k, i]       <- if (TD     > 0) FD / TD     else NA
       }
+
+      total_TD_m   <- sum(discoveries & Zg2 == 1, na.rm = TRUE)
+      total_FD_m   <- sum(discoveries & Zg  == 0, na.rm = TRUE)
+      total_tgt_m  <- sum(Zg2 == 1, na.rm = TRUE)
+      total_nul_m  <- sum(Zg  == 0, na.rm = TRUE)
+      total_disc_m <- total_TD_m + total_FD_m
+      marginal_power[i] <- if (total_tgt_m  > 0) total_TD_m  / total_tgt_m  else NA
+      marginal_FDR[i]   <- if (total_disc_m > 0) total_FD_m  / total_disc_m else NA
+      marginal_alpha[i] <- if (total_nul_m  > 0) total_FD_m  / total_nul_m  else NA
+      marginal_TD[i]    <- total_TD_m
+      marginal_FD[i]    <- total_FD_m
     }
+
+    list(p = p, j = j,
+         strat_power = strat_power, strat_TD = strat_TD, strat_FD = strat_FD,
+         strat_n_targets = strat_n_targets, strat_n_nulls = strat_n_nulls,
+         strat_FDR = strat_FDR, strat_alpha = strat_alpha, strat_FDC = strat_FDC,
+         marginal_power = marginal_power, marginal_FDR = marginal_FDR,
+         marginal_alpha = marginal_alpha, marginal_TD = marginal_TD, marginal_FD = marginal_FD)
+  }
+
+  combo_results <- parallel::mclapply(
+    seq_len(nrow(combo_grid)), run_one_phasexN,
+    mc.cores = mc.cores, mc.set.seed = TRUE
+  )
+
+  # Reassemble into original 4D/3D arrays
+  ps_strat_power     <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
+  ps_strat_TD        <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
+  ps_strat_FD        <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
+  ps_strat_n_targets <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
+  ps_strat_n_nulls   <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
+  ps_strat_FDR       <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
+  ps_strat_alpha     <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
+  ps_strat_FDC       <- array(NA, dim = c(n_phase, n_size, n_r_strata, nsims))
+  ps_marginal_power  <- array(NA, dim = c(n_phase, n_size, nsims))
+  ps_marginal_FDR    <- array(NA, dim = c(n_phase, n_size, nsims))
+  ps_marginal_alpha  <- array(NA, dim = c(n_phase, n_size, nsims))
+  ps_marginal_TD     <- array(NA, dim = c(n_phase, n_size, nsims))
+  ps_marginal_FD     <- array(NA, dim = c(n_phase, n_size, nsims))
+
+  for (ci in seq_along(combo_results)) {
+    r <- combo_results[[ci]]
+    if (is.null(r)) next
+    p <- r$p; j <- r$j
+    ps_strat_power[p, j, , ]     <- r$strat_power
+    ps_strat_TD[p, j, , ]        <- r$strat_TD
+    ps_strat_FD[p, j, , ]        <- r$strat_FD
+    ps_strat_n_targets[p, j, , ] <- r$strat_n_targets
+    ps_strat_n_nulls[p, j, , ]   <- r$strat_n_nulls
+    ps_strat_FDR[p, j, , ]       <- r$strat_FDR
+    ps_strat_alpha[p, j, , ]     <- r$strat_alpha
+    ps_strat_FDC[p, j, , ]       <- r$strat_FDC
+    ps_marginal_power[p, j, ]    <- r$marginal_power
+    ps_marginal_FDR[p, j, ]      <- r$marginal_FDR
+    ps_marginal_alpha[p, j, ]    <- r$marginal_alpha
+    ps_marginal_TD[p, j, ]       <- r$marginal_TD
+    ps_marginal_FD[p, j, ]       <- r$marginal_FD
   }
 
   list(
