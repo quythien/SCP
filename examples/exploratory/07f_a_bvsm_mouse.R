@@ -35,7 +35,7 @@ HARM_GRID <- expand.grid(alpha2 = c(0, 0.25, 0.5, 0.75, 1.0), alpha3 = 0)
 
 DATA_MOUSE <- "data/mice_GSE54651_CPM.RData"
 PILOT_N    <- 24L
-DATASET_LABEL <- "GSE54651 (r~2.9)"
+DATASET_LABEL <- "Mouse LIV vs CER (r~2.9)"
 COL        <- "steelblue"
 
 RUN_TAG <- Sys.getenv("RUN_TAG", format(Sys.Date(), "%Y%m%d"))

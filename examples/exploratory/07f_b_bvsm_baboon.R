@@ -27,7 +27,7 @@ HARM_GRID <- expand.grid(alpha2 = c(0, 0.25, 0.5, 0.75, 1.0), alpha3 = 0)
 
 DATA_BABOON   <- "data/CAMO_PRC_hmb.RData"
 PILOT_N       <- 12L
-DATASET_LABEL <- "Baboon LUN (r~1.7)"
+DATASET_LABEL <- "Baboon LUN vs CER (r~1.7)"
 COL           <- "darkorange"
 
 RUN_TAG <- Sys.getenv("RUN_TAG", format(Sys.Date(), "%Y%m%d"))

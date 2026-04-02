@@ -27,7 +27,7 @@ HARM_GRID <- expand.grid(alpha2 = c(0, 0.25, 0.5, 0.75, 1.0), alpha3 = 0)
 
 DATA_D1D2     <- "data/mouse_D1D2_logCPMfiltered_counts.csv"
 PILOT_N       <- 45L
-DATASET_LABEL <- "D1D2 (r~0.64)"
+DATASET_LABEL <- "Mouse D1 vs D2 neurons (r~0.64)"
 COL           <- "forestgreen"
 
 RUN_TAG <- Sys.getenv("RUN_TAG", format(Sys.Date(), "%Y%m%d"))
