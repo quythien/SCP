@@ -15,7 +15,7 @@
 
 \newcommand{\software}[1]{\texttt{#1}}
 
-\title{Supplementary Materials for:\\PowerSim: A Simulation-Based Power Assessment Framework\\for Differential Circadian Rhythm Analysis}
+\title{Supplementary Materials for:\\DiffCircaPower: Bootstrap-Based Power Analysis for Circadian Rhythm Studies}
 \author{}
 \date{}
 
@@ -407,21 +407,21 @@ $n$ & 1.25$\times$ & 1.5$\times$ & 2$\times$ & 3$\times$ & 4$\times$ \\
 \label{sec:fourier_robustness}
 %% ====================================================================
 
-The cosinor model assumes that each gene's rhythmic expression follows a pure sinusoid. In practice, circadian waveforms can deviate from this ideal---some genes peak sharply, others have asymmetric shapes---and the key question is whether such deviations affect power projections. To evaluate this, we simulated data in which the true gene signal contains a controlled amount of non-sinusoidal distortion. Specifically, we added a second-harmonic component to the generating model, so the true signal follows $A[\cos(2\pi t/24) + \alpha_2 \cos(4\pi t/24 + \phi_2)]$, where $\alpha_2 \in [0, 1]$ controls the degree of departure from a pure sinusoid ($\alpha_2 = 0$ recovers the standard cosinor; $\alpha_2 = 1$ means the second harmonic is as large as the fundamental). We then ran DR power simulations at $\alpha_2 \in \{0, 0.25, 0.5, 0.75, 1.0\}$ and third-harmonic $\alpha_3 = 0$, using 20 simulation replicates and 3,000 genes across all three active-design datasets.
+The cosinor model assumes that each gene's rhythmic expression follows a pure sinusoid. In practice, circadian waveforms can deviate from this ideal, and the key question is whether such deviations affect power projections. To evaluate this, we simulated data with a second-harmonic component added to the generating model, so the true signal follows $A[\cos(2\pi t/24) + \alpha_2 \cos(4\pi t/24)]$, where $\alpha_2 \in [0, 1]$ controls departure from a pure sinusoid ($\alpha_2 = 0$: standard cosinor; $\alpha_2 = 1$: second harmonic as large as the fundamental). DR power simulations were run at $\alpha_2 \in \{0, 0.25, 0.5, 0.75, 1.0\}$ with $\alpha_3 = 0$, using 20 simulation replicates and 3,000 genes. Each dataset was evaluated at two temporal designs---sparse (low $B$) and dense (high $B$)---at a dataset-specific reference sample size (Figure~\ref{fig:fourier_robustness}).
 
-Key findings (Figure~\ref{fig:fourier_robustness}):
+Key findings:
 
 \begin{enumerate}
-  \item \textbf{The cosinor assumption is confirmed to be adequate at $\alpha_2 = 0$}: across all datasets and all $B$ values tested, DR power at $\alpha_2 = 0$ differs by $\leq 1$\,pp for a given $N$. This is the empirical confirmation of Proposition~1 and validates the sinusoidal simulation baseline.
-  \item \textbf{Power projections are robust to moderate non-sinusoidal distortion for $B \geq 4$}: at $\alpha_2 = 0.5$ and $N \geq 48$, DR power loss relative to $\alpha_2 = 0$ is at most 2--9\,pp across all datasets. Empirical measurements of bulk RNA-seq circadian waveforms suggest second-harmonic amplitudes rarely exceed $\alpha_2 \approx 0.5$ \cite{hughes2009harmonics}, so this range covers realistic departures from the sinusoidal assumption in practice.
-  \item \textbf{Single-replicate designs ($m = 1$) are sensitive to non-sinusoidal waveforms at small $N$}: for the Mouse LIV vs.\ CER dataset ($\tilde{r} = 2.9$, $B = 12$, $m = 1$), DR power at $N = 12$ collapses from 58.6\% (at $\alpha_2 = 0$) to 0.2\% (at $\alpha_2 = 0.5$). Without within-timepoint replication, the cosinor model cannot distinguish waveform-induced residual variation from biological noise. Adding $m = 2$ replicates per timepoint substantially attenuates this sensitivity.
-  \item \textbf{$B = 3$ equally-spaced timepoints is algebraically problematic and should be avoided}: at $B = 3$ equally-spaced timepoints (e.g., 0, 8, 16\,h), the second-harmonic function $\cos(4\pi t/24)$ takes identical values to $\cos(2\pi t/24)$ at the sample points. This aliasing means the cosinor model absorbs the second-harmonic signal into its amplitude estimate rather than treating it as residual noise, causing DR power to increase artifactually with $\alpha_2$. $B = 3$ should not be used for circadian sampling.
+  \item \textbf{At $\alpha_2 = 0$, sparse and dense designs yield equivalent power}, confirming Proposition~1 and validating the sinusoidal simulation baseline. Power differences between $B$ values are $\leq 1$\,pp at $\alpha_2 = 0$ across all datasets.
+  \item \textbf{Power is robust to moderate distortion ($\alpha_2 \leq 0.5$) for $B \geq 4$}: at $\alpha_2 = 0.5$, DR power loss relative to $\alpha_2 = 0$ is modest for dense designs (e.g., Baboon $B=12$: $42\% \to 27\%$; Mouse $B=8$: $79\% \to 33\%$). Empirical bulk RNA-seq circadian waveforms rarely exceed $\alpha_2 \approx 0.5$ \cite{hughes2009harmonics}.
+  \item \textbf{At extreme distortion ($\alpha_2 > 0.5$), power degrades substantially for most designs}. However, sparse designs ($B = 4$) can outperform dense designs ($B = 8$) at extreme $\alpha_2$: Mouse LIV shows $B=8$ collapsing to near-zero while $B=4$ retains 28\% power at $\alpha_2 = 1.0$. This is a partial aliasing effect analogous to (but weaker than) the $B=3$ aliasing in Finding~4: at $B=4$ the second harmonic is not fully resolved, so the cosinor model absorbs part of the harmonic distortion into its amplitude estimate rather than treating it as residual noise.
+  \item \textbf{$B = 3$ equally-spaced timepoints produces artifactual power gain}: for Mouse D1D2 ($B=3$), DR power \emph{increases} with $\alpha_2$ (20\% $\to$ 35\% at $\alpha_2=1.0$). This is an aliasing artifact: the second-harmonic $\cos(4\pi t/24)$ is identical to the fundamental $\cos(2\pi t/24)$ at equally-spaced 3-point grids (0, 8, 16\,h), so the cosinor model absorbs the harmonic into its amplitude estimate. $B = 3$ should not be used for circadian sampling.
 \end{enumerate}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/fourier_robustness.pdf}
-\caption{Robustness of the cosinor assumption to non-sinusoidal waveforms. DR power vs.\ second-harmonic strength $\alpha_2$ for three active-design datasets, faceted by $N$. Each line represents a different $B$ value ($B \in \{4, 6, 12\}$; $B = 3$ excluded due to aliasing). At $\alpha_2 = 0$ (pure sinusoid), all $B$ lines coincide, confirming Proposition~1. Power loss is $\leq 2$--9\,pp for $B \geq 4$ at $N \geq 48$ and $\alpha_2 \leq 0.5$. The collapse at Mouse LIV $N = 12$ illustrates that single-replicate ($m = 1$) designs are particularly sensitive to waveform departures at small sample sizes.}
+\caption{Robustness of the cosinor assumption to non-sinusoidal waveforms. DR power vs.\ second-harmonic strength $\alpha_2$ ($\alpha_3 = 0$) for three active-design datasets at dataset-specific reference sample sizes. Each panel shows one dataset; solid line: sparse design (low $B$); dashed line: dense design (high $B$); per-dataset $B$ values: GSE54651 $B \in \{4, 8\}$ at $N=24$; Baboon $B \in \{4, 12\}$ at $N=12$; D1D2 $B \in \{3, 6\}$ at $N=45$. Vertical dashed line: $\alpha_2 = 0.5$ (practical upper bound for bulk RNA-seq). At $\alpha_2 = 0$, sparse and dense designs coincide (B-invariance). Power loss is modest for $B \geq 4$ up to $\alpha_2 = 0.5$. The D1D2 $B=3$ sparse line shows an artifactual power \emph{increase} due to second-harmonic aliasing at 3 equally-spaced timepoints (see finding~4 above).}
 \label{fig:fourier_robustness}
 \end{figure}
 

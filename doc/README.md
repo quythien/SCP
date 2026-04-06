@@ -1,6 +1,6 @@
-# DCPower: Bootstrap-Based Power Analysis for Circadian Rhythm Studies
+# DiffCircaPower: Bootstrap-Based Power Analysis for Circadian Rhythm Studies
 
-DCPower is an R framework for sample size planning and study design in **circadian differential expression** experiments. Given a small pilot RNA-seq dataset, it answers: *How many samples do I need, and how should I space my time points?*
+DiffCircaPower is an R framework for sample size planning and study design in **circadian differential expression** experiments. Given a small pilot RNA-seq dataset, it answers: *How many samples do I need, and how should I space my time points?*
 
 It supports both a fast two-stage (plug-in) approach and a bootstrap approach that additionally quantifies how much uncertainty in the sample size estimate comes from having a noisy pilot.
 
@@ -50,7 +50,7 @@ The key parameter is the amplitude-to-noise ratio **r = A/σ**:
 No package installation needed. Source the framework directly:
 
 ```r
-POWERSIM_ROOT <- "/path/to/DCPower"   # set to your local clone path
+POWERSIM_ROOT <- "/path/to/DiffCircaPower"   # set to your local clone path
 setwd(POWERSIM_ROOT)
 source_dir <- file.path(getwd(), "code")
 old_wd <- setwd(source_dir); source("setup.R"); setwd(old_wd)
@@ -283,7 +283,7 @@ runFourierDeviationPower(
 ## File Structure
 
 ```
-DCPower/
+DiffCircaPower/
 ├── doc/
 │   ├── README.md          # This file
 │   ├── ANALYSIS_PLAN.md   # Publication datasets, research questions, script map

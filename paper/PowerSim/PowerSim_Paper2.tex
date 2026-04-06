@@ -36,13 +36,15 @@ Circadian rhythms---endogenous $\sim$24-hour oscillations in gene expression---p
 
 Despite the biological importance, study design remains a major bottleneck. Investigators must decide how many samples are needed to achieve adequate power, how uncertain those recommendations are when pilot data are small or noisy, and, for active designs, whether to collect more distinct Zeitgeber times or more replicates per time point. These questions are especially pressing in \emph{passive} (observational) studies, such as post-mortem human brain experiments, where samples are scarce, collection times cannot be controlled, and each additional subject may require months of tissue procurement effort \cite{zong2023circapower}. In these settings, committing to a study without prospective design guidance risks years of work on an underpowered experiment.
 
-\software{CircaPower} \cite{zong2023circapower} established useful design intuition for one-group rhythm detection, but it summarizes intrinsic effect size by a single fixed signal-to-noise ratio $r=A/\sigma$. That simplification becomes limiting in transcriptomic differential circadian studies, where amplitude and noise vary substantially across genes and where inference is applied through a multi-stage two-group pipeline rather than a single-gene analytical test. In practice, a single representative $r$ can obscure the fact that some genes are essentially undetectable while others are well powered under the same study design.
+Power analysis in circadian transcriptomics poses challenges that do not arise in simpler settings. One-group circadian power calculations---answering ``how many samples to detect a rhythmic gene?''---are well established and addressed by tools such as \software{CircaPower} \cite{zong2023circapower}. The differential circadian problem is fundamentally harder: the inference pipeline is multi-stage (rhythmicity screening, DR or DP testing, multiplicity correction), closed-form power expressions are unavailable, and the relevant effect size---the amplitude-to-noise ratio $r=A/\sigma$---is not fixed but varies across tens of thousands of genes in a transcriptome-wide study. A single representative $r$ (e.g., from core clock genes, which typically have $r\approx 3$--$6$ in mouse liver) is $4$--$10\times$ larger than the median $r$ across all expressed genes in human brain tissue ($\tilde{r}\approx 0.6$), so using it in a power calculation produces severely over-optimistic projections for most of the transcriptome. Simulation calibrated to the full empirical $(A,\sigma)$ distribution is therefore the natural approach.
+
+This fixed-$r$ simplification becomes especially limiting in transcriptomic differential circadian studies, where amplitude and noise vary substantially across genes and where inference is applied through a multi-stage two-group pipeline rather than a single-gene analytical test. In practice, a single representative $r$ can obscure the fact that some genes are essentially undetectable while others are well powered under the same study design.
 
 \software{PROPER} \cite{wu2015proper} showed that simulation-based power analysis with empirical parameter distributions can provide more realistic guidance for high-throughput studies than closed-form formulas. We build on that idea to introduce \software{DiffCircaPower}, an R framework for sample-size planning and study design in circadian differential-expression experiments. Given a pilot RNA-seq dataset, \software{DiffCircaPower} estimates empirical distributions of gene-level circadian parameters, simulates two-group datasets under candidate designs, and evaluates DR/DP performance under the full DCP workflow (screening $\rightarrow$ DR test $\rightarrow$ post-hoc DP phase test). Rather than assuming a single fixed $r$, the framework samples genes from the pilot-derived distribution of $(A,\sigma)$, thereby inducing a transcriptome-wide distribution of $r=A/\sigma$. It supports both active (controlled-time point) and passive (observational) sampling designs, reports stratified power to expose effect-size heterogeneity, and provides two complementary operating modes: a fast two-stage plug-in analysis for point design estimates and a bootstrap analysis that quantifies uncertainty in projected power curves and sample-size recommendations.
 
 \paragraph{Contributions.}
 \begin{itemize}
-\item We extend circadian power analysis from one-group fixed-effect-size calculations to two-group differential circadian studies by simulating from pilot-derived empirical distributions of gene-level parameters, especially the joint distribution of amplitude and noise.
+\item We extend circadian power analysis from one-group fixed-effect-size calculations to two-group differential circadian studies by simulating from pilot-derived empirical distributions of gene-level parameters, especially the joint distribution of amplitude and noise. In practice, the median $r=A/\sigma$ across all expressed genes in a transcriptome is typically $4$--$10\times$ lower than $r$ for core clock genes; assuming a single fixed $r$ therefore yields severely over-optimistic power projections for most of the transcriptome.
 \item We introduce a bootstrap-based extension that propagates pilot-data uncertainty into projected power curves and sample-size recommendations, alongside a faster two-stage plug-in alternative for point estimation.
 \item We provide effect-size-aware design guidance by reporting both marginal and stratified power across the empirical distribution of signal-to-noise ratios $r=A/\sigma$, making transcriptome-wide heterogeneity explicit rather than averaging it away.
 \item We support both active and passive sampling designs and use the same simulation framework to study design trade-offs, dataset-specific biological feasibility, and method-level power/FDR comparisons under a common generative model.
@@ -121,7 +123,7 @@ d_g=d(\phi_g)=\frac{1}{n}\sum_{i=1}^n \sin^2\!\bigl(\omega(t_i+\phi_g)\bigr)
 is the sampling-design factor. We additionally write $Z_g^R\in\{0,1\}$ for a
 gene-level rhythmicity indicator and
 \begin{equation}
-\pi_R=\Pr(Z_g^R=1)
+\pi_{\mathrm{R}}=\Pr(Z_g^R=1)
 \label{eq:pi_r}
 \end{equation}
 for the proportion of genes that are rhythmic under the generative model.
@@ -460,7 +462,7 @@ practice under the full DiffCircaPower workflow.
 Passive circadian designs differ fundamentally because collection times are not
 under investigator control. In passive datasets (e.g.\ post-mortem studies),
 the sampled time-of-day distribution is generally uneven, so the design matrix
-does not satisfy the orthogonality conditions above. In this case we write
+does not satisfy the orthogonality conditions of Section~\ref{sec:design_theory}. In this case we write
 $d(\phi)$ for the generic phase-dependent design factor and
 $d_{g,k}=d(\phi_{g,k})$ for its value at gene-specific acrophase
 $\phi_{g,k}$, with
@@ -497,9 +499,10 @@ metrics used to evaluate prospective circadian study designs. At a high level,
 parameters in a pilot dataset, construct empirical parameter distributions,
 simulate new two-group datasets under candidate designs, run the full
 differential circadian analysis pipeline on each simulated dataset, and
-aggregate power and error rates across replicates. A bootstrap repeats this
-procedure after resampling the fitted pilot parameter table, thereby propagating
-pilot uncertainty into the projected power curves.
+aggregate power and error rates across replicates. A bootstrap extension
+(Section~\ref{sec:bootstrap}) repeats this procedure after resampling the
+fitted pilot parameter table, thereby propagating pilot uncertainty into the
+projected power curves.
 
 Consider a pilot circadian transcriptome dataset
 \(\mathcal{D}_0=\{Y^{(0)}=(y^{(0)}_{g,i})_{G_0\times N_0},\;
@@ -519,11 +522,11 @@ hyperparameters are
 \[
 \mathcal{H}
 =
-\{\pi_{\mathrm{DR}},\pi_{R},\pi_{\mathrm{DP}},
+\{\pi_{\mathrm{DR}},\pi_{\mathrm{R}},\pi_{\mathrm{DP}},
 \Delta\phi_{\min},\Delta\phi_{\max}\},
 \]
 where $\pi_{\mathrm{DR}}$ is the proportion of DR genes,
-$\pi_R=\Pr(Z_g^R=1)$ is the proportion of non-DR genes that are jointly
+$\pi_{\mathrm{R}}=\Pr(Z_g^R=1)$ is the proportion of non-DR genes that are jointly
 rhythmic, and $\pi_{\mathrm{DP}}$ is the proportion of jointly rhythmic genes
 assigned differential phase. Third, the pilot contributes the empirical objects
 \[
@@ -547,8 +550,8 @@ stages:
 \item fit gene-level cosinor models to the pilot data and estimate the
 empirical input objects;
 \item generate simulated two-group datasets from the semi-parametric model;
-\item apply DCP to each simulated dataset to obtain TOJR labels and DR/DP
-$p$-values;
+\item apply DCP to each simulated dataset to obtain Type of Joint Rhythmicity
+(TOJR) labels and DR/DP $p$-values;
 \item aggregate operating characteristics across simulation replicates and, when
 needed, across signal-to-noise strata.
 \end{enumerate}
@@ -707,6 +710,9 @@ how often genes are generated as DR, jointly rhythmic, or DP. These pilot-
 derived inputs are combined with the user-specified design
 $(n_1,n_2,B,\{m_b\})$ and phase-shift range
 $[\Delta\phi_{\min},\Delta\phi_{\max}]$.
+Together, $\hat{\Psi}$ summarizes what is borrowed from the pilot; Step~II
+uses these estimates to generate synthetic two-group datasets under any
+candidate design.
 
 % --------------------------------------------------------------------
 \subsection{Step II: Data Generation Under a Circadian Model}
@@ -762,7 +768,7 @@ without replacement from $\mathcal{A}$. Assign the first
 $\lceil n_{\mathrm{DR}}/2\rceil$ genes type $T_g=2$ and the remainder type
 $T_g=3$.
 \item From the non-DR remainder, draw
-$\lfloor\pi_R|\mathcal{A}\setminus\mathcal{G}_{\mathrm{DR}}|\rfloor$
+$\lfloor\pi_{\mathrm{R}}|\mathcal{A}\setminus\mathcal{G}_{\mathrm{DR}}|\rfloor$
 genes to form the jointly rhythmic pool $\mathcal{J}$.
 \item Draw $n_{\mathrm{DP}}=\lfloor\pi_{\mathrm{DP}}G\rfloor$ genes from
 $\mathcal{J}$ and assign them type
@@ -890,6 +896,9 @@ A_{g,k}^{(s)}\cos(\omega t_{k,i}^{(s)}-\omega\phi_{g,k}^{(s)})
 Thus, conditional on $\Theta_{g,\mathrm{grp}}^{(s)}$ and the collection times
 $\{t_{k,i}^{(s)}\}$, the observations are independent Gaussian draws from the
 corresponding group-specific cosinor mean functions.
+Each simulated dataset $\mathcal{D}^{(s)}$ is passed to Step~III, which
+applies the full DCP inference pipeline to produce gene-level differential
+calls.
 
 % --------------------------------------------------------------------
 \subsection{Step III: Detection via DiffCircaPipeline}
@@ -928,6 +937,8 @@ For genes with $\hat{Z}_g=\texttt{both}$, DCP uses the two-stage parameter
 framework described above; in our pipeline, the DP endpoint is the post-hoc
 phase-only test, and BH correction is applied within the jointly rhythmic
 stratum. Genes outside that stratum are assigned $p_g^{\mathrm{DP}}=1$.
+The gene-level calls from Step~III are aggregated in Step~IV to compute
+power and FDR metrics for the current design.
 
 % --------------------------------------------------------------------
 \subsection{Step IV: Power and FDR Metrics}
@@ -1212,26 +1223,26 @@ intervals than the passive Seney design despite a smaller pilot sample.}
 
 \subsection{Active Design: Multi-Dataset Power and Effect-Size Scaling}
 
-To evaluate \software{DiffCircaPower} across a wider range of study designs and effect sizes, we analyzed three additional pilot datasets spanning a 5-fold range in effect size. The mouse LIV vs.\ CER comparison (GSE54651; $n_{\text{pilot}} = 8$, $B = 8$, $m = 1$; Zhang et al.\ \cite{zhang2014comprehensive}) has median signal-to-noise ratio $\tilde{r} = 2.88$ and $\hat\pi_{\text{DR}} = 29.6\%$, representing the highest-signal scenario. The baboon LUN vs.\ CER comparison ($n_{\text{pilot}} = 12$, $B = 12$, $m = 1$) has $\tilde{r} = 1.72$ and $\hat\pi_{\text{DR}} = 40.7\%$. The mouse D1 vs.\ D2 striatal neuron comparison ($n_{\text{pilot}} = 45$, $B = 6$, $m \approx 7.5$) has $\tilde{r} = 0.65$ and $\hat\pi_{\text{DR}} = 19.9\%$ (Table~\ref{tab:signal_summary}).
+To evaluate \software{DiffCircaPower} across a wider range of study designs and effect sizes, we analyzed three additional pilot datasets spanning a 5-fold range in effect size. The mouse LIV vs.\ CER comparison (GSE54651; $n_{\text{pilot}} = 8$, $B = 8$, $m = 1$; Zhang et al.\ \cite{zhang2014comprehensive}) has median signal-to-noise ratio $\tilde{r} = 2.88$ and $\hat{\pi}_{\mathrm{DR}} = 29.6\%$, representing the highest-signal scenario. The baboon LUN vs.\ CER comparison ($n_{\text{pilot}} = 12$, $B = 12$, $m = 1$) has $\tilde{r} = 1.72$ and $\hat{\pi}_{\mathrm{DR}} = 40.7\%$. The mouse D1 vs.\ D2 striatal neuron comparison ($n_{\text{pilot}} = 45$, $B = 6$, $m \approx 7.5$) has $\tilde{r} = 0.65$ and $\hat{\pi}_{\mathrm{DR}} = 19.9\%$ (Table~\ref{tab:signal_summary}).
 
 \begin{table}[H]
 \centering
 \small
 \begin{tabular}{lll|rrr}
 \toprule
-Dataset & Design & Tissue & $\tilde{r}$ & $\hat\pi_{\text{DR}}$ & $n_{\text{pilot}}$ \\
+Dataset & Design & Tissue & $\tilde{r}$ & $\hat{\pi}_{\mathrm{DR}}$ & $n_{\text{pilot}}$ \\
 \midrule
-Mouse LIV vs.\ CER \cite{zhang2014comprehensive} & Active, $B=8$, $m=1$ & Liver & 2.88 & 30\% & 8 \\
+Mouse LIV vs.\ CER \cite{zhang2014comprehensive} & Active, $B=8$, $m=1$ & Liver & 2.88 & 29.6\% & 8 \\
 Baboon LUN vs.\ CER & Active, $B=12$, $m=1$ & Lung & 1.72 & 41\% & 12 \\
 Mouse D1 vs.\ D2 & Active, $B=6$, $m\approx 8$ & Striatum & 0.65 & 20\% & 45 \\
 Human PFC aging \cite{chen2016aging} & Passive & PFC & 0.56 & 14\% & 62 \\
 \bottomrule
 \end{tabular}
-\caption{Pilot dataset characteristics ordered by effect size. $\tilde{r}$ = median signal-to-noise ratio across rhythmic genes; $\hat\pi_{\text{DR}}$ = estimated proportion of differentially rhythmic genes; $n_{\text{pilot}}$ = pilot sample size per group.}
+\caption{Pilot dataset characteristics ordered by effect size. $\tilde{r}$ = median signal-to-noise ratio across rhythmic genes; $\hat{\pi}_{\mathrm{DR}}$ = estimated proportion of differentially rhythmic genes; $n_{\text{pilot}}$ = pilot sample size per group.}
 \label{tab:signal_summary}
 \end{table}
 
-Effect size ($\tilde{r}$) is the primary determinant of required sample size (Figure~\ref{fig:multi_dr_power}). For mouse LIV vs.\ CER ($\tilde{r} = 2.88$), DR power reaches 80\% at $N \approx 24$--$28$ per group, confirming that strong liver rhythms require very modest sample sizes even with $m = 1$. For baboon ($\tilde{r} = 1.72$, $\hat\pi_{\text{DR}} = 41\%$), 80\% power is achieved at $N \approx 34$--$36$. For mouse D1D2 ($\tilde{r} = 0.65$, $\hat\pi_{\text{DR}} = 20\%$), power is substantially lower: even at $N = 150$ per group, DR power reaches only ${\sim}43\%$. Together with the human PFC result ($\tilde{r} = 0.56$, $n_{80} > 100$), these four datasets span a 5-fold range in $\tilde{r}$ and a $>$3-fold range in $\hat\pi_{\text{DR}}$, yielding $n_{80}$ estimates that differ by more than an order of magnitude. This reinforces the need for effect-size-aware, dataset-specific simulation rather than a one-size-fits-all power calculation.
+Effect size ($\tilde{r}$) is the primary determinant of required sample size (Figure~\ref{fig:multi_dr_power}). For mouse LIV vs.\ CER ($\tilde{r} = 2.88$), DR power reaches 80\% at $N \approx 24$--$28$ per group, confirming that strong liver rhythms require very modest sample sizes even with $m = 1$. For baboon ($\tilde{r} = 1.72$, $\hat{\pi}_{\mathrm{DR}} = 40.7\%$), 80\% power is achieved at $N \approx 34$--$36$. For mouse D1D2 ($\tilde{r} = 0.65$, $\hat{\pi}_{\mathrm{DR}} = 19.9\%$), power is substantially lower: even at $N = 150$ per group, DR power reaches only ${\sim}43\%$. Together with the human PFC result ($\tilde{r} = 0.56$, $n_{80} > 100$), these four datasets span a 5-fold range in $\tilde{r}$ and a $>$3-fold range in $\hat{\pi}_{\mathrm{DR}}$, yielding $n_{80}$ estimates that differ by more than an order of magnitude. This reinforces the need for effect-size-aware, dataset-specific simulation rather than a one-size-fits-all power calculation.
 
 \begin{figure}[H]
 \centering
@@ -1242,13 +1253,13 @@ Effect size ($\tilde{r}$) is the primary determinant of required sample size (Fi
 
 \subsection{Maximizing Power: Time-Point Coverage vs.\ Replication}
 
-For active designs, total sample size $N$ is allocated across $B$ distinct collection time points with $m = N/B$ replicates per time point. Here $B$ is the number of distinct time points and $m$ is the replication per time point. Proposition~1 (Section~\ref{sec:design_theory}) establishes that for a pure sinusoidal waveform, DR power depends only on $N$ (not on $B$), implying that B and m are interchangeable given fixed $N$. We evaluate this proposition empirically using bootstrap power grids over $(N, B)$ for the baboon and D1D2 datasets.
+For active designs, total sample size $N$ is allocated across $B$ distinct collection time points with $m = N/B$ replicates per time point. Here $B$ is the number of distinct time points and $m$ is the replication per time point. Proposition~\ref{prop:b_invariance} (Section~\ref{sec:design_theory}) establishes that for a pure sinusoidal waveform, DR power depends only on $N$ (not on $B$), implying that B and m are interchangeable given fixed $N$. We evaluate this proposition empirically using bootstrap power grids over $(N, B)$ for the baboon and D1D2 datasets.
 
 For the baboon dataset ($\tilde{r} = 1.72$), B-invariance holds approximately: DR power at $B = 6$ and $B = 12$ are within 1\,pp at all $N$ (e.g., $N = 60$: $B = 6$ gives 79.6\% [78.7\%, 80.3\%] vs.\ $B = 12$ gives 80.3\% [79.5\%, 80.9\%]). Both reach 80\% power at $N = 60$. Reducing to $B = 4$ incurs a 7--9\,pp penalty (73.6\% [72.8\%, 74.3\%] at $N = 60$), suggesting that $B = 4$ is insufficient to resolve the 24-h sinusoid precisely.
 
 For the mouse D1D2 dataset ($\tilde{r} = 0.65$), the B effect is more pronounced: $B = 6$ gives more than twice the DR power of $B = 3$ at all tested $N$ (e.g., $N = 150$: $B = 6$ gives 42.8\% vs.\ $B = 3$ gives 18.3\%). This departure from B-invariance reflects the pilot data's real gene expression structure---including non-sinusoidal waveforms and temporal autocorrelation---which the pure-sinusoid simulation ($\alpha_2 = 0$) does not capture. In practice, denser temporal coverage ($B \geq 6$) improves cosinor model fit when $\tilde{r}$ is low and the sinusoidal assumption may not hold precisely.
 
-To assess whether the cosinor model's sinusoidal assumption affects power projections, we simulated data with progressively non-sinusoidal waveforms by adding a second-harmonic component of strength $\alpha_2$ to the generating model (Supplementary Section~\ref{sec:fourier_robustness}; Figure~\ref{fig:fourier_robustness}). The results show that power projections are robust to moderate waveform distortion for $B \geq 4$: at $\alpha_2 = 0.5$ and $N \geq 48$, DR power loss is at most 2--9\,pp relative to the pure-sinusoid baseline. The cosinor assumption matters most when $m = 1$ (one sample per time point) and $N$ is small: without within-time-point replication, the model cannot separate waveform-induced residual variation from noise, and DR power collapses (e.g., from 58.6\% to 0.2\% at $N = 12$, $B = 12$ for Mouse LIV vs.\ CER). Together, these results support a practical design rule: use $B \geq 4$ evenly-spaced time points to protect against non-sinusoidal rhythms, and include at least $m = 2$ replicates per time point when $\tilde{r}$ is expected to be moderate or low or when $N$ is small.
+For robustness of the cosinor assumption to non-sinusoidal waveforms, see Supplementary Section~S7. Briefly, at second-harmonic strength $\alpha_2 = 0.5$ and $N \geq 48$, DR power loss relative to the pure-sinusoid baseline is at most 2--9\,pp for $B \geq 4$, confirming that the cosinor model is adequate for the active designs considered here.
 
 \begin{figure}[H]
 \centering
@@ -1335,14 +1346,14 @@ $n$ & DCP & CC & DCP & CC \\
 100 & 68.6 & 77.5 & .023 & .087 \\
 \bottomrule
 \end{tabular}
-\caption{Method comparison (CC = CircaCompare) for DP. Power (\%, FDR 5\% threshold) and empirical FDR. CircaCompare achieves higher DP power but inflates DP FDR to 9--20\%.}
+\caption{Method comparison (CC = CircaCompare) for DP. Power (\%, FDR 5\% threshold) and empirical FDR. CircaCompare achieves higher DP power but inflates empirical DP FDR to 8.7--19.6\%.}
 \label{tab:method_comparison}
 \end{table}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{method_comparison/figures/method_comparison_combined.pdf}
-\caption{Method comparison: DCP (LRT) vs.\ CircaCompare (Wald NLS) for DP. (A) Marginal power at FDR 5\%. CircaCompare achieves consistently higher power. (B) Empirical FDR. CircaCompare inflates FDR to 9--20\%, far above the nominal threshold (dashed line), while DCP maintains proper control. Error bars show $\pm$1.96 SE across 50 simulations.}
+\caption{Method comparison: DCP (LRT) vs.\ CircaCompare (Wald NLS) for DP. (A) Marginal power at FDR 5\%. CircaCompare achieves consistently higher power. (B) Empirical FDR. CircaCompare inflates empirical FDR to 8.7--19.6\%, far above the nominal threshold (dashed line), while DCP maintains proper control. Error bars show $\pm$1.96 SE across 50 simulations.}
 \label{fig:method_comparison}
 \end{figure}
 
@@ -1362,19 +1373,15 @@ Second, \textbf{stratified power analysis is essential}. Marginal power averages
 
 Third, \textbf{phase shift power saturates around 8 hours}. This reflects the geometric limit of cosine separation: for two cosines with identical $A$ and phase difference $\Delta\phi$, the squared amplitude of $y_1(t) - y_2(t)$ is proportional to $\sin^2(\pi\Delta\phi/\tau)$, which plateaus for $\Delta\phi > \tau/3 \approx 8$\,h.
 
-Fourth, \textbf{the case study comparing DCP and CircaCompare illustrates how \software{DiffCircaPower} can guide method selection}. The two methods occupy complementary niches. DCP is the only tool providing a DR test for overall gain/loss of rhythmicity, making it indispensable when DR is the primary scientific question. For the shared test type (DP), CircaCompare offers 9--12 percentage points higher power but at the cost of inflated DP FDR (9--20\% vs.\ nominal 5\%) and ${\sim}75\times$ longer computation time. When the effective true discovery rate is adjusted for false positives, $\text{Power}_{\text{adj}} = \text{Power} \times (1 - \widehat{\text{FDR}})$, the DP gap narrows substantially (e.g., at $n = 60$: DCP $50.1\% \times 0.976 = 48.9\%$ vs.\ CC $61.8\% \times 0.900 = 55.6\%$). For DP, DCP is preferred in discovery studies where FDR control is critical, while CircaCompare may be considered when the power gain outweighs the inflation risk and findings will be independently validated. The computational difference is also practically relevant: a full power analysis across 50 simulations and 5 sample sizes completes in ${\sim}8$ minutes with DCP versus ${\sim}10$ hours with CircaCompare, making DCP far more suitable for exploratory analyses involving many scenarios. More broadly, this case study demonstrates how \software{DiffCircaPower}'s pluggable architecture enables evidence-based method choices by running competing methods on identical simulated data.
+Fourth, \textbf{the case study comparing DCP and CircaCompare illustrates how \software{DiffCircaPower} can guide method selection}. The two methods occupy complementary niches. DCP is the only tool providing a DR test for overall gain/loss of rhythmicity, making it indispensable when DR is the primary scientific question. For the shared test type (DP), CircaCompare offers 9--12 percentage points higher power but at the cost of inflated DP FDR (8.7--19.6\% vs.\ nominal 5\%) and ${\sim}75\times$ longer computation time. When the effective true discovery rate is adjusted for false positives, $\text{Power}_{\text{adj}} = \text{Power} \times (1 - \widehat{\text{FDR}})$, the DP gap narrows substantially (e.g., at $n = 60$: DCP $50.1\% \times 0.976 = 48.9\%$ vs.\ CC $61.8\% \times 0.900 = 55.6\%$). For DP, DCP is preferred in discovery studies where FDR control is critical, while CircaCompare may be considered when the power gain outweighs the inflation risk and findings will be independently validated. The computational difference is also practically relevant: a full power analysis across 50 simulations and 5 sample sizes completes in ${\sim}8$ minutes with DCP versus ${\sim}10$ hours with CircaCompare, making DCP far more suitable for exploratory analyses involving many scenarios. More broadly, this case study demonstrates how \software{DiffCircaPower}'s pluggable architecture enables evidence-based method choices by running competing methods on identical simulated data.
 
 Fifth, \textbf{the two-stage plug-in method systematically overestimates projected power, and bootstrap resampling corrects this bias while quantifying pilot uncertainty}. By treating pilot parameter estimates as exact, the plug-in approach ignores the variability that would result from re-running the pilot study. On the baboon LUN pilot ($n = 12$ active samples), the plug-in recommendation was $\hat{n}_{80} = 36$, but at that sample size the bootstrap analysis shows projected power is only 76\% [74.8\%, 77.0\%]---a gap of 6\,pp that would result in an underpowered study. The bootstrap recommendation of $N = 48$ correctly accounts for this uncertainty. Crucially, tight bootstrap confidence intervals do not require a large pilot: the baboon design uses only 12 animals with $m = 1$ replicate per time point, yet CIs are $\leq 3$\,pp wide because 12 equally-spaced time points fully constrain the cosinor parameters. The key is design informativeness---an active design with full 24-h coverage---rather than pilot size per se.
-
-\paragraph{B vs.\ m allocation and temporal resolution.} Proposition~1 establishes that for a pure sinusoidal waveform, DR power depends only on total sample size $N$ and not on how $N$ is split between time points $B$ and replicates per time point $m$. Empirically, we confirm this B-invariance across all datasets tested ($B \in \{3, 4, 6, 12\}$, $N \in \{12, 24, 48, 72\}$): when data are generated from a pure sinusoid ($\alpha_2 = 0$), DR power differs by $\leq 1$\,pp across all $B$ values at each $N$.
-
-When the cosinor assumption is violated---that is, when the true waveform departs from a pure sinusoid (simulated here by adding a second-harmonic component of strength $\alpha_2 = 0.5$)---the allocation choice begins to matter, particularly at small $N$. Because the cosinor model fits only the fundamental frequency, non-sinusoidal components contribute unexplained residual variance, reducing effective $R^2$ and consequently DR power. This effect is most severe when $m = N/B = 1$ (no replication within time points): in the mouse GSE54651 dataset ($r = 2.9$), DR power at $N = 12$ collapses from 58.6\% to near zero (0.2\%) as $\alpha_2$ increases to 0.5 at $B = 12$. With $m \geq 2$ the impact is attenuated, and at $N \geq 48$ the power penalty is small ($\leq 2$\,pp). The practical implication is that single-replicate designs ($m = 1$), such as single-animal-per-time point studies, are sensitive to violations of the sinusoidal assumption at small total sample sizes. Adding even one replicate per time point ($m = 2$) substantially mitigates this vulnerability.
 
 \paragraph{Practical recommendations.} For DR in human brain tissue: $n \geq 80$ for modest marginal per-gene power; targeted analyses of high-$r$ genes can succeed with $n = 40$--60. For DP ($\pm$6\,h shifts): $n = 60$ achieves 50\% marginal per-gene power. These recommendations are specific to human post-mortem brain, which has among the lowest circadian effect sizes of any tissue \cite{zong2023circapower} and therefore represents a conservative design baseline. For actively-designed mouse studies, where core-gene $r$ values are typically 3--10$\times$ higher ($r \approx 2$--$6$; CircaPower Table~1), substantially smaller sample sizes would suffice. Active designs also benefit from a higher design factor ($d = 0.5$ vs.\ ${\sim}0.24$ for passive), further reducing sample requirements. In all cases, we recommend reporting stratified alongside marginal per-gene power, as the latter can be misleading when $r$ is heterogeneous and can obscure actionable design guidance.
 
 \paragraph{Why stratified power matters.} Marginal power averages over the full distribution of $r$ and is dominated by the large mass of low-$r$ genes in human brain, leading to uniformly low averages even when a subset of strong rhythms is well powered. Stratified power makes this heterogeneity explicit by reporting power within $r$-bins, showing which effect sizes are detectable at feasible $n$. This framing supports targeted study design: investigators can choose sample sizes based on the effect-size range that is biologically meaningful rather than a single marginal average.
 
-\paragraph{Limitations.} Current limitations include: (i) independent marginal resampling of $\mu_g$, $\sigma_g$, and $A_g$ (ignoring potential correlations across genes; joint resampling of per-gene parameter tuples would preserve the empirical correlation structure); (ii) passive design results are specific to the pilot data's time-of-day distribution (different tissues or cohorts may have different $F_{\text{TOD}}$ and hence different $d$); (iii) computational cost of CircaCompare (${\sim}150$\,s per simulation vs.\ ${\sim}2$\,s for DCP) limits feasible $N_{\text{sim}}$; (iv) the cosinor model assumes sinusoidal waveforms; however, we evaluated this assumption by simulating data with increasing non-sinusoidal distortion (second-harmonic strength $\alpha_2 \leq 0.5$, which covers realistic bulk RNA-seq waveforms \cite{hughes2009harmonics}), and found power loss of at most 2--9 percentage points for $B \geq 4$ at $N \geq 48$, so this assumption is not consequential in practice for the study designs considered; and (v) BH control assumes independence or PRDS across genes, whereas gene--gene correlations may affect calibration in practice.
+\paragraph{Limitations.} Current limitations include: (i) marginal resampling of mesor $\mu_g$ and phase $\phi_g$ relative to amplitude and noise (the joint distribution $\hat{F}_{A,\sigma}$ is sampled as paired per-gene tuples, preserving the empirical $r=A/\sigma$ distribution, but correlations between mesor or phase and the $(A,\sigma)$ pair are not modeled); (ii) passive design results are specific to the pilot data's time-of-day distribution (different tissues or cohorts may have different $F_{\text{TOD}}$ and hence different $d$); (iii) computational cost of CircaCompare (${\sim}150$\,s per simulation vs.\ ${\sim}2$\,s for DCP) limits feasible $N_{\text{sim}}$; (iv) the cosinor model assumes sinusoidal waveforms; however, we evaluated this assumption by simulating data with increasing non-sinusoidal distortion (second-harmonic strength $\alpha_2 \leq 0.5$, which covers realistic bulk RNA-seq waveforms \cite{hughes2009harmonics}), and found power loss of at most 2--9 percentage points for $B \geq 4$ at $N \geq 48$, so this assumption is not consequential in practice for the study designs considered; and (v) BH control assumes independence or PRDS across genes, whereas gene--gene correlations may affect calibration in practice.
 
 A further limitation is that differential gene types are modeled as mutually exclusive: each gene is assigned to exactly one of DR or DP, and compound changes (e.g., a gene that simultaneously shifts phase and loses rhythmicity, as commonly observed in aging or neuropsychiatric disease) are not simulated. In real transcriptomes, circadian disruption often manifests as correlated multi-parameter changes rather than isolated single-parameter shifts. However, simulating each differential type in isolation is the standard approach in power analysis for multi-parameter tests, for the same reason that DE power analysis evaluates fold-changes in isolation: it allows clean, interpretable power curves for each test type and avoids confounding from compound effects that would make it impossible to attribute detection to a specific test. The one-at-a-time design is therefore appropriate for the primary goal of guiding study design, where investigators typically need to know the power for a specific hypothesis (e.g., ``how many subjects to detect phase-shifted genes?'') rather than the power under a complex joint model. Future work could extend the framework to compound-type genes to evaluate robustness of test specificity under realistic multi-parameter disruption.
 

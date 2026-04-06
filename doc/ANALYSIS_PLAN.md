@@ -1,4 +1,4 @@
-# DCPower — Analysis Plan for Publication
+# DiffCircaPower — Analysis Plan for Publication
 ## Date: 2026-03-19
 
 ---
