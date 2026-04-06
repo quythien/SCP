@@ -13,7 +13,7 @@ Circadian studies measure gene expression at multiple times of day (Zeitgeber ti
 - **N** — number of subjects per group
 - **B** — number of distinct time points sampled
 
-PowerSim helps answer:
+DiffCircaPower helps answer:
 
 | Question | Method |
 |----------|--------|
@@ -24,7 +24,7 @@ PowerSim helps answer:
 
 ### Detectable difference types
 
-PowerSim uses the **DiffCircaPipeline (DCP)** likelihood ratio framework to detect three gene-level patterns between two groups (e.g., disease vs control, tissue A vs tissue B):
+DiffCircaPower uses the **DiffCircaPipeline (DCP)** likelihood ratio framework to detect three gene-level patterns between two groups (e.g., disease vs control, tissue A vs tissue B):
 
 | Type | Meaning | Example |
 |------|---------|---------|
