@@ -1,13 +1,17 @@
 # Ignore everything
 *
 
-# Except code/, examples/, and doc/
+# Except code/, examples/, doc/, paper/, and .claude/
 !code/
 !code/**
 !examples/
 !examples/**
 !doc/
 !doc/**
+!paper/
+!paper/**
+!.claude/
+!.claude/**
 
 # And this .gitignore itself
 !.gitignore

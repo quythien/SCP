@@ -1,0 +1,432 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage[margin=1in]{geometry}
+\usepackage{caption}
+\usepackage{float}
+
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\thesection}{S\arabic{section}}
+
+\newcommand{\software}[1]{\texttt{#1}}
+
+\title{Supplementary Materials for:\\PowerSim: A Simulation-Based Power Assessment Framework\\for Differential Circadian Rhythm Analysis}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+%% ====================================================================
+\section{Detailed Power Results}
+\label{sec:detailed_power}
+%% ====================================================================
+
+Tables~\ref{tab:dr_detail}--\ref{tab:da_detail} extend the main text Table~1 with simulation-level standard errors and average false discoveries for DR, DP, and DA. DR power SEs are modest (0.3--1.0 percentage points; Table~\ref{tab:dr_detail}), confirming that $N_{\text{sim}} = 50$ simulations provide stable estimates. Empirical FDR is well controlled for all three tests: average false discoveries remain below 5 for DR (Table~\ref{tab:dr_detail}), below 12 for DP (Table~\ref{tab:dp_detail}), and below 5 for DA (Table~\ref{tab:da_summary}). DA achieves consistently higher power than DR at every $n$ and is competitive with DP: at $n = 60$, DA power (58.8\%) exceeds DR (13.1\%) and approaches DP (50.1\%). The DA FDR is exceptionally well controlled (0.002--0.007), the tightest of the three tests, because the amplitude LRT with \v{S}id\'{a}k correction is conservative. Sensitivity to the nominal FDR threshold is shown in the main text Figures~1B,D, 2B,D, and 3B,D; the empirical distribution of targets across $r$ strata is shown in panels F of those figures.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{r|cc|cc|cc}
+\toprule
+$n$ & Power (\%) & SE & Emp.\ FDR & SE & Avg TD & Avg FD \\
+\midrule
+20  & 1.1  & 0.3  & 0.028 & 0.005 & 8   & 0.2 \\
+40  & 5.4  & 0.5  & 0.018 & 0.003 & 40  & 0.7 \\
+60  & 13.1 & 0.8  & 0.020 & 0.003 & 98  & 2.0 \\
+80  & 22.4 & 1.0  & 0.025 & 0.004 & 168 & 4.3 \\
+100 & 30.5 & 1.0  & 0.021 & 0.003 & 229 & 4.8 \\
+\bottomrule
+\end{tabular}
+\caption{Differential rhythmicity (DR) power analysis. 5,000 genes, 50 simulations, 15\% DR proportion, FDR 5\% threshold, DCP method. SE = standard error across simulations.}
+\label{tab:dr_detail}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{r|cc|cc|cc}
+\toprule
+$n$ & Power (\%) & SE & Emp.\ FDR & SE & Avg TD & Avg FD \\
+\midrule
+20  & 13.3 & 0.6  & 0.063 & 0.007 & 99  & 7 \\
+40  & 34.5 & 0.7  & 0.031 & 0.003 & 259 & 8 \\
+60  & 50.1 & 0.7  & 0.024 & 0.002 & 376 & 9 \\
+80  & 61.4 & 0.7  & 0.020 & 0.002 & 460 & 10 \\
+100 & 68.7 & 0.6  & 0.023 & 0.002 & 515 & 12 \\
+\bottomrule
+\end{tabular}
+\caption{Differential phase (DP) power analysis ($\pm$6\,h uniform phase shift). 5,000 genes, 50 simulations, 15\% DP proportion, FDR 5\% threshold, DCP method.}
+\label{tab:dp_detail}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{r|cc|cc|cc}
+\toprule
+$n$ & Power (\%) & SE & Emp.\ FDR & SE & Avg TD & Avg FD \\
+\midrule
+20  & 17.7 & 0.34 & 0.002 & 0.000 & 133 & 0.2 \\
+40  & 42.6 & 0.36 & 0.003 & 0.000 & 320 & 1.1 \\
+60  & 58.8 & 0.41 & 0.006 & 0.000 & 441 & 2.7 \\
+80  & 69.0 & 0.30 & 0.006 & 0.001 & 517 & 3.1 \\
+100 & 75.5 & 0.28 & 0.007 & 0.001 & 566 & 4.3 \\
+\bottomrule
+\end{tabular}
+\caption{Differential amplitude (DA) power analysis ($[2,4]\times$ amplitude fold-change). 5,000 genes, 50 simulations, 15\% DA proportion, FDR 5\% threshold, DCP method. DA FDR is the tightest of the three tests (0.002--0.007) across all sample sizes.}
+\label{tab:da_summary}
+\end{table}
+
+%% ====================================================================
+\section{Phase Shift Sensitivity: Full Results}
+\label{sec:phase_sweep}
+%% ====================================================================
+
+Tables~\ref{tab:phase_power}--\ref{tab:phase_td} present the complete phase shift sensitivity analysis across 8 shift magnitudes (0.5--12\,h) and 5 sample sizes, corresponding to the main text Figure~3. This sweep serves as sensitivity analysis for the target definition based on phase shift magnitude $\Delta\phi$ (hours). Three key patterns emerge: (1) power increases monotonically with shift magnitude but saturates beyond $\sim$8\,h (Table~\ref{tab:phase_power}: 52.6\% at 8\,h vs.\ 53.1\% at 12\,h for $n = 60$), reflecting the geometric limit of cosine separation; (2) FDR is well controlled ($\leq 0.036$; Table~\ref{tab:phase_fdr}) for shifts $\geq 2$\,h at $n \geq 40$, with inflation at small shifts and small $n$ expected due to very few total rejections; and (3) Table~\ref{tab:phase_td} shows absolute true discoveries, which scale linearly with sample size and plateau beyond 8\,h.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{r|rrrrr}
+\toprule
+Phase (h) & $n=20$ & $n=40$ & $n=60$ & $n=80$ & $n=100$ \\
+\midrule
+0.5  & 0.0   & 0.1   & 0.2   & 0.3   & 0.6   \\
+1.0  & 0.2   & 0.6   & 0.9   & 1.5   & 2.3   \\
+2.0  & 1.5   & 4.7   & 8.6   & 13.3  & 18.5  \\
+4.0  & 8.9   & 25.2  & 39.0  & 49.5  & 57.5  \\
+6.0  & 13.3  & 34.5  & 50.1  & 61.4  & 68.7  \\
+8.0  & 14.6  & 36.8  & 52.6  & 63.8  & 70.6  \\
+10.0 & 14.9  & 37.0  & 53.1  & 64.2  & 71.0  \\
+12.0 & 15.1  & 37.2  & 53.1  & 64.2  & 71.3  \\
+\bottomrule
+\end{tabular}
+\caption{DP marginal power (\%) by phase shift magnitude and sample size (FDR 5\%, DCP method, 50 simulations). Power saturates beyond 8\,h shift (ratio 8h/12h $= 0.99$).}
+\label{tab:phase_power}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{r|rrrrr}
+\toprule
+Phase (h) & $n=20$ & $n=40$ & $n=60$ & $n=80$ & $n=100$ \\
+\midrule
+0.5  & 0.333 & 0.091 & 0.150 & 0.000 & 0.059 \\
+1.0  & 0.076 & 0.011 & 0.023 & 0.013 & 0.021 \\
+2.0  & 0.063 & 0.049 & 0.035 & 0.025 & 0.036 \\
+4.0  & 0.078 & 0.037 & 0.026 & 0.022 & 0.024 \\
+6.0  & 0.063 & 0.031 & 0.024 & 0.020 & 0.023 \\
+8.0  & 0.059 & 0.031 & 0.023 & 0.020 & 0.022 \\
+10.0 & 0.059 & 0.030 & 0.023 & 0.020 & 0.022 \\
+12.0 & 0.058 & 0.030 & 0.023 & 0.020 & 0.022 \\
+\bottomrule
+\end{tabular}
+\caption{Empirical FDR by phase shift magnitude. FDR is well controlled ($\leq 0.036$) for shifts $\geq 2$\,h at $n \geq 40$.}
+\label{tab:phase_fdr}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{r|rrrrr}
+\toprule
+Phase (h) & $n=20$ & $n=40$ & $n=60$ & $n=80$ & $n=100$ \\
+\midrule
+0.0  & 0.0   & 0.0   & 0.0   & 0.0   & 0.0   \\
+0.5  & 0.1   & 0.2   & 0.5   & 0.6   & 1.1   \\
+1.0  & 1.0   & 3.4   & 5.7   & 9.0   & 14.0  \\
+2.0  & 11.1  & 34.8  & 63.6  & 98.4  & 137.4 \\
+4.0  & 66.9  & 188.8 & 292.4 & 370.6 & 430.8 \\
+6.0  & 99.3  & 258.9 & 375.9 & 460.4 & 514.8 \\
+8.0  & 109.3 & 275.7 & 394.5 & 478.2 & 529.4 \\
+10.0 & 111.9 & 277.8 & 398.0 & 481.4 & 532.7 \\
+12.0 & 113.2 & 278.6 & 398.2 & 481.5 & 534.7 \\
+\bottomrule
+\end{tabular}
+\caption{Average true discoveries by phase shift magnitude and sample size.}
+\label{tab:phase_td}
+\end{table}
+
+%% ====================================================================
+\section{Method Comparison: Detailed Results}
+\label{sec:method_detail}
+%% ====================================================================
+
+Tables~\ref{tab:da_detail}--\ref{tab:dm_type1} present the full method comparison results with standard errors, extending the summary in the main text (Table~2). DCP uses likelihood ratio tests; CircaCompare (CC) uses Wald $t$-tests from per-gene nonlinear least squares.
+
+\subsection{Differential Amplitude (DA) Comparison}
+
+With 15\% of genes having amplitude fold-changes drawn from $[2, 4]\times$, CircaCompare achieves 5--7 percentage points higher DA power than DCP across all sample sizes (Table~\ref{tab:da_detail}). Crucially, both methods maintain empirical FDR well below the nominal 5\%, indicating that the power difference reflects genuine sensitivity gains rather than inflated false discoveries.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{r|cc|cc|cc|cc}
+\toprule
+& \multicolumn{2}{c|}{Power (\%)} & \multicolumn{2}{c|}{SE} & \multicolumn{2}{c|}{Emp.\ FDR} & \multicolumn{2}{c}{Avg TD} \\
+$n$ & DCP & CC & DCP & CC & DCP & CC & DCP & CC \\
+\midrule
+20  & 17.7 & 23.6 & 0.34 & 0.41 & 0.002 & 0.002 & 133 & 177 \\
+40  & 42.6 & 50.3 & 0.36 & 0.35 & 0.003 & 0.004 & 320 & 377 \\
+60  & 58.8 & 65.7 & 0.41 & 0.42 & 0.006 & 0.006 & 441 & 493 \\
+80  & 69.0 & 75.0 & 0.30 & 0.31 & 0.006 & 0.006 & 517 & 563 \\
+100 & 75.5 & 80.9 & 0.28 & 0.25 & 0.007 & 0.007 & 566 & 607 \\
+\bottomrule
+\end{tabular}
+\caption{DA comparison: DCP (LRT) vs.\ CircaCompare (CC, Wald NLS). Amplitude fold-change $[2, 4]\times$, 15\% DA proportion, FDR 5\%, 50 simulations. Both methods maintain FDR $\leq 0.007$.}
+\label{tab:da_detail}
+\end{table}
+
+\subsection{Differential Phase (DP) Comparison}
+
+For DP ($\pm$6\,h phase shift, 15\% DP proportion), CircaCompare achieves 9--12 percentage points higher power than DCP (Table~\ref{tab:dp_comparison}). However, this comes at the cost of substantially inflated FDR: CircaCompare's empirical FDR ranges from 8.7\% ($n=100$) to 19.6\% ($n=20$), far exceeding the nominal 5\% threshold. The excess false discoveries (CC: 43--56 vs.\ DCP: 7--12) account for much of the apparent power advantage.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{r|cc|cc|cc|cc}
+\toprule
+& \multicolumn{2}{c|}{Power (\%)} & \multicolumn{2}{c|}{SE} & \multicolumn{2}{c|}{Emp.\ FDR} & \multicolumn{2}{c}{Avg TD} \\
+$n$ & DCP & CC & DCP & CC & DCP & CC & DCP & CC \\
+\midrule
+20  & 13.2 & 23.5 & 0.28 & 0.39 & 0.063 & 0.196 & 99  & 176 \\
+40  & 34.5 & 46.8 & 0.34 & 0.40 & 0.031 & 0.127 & 259 & 351 \\
+60  & 50.1 & 61.8 & 0.36 & 0.32 & 0.024 & 0.100 & 376 & 463 \\
+80  & 61.4 & 71.3 & 0.34 & 0.33 & 0.020 & 0.090 & 460 & 535 \\
+100 & 68.6 & 77.5 & 0.27 & 0.24 & 0.023 & 0.087 & 515 & 581 \\
+\bottomrule
+\end{tabular}
+\caption{DP comparison. CircaCompare achieves 9--12 points higher power but inflates FDR to 9--20\% (vs.\ nominal 5\%).}
+\label{tab:dp_comparison}
+\end{table}
+
+\subsection{Differential Mesor (DM) Type I Error}
+
+No true mesor differences were simulated, so any DM rejection is a false positive. Both methods are highly conservative (Table~\ref{tab:dm_type1}), with Type~I rates two orders of magnitude below the nominal 5\%. CircaCompare is even more conservative than DCP, likely because NLS failures for borderline genes default to $p = 1$.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{r|cc|cc}
+\toprule
+& \multicolumn{2}{c|}{Type I Rate} & \multicolumn{2}{c}{SE} \\
+$n$ & DCP & CC & DCP & CC \\
+\midrule
+20  & 0.00138 & 0.00007 & 0.00024 & 0.00003 \\
+40  & 0.00033 & 0.00001 & 0.00007 & 0.00001 \\
+60  & 0.00014 & 0.00002 & 0.00005 & 0.00001 \\
+80  & 0.00017 & 0.00002 & 0.00004 & 0.00001 \\
+100 & 0.00017 & 0.000004 & 0.00004 & 0.000004 \\
+\bottomrule
+\end{tabular}
+\caption{DM Type I error under null (no true mesor differences). Both methods are highly conservative.}
+\label{tab:dm_type1}
+\end{table}
+
+%% ====================================================================
+\section{Stratified Method Comparison}
+\label{sec:strat_comparison}
+%% ====================================================================
+
+The main text (Table~2) reports marginal power comparisons between DCP and CircaCompare. Here we stratify by effect size $r = A/\sigma$ to identify where the methods differ most. Figure~\ref{fig:strat_comparison} shows that the power gap between methods is concentrated in moderate-$r$ strata ($0.5 < r < 1.5$), where CircaCompare's NLS approach captures additional signal that DCP's LRT misses. At high $r$ ($> 2$), both methods converge to near-perfect power in Figure~\ref{fig:strat_comparison}, and at very low $r$ ($< 0.25$), neither method detects anything. Figure~\ref{fig:td_by_r} translates these power differences into absolute true discovery counts by $r$ stratum. Figure~\ref{fig:power_comparison} summarizes the marginal power comparison, while Figure~\ref{fig:fdr_comparison} highlights CircaCompare's DP FDR inflation relative to the nominal 5\% threshold.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{method_comparison/figures/power_by_r_comparison.pdf}
+\caption{Power by $r$ stratum comparing DCP and CircaCompare. The power gap between methods is concentrated in moderate-$r$ strata ($0.5 < r < 1.5$); at high $r$ both methods achieve near-perfect power.}
+\label{fig:strat_comparison}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{method_comparison/figures/td_by_r_comparison.pdf}
+\caption{True discoveries by $r$ stratum comparing DCP and CircaCompare.}
+\label{fig:td_by_r}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{method_comparison/figures/power_comparison.pdf}
+\caption{Marginal power comparison between DCP and CircaCompare for DA and DP tests.}
+\label{fig:power_comparison}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{method_comparison/figures/fdr_comparison.pdf}
+\caption{FDR comparison between DCP and CircaCompare. CircaCompare inflates DP FDR substantially above the nominal 5\% threshold (dashed line).}
+\label{fig:fdr_comparison}
+\end{figure}
+
+%% ====================================================================
+\section{Validation Details}
+\label{sec:validation}
+%% ====================================================================
+
+\subsection{Type I Error Control Under Null}
+
+We ran 50 simulations under the complete null hypothesis (prop\_DR $= 0$, prop\_DP $= 0$, prop\_DA $= 0$; 5,000 genes; $n \in \{20, 40, 60, 80, 100\}$). Under this null, genes have identical parameters between groups (no differential rhythmicity, phase, or amplitude). Any rejection is a false positive.
+
+Results from 50 null simulations:
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{r|ccc|ccc}
+\toprule
+& \multicolumn{3}{c|}{Raw FPR} & \multicolumn{3}{c}{BH FPR} \\
+$n$ & DR & DP & DA & DR & DP & DA \\
+\midrule
+20  & 0.072 & 0.065 & 0.034 & 0.000 & 0.000 & 0.000 \\
+40  & 0.061 & 0.058 & 0.041 & 0.000 & 0.000 & 0.000 \\
+60  & 0.057 & 0.054 & 0.042 & 0.000 & 0.000 & 0.000 \\
+80  & 0.058 & 0.054 & 0.044 & 0.000 & 0.000 & 0.000 \\
+100 & 0.054 & 0.052 & 0.045 & 0.000 & 0.000 & 0.000 \\
+\bottomrule
+\end{tabular}
+\caption{Type I error rates under the complete null. Raw FPR is near nominal 0.05 for DR and DP; DA is slightly conservative (0.034--0.045). After BH correction, no false positives are produced.}
+\label{tab:null_typeI}
+\end{table}
+
+DR and DP raw FPR values are slightly above 0.05 at small $n$ (0.072 for DR at $n=20$), converging toward 0.05 as $n$ increases. DA raw FPR is consistently below 0.05, indicating a conservative test. After BH multiple testing correction, the false positive rate is exactly 0.000 for all tests and sample sizes, confirming proper error control.
+
+See Figure~\ref{fig:null_pval} for $p$-value uniformity histograms under the null.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{validation/null_pvalue_uniformity.pdf}
+\caption{$P$-value distributions under the complete null for DR, DP, and DA tests ($n = 60$, 50 simulations, 5{,}000 genes). Under a correctly calibrated test, $p$-values should follow a Uniform(0,1) distribution (red dashed line). DP is near-perfectly uniform. DR shows a mild left-skew (slight excess of small $p$-values), while DA is slightly conservative (deficit of small $p$-values). These deviations are minor---density remains within $[0.8, 1.5]$---and are fully absorbed by BH multiple testing correction (BH-adjusted FPR $= 0$ for all three tests).}
+\label{fig:null_pval}
+\end{figure}
+
+\subsection{Power Monotonicity}
+
+Power should increase monotonically with sample size for a well-behaved test. From the main text Table~1 and Supplementary Tables~\ref{tab:dr_detail}--\ref{tab:da_summary}, marginal power at FDR 5\% for $n \in \{20, 40, 60, 80, 100\}$:
+\begin{itemize}
+\item DR: 1.1\% $\to$ 5.4\% $\to$ 13.1\% $\to$ 22.4\% $\to$ 30.5\% (strictly monotonic: PASS)
+\item DP: 13.3\% $\to$ 34.5\% $\to$ 50.1\% $\to$ 61.4\% $\to$ 68.7\% (strictly monotonic: PASS)
+\item DA: 17.7\% $\to$ 42.6\% $\to$ 58.8\% $\to$ 69.0\% $\to$ 75.5\% (strictly monotonic: PASS)
+\end{itemize}
+This is also visible in the main text Figures~1C, 2C, and 3C (marginal power vs.\ sample size panels).
+
+\subsection{Effect Size Ordering}
+
+Power should increase with effect size magnitude. The phase sweep (Table~\ref{tab:phase_power}) confirms monotonic power increase from 0.5\,h through 12\,h at all sample sizes, consistent with the main text Figure~3C. Power saturates near 8\,h (8h/12h ratio $= 0.99$), reflecting the geometric limit of cosine separation.
+
+\subsection{FDR Calibration}
+
+Empirical FDR was computed as the average proportion of false discoveries among all BH-rejections. From Tables~\ref{tab:dr_detail}--\ref{tab:da_summary}:
+\begin{itemize}
+\item DR: empirical FDR ranges from 0.018 ($n = 40$) to 0.028 ($n = 20$), all below the nominal 5\%.
+\item DP: empirical FDR ranges from 0.020 ($n = 80$) to 0.063 ($n = 20$). Slight inflation at $n = 20$ is expected due to few total rejections, where a single false discovery disproportionately affects the FDR estimate.
+\item DA: empirical FDR ranges from 0.002 ($n = 20$) to 0.007 ($n = 100$), the most conservative of the three tests, consistent with the \v{S}id\'{a}k correction applied to the DA LRT.
+\end{itemize}
+Phase sweep FDR (Table~\ref{tab:phase_fdr}) further confirms proper control across a range of effect sizes.
+
+\subsection{Stratification Necessity}
+
+At $n = 60$, DR stratified power ranges from near 0\% (low $r$) to $>$83\% (high $r$), while marginal power is 13.1\% (main text Figure~1A). DP stratified power ranges from near 0\% to $>$92\% (main text Figure~2A). DA stratified power ranges from 1\% ($r < 0.25$) to 100\% ($r > 0.75$), while marginal power is 58.8\% (main text Figure~3A). Across all three tests, the within-stratum range exceeds 80 percentage points at $n = 60$, confirming that marginal power is a misleading summary when effect sizes are heterogeneous, justifying the stratified analysis approach advocated by PROPER \cite{wu2015proper}.
+
+%% ====================================================================
+\section{Simulation Algorithm}
+\label{sec:algorithm}
+%% ====================================================================
+
+The following pseudocode describes the data generation procedure for a single simulation replicate at sample size $n$, as implemented in \texttt{simCircadianDiff()}.
+
+\begin{figure}[H]
+\small
+\hrule\vspace{4pt}
+\textbf{Algorithm S1}: \texttt{simCircadianDiff} --- Two-group circadian simulation\vspace{2pt}
+\hrule\vspace{4pt}
+\textbf{Input}: $G$ genes, sample size $n$, proportions $\pi_R, \pi_{\text{DR}}, \pi_{\text{DP}}, \pi_{\text{DA}}$, empirical mesor distribution $\hat{F}_M$, empirical joint amplitude-noise distribution $\hat{F}_{A,\sigma}$, empirical phase distribution $\hat{F}_{\phi}$, phase shift $\Delta\phi$, amplitude fold-change range $[a_{\min}, a_{\max}]$, pilot collection times $\mathbf{t}_{\text{pilot}}$, seed $s$ \\
+\textbf{Output}: Expression matrices $\mathbf{Y}_1, \mathbf{Y}_2 \in \mathbb{R}^{G \times n}$, ground truth $\mathbf{D}$\vspace{4pt}
+
+\begin{enumerate}\setlength{\itemsep}{2pt}
+\item \textbf{Set seed}$(s)$. Resample with replacement for $g = 1,\ldots,G$: mesor $M_g$ from $\hat{F}_M$, the paired amplitude-noise tuple $(A_g,\sigma_g)$ jointly from $\hat{F}_{A,\sigma}$, and phase $\phi_g$ from $\hat{F}_{\phi}$. Joint sampling of $(A_g,\sigma_g)$ preserves the pilot-estimated gene-level signal-to-noise distribution $r_g = A_g/\sigma_g$.
+
+\item \textbf{Assign gene types sequentially} (independent of $n$; all types mutually exclusive):
+  (a) Sample $\lfloor G \cdot \pi_{\text{DR}} \rfloor$ DR genes from the full pool; split equally into type~2 (G1-only rhythmic) and type~3 (G2-only rhythmic).
+  (b) From the remaining non-DR genes, sample $\lfloor (G - n_{\text{DR}}) \cdot \pi_R \rfloor$ as \emph{rhythmic-in-both}.
+  (c) From rhythmic-in-both, sample $\lfloor G \cdot \pi_{\text{DP}} \rfloor$ as type~4 (DP).
+  (d) From rhythmic-in-both \emph{excluding DP genes}, sample $\lfloor G \cdot \pi_{\text{DA}} \rfloor$ as type~5 (DA).
+  (e) Remaining rhythmic-in-both genes become type~1 (rhythmic, no difference); all other genes are type~0 (arrhythmic).
+  Note: a gene cannot simultaneously be DR, DP, and DA; compound multi-parameter changes are not modeled.
+
+\item \textbf{Set group-specific parameters}. For rhythmic genes, initialize group~1 with $(A_{g,1}, \phi_{g,1}) = (A_g, \phi_g)$. Then modify group~2 according to gene type:
+  type~2: $A_{g,2} = 0$ (arrhythmic in G2);
+  type~3: $A_{g,1} = 0$, draw a fresh paired tuple $(A_{g,2}, \sigma_{g,2})$ and phase $\phi_{g,2}$ from the corresponding pilot-derived empirical distributions;
+  type~4: $\phi_{g,2} = (\phi_{g,1} + \Delta\phi) \bmod 24$, $A_{g,2} = A_{g,1}$;
+  type~5: $A_{g,2} = A_{g,1} \cdot u$, $u \sim \text{Unif}(a_{\min}, a_{\max})$.
+
+\item \textbf{Set seed}$(s + 7919n)$. Generate collection times $t_{k,i}$ for group $k \in \{1,2\}$ and $i = 1,\ldots,n$. For passive designs, sample from the pilot-implied empirical time-of-day distribution estimated from $\mathbf{t}_{\text{pilot}}$ using a circular density estimator. For active designs, assign times deterministically from the user-specified schedule.
+
+\item \textbf{Generate expression}. For each gene $g$, group $k$, and sample $i$:
+\[
+Y_{g,k,i}(t_i) = M_g + A_{g,k}\cos(\omega t_i - \omega\phi_{g,k}) + \varepsilon_{g,k,i}, \quad \varepsilon_{g,k,i} \stackrel{\text{iid}}{\sim} N(0, \sigma_{g,k}^2), \quad \omega = 2\pi/24
+\]
+
+\item \textbf{Record ground truth}: gene type, $r_{g,k} = A_{g,k}/\sigma_{g,k}$, phase and amplitude differences.
+\end{enumerate}
+\vspace{2pt}\hrule
+\end{figure}
+
+The two-stage seeding strategy (steps 1 and 4) ensures that gene-type assignments and baseline biological parameters are identical across sample sizes within a simulation, while the $n$-dependent reseed in step~4 introduces appropriate stochastic variation in collection times and expression noise. In particular, the initial seed fixes all $n$-independent biological quantities---such as gene-type indicators and baseline parameters $(M_g, A_g, \sigma_g, \phi_g)$---so that the true differential structure is held constant across $n$. The reseed of the form $s + 7919n$ then produces independent realizations of sampling times $t_i$ and residual errors $\varepsilon_{gi}$ for each sample size, preventing the dataset at $n_2 > n_1$ from being a simple extension of the dataset at $n_1$. Consequently, comparisons of $\mathrm{Power}(n)$ isolate the effect of sample size on sampling variability while keeping the underlying biological configuration fixed.
+
+%% ====================================================================
+\section{Amplitude Fold-Change Sensitivity: Full Results}
+\label{sec:amp_sweep}
+%% ====================================================================
+
+Table~\ref{tab:amp_sweep_power} presents marginal DA power across 5 fold-change values and 5 sample sizes, corresponding to the main text Figure~4. Power is negligible for 1.25$\times$ fold-changes ($<2\%$ at all $n \leq 100$), rises sharply for 2$\times$ (4.7\%--54.2\%), and approaches the main DA scenario levels at 3$\times$--4$\times$ (compare to Table~\ref{tab:da_summary} main DA results at $[2,4]\times$). Three patterns are notable: (1) even a 2$\times$ fold-change crosses 33\% power at $n \geq 80$; (2) the 3$\times$ and 4$\times$ results are lower than the main DA scenario (Table~\ref{tab:da_summary}) because the sweep uses \emph{fixed} fold-change ($\text{amp\_diff} = (fc, fc)$) while the main scenario draws from a \emph{uniform} $[2,4]\times$ distribution, yielding higher average effect; and (3) at $n=100$, both 3$\times$ and 4$\times$ exceed 78\%, confirming that moderate-to-large amplitude differences are well powered at feasible sample sizes.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{r|rrrrr}
+\toprule
+& \multicolumn{5}{c}{Amplitude Fold-Change} \\
+$n$ & 1.25$\times$ & 1.5$\times$ & 2$\times$ & 3$\times$ & 4$\times$ \\
+\midrule
+20  & 0.1  & 0.7  & 4.7  & 18.4 & 27.0 \\
+40  & 0.4  & 2.5  & 19.2 & 45.4 & 53.3 \\
+60  & 0.8  & 5.6  & 33.4 & 61.8 & 67.6 \\
+80  & 1.1  & 9.6  & 44.9 & 72.1 & 76.4 \\
+100 & 1.7  & 14.3 & 54.2 & 78.3 & 81.5 \\
+\bottomrule
+\end{tabular}
+\caption{DA marginal power (\%) by amplitude fold-change and sample size (FDR 5\%, DCP method, 50 simulations, fixed fold-change $\text{amp\_diff} = (fc, fc)$). Power is negligible for 1.25$\times$ and grows rapidly from 2$\times$ onward.}
+\label{tab:amp_sweep_power}
+\end{table}
+
+\section{Robustness of the Cosinor Model Assumption}
+\label{sec:fourier_robustness}
+%% ====================================================================
+
+The cosinor model assumes that each gene's rhythmic expression follows a pure sinusoid. In practice, circadian waveforms can deviate from this ideal---some genes peak sharply, others have asymmetric shapes---and the key question is whether such deviations affect power projections. To evaluate this, we simulated data in which the true gene signal contains a controlled amount of non-sinusoidal distortion. Specifically, we added a second-harmonic component to the generating model, so the true signal follows $A[\cos(2\pi t/24) + \alpha_2 \cos(4\pi t/24 + \phi_2)]$, where $\alpha_2 \in [0, 1]$ controls the degree of departure from a pure sinusoid ($\alpha_2 = 0$ recovers the standard cosinor; $\alpha_2 = 1$ means the second harmonic is as large as the fundamental). We then ran DR power simulations at $\alpha_2 \in \{0, 0.25, 0.5, 0.75, 1.0\}$ and third-harmonic $\alpha_3 = 0$, using 20 simulation replicates and 3,000 genes across all three active-design datasets.
+
+Key findings (Figure~\ref{fig:fourier_robustness}):
+
+\begin{enumerate}
+  \item \textbf{The cosinor assumption is confirmed to be adequate at $\alpha_2 = 0$}: across all datasets and all $B$ values tested, DR power at $\alpha_2 = 0$ differs by $\leq 1$\,pp for a given $N$. This is the empirical confirmation of Proposition~1 and validates the sinusoidal simulation baseline.
+  \item \textbf{Power projections are robust to moderate non-sinusoidal distortion for $B \geq 4$}: at $\alpha_2 = 0.5$ and $N \geq 48$, DR power loss relative to $\alpha_2 = 0$ is at most 2--9\,pp across all datasets. Empirical measurements of bulk RNA-seq circadian waveforms suggest second-harmonic amplitudes rarely exceed $\alpha_2 \approx 0.5$ \cite{hughes2009harmonics}, so this range covers realistic departures from the sinusoidal assumption in practice.
+  \item \textbf{Single-replicate designs ($m = 1$) are sensitive to non-sinusoidal waveforms at small $N$}: for the Mouse LIV vs.\ CER dataset ($\tilde{r} = 2.9$, $B = 12$, $m = 1$), DR power at $N = 12$ collapses from 58.6\% (at $\alpha_2 = 0$) to 0.2\% (at $\alpha_2 = 0.5$). Without within-timepoint replication, the cosinor model cannot distinguish waveform-induced residual variation from biological noise. Adding $m = 2$ replicates per timepoint substantially attenuates this sensitivity.
+  \item \textbf{$B = 3$ equally-spaced timepoints is algebraically problematic and should be avoided}: at $B = 3$ equally-spaced timepoints (e.g., 0, 8, 16\,h), the second-harmonic function $\cos(4\pi t/24)$ takes identical values to $\cos(2\pi t/24)$ at the sample points. This aliasing means the cosinor model absorbs the second-harmonic signal into its amplitude estimate rather than treating it as residual noise, causing DR power to increase artifactually with $\alpha_2$. $B = 3$ should not be used for circadian sampling.
+\end{enumerate}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/fourier_robustness.pdf}
+\caption{Robustness of the cosinor assumption to non-sinusoidal waveforms. DR power vs.\ second-harmonic strength $\alpha_2$ for three active-design datasets, faceted by $N$. Each line represents a different $B$ value ($B \in \{4, 6, 12\}$; $B = 3$ excluded due to aliasing). At $\alpha_2 = 0$ (pure sinusoid), all $B$ lines coincide, confirming Proposition~1. Power loss is $\leq 2$--9\,pp for $B \geq 4$ at $N \geq 48$ and $\alpha_2 \leq 0.5$. The collapse at Mouse LIV $N = 12$ illustrates that single-replicate ($m = 1$) designs are particularly sensitive to waveform departures at small sample sizes.}
+\label{fig:fourier_robustness}
+\end{figure}
+
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
