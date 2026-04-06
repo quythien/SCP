@@ -224,12 +224,11 @@ evaluate operating characteristics under candidate study designs.
 \subsection{Design Theory for Active and Passive Circadian Sampling}
 \label{sec:design_theory}
 
-In this paper, an \emph{active} design denotes a study in which investigators
-specify the sampling schedule, including the number and placement of collection
-times and, if applicable, replicates per time point, whereas a \emph{passive}
-design denotes a study in which collection times are not controlled by the
-investigator and are instead determined by an empirical time-of-day distribution. To make the role of sampling schedules explicit, we use the linearized
-first-harmonic representation of the cosinor model,
+An \emph{active} design specifies the sampling schedule: the number,
+placement, and replication of collection times. A \emph{passive} design
+leaves collection times to the empirical time-of-day distribution of the
+cohort (e.g., post-mortem studies). We adopt the linearized first-harmonic
+representation of the cosinor model,
 \begin{equation}
 y_{g,k}(t)
 =
@@ -368,8 +367,8 @@ simulation framework described below.
 \subsection{Study Design, Prospective Simulation, and Performance Metrics}
 \label{sec:study_design}
 
-We next formalize the study setting, simulation workflow, and performance
-metrics used to evaluate prospective circadian study designs. At a high level,
+The study setting, simulation workflow, and performance metrics for
+evaluating prospective circadian study designs are formalized below. At a high level,
 \software{DiffCircaPower} proceeds as follows: fit gene-level circadian
 parameters in a pilot dataset, construct empirical parameter distributions,
 simulate new two-group datasets under candidate designs, run the full
@@ -504,7 +503,7 @@ y_g^{(0)}=\mu_g\mathbf{1}+E_g\mathbf{c}+F_g\mathbf{s}+\boldsymbol\varepsilon_g,
 \mathbf{c}_i=\cos(\omega t_i^{(0)}),\;\mathbf{s}_i=\sin(\omega t_i^{(0)}),
 \label{eq:pilot_fit}
 \end{equation}
-yielding estimates $\hat{\mu}_g$, $\hat{E}_g$, and $\hat{F}_g$.
+This yields estimates $\hat{\mu}_g$, $\hat{E}_g$, and $\hat{F}_g$.
 Amplitude and acrophase are recovered as
 \(\hat{A}_g=\sqrt{\hat{E}_g^2+\hat{F}_g^2}\) and
 \(\hat{\phi}_g=\frac{1}{\omega}\,\mathrm{atan2}\!\left(\hat{F}_g,\hat{E}_g\right)\),
@@ -520,8 +519,8 @@ y_{g,i}^{(0)}-\hat{\mu}_g-\hat{A}_g\cos(\omega t_i^{(0)}-\omega\hat{\phi}_g)
 \right]^{1/2}.
 \label{eq:pilot_sigma}
 \end{equation}
-A BH-adjusted rhythmicity $q$-value for $H_0:E_g=F_g=0$ is obtained from the
-OLS $F$-test, and the rhythmic gene set is defined as
+We compute a BH-adjusted rhythmicity $q$-value from the OLS $F$-test on
+$H_0:E_g=F_g=0$, and define the rhythmic gene set as
 $\mathcal{G}_R=\{g:q_g<0.10\}$. We then form the fitted pilot row
 \[
 \hat{\Theta}_g=(\hat{\mu}_g,\hat{A}_g,\hat{\sigma}_g,\hat{\phi}_g,\hat{Z}_g^R),
@@ -801,7 +800,10 @@ Second, the Type of Joint Rhythmicity (TOJR) classifier assigns
 \end{cases}
 \label{eq:tojr}
 \end{equation}
-using unadjusted group-specific rhythmicity $p$-values.
+using unadjusted group-specific rhythmicity $p$-values. TOJR uses unadjusted
+$p$-values for screening because it assigns conditional gene pools for
+downstream testing rather than making final discovery claims; BH correction
+is reserved for the DR and DP tests that produce reported discoveries.
 
 Third, DR and DP testing are performed conditionally on the TOJR class. For
 all genes with $\hat{Z}_g\neq\texttt{arrhy}$, DCP tests
@@ -912,11 +914,9 @@ the fitted tuple
 $\hat{\Theta}_g=(\hat{\mu}_g,\hat{A}_g,\hat{\sigma}_g,\hat{\phi}_g,\hat{Z}_g^R)$.
 The bootstrap then repeatedly resamples these fitted rows, rebuilds the
 empirical distributions, reruns the simulation grid, and summarizes the
-variability of the resulting power curves. Because the resampling unit is the
-entire fitted row, the bootstrap preserves the empirical \emph{joint}
-distribution among the within-gene quantities retained in $\hat{\Theta}_g$,
-especially the dependence between $A$ and $\sigma$; the marginal distributions
-used by the simulator are induced from that joint empirical law. In the current
+variability of the resulting power curves. Because the resampling unit is the entire fitted row $\hat{\Theta}_g$,
+the bootstrap preserves the empirical joint distribution of $(A,\sigma)$,
+from which all marginal simulator inputs are induced. In the current
 implementation, the empirical time-of-day distribution
 $\hat{F}_{\mathrm{TOD},k}$ is treated as fixed at the observed pilot schedule,
 so the bootstrap quantifies uncertainty in the gene-level parameter
