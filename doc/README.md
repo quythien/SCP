@@ -316,7 +316,7 @@ DiffCircaPower/
 │   └── exploratory/       # Dataset-specific and sensitivity analyses
 ├── paper/
 │   └── PowerSim/
-│       ├── PowerSim_Paper2.tex   # Main manuscript (working file)
+│       ├── DCP.tex               # Main manuscript (working file)
 │       ├── supplementary.tex     # Supplementary material
 │       ├── references.bib        # Bibliography
 │       └── figures/              # All publication figures (PDF)

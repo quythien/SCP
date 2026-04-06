@@ -174,7 +174,7 @@ if (!is.null(d1d2)) {
 }
 lines <- c(lines, "",
   "=== MANUSCRIPT PATCH — §3.2 TABLE ROWS TO ADD/REPLACE ===",
-  "Copy these rows into tab:bootstrap_results in PowerSim_Paper2.tex:",
+  "Copy these rows into tab:bootstrap_results in DCP.tex:",
   ""
 )
 if (!is.null(d1d2)) {
