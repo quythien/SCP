@@ -228,86 +228,9 @@ evaluate operating characteristics under candidate study designs.
 An \emph{active} design specifies the sampling schedule: the number,
 placement, and replication of collection times. A \emph{passive} design
 leaves collection times to the empirical time-of-day distribution of the
-cohort (e.g., post-mortem studies). We adopt the linearized first-harmonic
-representation of the cosinor model,
-\begin{equation}
-y_{g,k}(t)
-=
-\mu_{g,k}
-+
-\beta_{g,k,1}\cos(\omega t)
-+
-\beta_{g,k,2}\sin(\omega t)
-+
-\varepsilon_{g,k}(t),
-\qquad
-\varepsilon_{g,k}(t)\sim N(0,\sigma_{g,k}^2),
-\label{eq:cosinor_linear}
-\end{equation}
-which is algebraically equivalent to \eqref{eq:cosinor_model} through
-\begin{equation}
-A_{g,k}=\sqrt{\beta_{g,k,1}^2+\beta_{g,k,2}^2},
-\qquad
-\phi_{g,k}=\operatorname{atan2}\!\left(\beta_{g,k,2},\beta_{g,k,1}\right).
-\label{eq:beta_to_phase}
-\end{equation}
-This representation is used only for design reasoning; downstream inference
-remains the DCP procedure described above. In the notation of
-\eqref{eq:design_factor_circapower}, the corresponding design factor can be
-written equivalently with sine or cosine basis functions because the two forms
-are phase-shifted versions of the same first harmonic.
-
-Let the design have $B$ distinct sampling times $\{t_b\}_{b=1}^B$ with $m_b$
-replicates at time $t_b$, satisfying $\sum_{b=1}^B m_b=n$. Define
-$f(t)=\bigl(1,\cos(\omega t),\sin(\omega t)\bigr)^\top$, and let
-$X\in\mathbb{R}^{n\times 3}$ be the design matrix whose rows are $f(t_b)^\top$,
-repeated $m_b$ times for each sampling time $t_b$. Under the Gaussian linear
-model, the Fisher information for $(\mu_{g,k},\beta_{g,k,1},\beta_{g,k,2})$ is
-proportional to
-\begin{equation}
-I(\mathcal{D}) \propto X^\top X
-=
-\sum_{b=1}^B m_b\, f(t_b)f(t_b)^\top,
-\label{eq:info_matrix}
-\end{equation}
-where $\mathcal{D}=\{(t_b,m_b)\}_{b=1}^B$ denotes the sampling design.
-Equation~\eqref{eq:info_matrix} shows that replication increases information by
-reweighting existing time points through $m_b$, whereas adding new sampling
-times changes the harmonic basis represented in the design and can improve
-parameter identifiability.
-
-We first consider balanced active designs. For equally spaced sampling times
-$t_b=(b-1)\tau/B$ with $B\geq 3$ and common replication $m$ per time point
-($n=Bm$), the first-harmonic basis is orthogonal on the sampled grid and the
-squared-cosine and squared-sine sums each equal $B/2$ (derivation in
-Supplementary~S8). Substituting into \eqref{eq:info_matrix} gives
-\begin{equation}
-X^\top X = \operatorname{diag}(n,\,n/2,\,n/2).
-\label{eq:xtx_balanced}
-\end{equation}
-
-For notational simplicity, we suppress gene and group indices in the following
-derivation. For the global rhythmicity test
-$H_0:\beta_1=\beta_2=0$ in the linearized cosinor model, the noncentrality
-parameter is determined by the $(\beta_1,\beta_2)$ block of $X^\top X$. Using
-\eqref{eq:xtx_balanced},
-\begin{equation}
-\lambda
-=
-\frac{1}{\sigma^2}
-\begin{pmatrix}\beta_1 & \beta_2\end{pmatrix}
-\begin{pmatrix} n/2 & 0 \\ 0 & n/2 \end{pmatrix}
-\begin{pmatrix}\beta_1 \\ \beta_2\end{pmatrix}
-=
-\frac{n}{2\sigma^2}(\beta_1^2+\beta_2^2)
-=
-\frac{n}{2}\left(\frac{A}{\sigma}\right)^2,
-\label{eq:ncp_active}
-\end{equation}
-where $A^2=\beta_1^2+\beta_2^2$. Thus, within this class of balanced equally
-spaced designs, detection efficiency depends on the total sample size $n$, but
-not separately on the number of distinct time points $B$ and the replication
-level $m$.
+cohort (e.g., post-mortem studies). The full matrix-algebraic derivation
+connecting the sampling design to the noncentrality parameter is given in
+Supplementary~S8.
 
 \begin{proposition}[$B$-invariance for balanced active designs]
 \label{prop:b_invariance}
@@ -323,21 +246,17 @@ See Supplementary~S8.
 \end{proof}
 
 Proposition~\ref{prop:b_invariance} formalizes the design-factor result of
-\citet{zong2023circapower} in the two-group differential setting: within the
-restricted class of balanced active designs, reallocating effort
-between the number of time points $B$ and replicates $m$ at fixed $n$ has
-little effect on first-harmonic efficiency. This is a useful design heuristic,
-not the main result of the paper. Practical power under the full downstream
-pipeline can still differ because of screening, DR/DP testing, multiple-testing
-correction, empirical effect-size heterogeneity, finite-sample effects, and
-departures from the idealized sinusoidal design assumptions. We therefore use
-simulation to assess how closely the theoretical $B$-invariance persists in
-practice under the full DiffCircaPower workflow.
+\citet{zong2023circapower} in the two-group differential setting: for balanced
+active designs, detection efficiency depends on total $n$, not the $B$-vs-$m$
+allocation. This is a theoretical baseline; practical power under the full
+multi-stage pipeline can deviate due to screening, multiplicity correction, and
+effect-size heterogeneity, so we assess adherence via simulation.
 
 Passive circadian designs differ fundamentally because collection times are not
 under investigator control. In passive datasets (e.g.\ post-mortem studies),
 the sampled time-of-day distribution is generally uneven, so the design matrix
-does not satisfy the orthogonality conditions of Section~\ref{sec:design_theory}. In this case we write
+does not satisfy the first-harmonic orthogonality conditions that underpin
+Proposition~\ref{prop:b_invariance}. In this case we write
 $d(\phi)$ for the generic phase-dependent design factor and
 $d_{g,k}=d(\phi_{g,k})$ for its value at gene-specific acrophase
 $\phi_{g,k}$, with
