@@ -276,64 +276,15 @@ reweighting existing time points through $m_b$, whereas adding new sampling
 times changes the harmonic basis represented in the design and can improve
 parameter identifiability.
 
-We first consider balanced active designs. Under equally spaced sampling times
-$t_b=(b-1)\tau/B$ with $B\geq 3$ and common replication $m$ per time point, so
-that $n=Bm$, each distinct time contributes
-$m\,f(t_b)f(t_b)^\top$ to $X^\top X$, giving
+We first consider balanced active designs. For equally spaced sampling times
+$t_b=(b-1)\tau/B$ with $B\geq 3$ and common replication $m$ per time point
+($n=Bm$), the first-harmonic basis is orthogonal on the sampled grid and the
+squared-cosine and squared-sine sums each equal $B/2$ (derivation in
+Supplementary~S8). Substituting into \eqref{eq:info_matrix} gives
 \begin{equation}
-X^\top X
-=
-m\sum_{b=1}^B
-\begin{bmatrix}
-1 \\
-\cos(\omega t_b) \\
-\sin(\omega t_b)
-\end{bmatrix}
-\begin{bmatrix}
-1 & \cos(\omega t_b) & \sin(\omega t_b)
-\end{bmatrix}.
-\label{eq:xtx_expand}
-\end{equation}
-Expanding the outer product yields
-\begin{equation}
-X^\top X
-=
-m
-\begin{pmatrix}
-\sum_{b=1}^B 1 &
-\sum_{b=1}^B \cos(\omega t_b) &
-\sum_{b=1}^B \sin(\omega t_b) \\[6pt]
-\sum_{b=1}^B \cos(\omega t_b) &
-\sum_{b=1}^B \cos^2(\omega t_b) &
-\sum_{b=1}^B \cos(\omega t_b)\sin(\omega t_b) \\[6pt]
-\sum_{b=1}^B \sin(\omega t_b) &
-\sum_{b=1}^B \cos(\omega t_b)\sin(\omega t_b) &
-\sum_{b=1}^B \sin^2(\omega t_b)
-\end{pmatrix}.
-\label{eq:xtx_sumform}
-\end{equation}
-For equally spaced points over one full cycle, the first-harmonic basis
-functions are orthogonal on the sampled grid:
-$\sum_{b=1}^B \cos(\omega t_b)=0$,
-$\sum_{b=1}^B \sin(\omega t_b)=0$,
-$\sum_{b=1}^B \cos(\omega t_b)\sin(\omega t_b)=0$,
-and
-$\sum_{b=1}^B \cos^2(\omega t_b)=\sum_{b=1}^B \sin^2(\omega t_b)=B/2$.
-Substituting these identities into \eqref{eq:xtx_sumform} gives
-\begin{equation}
-X^\top X
-=
-m
-\begin{pmatrix}
-B & 0 & 0 \\
-0 & B/2 & 0 \\
-0 & 0 & B/2
-\end{pmatrix}
-=
-\operatorname{diag}(n,n/2,n/2),
+X^\top X = \operatorname{diag}(n,\,n/2,\,n/2).
 \label{eq:xtx_balanced}
 \end{equation}
-since $n=Bm$.
 
 For notational simplicity, we suppress gene and group indices in the following
 derivation. For the global rhythmicity test
@@ -1297,17 +1248,18 @@ Second, \textbf{stratified power analysis is essential}. Marginal power averages
 
 Third, \textbf{phase shift power saturates around 8 hours}. This reflects the geometric limit of cosine separation: for two cosines with identical $A$ and phase difference $\Delta\phi$, the squared amplitude of $y_1(t) - y_2(t)$ is proportional to $\sin^2(\pi\Delta\phi/\tau)$, which plateaus for $\Delta\phi > \tau/3 \approx 8$\,h.
 
-Fourth, \textbf{the case study comparing DCP and CircaCompare illustrates how \software{DiffCircaPower} can guide method selection}. The two methods occupy complementary niches. DCP is the only tool providing a DR test for overall gain/loss of rhythmicity, making it indispensable when DR is the primary scientific question. For the shared test type (DP), CircaCompare offers 9--12 percentage points higher power but at the cost of inflated DP FDR (8.7--19.6\% vs.\ nominal 5\%) and ${\sim}75\times$ longer computation time. When the effective true discovery rate is adjusted for false positives, $\text{Power}_{\text{adj}} = \text{Power} \times (1 - \widehat{\text{FDR}})$, the DP gap narrows substantially (e.g., at $n = 60$: DCP $50.1\% \times 0.976 = 48.9\%$ vs.\ CC $61.8\% \times 0.900 = 55.6\%$). For DP, DCP is preferred in discovery studies where FDR control is critical, while CircaCompare may be considered when the power gain outweighs the inflation risk and findings will be independently validated. The computational difference is also practically relevant: a full power analysis across 50 simulations and 5 sample sizes completes in ${\sim}8$ minutes with DCP versus ${\sim}10$ hours with CircaCompare, making DCP far more suitable for exploratory analyses involving many scenarios. More broadly, this case study demonstrates how \software{DiffCircaPower}'s pluggable architecture enables evidence-based method choices by running competing methods on identical simulated data.
+Fourth, \textbf{the case study comparing DCP and CircaCompare illustrates how \software{DiffCircaPower} can guide method selection}. The two methods occupy complementary niches. DCP is the only tool providing a DR test for overall gain/loss of rhythmicity, making it indispensable when DR is the primary scientific question. For the shared test type (DP), CircaCompare offers 9--12 percentage points higher power but at the cost of inflated DP FDR (8.7--19.6\% vs.\ nominal 5\%) and ${\sim}75\times$ longer computation time. For DP, DCP is preferred in discovery studies where FDR control is critical, while CircaCompare may be considered when the power gain outweighs the inflation risk and findings will be independently validated.
 
 Fifth, \textbf{the two-stage plug-in method systematically overestimates projected power, and bootstrap resampling corrects this bias while quantifying pilot uncertainty}. By treating pilot parameter estimates as exact, the plug-in approach ignores the variability that would result from re-running the pilot study. On the baboon LUN pilot ($n = 12$ active samples), the plug-in recommendation was $\hat{n}_{80} = 36$, but at that sample size the bootstrap analysis shows projected power is only 76\% [74.8\%, 77.0\%]---a gap of 6\,pp that would result in an underpowered study. The bootstrap recommendation of $N = 48$ correctly accounts for this uncertainty. Crucially, tight bootstrap confidence intervals do not require a large pilot: the baboon design uses only 12 animals with $m = 1$ replicate per time point, yet CIs are $\leq 3$\,pp wide because 12 equally-spaced time points fully constrain the cosinor parameters. The key is design informativeness---an active design with full 24-h coverage---rather than pilot size per se.
 
 \paragraph{Practical recommendations.} For DR in human brain tissue: $n \geq 80$ for modest marginal per-gene power; targeted analyses of high-$r$ genes can succeed with $n = 40$--60. For DP ($\pm$6\,h shifts): $n = 60$ achieves 50\% marginal per-gene power. These recommendations are specific to human post-mortem brain, which has among the lowest circadian effect sizes of any tissue \cite{zong2023circapower} and therefore represents a conservative design baseline. For actively-designed mouse studies, where core-gene $r$ values are typically 3--10$\times$ higher ($r \approx 2$--$6$; CircaPower Table~1), substantially smaller sample sizes would suffice. Active designs also benefit from a higher design factor ($d = 0.5$ vs.\ ${\sim}0.24$ for passive), further reducing sample requirements. In all cases, we recommend reporting stratified alongside marginal per-gene power, as the latter can be misleading when $r$ is heterogeneous and can obscure actionable design guidance.
 
-\paragraph{Why stratified power matters.} Marginal power averages over the full distribution of $r$ and is dominated by the large mass of low-$r$ genes in human brain, leading to uniformly low averages even when a subset of strong rhythms is well powered. Stratified power makes this heterogeneity explicit by reporting power within $r$-bins, showing which effect sizes are detectable at feasible $n$. This framing supports targeted study design: investigators can choose sample sizes based on the effect-size range that is biologically meaningful rather than a single marginal average.
 
-\paragraph{Limitations.} Current limitations include: (i) marginal resampling of mesor $\mu_g$ and phase $\phi_g$ relative to amplitude and noise (the joint distribution $\hat{F}_{A,\sigma}$ is sampled as paired per-gene tuples, preserving the empirical $r=A/\sigma$ distribution, but correlations between mesor or phase and the $(A,\sigma)$ pair are not modeled); (ii) passive design results are specific to the pilot data's time-of-day distribution (different tissues or cohorts may have different $F_{\text{TOD}}$ and hence different $d$); (iii) computational cost of CircaCompare (${\sim}150$\,s per simulation vs.\ ${\sim}2$\,s for DCP) limits feasible $N_{\text{sim}}$; (iv) the cosinor model assumes sinusoidal waveforms; however, we evaluated this assumption by simulating data with increasing non-sinusoidal distortion (second-harmonic strength $\alpha_2 \leq 0.5$, which covers realistic bulk RNA-seq waveforms \cite{hughes2009harmonics}), and found power loss of at most 2--9 percentage points for $B \geq 4$ at $N \geq 48$, so this assumption is not consequential in practice for the study designs considered; and (v) BH control assumes independence or PRDS across genes, whereas gene--gene correlations may affect calibration in practice.
-
-A further limitation is that differential gene types are modeled as mutually exclusive: each gene is assigned to exactly one of DR or DP, and compound changes (e.g., a gene that simultaneously shifts phase and loses rhythmicity, as commonly observed in aging or neuropsychiatric disease) are not simulated. In real transcriptomes, circadian disruption often manifests as correlated multi-parameter changes rather than isolated single-parameter shifts. However, simulating each differential type in isolation is the standard approach in power analysis for multi-parameter tests, for the same reason that DE power analysis evaluates fold-changes in isolation: it allows clean, interpretable power curves for each test type and avoids confounding from compound effects that would make it impossible to attribute detection to a specific test. The one-at-a-time design is therefore appropriate for the primary goal of guiding study design, where investigators typically need to know the power for a specific hypothesis (e.g., ``how many subjects to detect phase-shifted genes?'') rather than the power under a complex joint model. Future work could extend the framework to compound-type genes to evaluate robustness of test specificity under realistic multi-parameter disruption.
+\paragraph{Limitations.} Key limitations include: the cosinor model assumes
+sinusoidal waveforms (power loss $\leq$9\,pp for $\alpha_2\leq 0.5$,
+$B\geq 4$; Supplementary~S7); gene types are modeled as mutually exclusive
+(compound DR+DP changes are not simulated); and passive-design results depend
+on the pilot's time-of-day distribution. Full discussion in Supplementary~S9.
 
 \paragraph{Software availability.} \software{DiffCircaPower} is available as an open-source R framework with a PROPER-style configuration system. An end-to-end pipeline (\texttt{examples/run\_pipeline.R}) reproduces all results in this paper, and a validation suite (\texttt{examples/run\_validation.R}) implements the checks described in Section~3.6.
 

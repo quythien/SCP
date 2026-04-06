@@ -425,6 +425,53 @@ Key findings:
 \label{fig:fourier_robustness}
 \end{figure}
 
+\section{Limitations}
+\label{sec:limitations}
+
+Current limitations of \software{DiffCircaPower} include the following.
+
+\begin{enumerate}[(i)]
+  \item \textbf{Marginal resampling of mesor and phase.} The joint distribution
+    $\hat{F}_{A,\sigma}$ is sampled as paired per-gene tuples, preserving the
+    empirical $r=A/\sigma$ distribution. However, correlations between mesor
+    $\mu_g$ or phase $\phi_g$ and the $(A,\sigma)$ pair are not modeled; mesor
+    and phase are resampled marginally from their respective empirical
+    distributions.
+  \item \textbf{Passive design specificity.} Passive-design power projections
+    depend on the pilot study's time-of-day distribution. Different tissues or
+    cohorts may have different $F_{\text{TOD}}$ and hence different
+    phase-dependent design factors $d_{g,k}$; projections should not be
+    extrapolated to cohorts with substantially different collection schedules.
+  \item \textbf{Computational cost of CircaCompare.} When CircaCompare is
+    included in a method comparison, its nonlinear fitting (${\sim}150$\,s per
+    simulation vs.\ ${\sim}2$\,s for DCP) limits the feasible number of
+    simulation replicates $N_{\text{sim}}$ in reasonable wall time.
+  \item \textbf{Cosinor model assumption.} The framework assumes sinusoidal
+    waveforms. We evaluated this by simulating data with increasing
+    non-sinusoidal distortion (second-harmonic strength $\alpha_2 \leq 0.5$,
+    covering realistic bulk RNA-seq waveforms \cite{hughes2009harmonics}) and
+    found power loss of at most 2--9\,pp for $B \geq 4$ at $N \geq 48$
+    (Supplementary~S7). The assumption is therefore not consequential for the
+    active designs considered; more extreme distortions ($\alpha_2 > 0.5$)
+    applicable to single-cell data are shown in Supplementary~S7.
+  \item \textbf{Gene independence assumption.} BH multiple-testing control
+    assumes independence or PRDS across genes, whereas gene--gene expression
+    correlations may affect calibration in practice. Empirical FDR in our
+    validation (Supplementary~S5) was at or below nominal, suggesting the
+    assumption is adequate for the scenarios examined here.
+\end{enumerate}
+
+A further limitation is that differential gene types are modeled as mutually
+exclusive: each gene is assigned to exactly one of DR or DP, and compound
+changes (e.g., a gene that simultaneously shifts phase and loses rhythmicity)
+are not simulated. Simulating each differential type in isolation is the
+standard approach in power analysis for multi-parameter tests---it allows clean,
+interpretable power curves for each test and avoids confounding from compound
+effects. The one-at-a-time design is appropriate when investigators need to know
+the power for a specific hypothesis. Future work could extend the framework to
+compound-type genes to evaluate robustness of test specificity under realistic
+multi-parameter disruption.
+
 \nocite{*}
 \bibliographystyle{plain}
 \bibliography{references}
