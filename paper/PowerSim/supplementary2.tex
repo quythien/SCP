@@ -331,4 +331,43 @@ $\{0,\tau/2\}$, so
 \]
 Thus the sine column of the design matrix is identically zero, and the design is not full rank.
 
+\section{Proof of Proposition~1 (B-invariance)}
+\label{sec:proof_b_invariance}
+
+Under balanced equally spaced sampling with $B\ge 3$ distinct time points and
+common replication $m$ per time point, so that $n=Bm$, the Fisher information
+block for $(\beta_1,\beta_2)$ is $(n/2)I_2$ by \eqref{eq:xtx_balanced}.
+The noncentrality parameter for the global rhythmicity test
+$H_0:\beta_1=\beta_2=0$ is therefore
+\[
+\lambda
+=
+\frac{1}{\sigma^2}
+\begin{pmatrix}\beta_1 & \beta_2\end{pmatrix}
+\begin{pmatrix} n/2 & 0 \\ 0 & n/2 \end{pmatrix}
+\begin{pmatrix}\beta_1 \\ \beta_2\end{pmatrix}
+=
+\frac{n}{2\sigma^2}(\beta_1^2+\beta_2^2)
+=
+\frac{n}{2}\left(\frac{A}{\sigma}\right)^2,
+\]
+which depends on $n$ and $A/\sigma$ but not separately on $B$ and $m$.
+
+For phase-invariance, using $\cos^2(x)=\{1+\cos(2x)\}/2$,
+\begin{align*}
+d(\phi)
+&=
+\frac{1}{B}\sum_{b=1}^B \cos^2(\omega t_b-\omega\phi)\\
+&=
+\frac{1}{2}
++
+\frac{1}{2B}\sum_{b=1}^B \cos\!\bigl(2\omega t_b-2\omega\phi\bigr).
+\end{align*}
+The remaining sum is zero by the finite cosine sum formula applied to the
+equally spaced grid (Section~3), so
+\[
+d(\phi)=\frac{1}{2}
+\]
+for all $\phi$.\qed
+
 \end{document}

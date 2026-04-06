@@ -368,88 +368,12 @@ $d(\phi)=1/2$, for all phases $\phi$.
 \end{proposition}
 
 \begin{proof}
-Under balanced equally spaced sampling, each distinct time point $t_b$ is
-observed $m$ times and $n=Bm$. By \eqref{eq:xtx_sumform}, it therefore
-suffices to evaluate the trigonometric sums over the equally spaced grid
-$t_b=(b-1)\tau/B$, $b=1,\ldots,B$. For this grid,
-\[
-\sum_{b=1}^B \cos(\omega t_b)=0,
-\qquad
-\sum_{b=1}^B \sin(\omega t_b)=0,
-\qquad
-\sum_{b=1}^B \cos(\omega t_b)\sin(\omega t_b)=0,
-\]
-because the sampled first-harmonic basis functions are orthogonal over one full
-cycle. In addition,
-\[
-\sum_{b=1}^B \cos^2(\omega t_b)
-=
-\sum_{b=1}^B \sin^2(\omega t_b)
-=
-\frac{B}{2}.
-\]
-Substituting these identities into \eqref{eq:xtx_sumform} gives
-\[
-X^\top X
-=
-m
-\begin{pmatrix}
-B & 0 & 0 \\
-0 & B/2 & 0 \\
-0 & 0 & B/2
-\end{pmatrix}
-=
-\operatorname{diag}(n,n/2,n/2),
-\]
-which is \eqref{eq:xtx_balanced}. Hence the $(\beta_1,\beta_2)$ block of the
-information matrix is $(n/2)I_2$, so the precision of $\hat\beta_1$ and
-$\hat\beta_2$ depends only on the total sample size $n$.
-
-For the global rhythmicity test $H_0:\beta_1=\beta_2=0$, the noncentrality
-parameter is
-\[
-\lambda
-=
-\frac{1}{\sigma^2}
-\begin{pmatrix}\beta_1 & \beta_2\end{pmatrix}
-\begin{pmatrix} n/2 & 0 \\ 0 & n/2 \end{pmatrix}
-\begin{pmatrix}\beta_1 \\ \beta_2\end{pmatrix}
-=
-\frac{n}{2\sigma^2}(\beta_1^2+\beta_2^2)
-=
-\frac{n}{2}\left(\frac{A}{\sigma}\right)^2,
-\]
-which depends on $n$ and the signal-to-noise ratio $A/\sigma$, but not
-separately on $B$ and $m$.
-
-It remains to show that the design factor is phase-invariant. Because each
-time point is replicated $m$ times,
-\[
-d(\phi)
-=
-\frac{1}{n}\sum_{i=1}^n \cos^2(\omega t_i-\omega\phi)
-=
-\frac{1}{Bm}\sum_{b=1}^B \sum_{j=1}^m \cos^2(\omega t_b-\omega\phi)
-=
-\frac{1}{B}\sum_{b=1}^B \cos^2(\omega t_b-\omega\phi).
-\]
-Using $\cos^2(x)=\{1+\cos(2x)\}/2$,
-\[
-d(\phi)
-=
-\frac{1}{2}
-\frac{1}{2B}\sum_{b=1}^B \cos\!\bigl(2\omega t_b-2\omega\phi\bigr).
-\]
-The second term vanishes because the equally spaced grid is also orthogonal for
-the shifted second-harmonic cosine sum, so
-\[
-d(\phi)=\frac{1}{2}
-\]
-for all $\phi$.
+See Supplementary~S8.
 \end{proof}
 
-Proposition~\ref{prop:b_invariance} provides the theoretical baseline for
-balanced active designs: within this restricted class, reallocating effort
+Proposition~\ref{prop:b_invariance} formalizes the design-factor result of
+\citet{zong2023circapower} in the two-group differential setting: within the
+restricted class of balanced active designs, reallocating effort
 between the number of time points $B$ and replicates $m$ at fixed $n$ has
 little effect on first-harmonic efficiency. This is a useful design heuristic,
 not the main result of the paper. Practical power under the full downstream
