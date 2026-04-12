@@ -187,12 +187,23 @@ quantify how temporal coverage affects efficiency.
 
 \emph{Step 3 --- Inference.}
 Apply the $F$-test \eqref{eq:rhythm_f_test} to every gene and BH correction at
-nominal level $\alpha$ across all $G$ genes; genes passing the threshold are
-declared rhythmic ($D_{g,s}=1$).
+nominal level $\alpha$ across all $G$ genes. Let $D_{g,s}\in\{0,1\}$ denote
+the discovery indicator ($D_{g,s}=1$ if gene $g$ is declared rhythmic in
+replicate $s$).
 
 \emph{Step 4 --- Power aggregation.}
-Average empirical power and FDR estimates across $S$ replicates to obtain
-stable design-level summaries.
+With $Z_g^R\in\{0,1\}$ the true rhythmicity status assigned in Step~2, empirical
+power is $\widehat{\mathrm{Power}}(n) = S^{-1}\sum_s\bigl(\sum_g D_{g,s}Z_g^R\bigr)/\bigl(\sum_g Z_g^R\bigr)$,
+and empirical FDR is the per-replicate fraction of false discoveries among all
+discoveries, averaged across $S$ replicates. Because gene parameters are drawn
+from the full pilot distribution $\hat{F}_{A,\sigma}$ (Step~2), the power
+estimate integrates over the complete transcriptome-wide distribution of
+signal-to-noise ratios rather than a single representative $r$; because BH
+correction is applied within each replicate (Step~3), genome-wide multiplicity
+control is captured naturally rather than treated as a post-hoc adjustment.
+The notation $D_{g,s}$ and $Z_g^R$ introduced here extends directly to the
+differential setting in Section~\ref{sec:differential}, where endpoint-specific
+superscripts are added.
 
 %% --------------------------------------------------------------------
 \subsection{Differential Circadian Analysis}
@@ -226,17 +237,18 @@ suppresses a gene's average level while leaving its oscillation intact. These
 endpoints are not mutually exclusive in real data; power analysis evaluates
 each in isolation to produce interpretable, endpoint-specific power curves.
 
-Throughout this section, genes are indexed by $g=1,\ldots,G$, subjects by
-$i$, groups by $k\in\{1,2\}$, and simulation replicates by $s=1,\ldots,S$.
-For each endpoint $E\in\{\mathrm{DR},\mathrm{DP},\mathrm{DM}\}$, $z_g^E\in\{0,1\}$
-indicates a truly differential gene and $z_g^{*,E}\in\{0,1\}$ a targeted
-differential gene whose effect exceeds a user-specified minimum threshold
-$\Delta$ (e.g., minimum amplitude ratio for DR, minimum phase shift for DP,
-or minimum mesor difference for DM); formally $z_g^{*,E} = z_g^E \cdot
-\mathbf{1}\{\mathrm{effect}_g^E \geq \Delta\}$. $D_{g,s}^E\in\{0,1\}$ denotes
-discovery by the pipeline in replicate $s$. The proportions of DR, DP, and DM
-genes are $\pi_{\mathrm{DR}}$, $\pi_{\mathrm{DP}}$, and $\pi_{\mathrm{DM}}$,
-and $\pi_{\mathrm{R}}$ denotes the proportion of jointly rhythmic (non-DR) genes.
+The notation from Section~\ref{sec:single_cohort} extends to the two-group
+setting as follows. Groups are indexed by $k\in\{1,2\}$. For each endpoint
+$E\in\{\mathrm{DR},\mathrm{DP},\mathrm{DM}\}$, the single-group discovery
+indicator $D_{g,s}$ is replaced by an endpoint-specific indicator
+$D_{g,s}^E\in\{0,1\}$, and the single-group true-status indicator $Z_g^R$ is
+replaced by $z_g^E\in\{0,1\}$ (truly differential for endpoint $E$). To
+evaluate power at a minimum biologically relevant effect size, a targeted
+indicator $z_g^{*,E} = z_g^E\cdot\mathbf{1}\{\mathrm{effect}_g^E \geq \Delta\}$
+selects genes exceeding a user-specified threshold $\Delta$ (e.g., minimum
+amplitude ratio for DR, minimum phase shift for DP, or minimum mesor difference
+for DM). The proportions of DR, DP, DM, and jointly rhythmic genes are denoted
+$\pi_{\mathrm{DR}}$, $\pi_{\mathrm{DP}}$, $\pi_{\mathrm{DM}}$, and $\pi_R$.
 
 The differential pipeline follows the same four steps as Section~\ref{sec:single_cohort},
 with Steps~1 and 4 unchanged and Steps~2--3 extended to the two-group setting.
