@@ -1,4 +1,4 @@
-# DiffCircaPower — Analysis Plan for Publication
+# SCP — Analysis Plan for Publication
 ## Date: 2026-03-19
 
 ---

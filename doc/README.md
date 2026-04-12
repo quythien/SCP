@@ -1,6 +1,6 @@
-# DiffCircaPower: Bootstrap-Based Power Analysis for Circadian Rhythm Studies
+# SCP: Simulation-Based Power Analysis for Circadian Rhythm Studies
 
-DiffCircaPower is an R framework for sample size planning and study design in **circadian differential expression** experiments. Given a small pilot RNA-seq dataset, it answers: *How many samples do I need, and how should I space my time points?*
+SCP (Simulation-based Circadian Power) is an R framework for sample size planning and study design in **circadian transcriptomic** experiments. Given a small pilot RNA-seq dataset, it answers: *How many samples do I need, and how should I space my time points?*
 
 It supports both a fast two-stage (plug-in) approach and a bootstrap approach that additionally quantifies how much uncertainty in the sample size estimate comes from having a noisy pilot.
 
@@ -13,7 +13,7 @@ Circadian studies measure gene expression at multiple times of day (Zeitgeber ti
 - **N** — number of subjects per group
 - **B** — number of distinct time points sampled
 
-DiffCircaPower helps answer:
+SCP helps answer:
 
 | Question | Method |
 |----------|--------|
@@ -24,13 +24,13 @@ DiffCircaPower helps answer:
 
 ### Detectable difference types
 
-DiffCircaPower uses the **DiffCircaPipeline (DCP)** likelihood ratio framework to detect three gene-level patterns between two groups (e.g., disease vs control, tissue A vs tissue B):
+SCP uses the **DiffCircaPipeline (DCP)** likelihood ratio framework to detect three gene-level differential patterns between two groups (e.g., disease vs control, tissue A vs tissue B):
 
 | Type | Meaning | Example |
 |------|---------|---------|
-| **DR** — Differential Rhythmicity | Gene oscillates in group A but is flat in group B | Clock-controlled gene lost in disease |
-| **DP** — Differential Phase | Same amplitude, but peak time shifts between groups | Jet-lagged vs normal tissue |
-| **DA** — Differential Amplitude | Same peak time, but swing size differs | Dampened oscillation in aging |
+| **DR** — Differential Rhythmicity | Gene oscillates in one group but is flat in the other | Clock-controlled gene lost in neurodegeneration |
+| **DP** — Differential Phase | Same amplitude, but peak time shifts between groups | Circadian misalignment or disease-altered phasing |
+| **DM** — Differential Mesor | Same rhythm, but baseline expression level differs | Inflammatory state elevating average gene expression |
 
 ### Effect size: r = A/σ
 
@@ -50,7 +50,7 @@ The key parameter is the amplitude-to-noise ratio **r = A/σ**:
 No package installation needed. Source the framework directly:
 
 ```r
-POWERSIM_ROOT <- "/path/to/DiffCircaPower"   # set to your local clone path
+POWERSIM_ROOT <- "/path/to/SCP"   # set to your local clone path
 setwd(POWERSIM_ROOT)
 source_dir <- file.path(getwd(), "code")
 old_wd <- setwd(source_dir); source("setup.R"); setwd(old_wd)
@@ -239,7 +239,7 @@ estCircadianParamTwoGroup(data_1, data_2, times_1, times_2,
 # Single group — use this for rhythmicity detection power only
 estCircadianParam(data, times, period = 24, prop_DR = 0.1, min_rhythm_pval = 0.1, ...)
 ```
-Both return a `CircadianBioOptions` object with per-gene empirical distributions of amplitude (A), noise (σ), effect size (r = A/σ), phase (φ), and the proportion of DR/DP/DA genes estimated from the pilot. A and σ are stored as paired gene-level tuples (`sigma_rhythmic`) so that downstream simulation preserves the empirical r = A/σ distribution via joint sampling.
+Both return a `CircadianBioOptions` object with per-gene empirical distributions of amplitude (A), noise (σ), effect size (r = A/σ), phase (φ), and the proportion of DR/DP/DM genes estimated from the pilot. A and σ are stored as paired gene-level tuples (`sigma_rhythmic`) so that downstream simulation preserves the empirical r = A/σ distribution via joint sampling.
 
 ### Options objects
 ```r
@@ -283,7 +283,7 @@ runFourierDeviationPower(
 ## File Structure
 
 ```
-DiffCircaPower/
+SCP/
 ├── doc/
 │   ├── README.md          # This file
 │   ├── ANALYSIS_PLAN.md   # Publication datasets, research questions, script map
@@ -295,7 +295,7 @@ DiffCircaPower/
 │   ├── bootstrap_sim.R    # Bootstrap logic, compareDesignApproaches
 │   ├── estimation.R       # estCircadianParam, estCircadianParamTwoGroup
 │   ├── simulation.R       # simCircadianDiff — joint A-sigma sampling
-│   ├── detection.R        # DCP pipeline (DR/DP/DA likelihood ratio tests)
+│   ├── detection.R        # DCP pipeline (DR/DP/DM likelihood ratio tests)
 │   ├── fourier_sim.R      # runFourierDeviationPower
 │   ├── design_comparison.R # plotDesignComparison
 │   └── utils.R            # prepCircadianData, fitCosinorAll, helpers
@@ -316,7 +316,7 @@ DiffCircaPower/
 │   └── exploratory/       # Dataset-specific and sensitivity analyses
 ├── paper/
 │   └── PowerSim/
-│       ├── DCP.tex               # Main manuscript (working file)
+│       ├── SCP.tex               # Main manuscript (working file)
 │       ├── supplementary.tex     # Supplementary material
 │       ├── references.bib        # Bibliography
 │       └── figures/              # All publication figures (PDF)

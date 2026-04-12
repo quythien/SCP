@@ -1,4 +1,4 @@
-# DiffCircaPower — Change Log
+# SCP — Change Log
 
 ---
 
@@ -235,7 +235,7 @@ Publication scripts were renamed with numeric prefixes:
 |-----------------------|-----------------------------|---------|
 | `run_validation.R`    | `01_validation.R`           | Type I error, QQ plots, monotonicity, FDR control |
 | `run_calibration.R`   | `02_calibration.R`          | Two-stage vs bootstrap calibration on synthetic data |
-| `run_pipeline.R`      | `03_power_core.R`           | Core DR/DP/DA power from real pilot data |
+| `run_pipeline.R`      | `03_power_core.R`           | Core DR/DP/DM power from real pilot data |
 | `run_pipeline2.R`     | `04_power_design.R`         | Bootstrap design grid + sensitivity on real pilot |
 
 ---
@@ -285,7 +285,7 @@ Publication scripts were renamed with numeric prefixes:
   Fixed by wrapping with `matrix(..., nrow = n_N, ncol = n_B)`.
 
 ### `code/estimation.R` — `estCircadianParam()`
-- **Graceful rhythmic budget handling**: if `prop_DR + prop_DP + prop_DA > prop_rhythmic`
+- **Graceful rhythmic budget handling**: if `prop_DR + prop_DP + prop_DM > prop_rhythmic`
   (estimated from pilot data), the differential proportions are now silently scaled down
   proportionally to fit the budget, with an informative `message()`.
   Previously this caused a hard error from `CircadianBioOptions()`.
@@ -319,7 +319,7 @@ B is not identifiable in passive mode. `04_power_design.R` uses `B_values = 4L` 
 placeholder and sweeps only N. This is documented in comments in the script.
 
 ### `prop_rhythmic` budget
-`CircadianBioOptions` enforces `prop_DR + prop_DP + prop_DA <= prop_rhythmic` because all
+`CircadianBioOptions` enforces `prop_DR + prop_DP + prop_DM <= prop_rhythmic` because all
 differential genes must be rhythmic in at least one group. When estimating from real pilot
 data, the empirical rhythmic fraction may be less than the user-specified differential
 proportions. `estCircadianParam` now handles this gracefully.
@@ -343,7 +343,7 @@ code/
 examples/publication/
   01_validation.R        — self-contained, QQ plots, timestamped output
   02_calibration.R       — panels="A" in plotDesignComparison call
-  03_power_core.R        — Section 10 (DCP vs CircaCompare) removed; DA removed; DR+DP only
+  03_power_core.R        — Section 10 (DCP vs CircaCompare) removed; DR+DP only
   04_power_design.R      — cat/sprintf fix, single B for passive design
 ```
 
