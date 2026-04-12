@@ -51,13 +51,13 @@ These gaps motivate a unified framework for circadian study design that integrat
 \textsc{SCP} (Simulation-based Circadian Power) provides a unified framework
 for sample-size planning in circadian transcriptomic studies. For single-cohort
 rhythmicity detection, \textsc{SCP} extends the closed-form
-\textsc{CircaPower} calculation to the transcriptome-wide setting using
-pilot-calibrated gene-level effect sizes. For differential circadian analysis,
-where no closed-form solution exists, \textsc{SCP} uses pilot-data-driven
-simulation to evaluate power and FDR under the full multi-stage inference
-pipeline. Both modes follow the prospective simulation philosophy of
-\textsc{PROPER} \citep{wu2015proper}, reporting power stratified by
-signal-to-noise ratio rather than a single marginal average.
+\textsc{CircaPower} formula to the transcriptome-wide setting by estimating
+gene-specific effect sizes from a pilot dataset and averaging power across the
+full transcriptome-wide distribution of signal-to-noise ratios. For
+differential circadian analysis, where no closed-form solution exists because
+the multi-stage inference pipeline creates intractable dependence between
+rhythmicity screening and endpoint testing, \textsc{SCP} evaluates power and
+FDR via pilot-data-driven simulation.
 
 %% --------------------------------------------------------------------
 \subsection{SCP for Circadian Biomarker Detection (Single Cohort)}
@@ -159,7 +159,8 @@ $\mathcal{G}_R = \{g : \hat{q}_g < 0.10\}$.
 \item \textbf{Simulation-based (recommended):} Using the pilot-estimated
   empirical distributions, simulate single-group datasets, apply the $F$-test
   with BH correction, and aggregate empirical power and FDR across simulation
-  replicates (Steps~I--II below, applied to a single group). This naturally
+  replicates (Step~I and the data simulation step below, applied to a single
+  group). This naturally
   accounts for multiplicity correction, passive design, and the full
   heterogeneity of $(A_g, \sigma_g)$ jointly.
 \end{enumerate}
@@ -189,7 +190,7 @@ $\hat{\Psi} = (\hat{F}_\mu, \hat{F}_{A,\sigma}, \hat{F}_\phi,
 where $\hat{F}_{\mathrm{TOD}}$ is the empirical collection-time distribution
 (for passive designs) and $\hat{\pi}_R = |\mathcal{G}_R|/G_0$.
 
-\paragraph{Step II: Single-group data simulation.}
+\paragraph{Data simulation.}
 For simulation replicate $s$ and candidate sample size $n$, we generate
 $G$ genes as follows. Draw $\mu_g^{(s)}\sim\hat{F}_\mu$,
 $(A_g^{(s)},\sigma_g^{(s)})\sim\hat{F}_{A,\sigma}$, and
@@ -217,24 +218,34 @@ coverage affects efficiency.
 
 When the goal is to compare rhythmic patterns between two groups (e.g.,
 disease vs.\ control), single-cohort power calculations are insufficient.
-Differential circadian inference is multi-stage and genome-wide: it requires
-rhythmicity screening, differential testing for each endpoint, and
-multiplicity correction. Because this pipeline has no tractable closed-form
-power expression, \textsc{SCP} evaluates operating characteristics via
-calibrated simulation.
+Differential circadian inference is multi-stage: the TOJR classifier assigns
+each gene to a conditional pool based on per-group $p$-values, and endpoint
+tests are then applied within those data-derived strata. This conditioning
+creates multi-stage dependence between rhythmicity screening and downstream
+testing that renders the joint power distribution analytically intractable.
+\textsc{SCP} therefore evaluates operating characteristics via calibrated
+simulation of the full pipeline.
 
 \paragraph{Differential endpoints.}
 For two groups $k\in\{1,2\}$ and gene $g$, \textsc{SCP} supports three
 differential endpoints:
 \begin{itemize}
 \item \textbf{DR} (differential rhythmicity): gene is rhythmic in one group
-  but not the other (gain or loss of rhythmicity).
+  but not the other (gain or loss of rhythmicity). Biologically, DR captures
+  clock gene disruption — for example, core oscillator genes that cycle in
+  healthy tissue but lose rhythmicity in tumor or neurodegenerative tissue.
 \item \textbf{DP} (differential phase): gene is rhythmic in both groups but
-  with a shifted acrophase, $\phi_{g,1}\neq\phi_{g,2}$.
+  with a shifted acrophase, $\phi_{g,1}\neq\phi_{g,2}$. DP corresponds to
+  a change in the timing of peak expression, as seen in circadian misalignment,
+  shift work, or disease states that alter clock-output phasing without
+  abolishing the oscillation.
 \item \textbf{DM} (differential mesor): gene has the same rhythmic structure
   in both groups but a shifted baseline expression level,
   $\mu_{g,1}\neq\mu_{g,2}$. DM is the circadian analogue of differential
-  expression (DE) in standard RNA-seq analysis.
+  expression (DE) in standard RNA-seq analysis: the gene oscillates similarly
+  in both groups but at a different average level, as occurs when an
+  inflammatory or disease state elevates or suppresses a gene's baseline
+  while leaving its rhythmic pattern intact.
 \end{itemize}
 These endpoints are not mutually exclusive in real data; however, power
 analysis evaluates each in isolation to produce interpretable, endpoint-specific
@@ -245,7 +256,10 @@ We index genes by $g=1,\ldots,G$, subjects by $i$, groups by $k\in\{1,2\}$,
 and simulation replicates by $s=1,\ldots,S$. For each endpoint
 $E\in\{\mathrm{DR},\mathrm{DP},\mathrm{DM}\}$, let $z_g^E\in\{0,1\}$ indicate
 a truly differential gene and $z_g^{*,E}\in\{0,1\}$ a targeted differential
-gene whose effect exceeds a threshold. Let $D_{g,s}^E\in\{0,1\}$ indicate
+gene whose effect exceeds a user-specified minimum threshold $\Delta$
+(e.g., minimum amplitude ratio for DR, minimum phase shift for DP, or minimum
+mesor difference for DM); formally $z_g^{*,E} = z_g^E \cdot
+\mathbf{1}\{\mathrm{effect}_g^E \geq \Delta\}$. Let $D_{g,s}^E\in\{0,1\}$ indicate
 discovery by the pipeline in replicate $s$. The proportions of DR, DP, and DM
 genes are $\pi_{\mathrm{DR}}$, $\pi_{\mathrm{DP}}$, and $\pi_{\mathrm{DM}}$,
 and $\pi_{\mathrm{R}}$ denotes the proportion of jointly rhythmic
@@ -254,13 +268,17 @@ and $\pi_{\mathrm{R}}$ denotes the proportion of jointly rhythmic
 \paragraph{Step II: Two-group data generation.}
 Building on the pilot summary $\hat{\Psi}$ from \S\ref{sec:single_cohort}, we
 extend Step~II to the two-group setting. Each gene is assigned a latent type
-$T_g\in\{0,1,2,3,4,5\}$ using proportions
-$(\pi_{\mathrm{DR}},\pi_R,\pi_{\mathrm{DP}},\pi_{\mathrm{DM}})$:
+$T_g\in\{0,1,2,3,4,5\}$ with probabilities determined by the four user-supplied
+proportions $(\pi_{\mathrm{DR}},\pi_R,\pi_{\mathrm{DP}},\pi_{\mathrm{DM}})$:
+$P(T_g=2)=P(T_g=3)=\pi_{\mathrm{DR}}/2$ (DR genes split equally between
+gain and loss of rhythmicity), $P(T_g=1)=\pi_R$, $P(T_g=4)=\pi_{\mathrm{DP}}$,
+$P(T_g=5)=\pi_{\mathrm{DM}}$, and
+$P(T_g=0)=1-\pi_{\mathrm{DR}}-\pi_R-\pi_{\mathrm{DP}}-\pi_{\mathrm{DM}}$.
 \begin{itemize}
   \item $T_g=0$: arrhythmic in both groups ($A_{g,1}=A_{g,2}=0$).
   \item $T_g=1$: jointly rhythmic, no differential pattern.
-  \item $T_g=2$: rhythmic in group~1 only (DR).
-  \item $T_g=3$: rhythmic in group~2 only (DR).
+  \item $T_g=2$: rhythmic in group~1 only (DR, loss of rhythmicity).
+  \item $T_g=3$: rhythmic in group~2 only (DR, gain of rhythmicity).
   \item $T_g=4$: phase-shifted; $\phi_{g,2}=(\phi_{g,1}+\Delta\phi_g)\bmod 24$,
     $\Delta\phi_g\sim\mathrm{Unif}(\Delta\phi_{\min},\Delta\phi_{\max})$ (DP).
   \item $T_g=5$: differential mesor; same rhythmic structure in both groups
@@ -268,6 +286,9 @@ $(\pi_{\mathrm{DR}},\pi_R,\pi_{\mathrm{DP}},\pi_{\mathrm{DM}})$:
     $\mu_{g,2}=\mu_{g,1}+\Delta\mu_g$,
     $\Delta\mu_g\sim\mathrm{Unif}(\Delta\mu_{\min},\Delta\mu_{\max})$ (DM).
 \end{itemize}
+For $T_g=3$ genes (rhythmic in group~2 only), the group-2 amplitude and phase
+are drawn independently from the pilot distributions:
+$A_g^{*,(s)}\sim\hat{F}_{A,\sigma}$ and $\phi_g^{*,(s)}\sim\hat{F}_\phi$.
 
 The full type-to-parameter mapping is given in Table~\ref{tab:type_mapping}.
 Observations are generated from the two-group cosinor model
@@ -333,8 +354,11 @@ is reserved for the endpoint-specific tests below.
 \emph{Stage 3 --- Endpoint testing.}
 \begin{itemize}
 \item \textbf{DR}: For all genes with $\hat{Z}_g\neq\texttt{arrhy}$, test
-  $H_0: R_{g,1}^2 = R_{g,2}^2$ by a $\Delta R^2$ likelihood ratio test
-  \citep{ding2021likelihood}, followed by BH correction across tested genes.
+  $H_0: R_{g,1}^2 = R_{g,2}^2$, where $R_{g,k}^2 = 1 -
+  \mathrm{RSS}_{g,k}/\mathrm{TSS}_{g,k}$ is the proportion of variance
+  explained by the cosinor fit in group $k$, using a $\Delta R^2$ likelihood
+  ratio test \citep{ding2021likelihood}, followed by BH correction across
+  tested genes.
 \item \textbf{DP}: For genes with $\hat{Z}_g=\texttt{both}$, test
   $H_0: A_{g,1}=A_{g,2},\,\phi_{g,1}=\phi_{g,2}$ jointly, then apply a
   post-hoc phase test with \v{S}id\'{a}k correction; BH is applied within the
@@ -430,7 +454,9 @@ bootstrap replicate $b=1,\ldots,R_{\mathrm{boot}}$:
   with replacement to form $\widehat{\Theta}^{(b)}$.
 \item Reconstruct bootstrap empirical distributions
   $(\hat{F}_\mu^{(b)}, \hat{F}_{A,\sigma}^{(b)}, \hat{F}_\phi^{(b)})$.
-\item Run Steps~II--IV over the design grid using bootstrap inputs, yielding
+\item Run the data generation and inference pipeline (Steps~II--IV) over the
+  design grid using bootstrap inputs, averaging over $S_{\mathrm{inner}}$ inner
+  simulation replicates to obtain
   $\widehat{\mathrm{Power}}^{E,(b)}(n,B)
   = S_{\mathrm{inner}}^{-1}\sum_s \widehat{\mathrm{TPower}}_s^{E,(b)}(n,B)$.
 \end{enumerate}
