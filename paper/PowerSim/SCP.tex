@@ -54,10 +54,10 @@ rhythmicity detection, \textsc{SCP} extends the closed-form
 \textsc{CircaPower} formula to the transcriptome-wide setting by estimating
 gene-specific effect sizes from a pilot dataset and averaging power across the
 full transcriptome-wide distribution of signal-to-noise ratios. For
-differential circadian analysis, where no closed-form solution exists because
-the multi-stage inference pipeline creates intractable dependence between
-rhythmicity screening and endpoint testing, \textsc{SCP} evaluates power and
-FDR via pilot-data-driven simulation.
+differential circadian analysis, the multi-stage inference pipeline creates
+dependence between rhythmicity screening and endpoint testing that cannot be
+captured in closed form; simulation therefore provides a natural and necessary
+framework for evaluating power and FDR under realistic study conditions.
 
 %% --------------------------------------------------------------------
 \subsection{SCP for Circadian Biomarker Detection (Single Cohort)}
@@ -156,13 +156,13 @@ $\mathcal{G}_R = \{g : \hat{q}_g < 0.10\}$.
   This is fast and directly extends \textsc{CircaPower} to heterogeneous $r$,
   but does not model genome-wide FDR.
 
-\item \textbf{Simulation-based (recommended):} Using the pilot-estimated
-  empirical distributions, simulate single-group datasets, apply the $F$-test
-  with BH correction, and aggregate empirical power and FDR across simulation
-  replicates (Step~I and the data simulation step below, applied to a single
-  group). This naturally
-  accounts for multiplicity correction, passive design, and the full
-  heterogeneity of $(A_g, \sigma_g)$ jointly.
+\item \textbf{Simulation-based (recommended):} Simulate single-group datasets
+  from the pilot-estimated empirical distributions, apply the $F$-test with BH
+  correction, and aggregate empirical power and FDR across replicates (Step~I
+  and the data simulation step below). Simulation naturally captures
+  genome-wide multiplicity correction, the full joint heterogeneity of
+  $(A_g, \sigma_g)$, and passive-design timing variability — features that
+  are not accessible to the closed-form approach.
 \end{enumerate}
 
 \paragraph{Step I: Pilot parameter estimation.}
@@ -217,14 +217,16 @@ coverage affects efficiency.
 \label{sec:differential}
 
 When the goal is to compare rhythmic patterns between two groups (e.g.,
-disease vs.\ control), single-cohort power calculations are insufficient.
-Differential circadian inference is multi-stage: the TOJR classifier assigns
-each gene to a conditional pool based on per-group $p$-values, and endpoint
-tests are then applied within those data-derived strata. This conditioning
-creates multi-stage dependence between rhythmicity screening and downstream
-testing that renders the joint power distribution analytically intractable.
-\textsc{SCP} therefore evaluates operating characteristics via calibrated
-simulation of the full pipeline.
+disease vs.\ control), the inference problem changes fundamentally. The
+analysis pipeline is multi-stage: a joint rhythmicity classifier first assigns
+each gene to a conditional pool based on per-group $p$-values, and
+endpoint-specific tests are then applied within those data-derived strata.
+Because the conditional structure of the pipeline cannot be expressed in closed
+form, power and FDR cannot be derived analytically even for simple two-group
+designs. This motivates a simulation-based framework in which the entire
+analysis pipeline is evaluated numerically, making it possible to characterize
+study performance under the actual inference procedure and under realistic
+parameter settings drawn from pilot data.
 
 \paragraph{Differential endpoints.}
 For two groups $k\in\{1,2\}$ and gene $g$, \textsc{SCP} supports three
