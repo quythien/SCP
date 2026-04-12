@@ -15,7 +15,7 @@
 
 \newcommand{\software}[1]{\texttt{#1}}
 
-\title{Supplementary Materials for:\\DiffCircaPower: Bootstrap-Based Power Analysis for Circadian Rhythm Studies}
+\title{Supplementary Materials for:\\SCP: Simulation-Based Power Analysis for Circadian Rhythm Studies}
 \author{}
 \date{}
 
@@ -377,31 +377,6 @@ Y_{g,k,i}(t_i) = M_g + A_{g,k}\cos(\omega t_i - \omega\phi_{g,k}) + \varepsilon_
 
 The two-stage seeding strategy (steps 1 and 4) ensures that gene-type assignments and baseline biological parameters are identical across sample sizes within a simulation, while the $n$-dependent reseed in step~4 introduces appropriate stochastic variation in collection times and expression noise. In particular, the initial seed fixes all $n$-independent biological quantities---such as gene-type indicators and baseline parameters $(M_g, A_g, \sigma_g, \phi_g)$---so that the true differential structure is held constant across $n$. The reseed of the form $s + 7919n$ then produces independent realizations of sampling times $t_i$ and residual errors $\varepsilon_{gi}$ for each sample size, preventing the dataset at $n_2 > n_1$ from being a simple extension of the dataset at $n_1$. Consequently, comparisons of $\mathrm{Power}(n)$ isolate the effect of sample size on sampling variability while keeping the underlying biological configuration fixed.
 
-%% ====================================================================
-\section{Amplitude Fold-Change Sensitivity: Full Results}
-\label{sec:amp_sweep}
-%% ====================================================================
-
-Table~\ref{tab:amp_sweep_power} presents marginal DA power across 5 fold-change values and 5 sample sizes, corresponding to the main text Figure~4. Power is negligible for 1.25$\times$ fold-changes ($<2\%$ at all $n \leq 100$), rises sharply for 2$\times$ (4.7\%--54.2\%), and approaches the main DA scenario levels at 3$\times$--4$\times$ (compare to Table~\ref{tab:da_summary} main DA results at $[2,4]\times$). Three patterns are notable: (1) even a 2$\times$ fold-change crosses 33\% power at $n \geq 80$; (2) the 3$\times$ and 4$\times$ results are lower than the main DA scenario (Table~\ref{tab:da_summary}) because the sweep uses \emph{fixed} fold-change ($\text{amp\_diff} = (fc, fc)$) while the main scenario draws from a \emph{uniform} $[2,4]\times$ distribution, yielding higher average effect; and (3) at $n=100$, both 3$\times$ and 4$\times$ exceed 78\%, confirming that moderate-to-large amplitude differences are well powered at feasible sample sizes.
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{r|rrrrr}
-\toprule
-& \multicolumn{5}{c}{Amplitude Fold-Change} \\
-$n$ & 1.25$\times$ & 1.5$\times$ & 2$\times$ & 3$\times$ & 4$\times$ \\
-\midrule
-20  & 0.1  & 0.7  & 4.7  & 18.4 & 27.0 \\
-40  & 0.4  & 2.5  & 19.2 & 45.4 & 53.3 \\
-60  & 0.8  & 5.6  & 33.4 & 61.8 & 67.6 \\
-80  & 1.1  & 9.6  & 44.9 & 72.1 & 76.4 \\
-100 & 1.7  & 14.3 & 54.2 & 78.3 & 81.5 \\
-\bottomrule
-\end{tabular}
-\caption{DA marginal power (\%) by amplitude fold-change and sample size (FDR 5\%, DCP method, 50 simulations, fixed fold-change $\text{amp\_diff} = (fc, fc)$). Power is negligible for 1.25$\times$ and grows rapidly from 2$\times$ onward.}
-\label{tab:amp_sweep_power}
-\end{table}
 
 \section{Robustness of the Cosinor Model Assumption}
 \label{sec:fourier_robustness}
@@ -425,10 +400,99 @@ Key findings:
 \label{fig:fourier_robustness}
 \end{figure}
 
+
+%% ====================================================================
+\section{Design Matrix Properties and B-Invariance}
+\label{sec:b_invariance}
+%% ====================================================================
+
+This section provides the mathematical derivation underlying Proposition~1
+(B-invariance) stated in the main text. Under balanced equally spaced sampling
+with $B\geq 3$ distinct time points, the Fisher information block for the
+harmonic coefficients is $\frac{n}{2}I_2$, independent of $B$.
+
+\subsection{Setup and notation}
+
+Sampling times for individual subjects are denoted by $t_i$, $i=1,\dots,n$.
+Distinct sampling times are denoted by $t_b$, $b=1,\dots,B$, with replicate
+counts $m_b$, so $n=\sum_{b=1}^B m_b$. The harmonic basis vector is
+$f(t)=[1,\cos(\omega t),\sin(\omega t)]^\top$ with $\omega=2\pi/24$.
+For evenly spaced sampling over one full 24\,h cycle,
+$t_b=(b-1)\cdot 24/B$ and $\theta_b:=\omega t_b=2\pi(b-1)/B$.
+
+\subsection{Balanced evenly spaced design: \texorpdfstring{$X^\top X$}{X'X}}
+
+For one group and one gene with design matrix
+$X_{ij}=f(t_i)_j$, the $(2,2)$ and $(3,3)$ diagonal blocks of $X^\top X$
+involve sums of $\cos^2(\theta_b)$ and $\sin^2(\theta_b)$ over the equally
+spaced grid. Using $\cos^2\theta=\tfrac{1+\cos(2\theta)}{2}$ and the finite
+cosine sum formula with $d=4\pi/B$:
+\[
+\sum_{k=0}^{B-1}\cos\!\left(\frac{4\pi k}{B}\right)
+=
+\frac{\sin(2\pi)}{\sin(2\pi/B)}\cos\!\left(\frac{2\pi(B-1)}{B}\right)
+= 0 \quad (B\geq 3),
+\]
+one obtains $\sum_{b=1}^B \cos^2(\theta_b)=B/2$ and by the same argument
+$\sum_{b=1}^B \sin^2(\theta_b)=B/2$. The off-diagonal terms
+$\sum_{b=1}^B\cos(\theta_b)$, $\sum_{b=1}^B\sin(\theta_b)$, and
+$\sum_{b=1}^B\sin(\theta_b)\cos(\theta_b)$ all vanish by the finite
+trigonometric sum formulas (requiring $B\geq 3$ so that $\sin(2\pi/B)\neq 0$
+and $\sin(\pi/B)\neq 0$). With balanced replication $m_b\equiv m$ and $n=Bm$:
+\begin{equation}
+X^\top X
+=
+\begin{pmatrix}
+n & 0 & 0\\
+0 & n/2 & 0\\
+0 & 0 & n/2
+\end{pmatrix}.
+\label{eq:xtx_balanced}
+\end{equation}
+
+The condition $B\geq 3$ is necessary: at $B=2$ the sampling times are
+$\{0,\tau/2\}$, the sine column of $X$ is identically zero, and the design
+is rank-deficient.
+
+\subsection{Proof of Proposition~1 (B-invariance)}
+\label{sec:proof_b_invariance}
+
+Under balanced equally spaced sampling with $B\geq 3$ distinct time points and
+common replication $m$ per time point ($n=Bm$), the Fisher information block
+for $(\beta_1,\beta_2)$ is $(n/2)I_2$ by \eqref{eq:xtx_balanced}. The
+noncentrality parameter for the global rhythmicity test
+$H_0:\beta_1=\beta_2=0$ is therefore
+\[
+\lambda
+=
+\frac{1}{\sigma^2}
+\begin{pmatrix}\beta_1 & \beta_2\end{pmatrix}
+\begin{pmatrix} n/2 & 0 \\ 0 & n/2 \end{pmatrix}
+\begin{pmatrix}\beta_1 \\ \beta_2\end{pmatrix}
+=
+\frac{n}{2\sigma^2}(\beta_1^2+\beta_2^2)
+=
+\frac{n}{2}\!\left(\frac{A}{\sigma}\right)^{\!2},
+\]
+which depends on $n$ and $A/\sigma$ but not separately on $B$ and $m$.
+
+For phase-invariance, using $\cos^2(x)=\{1+\cos(2x)\}/2$,
+\[
+d(\phi)
+=
+\frac{1}{B}\sum_{b=1}^B \cos^2(\omega t_b-\omega\phi)
+=
+\frac{1}{2}
++
+\frac{1}{2B}\sum_{b=1}^B \cos\!\bigl(2\omega t_b-2\omega\phi\bigr).
+\]
+The remaining sum is zero by the finite cosine sum formula applied to the
+equally spaced grid (the argument above), so $d(\phi)=1/2$ for all $\phi$.\qed
+
 \section{Limitations}
 \label{sec:limitations}
 
-Current limitations of \software{DiffCircaPower} include the following.
+Current limitations of \textsc{SCP} include the following.
 
 \begin{enumerate}[(i)]
   \item \textbf{Marginal resampling of mesor and phase.} The joint distribution
@@ -471,6 +535,40 @@ effects. The one-at-a-time design is appropriate when investigators need to know
 the power for a specific hypothesis. Future work could extend the framework to
 compound-type genes to evaluate robustness of test specificity under realistic
 multi-parameter disruption.
+
+
+%% ====================================================================
+\section{Amplitude Fold-Change Sensitivity (Historical)}
+\label{sec:amp_sweep}
+%% ====================================================================
+
+The following results were produced under an earlier version of the framework
+that used Differential Amplitude (DA) as an endpoint. The current framework
+uses Differential Mesor (DM) instead. These results are retained for reference.
+
+Table~\ref{tab:amp_sweep_power} presents marginal DA power across 5 fold-change
+values and 5 sample sizes. Power is negligible for 1.25$\times$ fold-changes
+($<2\%$ at all $n \leq 100$), rises sharply for 2$\times$ (4.7\%--54.2\%),
+and approaches main DA scenario levels at 3$\times$--4$\times$.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{r|rrrrr}
+\toprule
+& \multicolumn{5}{c}{Amplitude Fold-Change} \\
+$n$ & 1.25$\times$ & 1.5$\times$ & 2$\times$ & 3$\times$ & 4$\times$ \\
+\midrule
+20  & 0.1  & 0.7  & 4.7  & 18.4 & 27.0 \\
+40  & 0.4  & 2.5  & 19.2 & 45.4 & 53.3 \\
+60  & 0.8  & 5.6  & 33.4 & 61.8 & 67.6 \\
+80  & 1.1  & 9.6  & 44.9 & 72.1 & 76.4 \\
+100 & 1.7  & 14.3 & 54.2 & 78.3 & 81.5 \\
+\bottomrule
+\end{tabular}
+\caption{DA marginal power (\%) by amplitude fold-change and sample size.}
+\label{tab:amp_sweep_power}
+\end{table}
 
 \nocite{*}
 \bibliographystyle{plain}
