@@ -26,11 +26,11 @@
 \maketitle
 
 \begin{abstract}
-Circadian disruption is a hallmark of many human diseases, yet detecting condition-specific changes in gene rhythms remains challenging. Circadian transcriptomic studies aim to identify rhythmic genes within a condition or characterize differences across conditions, including differential rhythmicity and phase shifts, but prospective study design remains underdeveloped. Existing approaches (e.g., \software{CircaPower}) provide analytical power calculations for single-condition studies under a fixed signal-to-noise ratio $r = A/\sigma$, but do not extend to differential analysis or account for gene-level heterogeneity.
+Circadian disruption is a hallmark of many human diseases, yet detecting condition-specific changes in gene rhythms remains challenging. Circadian transcriptomic studies aim to identify rhythmic genes within a condition or characterize differences across conditions, including differential rhythmicity and phase shifts, but prospective study design remains underdeveloped. Existing approaches (e.g., \textsc{CircaPower}) provide analytical power calculations for single-condition studies under a fixed signal-to-noise ratio $r = A/\sigma$, but do not extend to differential analysis or account for gene-level heterogeneity.
 
-We present \software{SCP} (Simulation-based Circadian Power), a unified framework for sample-size planning in circadian transcriptomic studies. \software{SCP} provides closed-form power calculations for circadian biomarker detection, building upon \software{CircaPower}, and uses pilot-data-driven simulation to evaluate power and false discovery rate (FDR) for differential circadian analysis under both active and passive designs. A bootstrap procedure quantifies uncertainty in power curves and sample-size recommendations.
+We present \textsc{SCP} (Simulation-based Circadian Power), a unified framework for sample-size planning in circadian transcriptomic studies. \textsc{SCP} provides closed-form power calculations for circadian biomarker detection, building upon \textsc{CircaPower}, and uses pilot-data-driven simulation to evaluate power and false discovery rate (FDR) for differential circadian analysis under both active and passive designs. A bootstrap procedure quantifies uncertainty in power curves and sample-size recommendations.
 
-Applied to human prefrontal cortex data (19{,}998 genes; $n = 62$), power to detect differential rhythmicity remains limited (30.5\% at $n = 100$ per group, FDR 5\%), with substantial variation across genes. \software{SCP} enables principled design of circadian transcriptomic studies.
+Applied to human prefrontal cortex data (19{,}998 genes; $n = 62$), power to detect differential rhythmicity remains limited (30.5\% at $n = 100$ per group, FDR 5\%), with substantial variation across genes. \textsc{SCP} enables principled design of circadian transcriptomic studies.
 \end{abstract}
 %% ====================================================================
 \section{Introduction}
@@ -48,634 +48,422 @@ These gaps motivate a unified framework for circadian study design that integrat
 \section{Methods}
 %% ====================================================================
 
-We evaluate how experimental design affects operating characteristics in
-differential circadian analysis using a simulation-based framework. Because
-differential circadian inference is multi-stage---rhythmicity screening,
-followed by DR/DP testing and multiplicity adjustment---closed-form power
-calculations are generally unavailable for the full analysis pipeline. We
-therefore assess power and error control empirically under realistic design
-settings using simulations calibrated to pilot data.
+\textsc{SCP} (Simulation-based Circadian Power) provides a unified framework
+for sample-size planning in circadian transcriptomic studies. For single-cohort
+rhythmicity detection, \textsc{SCP} extends the closed-form
+\textsc{CircaPower} calculation to the transcriptome-wide setting using
+pilot-calibrated gene-level effect sizes. For differential circadian analysis,
+where no closed-form solution exists, \textsc{SCP} uses pilot-data-driven
+simulation to evaluate power and FDR under the full multi-stage inference
+pipeline. Both modes follow the prospective simulation philosophy of
+\textsc{PROPER} \citep{wu2015proper}, reporting power stratified by
+signal-to-noise ratio rather than a single marginal average.
 
-The framework has two components. First, we generate simulated circadian
-datasets using flexible gene-level models calibrated to pilot data, preserving
-effect-size heterogeneity, noise heterogeneity, and variation in rhythmicity
-strength across genes. Second, we apply the full
-\software{DiffCircaPipeline} (DCP) to each simulated dataset and summarize
-operating characteristics across design scenarios. The simulation model and
-evaluation procedure are modular, allowing alternative simulators or detection
-methods to be paired with the same pipeline-level power assessment.
+%% --------------------------------------------------------------------
+\subsection{SCP for Circadian Biomarker Detection (Single Cohort)}
+\label{sec:single_cohort}
 
-Rather than summarizing performance by a single overall power curve, we
-emphasize prospective power evaluation across a grid of realistic scenarios
-that vary sample size, sampling schedule, screening rules, and gene-filtering
-settings. We also report conditional power summaries stratified by rhythmicity
-strength, e.g.\ $r_{g,k}=A_{g,k}/\sigma_{g,k}$, which are often more
-informative for study design than a single marginal average. This strategy follows
-the prospective simulation-based philosophy of \software{PROPER}
-\citep{wu2015proper}.
-
-\software{CircaPower} provides the baseline power-calculation intuition in a
-one-group setting: under fixed Type~I error control, power is determined by
-sample size, rhythmic proportion, intrinsic effect size, and sampling design.
-In that framework, the intrinsic effect size is summarized by a single scalar
-$r=A/\sigma$. This simplification is often inadequate for transcriptomic
-circadian studies, where amplitude and noise vary substantially across genes,
-so the corresponding signal-to-noise ratio is not well represented by one
-common value. \software{DiffCircaPower} generalizes this framework by using
-pilot data to estimate the empirical distribution of gene-level effects. In
-particular, instead of assuming a single fixed $r$, we simulate genes from the
-pilot-estimated distribution of $(A,\sigma)$, so that each simulated gene has
-its own intrinsic effect size $r=A/\sigma$. Power is then summarized at the
-transcriptome level across this heterogeneous gene population, rather than for
-a single representative effect size.
-
-% --------------------------------------------------------------------
-\subsection{Notations and Terminology}
-\label{sec:notation}
-
-We index genes by $g=1,\ldots,G$, subjects by $i$, groups by
-$k\in\{1,2\}$, and simulation replicates by $s=1,\ldots,S$. Time-of-day is
-denoted by $t\in[0,24)$ hours, with period $\tau=24$ and angular frequency
-$\omega=2\pi/\tau$. Gene-level cosinor parameters are mesor $\mu_{g,k}$,
-amplitude $A_{g,k}$, acrophase $\phi_{g,k}$, and noise level $\sigma_{g,k}$,
-with signal-to-noise ratio $r_{g,k}=A_{g,k}/\sigma_{g,k}$.
-
-To connect our framework to \software{CircaPower}, recall that under fixed
-Type~I error control $\alpha$, single-gene detection power is driven by a
-total effect-size parameter of the form
+\paragraph{Cosinor model.}
+For a single group of $n$ subjects with collection times
+$t_1,\ldots,t_n\in[0,24)$, the expression of gene $g$ follows the cosinor model
 \begin{equation}
-\lambda_g \propto n\,r_g^2\,d_g,
-\label{eq:lambda_decomp}
-\end{equation}
-where $n$ is the per-group sample size, $r_g=A_g/\sigma_g$ denotes the
-per-gene intrinsic effect size in the one-group setting, and
-\[
-d(\phi_g)=\frac{1}{n}\sum_{i=1}^n \sin^2\!\bigl(\omega(t_i+\phi_g)\bigr)
-\]
-is the corresponding one-group sampling-design factor. We additionally write $Z_g^R\in\{0,1\}$ for a
-gene-level rhythmicity indicator and $\pi_{\mathrm{R}} = \Pr(Z_g^R = 1)$ for the proportion of genes that are rhythmic under the generative model.
-Equation~\eqref{eq:lambda_decomp} provides the basic design intuition: power
-increases with larger $n$, larger intrinsic effect size $r$, and more
-favorable temporal coverage $d$. \software{DiffCircaPower} extends this idea
-from a single fixed gene to a transcriptome-wide setting by treating $r$, $d$,
-and rhythmicity status as heterogeneous across genes and by estimating their
-distributions from pilot data. For the evenly spaced active designs considered
-later, Proposition~\ref{prop:b_invariance} shows that $d(\phi)=1/2$ for all
-phases when $B\geq 3$, so the design factor is phase-invariant in that setting.
-
-DR denotes differential rhythmicity, i.e.\ gain or loss of rhythmicity between
-groups, and DP denotes differential phase, i.e.\ a phase shift between groups
-among genes rhythmic in both groups. For endpoint $E\in\{\mathrm{DR}, \mathrm{DP}\}$, let $D_{g,s}^E\in\{0,1\}$
-indicate discovery of gene $g$ in simulation replicate $s$ by the analysis
-pipeline, let $z_g^E\in\{0,1\}$ indicate a true differential gene, and let
-$z_g^{*,E}\in\{0,1\}$ indicate a targeted differential gene whose true effect
-exceeds a user-specified threshold.
-
-We distinguish between empirical \emph{joint} distributions estimated from
-pilot-fitted gene-level tuples and the \emph{marginal} distributions induced by
-those tuples. In particular, for rhythmic genes we use the empirical joint
-distribution of amplitude and noise,
-$\hat{F}_{A,\sigma,k}$, so that $(A,\sigma)$ is sampled jointly and the
-induced distribution of $r=A/\sigma$ is implicit in $\hat{F}_{A,\sigma,k}$
-rather than specified separately. The time-of-day sampling distribution for
-passive designs is denoted by $\hat{F}_{\mathrm{TOD},k}$. In
-active designs, we distinguish the number of distinct time points $B$ and the
-number of replicates per time point $m_b$, so that the total sample size per
-group is $n=\sum_{b=1}^B m_b$, assuming a balanced design.
-% --------------------------------------------------------------------
-
-\subsection{Cosinor Model and Hypothesis Tests}
-\label{sec:cosinor_tests}
-
-For group $k\in\{1,2\}$ and gene $g$, we use the cosinor model
-\begin{equation}
-y_{g,k,i}
+y_{g,i}
 =
-\mu_{g,k}
+\mu_g
 +
-A_{g,k}\cos\!\bigl(\omega(t_{k,i}-\phi_{g,k})\bigr)
+A_g\cos\!\bigl(\omega(t_i - \phi_g)\bigr)
 +
-\varepsilon_{g,k,i},
+\varepsilon_{g,i},
 \qquad
-\varepsilon_{g,k,i}\overset{\text{iid}}{\sim}N(0,\sigma_{g,k}^2).
+\varepsilon_{g,i}\overset{\text{iid}}{\sim}N(0,\sigma_g^2),
 \label{eq:cosinor_model}
 \end{equation}
-Rhythmicity within each group is assessed by testing
-$H_0:A_{g,k}=0$ versus $H_1:A_{g,k}\neq 0$ using the standard $F$ statistic
+where $\omega=2\pi/24$, $\mu_g$ is the mesor, $A_g\geq 0$ is the amplitude,
+$\phi_g\in[0,24)$ is the acrophase, and $\sigma_g$ is the noise level. The
+intrinsic effect size is $r_g = A_g/\sigma_g$. Rhythmicity of gene $g$ is
+assessed by testing $H_0: A_g = 0$ using the $F$-statistic
 \begin{equation}
-F_{g,k}
+F_g
 =
-\frac{(\mathrm{TSS}_{g,k}-\mathrm{RSS}_{g,k})/2}
-{\mathrm{RSS}_{g,k}/(n_k-3)}
-\sim F(2,n_k-3),
+\frac{(\mathrm{TSS}_g - \mathrm{RSS}_g)/2}{\mathrm{RSS}_g/(n-3)}
+\sim F(2,\, n-3),
 \label{eq:rhythm_f_test}
 \end{equation}
-where $\mathrm{RSS}_{g,k}=\sum_{i=1}^{n_k}(y_{g,k,i}-\hat y_{g,k,i})^2$ is the
-residual sum of squares, $\mathrm{TSS}_{g,k}=\sum_{i=1}^{n_k}(y_{g,k,i}-\bar
-y_{g,k})^2$ is the total sum of squares, $\hat y_{g,k,i}$ is the fitted value
-under the cosinor model, $\bar y_{g,k}=n_k^{-1}\sum_{i=1}^{n_k} y_{g,k,i}$ is
-the group mean, and $n_k$ denotes the sample size in group $k$.
-At significance level $\alpha$, the null is rejected when
-$F_{g,k}>F_{1-\alpha,\,2,\,n_k-3}$.
+where $\mathrm{RSS}_g$ and $\mathrm{TSS}_g$ are the residual and total sums of
+squares from the cosinor fit. Across $G$ genes, Benjamini--Hochberg (BH)
+correction at nominal FDR level $\alpha$ controls the false discovery rate for
+rhythmicity detection.
 
-For genes rhythmic in at least one group, DCP characterizes rhythm fitness by
-$R^2=1-\mathrm{RSS}/\mathrm{TSS}$ and tests
+\paragraph{CircaPower closed-form calculation.}
+Under the cosinor model, the noncentrality parameter of the $F$-test is
 \begin{equation}
-H_{0,R^2}: R_{g,1}^2 = R_{g,2}^2
-\qquad \text{vs.} \qquad
-H_{A,R^2}: R_{g,1}^2 \neq R_{g,2}^2,
-\label{eq:dr_r2_hyp}
+\lambda_g = r_g^2 \cdot n \cdot d(\phi_g),
+\label{eq:ncp}
 \end{equation}
-using a likelihood ratio test on the SNR-parameterized model.
-When the sampled time points are matched across groups, equality of $R^2$
-corresponds to equality of signal-to-noise ratio $A/\sigma$, providing the
-interpretive basis for DR testing in DCP.
-
-For genes rhythmic in both groups, DCP uses a two-stage parameter framework.
-The global joint test evaluates
+where the sampling design factor $d(\phi_g)$ captures how well the collection
+times cover the gene's peak expression time:
 \begin{equation}
-H_{0,(A,\phi)}:\; A_{g,1}=A_{g,2}\ \text{and}\ \phi_{g,1}=\phi_{g,2}
-\qquad \text{vs.} \qquad
-H_{A,(A,\phi)}:\; \text{complement},
-\label{eq:dp_hyp}
+d(\phi_g)
+=
+\frac{1}{n}\sum_{i=1}^n \cos^2\!\bigl(\omega(t_i - \phi_g)\bigr)
+-
+\left(\frac{1}{n}\sum_{i=1}^n \cos\!\bigl(\omega(t_i - \phi_g)\bigr)\right)^{\!2}.
+\label{eq:design_factor_circapower}
 \end{equation}
-followed by post-hoc amplitude and phase tests with \v{S}id\'{a}k adjustment.
-In our pipeline, the DP endpoint is the post-hoc phase-only test, consistent
-with DCP’s recommendation when phase is the sole parameter of interest.
+Per-gene power at sample size $n$ is then
+\begin{equation}
+\mathrm{Power}_g(n)
+=
+1 - F_{2,\,n-3}\!\bigl(F_{1-\alpha,\,2,\,n-3};\, \lambda_g\bigr),
+\label{eq:circapower_formula}
+\end{equation}
+where $F_{2,n-3}(\cdot\,;\,\lambda_g)$ is the CDF of the non-central $F$
+distribution with noncentrality $\lambda_g$ \citep{zong2023circapower}. For
+balanced equally spaced active designs with $B\geq 3$ time points,
+$d(\phi_g)=1/2$ for all phases (B-invariance; see Supplementary~S8), so
+$\lambda_g = r_g^2 \cdot n / 2$ and power depends only on $r_g$ and $n$.
 
-Throughout, DCP is treated as the fixed downstream inference procedure used to
-evaluate operating characteristics under candidate study designs.
+\paragraph{Limitation of the single-$r$ assumption.}
+\textsc{CircaPower} applies \eqref{eq:circapower_formula} at a single
+representative $r$ specified by the user. In transcriptome-wide studies, $r_g$
+varies substantially across genes: core clock genes in mouse liver typically
+have $r \approx 3$--$6$, while the median $r$ across all expressed genes in
+human brain tissue is $\tilde{r}\approx 0.6$ \citep{zong2023circapower}. Using
+a single high $r$ therefore produces severely over-optimistic power projections
+for the majority of the transcriptome. Moreover, the per-gene formula
+\eqref{eq:circapower_formula} does not account for the multiple-testing
+correction applied when testing thousands of genes simultaneously.
 
+\paragraph{SCP extension: pilot-calibrated transcriptome-level power.}
+When a pilot dataset is available, \textsc{SCP} estimates gene-level
+parameters directly from the data. For each of the $G_0$ pilot genes, we fit
+\eqref{eq:cosinor_model} by OLS, yielding estimates
+$(\hat{\mu}_g, \hat{A}_g, \hat{\sigma}_g, \hat{\phi}_g)$ and a BH-adjusted
+rhythmicity $q$-value $\hat{q}_g$. The rhythmic gene set is
+$\mathcal{G}_R = \{g : \hat{q}_g < 0.10\}$.
 
+\textsc{SCP} supports two modes for single-cohort power analysis:
 
-% --------------------------------------------------------------------
-\subsection{Design Theory for Active and Passive Circadian Sampling}
-\label{sec:design_theory}
-
-An \emph{active} design specifies the sampling schedule: the number,
-placement, and replication of collection times. A \emph{passive} design
-leaves collection times to the empirical time-of-day distribution of the
-cohort (e.g., post-mortem studies). The full matrix-algebraic derivation
-connecting the sampling design to the noncentrality parameter is given in
-Supplementary~S8.
-
-\begin{remark}[$B$-invariance for balanced active designs]
-\label{rem:b_invariance}
-Under the cosinor model \eqref{eq:cosinor_model} with independent subjects,
-for an active design with $B \geq 3$ equally spaced time points and balanced
-replication, first-harmonic efficiency depends on the total sample size $n$
-but not separately on the number of time points $B$ and replicates per time
-point $m$. This follows from the phase-invariant property of evenly spaced
-designs \citepp{zong2023circapower}, which implies that the design factor is
-constant, $d(\phi)=1/2$, for all phases $\phi$.
-\end{remark}
-
-This result provides a useful design baseline: under idealized conditions,
-reallocating samples between time points and replicates has equivalent impact
-on efficiency as long as the total sample size $n$ is fixed. However, practical
-power under the full differential circadian pipeline may deviate from this
-ideal due to screening, multiplicity correction, and gene-level effect-size
-heterogeneity. We therefore assess these effects empirically via simulation.
-
-Passive designs lack investigator-controlled sampling times. In such datasets
-(e.g.\ post-mortem studies), time-of-day sampling is typically uneven, so the
-orthogonality conditions underlying Remark~\ref{rem:b_invariance} do not hold.
-We extend the standard design factor $d(\phi)$ by evaluating it at gene- and
-group-specific phases $\phi_{g,k}$, yielding $d(\phi_{g,k}) =
-\frac{1}{n_k}\sum_{i=1}^{n_k}
-\cos^2\!\bigl(\omega t_{k,i}-\omega\phi_{g,k}\bigr)$,
-where $n_k$ denotes the sample size in group $k$. Consequently, detection efficiency depends jointly on sample size and
-time-of-day coverage, rather than sample size alone: genes peaking in
-well-sampled regions receive greater effective information than those in
-sparsely sampled windows. 
-
-These considerations lead to two design questions. For active designs, we ask
-whether performance depends primarily on total sample size or also on the
-allocation across time points. For passive designs, we assess how sample size
-and empirical time-of-day coverage jointly determine detection performance.
-Both are addressed using the simulation framework described below.
-
-% --------------------------------------------------------------------
-\subsection{Study Design, Prospective Simulation, and Performance Metrics}
-\label{sec:study_design}
-
-The study setting, simulation workflow, and performance metrics for
-evaluating prospective circadian study designs are formalized below. At a high level,
-\software{DiffCircaPower} proceeds as follows: fit gene-level circadian
-parameters in a pilot dataset, construct empirical parameter distributions,
-simulate new two-group datasets under candidate designs, run the full
-differential circadian analysis pipeline on each simulated dataset, and
-aggregate power and error rates across replicates. A bootstrap extension
-(Section~\ref{sec:bootstrap}) repeats this procedure after resampling the
-fitted pilot parameter table, thereby propagating pilot uncertainty into the
-projected power curves.
-
-Consider a pilot circadian transcriptome dataset
-\(\mathcal{D}_0=\{Y^{(0)}=(y^{(0)}_{g,i})_{G_0\times N_0},\;
-t^{(0)}=(t_i^{(0)})_{1\times N_0}\}\),
-where $y^{(0)}_{g,i}$ is the log-normalized expression of gene $g$ in pilot
-subject $i$, and $t_i^{(0)}\in[0,24)$ is the collection time.
-Based on $\mathcal{D}_0$, we study a future two-group experiment with $G$
-genes, group index $k\in\{1,2\}$, and planned sample sizes $(n_1,n_2)$,
-under either an active design (user-specified collection times) or a passive
-design (collection times drawn from an empirical time-of-day distribution).
-Throughout, we fix $\tau=24$\,h and $\omega=2\pi/\tau$.
-
-The study setting has three components. First, the design variables are the
-number of genes $G$, group sample sizes $(n_1,n_2)$, period $\tau$, and the
-sampling design (active or passive). Second, the biological simulation hyperparameters are given by
-$\mathcal{H} = \{\pi_{\mathrm{DR}},\pi_{\mathrm{R}},\pi_{\mathrm{DP}},
-\Delta\phi_{\min},\Delta\phi_{\max}\}$,
-where $\pi_{\mathrm{DR}}$ is the proportion of DR genes,
-$\pi_{\mathrm{R}}=\Pr(Z_g^R=1)$ is the proportion of non-DR genes that are jointly
-rhythmic, and $\pi_{\mathrm{DP}}$ is the proportion of jointly rhythmic genes
-assigned differential phase. Third, the pilot contributes the empirical objects
-$\hat{F}_\mu,\ \hat{F}_{A,\sigma,k},\ \hat{F}_{\phi,k},\ \hat{F}_{\mathrm{TOD},k}$ for $k \in \{1,2\}$,
-together with the nominal FDR level $\alpha$. When only one-group pilot data
-are available, we use the $k=1$ empirical distributions for both groups.
-
-We denote the resulting study specification by
-\(\mathcal{S}=(G,n_1,n_2,\omega,\mathcal{H},\alpha,\hat{F}_\mu,
-\hat{F}_{A,\sigma,k},\hat{F}_{\phi,k},\hat{F}_{\mathrm{TOD},k})\),
-and condition on $\mathcal{S}$ implicitly.
-
-Given $\mathcal{S}$, the \software{DiffCircaPower} workflow proceeds in four
-stages:
 \begin{enumerate}
-\item fit gene-level cosinor models to the pilot data and estimate the
-empirical input objects;
-\item generate simulated two-group datasets from the semi-parametric model;
-\item apply DCP to each simulated dataset to obtain Type of Joint Rhythmicity
-(TOJR) labels and DR/DP $p$-values;
-\item aggregate operating characteristics across simulation replicates and,
-when needed, across signal-to-noise strata.
+\item \textbf{Closed-form (fast):} Apply \eqref{eq:circapower_formula} to each
+  pilot gene's estimated $\hat{r}_g = \hat{A}_g/\hat{\sigma}_g$ and design factor
+  $\hat{d}(\hat{\phi}_g)$, then average across genes:
+  \[
+  \widehat{\mathrm{Power}}_{\mathrm{CF}}(n)
+  =
+  \frac{1}{G_0}\sum_{g=1}^{G_0} \mathrm{Power}_g(n;\,\hat{r}_g,\hat{d}_g).
+  \]
+  This is fast and directly extends \textsc{CircaPower} to heterogeneous $r$,
+  but does not model genome-wide FDR.
+
+\item \textbf{Simulation-based (recommended):} Using the pilot-estimated
+  empirical distributions, simulate single-group datasets, apply the $F$-test
+  with BH correction, and aggregate empirical power and FDR across simulation
+  replicates (Steps~I--II below, applied to a single group). This naturally
+  accounts for multiplicity correction, passive design, and the full
+  heterogeneity of $(A_g, \sigma_g)$ jointly.
 \end{enumerate}
 
-
-
-
-This prospective simulation framework also supports experimental-design
-comparisons. For active designs, candidate schedules may vary in the number and
-placement of time points and in the allocation of replication across them. For
-passive designs, candidate scenarios vary sample size and the implied
-time-of-day coverage through $\hat{F}_{\mathrm{TOD},k}$. In both cases,
-performance is evaluated directly under the full downstream pipeline rather than
-through a closed-form approximation.
-
-From a prospective design perspective, operating characteristics are
-summarized through complementary metrics, including targeted power and FDR as
-functions of $n$, stratified targeted power by signal-to-noise ratio to assess
-which genes are detectable under varying rhythmic strength, discovery-yield, and design-efficiency diagnostics for
-passive sampling designs. Formal
-definitions are given in Step~IV.
-
-\subsection{Step I: Pilot Parameter Estimation}
-\label{sec:pilot}
-
-For each of the $G_0$ genes in the pilot dataset, we fit the linearized cosinor
-model by ordinary least squares:
+\paragraph{Step I: Pilot parameter estimation.}
+From the pilot gene fits, we construct empirical distributions:
 \begin{equation}
-y_g^{(0)}=\mu_g\mathbf{1}+E_g\mathbf{c}+F_g\mathbf{s}+\boldsymbol\varepsilon_g,
-\qquad
-\mathbf{c}_i=\cos(\omega t_i^{(0)}),\;\mathbf{s}_i=\sin(\omega t_i^{(0)}).
-\label{eq:pilot_fit}
-\end{equation}
-This yields estimates $\hat{\mu}_g$, $\hat{E}_g$, and $\hat{F}_g$.
-Amplitude and acrophase are recovered as
-$\hat{A}_g=\sqrt{\hat{E}_g^2+\hat{F}_g^2}$ and
-$\hat{\phi}_g=\frac{1}{\omega}\,\mathrm{atan2}(\hat{F}_g,\hat{E}_g)$, and the
-noise level $\hat{\sigma}_g$ is estimated from the residual variance.
-
-We compute a BH-adjusted rhythmicity $q$-value from the OLS $F$-test on
-$H_0:E_g=F_g=0$, and define the rhythmic gene set
-$\mathcal{G}_R=\{g:q_g<0.10\}$. The fitted pilot row is then
-$\hat{\Theta}_g=(\hat{\mu}_g,\hat{A}_g,\hat{\sigma}_g,\hat{\phi}_g,\hat{Z}_g^R)$,
-with $\hat{Z}_g^R=\mathbf{1}\{g\in\mathcal{G}_R\}$.
-
-From these rows, we construct empirical distributions:
-\begin{equation}
-\hat{F}_\mu=\frac{1}{G_0}\sum_{g=1}^{G_0}\delta_{\hat{\mu}_g},\quad
-\hat{F}_{A,\sigma,1}=\frac{1}{|\mathcal{G}_R|}\sum_{g\in\mathcal{G}_R}
-\delta_{(\hat{A}_g,\hat{\sigma}_g)},\quad
-\hat{F}_{\phi,1}=\frac{1}{|\mathcal{G}_R|}\sum_{g\in\mathcal{G}_R}
-\delta_{\hat{\phi}_g}.
+\hat{F}_\mu
+=
+\frac{1}{G_0}\sum_{g=1}^{G_0}\delta_{\hat{\mu}_g},
+\quad
+\hat{F}_{A,\sigma}
+=
+\frac{1}{|\mathcal{G}_R|}\sum_{g\in\mathcal{G}_R}\delta_{(\hat{A}_g,\hat{\sigma}_g)},
+\quad
+\hat{F}_{\phi}
+=
+\frac{1}{|\mathcal{G}_R|}\sum_{g\in\mathcal{G}_R}\delta_{\hat{\phi}_g}.
 \label{eq:empirical_dists}
 \end{equation}
+Sampling $(A,\sigma)$ jointly from $\hat{F}_{A,\sigma}$ preserves the empirical
+dependence between amplitude and noise, so the induced distribution of
+$r=A/\sigma$ reflects the pilot transcriptome without requiring $r$ to be
+specified separately. We denote the full pilot summary by
+$\hat{\Psi} = (\hat{F}_\mu, \hat{F}_{A,\sigma}, \hat{F}_\phi,
+\hat{F}_{\mathrm{TOD}}, \hat{\pi}_R)$,
+where $\hat{F}_{\mathrm{TOD}}$ is the empirical collection-time distribution
+(for passive designs) and $\hat{\pi}_R = |\mathcal{G}_R|/G_0$.
 
-Sampling $(A,\sigma)$ jointly preserves their empirical dependence from the pilot,
-so the induced distribution of $r=A/\sigma$ follows automatically. This allows
-the simulator to retain the observed heterogeneity in rhythmic signal strength
-across genes, rather than imposing a single common effect size.
+\paragraph{Step II: Single-group data simulation.}
+For simulation replicate $s$ and candidate sample size $n$, we generate
+$G$ genes as follows. Draw $\mu_g^{(s)}\sim\hat{F}_\mu$,
+$(A_g^{(s)},\sigma_g^{(s)})\sim\hat{F}_{A,\sigma}$, and
+$\phi_g^{(s)}\sim\hat{F}_\phi$ for each gene, with rhythmicity status
+$Z_g^R\sim\mathrm{Bernoulli}(\hat\pi_R)$. For rhythmic genes, generate
+observations from \eqref{eq:cosinor_model}; for arrhythmic genes, set $A_g=0$.
+Collection times follow the active schedule or are drawn from
+$\hat{F}_{\mathrm{TOD}}$ for passive designs.
 
-When two-group pilot data are available, analogous distributions are constructed
-for group 2. We also estimate mixture parameters
-$\hat{\pi}_{\mathrm{DR}},\hat{\pi}_R,\hat{\pi}_{\mathrm{DP}}$ and
-$[\Delta\phi_{\min},\Delta\phi_{\max}]$.
+\paragraph{Active vs.\ passive designs.}
+An \emph{active} design specifies the sampling schedule: the number $B$ of
+distinct time points and the replication $m_b$ at each, with total $n=\sum_b
+m_b$. A \emph{passive} design leaves collection times to the empirical
+time-of-day distribution of the cohort (e.g., post-mortem studies). For active
+designs with $B\geq 3$ equally spaced times and balanced replication,
+$d(\phi)=1/2$ for all phases (Supplementary~S8), so power depends only on
+total $n$. For passive designs, the design factor $d_{g} =
+n^{-1}\sum_{i=1}^n\cos^2(\omega t_i - \omega\phi_g)$ varies per gene,
+and \textsc{SCP} reports design-factor diagnostics to quantify how temporal
+coverage affects efficiency.
 
-We summarize these pilot-derived inputs by
-$\hat{\Psi}=(\hat{\pi}_{\mathrm{DR}},\hat{\pi}_R,\hat{\pi}_{\mathrm{DP}},
-\hat{F}_\mu,\hat{F}_{A,\sigma,k},\hat{F}_{\phi,k},\hat{F}_{\mathrm{TOD},k})$ for
-$k\in\{1,2\}$. This collection summarizes what is borrowed from the pilot to
-generate future circadian datasets under any candidate design
-$(n_1,n_2,B,\{m_b\})$.
+%% --------------------------------------------------------------------
+\subsection{Differential Circadian Analysis}
+\label{sec:differential}
 
-% --------------------------------------------------------------------
+When the goal is to compare rhythmic patterns between two groups (e.g.,
+disease vs.\ control), single-cohort power calculations are insufficient.
+Differential circadian inference is multi-stage and genome-wide: it requires
+rhythmicity screening, differential testing for each endpoint, and
+multiplicity correction. Because this pipeline has no tractable closed-form
+power expression, \textsc{SCP} evaluates operating characteristics via
+calibrated simulation.
 
-\subsection{Step II: Data Generation Under a Circadian Model}
-\label{sec:generative}
+\paragraph{Differential endpoints.}
+For two groups $k\in\{1,2\}$ and gene $g$, \textsc{SCP} supports three
+differential endpoints:
+\begin{itemize}
+\item \textbf{DR} (differential rhythmicity): gene is rhythmic in one group
+  but not the other (gain or loss of rhythmicity).
+\item \textbf{DP} (differential phase): gene is rhythmic in both groups but
+  with a shifted acrophase, $\phi_{g,1}\neq\phi_{g,2}$.
+\item \textbf{DM} (differential mesor): gene has the same rhythmic structure
+  in both groups but a shifted baseline expression level,
+  $\mu_{g,1}\neq\mu_{g,2}$. DM is the circadian analogue of differential
+  expression (DE) in standard RNA-seq analysis.
+\end{itemize}
+These endpoints are not mutually exclusive in real data; however, power
+analysis evaluates each in isolation to produce interpretable, endpoint-specific
+power curves --- the standard practice in multi-parameter power analysis.
 
-We now describe the generative model used to simulate two-group circadian datasets.
+\paragraph{Notation.}
+We index genes by $g=1,\ldots,G$, subjects by $i$, groups by $k\in\{1,2\}$,
+and simulation replicates by $s=1,\ldots,S$. For each endpoint
+$E\in\{\mathrm{DR},\mathrm{DP},\mathrm{DM}\}$, let $z_g^E\in\{0,1\}$ indicate
+a truly differential gene and $z_g^{*,E}\in\{0,1\}$ a targeted differential
+gene whose effect exceeds a threshold. Let $D_{g,s}^E\in\{0,1\}$ indicate
+discovery by the pipeline in replicate $s$. The proportions of DR, DP, and DM
+genes are $\pi_{\mathrm{DR}}$, $\pi_{\mathrm{DP}}$, and $\pi_{\mathrm{DM}}$,
+and $\pi_{\mathrm{R}}$ denotes the proportion of jointly rhythmic
+(non-DR) genes.
 
-For simulation replicate $s$, we generate
-$\mathcal{D}^{(s)}=\{y_{g,k,i}^{(s)},t_{k,i}^{(s)}\}$ for
-$g=1,\ldots,G$, $k\in\{1,2\}$, $i=1,\ldots,n_k$, using the pilot-derived inputs
-$\hat{\Psi}$. The simulation proceeds in four steps.
+\paragraph{Step II: Two-group data generation.}
+Building on the pilot summary $\hat{\Psi}$ from \S\ref{sec:single_cohort}, we
+extend Step~II to the two-group setting. Each gene is assigned a latent type
+$T_g\in\{0,1,2,3,4,5\}$ using proportions
+$(\pi_{\mathrm{DR}},\pi_R,\pi_{\mathrm{DP}},\pi_{\mathrm{DM}})$:
+\begin{itemize}
+  \item $T_g=0$: arrhythmic in both groups ($A_{g,1}=A_{g,2}=0$).
+  \item $T_g=1$: jointly rhythmic, no differential pattern.
+  \item $T_g=2$: rhythmic in group~1 only (DR).
+  \item $T_g=3$: rhythmic in group~2 only (DR).
+  \item $T_g=4$: phase-shifted; $\phi_{g,2}=(\phi_{g,1}+\Delta\phi_g)\bmod 24$,
+    $\Delta\phi_g\sim\mathrm{Unif}(\Delta\phi_{\min},\Delta\phi_{\max})$ (DP).
+  \item $T_g=5$: differential mesor; same rhythmic structure in both groups
+    ($A_{g,1}=A_{g,2}$, $\phi_{g,1}=\phi_{g,2}$) but
+    $\mu_{g,2}=\mu_{g,1}+\Delta\mu_g$,
+    $\Delta\mu_g\sim\mathrm{Unif}(\Delta\mu_{\min},\Delta\mu_{\max})$ (DM).
+\end{itemize}
 
-\textbf{Step 1 (baseline parameters).}
-For each gene, draw
-$\mu_g^{(s)}\sim\hat{F}_\mu$,
-$(A_g^{(s)},\sigma_g^{(s)})\sim\hat{F}_{A,\sigma,1}$,
-and $\phi_g^{(s)}\sim\hat{F}_{\phi,1}$.
-This defines the baseline latent state
-$\Theta_g^{(s)}=(\mu_g^{(s)},A_g^{(s)},\sigma_g^{(s)},\phi_g^{(s)})$.
-
-\textbf{Step 2 (gene type assignment).}
-
-Each gene is assigned a latent type $T_g\in\{0,1,2,3,4\}$ corresponding to
-arrhythmic (0), jointly rhythmic (1), group-specific rhythmicity (2--3), or
-phase-shifted (4), using proportions
-$\pi_{\mathrm{DR}}, \pi_R, \pi_{\mathrm{DP}}$.
-This construction reflects the biological logic that phase shifts can only be
-evaluated for genes that remain rhythmic in both groups.
-
-\textbf{Step 3 (group-specific parameters).}
-The latent type $T_g$ determines group-specific amplitudes and phases.
-For DP genes, we draw a phase shift
-$\Delta\phi_g^{(s)}\sim\mathrm{Unif}(\Delta\phi_{\min},\Delta\phi_{\max})$.
-For group-specific rhythmic genes, parameters are drawn from group-specific
-empirical distributions when needed, allowing one group to lose or gain
-rhythmicity relative to the other.
-
-The mapping between $T_g$ and group-specific parameters is summarized in
-Table~\ref{tab:type_mapping}.
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{c|ccccc}
-\toprule
- & 0 (arrhy) & 1 (both) & 2 (g1-only) & 3 (g2-only) & 4 (DP) \\
-\midrule
-Group 1 $(A_{g,1},\phi_{g,1})$
-& ( -- , -- )
-& ( $A_g^{(s)}$, $\phi_g^{(s)}$ )
-& ( $A_g^{(s)}$, $\phi_g^{(s)}$ )
-& ( -- , -- )
-& ( $A_g^{(s)}$, $\phi_g^{(s)}$ ) \\
-
-Group 2 $(A_{g,2},\phi_{g,2})$
-& ( -- , -- )
-& ( $A_g^{(s)}$, $\phi_g^{(s)}$ )
-& ( -- , -- )
-& ( $A_g^{*,(s)}$, $\phi_g^{*,(s)}$ )
-& ( $A_g^{(s)}$, $(\phi_g^{(s)}+\Delta\phi_g^{(s)})\bmod 24$ ) \\
-\bottomrule
-\end{tabular}
-\caption{Mapping between gene type $T_g$ and group-specific rhythm parameters.
-Dashes indicate undefined amplitude and phase in arrhythmic groups.}
-\label{tab:type_mapping}
-\end{table}
-
-We set $\mu_{g,1}^{(s)}=\mu_{g,2}^{(s)}=\mu_g^{(s)}$ to isolate differences in
-rhythmicity and phase rather than baseline mean shifts. By default, noise
-levels are shared across groups.
-
-\textbf{Step 4 (sampling and observations).}
-For passive designs, draw $t_{k,i}^{(s)}\sim\hat{F}_{\mathrm{TOD},k}$.
-For active designs, assign times deterministically according to the specified
-schedule.
-
-Observations are then generated as
+The full type-to-parameter mapping is given in Table~\ref{tab:type_mapping}.
+Observations are generated from the two-group cosinor model
 \begin{equation}
 y_{g,k,i}^{(s)}
 =
-\mu_g^{(s)} +
-A_{g,k}^{(s)}\cos(\omega t_{k,i}^{(s)}-\omega\phi_{g,k}^{(s)})
-+\varepsilon_{g,k,i}^{(s)},
+\mu_{g,k}^{(s)}
++
+A_{g,k}^{(s)}\cos\!\bigl(\omega t_{k,i}^{(s)} - \omega\phi_{g,k}^{(s)}\bigr)
++
+\varepsilon_{g,k,i}^{(s)},
 \quad
 \varepsilon_{g,k,i}^{(s)}\sim N(0,(\sigma_{g,k}^{(s)})^2).
 \label{eq:obs}
 \end{equation}
 
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{c|cccccc}
+\toprule
+ & 0 (arrhy) & 1 (both) & 2 (g1-only) & 3 (g2-only) & 4 (DP) & 5 (DM) \\
+\midrule
+$A_{g,1}$ & -- & $A_g^{(s)}$ & $A_g^{(s)}$ & -- & $A_g^{(s)}$ & $A_g^{(s)}$ \\
+$\phi_{g,1}$ & -- & $\phi_g^{(s)}$ & $\phi_g^{(s)}$ & -- & $\phi_g^{(s)}$ & $\phi_g^{(s)}$ \\
+$A_{g,2}$ & -- & $A_g^{(s)}$ & -- & $A_g^{*,(s)}$ & $A_g^{(s)}$ & $A_g^{(s)}$ \\
+$\phi_{g,2}$ & -- & $\phi_g^{(s)}$ & -- & $\phi_g^{*,(s)}$ & $(\phi_g^{(s)}+\Delta\phi_g)\bmod 24$ & $\phi_g^{(s)}$ \\
+$\mu_{g,2}-\mu_{g,1}$ & 0 & 0 & 0 & 0 & 0 & $\Delta\mu_g$ \\
+\bottomrule
+\end{tabular}
+\caption{Gene type to group-specific parameter mapping. Dashes indicate
+arrhythmic groups ($A=0$). For DM genes ($T_g=5$), both groups share the same
+amplitude and phase; the mesor shift $\Delta\mu_g$ creates differential
+baseline expression.}
+\label{tab:type_mapping}
+\end{table}
 
+\paragraph{Step III: Inference via DiffCircaPipeline.}
+Given simulated dataset $\{y_{g,k,i}^{(s)}, t_{k,i}^{(s)}\}$, the
+\textsc{DiffCircaPipeline} (DCP) \citep{xue2023diffcircapipeline} applies
+the following three-stage procedure.
 
-% --------------------------------------------------------------------
-\subsection{Step III: Detection via DiffCircaPipeline}
-\label{sec:dcp}
+\emph{Stage 1 --- Group-level rhythmicity.} For each group $k$ and gene $g$,
+fit the linearized cosinor model by OLS and compute an $F$-test
+$p$-value $p_{g,k}$.
 
-Given a simulated dataset
-$\{y_{g,k,i}^{(s)},t_{k,i}^{(s)}\}$, DCP estimates
-group-specific parameters and performs differential circadian inference in
-three stages.
-
-First, for each group $k\in\{1,2\}$, DCP fits the linearized cosinor model
-\(y_{g,k,i}^{(s)}=\mu_{g,k}+E_{g,k}\cos(\omega t_{k,i})+F_{g,k}\sin(\omega t_{k,i})
-+\varepsilon_{g,k,i}^{(s)}\).
-An $F$-test on $(E_{g,k},F_{g,k})$ yields a raw rhythmicity $p$-value $p_{g,k}$
-for each gene and group.
-
-Second, the Type of Joint Rhythmicity (TOJR) classifier assigns
+\emph{Stage 2 --- TOJR classification.} Assign each gene a Type of Joint
+Rhythmicity (TOJR) label using unadjusted $p$-values:
 \begin{equation}
 \hat{Z}_g =
 \begin{cases}
-\texttt{arrhy} & p_{g,1}>\alpha \text{ and } p_{g,2}>\alpha,\\
+\texttt{arrhy}   & p_{g,1}>\alpha \text{ and } p_{g,2}>\alpha,\\
 \texttt{g1-only} & p_{g,1}\leq\alpha \text{ and } p_{g,2}>\alpha,\\
 \texttt{g2-only} & p_{g,1}>\alpha \text{ and } p_{g,2}\leq\alpha,\\
-\texttt{both} & p_{g,1}\leq\alpha \text{ and } p_{g,2}\leq\alpha,
+\texttt{both}    & p_{g,1}\leq\alpha \text{ and } p_{g,2}\leq\alpha.
 \end{cases}
 \label{eq:tojr}
 \end{equation}
-using unadjusted group-specific rhythmicity $p$-values. TOJR uses unadjusted
-$p$-values for screening because its role is to separate genes into biologically
-relevant rhythmicity classes before downstream testing, rather than to make
-final discovery claims. BH correction is reserved for the DR and DP tests that
-produce reported discoveries.
+Unadjusted $p$-values are used here because TOJR assigns conditional gene pools
+for downstream testing rather than making final discovery claims; BH correction
+is reserved for the endpoint-specific tests below.
 
-Third, DR and DP testing are performed conditionally on the TOJR class. For
-all genes with $\hat{Z}_g\neq\texttt{arrhy}$, DCP tests
-$H_0:R^2_{g,1}=R^2_{g,2}$ by a $\Delta R^2$ likelihood ratio test
-\citep{ding2021likelihood}, followed by BH correction across the tested genes.
-Genes not entering the DR stage are assigned $p_g^{\mathrm{DR}}=1$.
-For genes with $\hat{Z}_g=\texttt{both}$, DCP uses the two-stage parameter
-framework described above; in our pipeline, the DP endpoint is the post-hoc
-phase-only test, and BH correction is applied within the jointly rhythmic
-stratum. Genes outside that stratum are assigned $p_g^{\mathrm{DP}}=1$.
-The gene-level calls from Step~III are then aggregated in Step~IV to quantify
-how well the proposed design detects true circadian differences while
-controlling false discoveries.
+\emph{Stage 3 --- Endpoint testing.}
+\begin{itemize}
+\item \textbf{DR}: For all genes with $\hat{Z}_g\neq\texttt{arrhy}$, test
+  $H_0: R_{g,1}^2 = R_{g,2}^2$ by a $\Delta R^2$ likelihood ratio test
+  \citep{ding2021likelihood}, followed by BH correction across tested genes.
+\item \textbf{DP}: For genes with $\hat{Z}_g=\texttt{both}$, test
+  $H_0: A_{g,1}=A_{g,2},\,\phi_{g,1}=\phi_{g,2}$ jointly, then apply a
+  post-hoc phase test with \v{S}id\'{a}k correction; BH is applied within the
+  jointly rhythmic stratum.
+\item \textbf{DM}: For all genes, test $H_0:\mu_{g,1}=\mu_{g,2}$ using a
+  two-sample $t$-test on the OLS-estimated mesors $\hat{\mu}_{g,k}$, followed
+  by BH correction across all genes. DM detection is independent of TOJR
+  class, since a mesor shift can occur regardless of rhythmicity status.
+\end{itemize}
 
-% --------------------------------------------------------------------
-
-% --------------------------------------------------------------------
-\subsection{Step IV: Power and FDR Metrics}
-\label{sec:metrics}
-We now define the operating characteristics used to summarize how often the full
-pipeline detects biologically meaningful circadian differences and how often
-those detections are false. The notation is organized at three levels: gene-level indicators,
-per-replicate performance, and design-level summaries across simulation
-replicates.
-
-For each endpoint $E\in\{\mathrm{DR},\mathrm{DP}\}$, let
-$D_{g,s}^E\in\{0,1\}$ indicate whether gene $g$ is discovered in simulation
-replicate $s$, let $z_g^E\in\{0,1\}$ indicate true differential status, and let
-$z_g^{*,E}\in\{0,1\}$ indicate a biologically meaningful differential effect
-above threshold $\Delta$.
-
-For simulation replicate $s$, let
-$R_s^E=\sum_g D_{g,s}^E$ denote the number of discoveries and
-$V_s^E=\sum_g D_{g,s}^E(1-z_g^E)$ the number of false discoveries. The
-per-replicate false discovery rate is
+\paragraph{Step IV: Power and FDR metrics.}
+For each endpoint $E\in\{\mathrm{DR},\mathrm{DP},\mathrm{DM}\}$ and simulation
+replicate $s$, let $R_s^E=\sum_g D_{g,s}^E$ denote the number of discoveries
+and $V_s^E=\sum_g D_{g,s}^E(1-z_g^E)$ the number of false discoveries.
+The per-replicate FDR is
 \[
-\widehat{\mathrm{FDR}}_s^E=
+\widehat{\mathrm{FDR}}_s^E
+=
 \frac{V_s^E}{R_s^E}\,\mathbf{1}\{R_s^E>0\}.
 \]
-
-Let
-$S_s^{*,E}=\sum_g D_{g,s}^E z_g^{*,E}$ denote the number of targeted
-discoveries and $G_1^{*,E}=\sum_g z_g^{*,E}$ the number of targeted non-null
-genes. The per-replicate targeted power is
+Let $S_s^{*,E}=\sum_g D_{g,s}^E z_g^{*,E}$ and
+$G_1^{*,E}=\sum_g z_g^{*,E}$. The per-replicate targeted power is
 \begin{equation}
 \widehat{\mathrm{TPower}}_s^E(\Delta)
 =
 \frac{S_s^{*,E}}{G_1^{*,E}}.
 \label{eq:tpower_def}
 \end{equation}
-For $\Delta>0$, this measures the ability of a proposed design to detect
-circadian differences that are large enough to be biologically interpretable,
-and it serves as the primary criterion for design evaluation.
-
-To assess heterogeneity in detectability, genes may be stratified by variables
-such as signal-to-noise ratio $r_{g,k}=A_{g,k}/\sigma_{g,k}$, phase $\phi_g$,
-design efficiency $d(\phi_{g,k})$, or mean expression level. This helps
-identify which classes of genes are likely to be detectable and which remain
-underpowered under a given design. For a
-stratification variable $W_g$ and bins $\{B_j\}$, the per-replicate stratified
-targeted power is
+Design-level summaries are obtained by averaging across $S$ replicates.
+Genes may additionally be stratified by $r_g = A_g/\sigma_g$, phase $\phi_g$,
+or design efficiency $d(\phi_g)$ to reveal which classes of genes are
+detectable under a given design:
 \begin{equation}
 \widehat{\mathrm{TPower}}_{s,j}^E(\Delta)
 =
-\frac{\sum_{g:W_g\in B_j} D_{g,s}^E z_g^{*,E}}
-{\sum_{g:W_g\in B_j} z_g^{*,E}}.
+\frac{\sum_{g: W_g\in B_j} D_{g,s}^E z_g^{*,E}}
+     {\sum_{g: W_g\in B_j} z_g^{*,E}},
 \label{eq:tpower_strat_def}
 \end{equation}
-Stratum-specific power summaries are obtained by averaging
-$\widehat{\mathrm{TPower}}_{s,j}^E(\Delta)$ across simulation replicates.
+where $W_g$ is the stratification variable and $\{B_j\}$ are the strata.
 
-% --------------------------------------------------------------------
+%% --------------------------------------------------------------------
+\subsection{Design Considerations: B vs.\ m Trade-off}
+\label{sec:design_bvsm}
 
-\subsection{Two-Stage (Plug-In) Power Analysis}
-\label{sec:two_stage}
+In active designs, investigators must allocate a fixed subject budget $n$
+between the number of distinct time points $B$ and the replication level
+$m = n/B$ per time point. Under the idealized cosinor model for a balanced
+equally spaced design with $B\geq 3$ time points, the design factor satisfies
+$d(\phi)=1/2$ for all gene phases $\phi$
+(Supplementary~S8). Consequently, the noncentrality parameter
+\eqref{eq:ncp} reduces to $\lambda_g = r_g^2 n / 2$, which depends on total
+$n$ but not on the $B$-vs-$m$ allocation. This is the $B$-invariance property:
+\emph{for single-harmonic cosinor inference on a balanced equally spaced grid,
+resampling effort between time points and replicates does not affect power.}
 
-The prospective power analysis described in Steps~I--IV can be viewed as a
-\emph{two-stage plug-in} procedure. In Stage~1, Step~I is applied once to the
-pilot data $\mathcal{D}_0$, yielding point estimates
-$(\hat{\pi}_{\mathrm{DR}},\hat{\pi}_R,\hat{\pi}_{\mathrm{DP}},
-\hat{F}_{\mu},\hat{F}_{A,\sigma,k},\hat{F}_{\phi,k},\hat{F}_{\mathrm{TOD},k})$.
-In Stage~2, Steps~II--IV are evaluated over a design grid, treating these
-Stage-1 estimates as fixed inputs to the simulation model. For endpoint $E$,
-the resulting two-stage plug-in power curve is
-$\widehat{\mathrm{Power}}_{\mathrm{TS}}^{E}(n)
-=
-\frac{1}{S}\sum_{s=1}^{S}\widehat{\mathrm{TPower}}_s^{E}(n)$.
+In practice, this idealized result can break down. The full \textsc{SCP}
+pipeline includes rhythmicity screening, DR/DP/DM testing, and BH multiplicity
+correction, all of which interact with the design in non-trivial ways. At
+low signal-to-noise ratios, denser time sampling ($\uparrow B$, $\downarrow m$)
+can improve rhythmicity screening power even at fixed $n$, because the cosinor
+model benefits from broader phase coverage. Conversely, designs with very few
+time points ($B=3$) are susceptible to second-harmonic aliasing artifacts
+(Supplementary~S7).
 
+\textsc{SCP} evaluates the B-vs-$m$ trade-off directly by sweeping both $B$
+and $n$ in the simulation grid, producing joint power surfaces that reveal
+whether the allocation matters for a given pilot dataset and target endpoint.
 
-This plug-in formulation is useful for preliminary design planning, but it does
-not quantify how uncertainty in the pilot estimates
-$\hat{\pi}_{\mathrm{DR}}$, $\hat{\pi}_R$,
-$\hat{F}_{A,\sigma,k}$, and related pilot-derived objects affects the projected
-power curve. The corresponding minimum-sample-size recommendation,
-$\hat{n}_{80}^{E}
-=
-\min\!\left\{n:\widehat{\mathrm{Power}}_{\mathrm{TS}}^{E}(n)\geq 0.80\right\}$,
-is therefore reported as a point estimate.
-
-
-
-
-% --------------------------------------------------------------------
-
-\subsection{Bootstrap-Based Uncertainty Quantification}
+%% --------------------------------------------------------------------
+\subsection{Sensitivity Analysis via Bootstrap}
 \label{sec:bootstrap}
 
-To assess this source of uncertainty, we augment the plug-in analysis with a
-nonparametric bootstrap of the fitted pilot-derived parameter table. We first
-fit gene-level circadian parameters to the pilot data, obtaining for each gene
-the fitted tuple
-$\hat{\Theta}_g=(\hat{\mu}_g,\hat{A}_g,\hat{\sigma}_g,\hat{\phi}_g,\hat{Z}_g^R)$.
-The bootstrap then repeatedly resamples these fitted rows, rebuilds the
-empirical distributions, reruns the simulation grid, and summarizes the
-variability of the resulting power curves. Because the resampling unit is the
-entire fitted row $\hat{\Theta}_g$, the bootstrap preserves the empirical joint
-distribution of $(A,\sigma)$, from which all marginal simulator inputs are
-induced. In the current implementation, the empirical time-of-day distribution
-$\hat{F}_{\mathrm{TOD},k}$ is treated as fixed at the observed pilot schedule,
-so the bootstrap quantifies uncertainty in the gene-level parameter
-distribution conditional on the observed collection-time distribution.
+\paragraph{Two-stage plug-in baseline.}
+The workflow described above constitutes a \emph{two-stage plug-in} procedure:
+Step~I fits pilot parameters once, and Steps~II--IV are evaluated over a design
+grid treating those estimates as fixed. For endpoint $E$, the resulting
+power curve is
+$\widehat{\mathrm{Power}}_{\mathrm{TS}}^{E}(n)
+= S^{-1}\sum_{s=1}^{S}\widehat{\mathrm{TPower}}_s^{E}(n)$,
+and the minimum recommended sample size is
+$\hat{n}_{80}^{E} = \min\{n: \widehat{\mathrm{Power}}_{\mathrm{TS}}^{E}(n)\geq 0.80\}$.
+This plug-in estimate is fast but treats pilot uncertainty as zero, which can
+lead to over-optimistic projections when the pilot is small ($n_0 < 20$) or
+the signal is weak ($\tilde{r} < 0.5$).
 
-For each bootstrap replicate $b=1,\ldots,R_{\mathrm{boot}}$:
+\paragraph{Bootstrap procedure.}
+To quantify pilot uncertainty, \textsc{SCP} augments the plug-in analysis
+with a nonparametric bootstrap over the fitted pilot parameter table. For each
+bootstrap replicate $b=1,\ldots,R_{\mathrm{boot}}$:
 \begin{enumerate}
-\item Draw $G_0$ fitted gene-level parameter rows with replacement from the
-pilot-derived parameter table to form bootstrap sample
-$\widehat{\Theta}^{(b)}$.
-
-\item Construct bootstrap empirical parameter distributions from
-$\widehat{\Theta}^{(b)}$, yielding bootstrap inputs
-$\bigl(\hat{F}_{\mu}^{(b)},\hat{F}_{A,\sigma,k}^{(b)},\hat{F}_{\phi,k}^{(b)}\bigr)$.
-
-\item For each candidate design $(n,B)$ in the evaluation grid, run Steps~II--IV
-using the bootstrap estimates as inputs over $S_{\mathrm{inner}}$ simulation
-replicates, yielding the bootstrap-specific power estimate
-$\widehat{\mathrm{Power}}^{E,(b)}(n,B)
-=
-\frac{1}{S_{\mathrm{inner}}}
-\sum_{s=1}^{S_{\mathrm{inner}}}
-\widehat{\mathrm{TPower}}_s^{E,(b)}(n,B)$.
+\item Draw $G_0$ gene-level rows $\hat{\Theta}_g=(\hat{\mu}_g,\hat{A}_g,\hat{\sigma}_g,\hat{\phi}_g,\hat{Z}_g^R)$
+  with replacement to form $\widehat{\Theta}^{(b)}$.
+\item Reconstruct bootstrap empirical distributions
+  $(\hat{F}_\mu^{(b)}, \hat{F}_{A,\sigma}^{(b)}, \hat{F}_\phi^{(b)})$.
+\item Run Steps~II--IV over the design grid using bootstrap inputs, yielding
+  $\widehat{\mathrm{Power}}^{E,(b)}(n,B)
+  = S_{\mathrm{inner}}^{-1}\sum_s \widehat{\mathrm{TPower}}_s^{E,(b)}(n,B)$.
 \end{enumerate}
+Because the resampling unit is the entire fitted row $\hat{\Theta}_g$, the
+bootstrap preserves the empirical joint distribution of $(A,\sigma)$, from
+which all marginal simulator inputs are induced. The collection-time
+distribution $\hat{F}_{\mathrm{TOD}}$ is held fixed, so the bootstrap
+quantifies gene-level parameter uncertainty conditional on the observed
+sampling schedule.
 
-Across the $R_{\mathrm{boot}}$ replicates, the bootstrap mean power for
-endpoint $E$ at each design point $(n,B)$ is
-$\bar{P}^{E}(n,B)
+\paragraph{Inference from bootstrap replicates.}
+The bootstrap mean power and pointwise $(1-\alpha_{\mathrm{CI}})$ confidence
+interval at design point $(n,B)$ are
+\[
+\bar{P}^{E}(n,B)
 =
 \frac{1}{R_{\mathrm{boot}}}
 \sum_{b=1}^{R_{\mathrm{boot}}}
-\widehat{\mathrm{Power}}^{E,(b)}(n,B)$.
-A pointwise $(1-\alpha_{\mathrm{CI}})$ bootstrap confidence interval is formed
-from the empirical quantiles of the resample distribution as
-$\mathrm{CI}^{E}(n,B)
+\widehat{\mathrm{Power}}^{E,(b)}(n,B),
+\]
+\[
+\mathrm{CI}^{E}(n,B)
 =
 \bigl[
 \widehat{\mathrm{Power}}^{E}_{\,\alpha_{\mathrm{CI}}/2}(n,B),\;
 \widehat{\mathrm{Power}}^{E}_{\,1-\alpha_{\mathrm{CI}}/2}(n,B)
-\bigr]$,
-where $\widehat{\mathrm{Power}}^{E}_{q}(n,B)$ denotes the $q$-th empirical
-quantile of
-$\{\widehat{\mathrm{Power}}^{E,(b)}(n,B)\}_{b=1}^{R_{\mathrm{boot}}}$.
-
-These intervals describe how sensitive the projected power is to sampling
-variation in the pilot-derived empirical parameter distributions. Narrow intervals indicate that the pilot supports stable power projections,
-whereas wider intervals indicate greater uncertainty in the projected design
-performance and sample-size recommendations. The bootstrap mean $\bar{P}^{E}(n,B)$ provides a natural
-summary of the resampled endpoint-specific power curves, while the interval
-$\mathrm{CI}^{E}(n,B)$ complements the two-stage plug-in estimate
-$\widehat{\mathrm{Power}}_{\mathrm{TS}}^{E}(n)$ by displaying variability that
-is not visible in a single fitted pilot.
-
-\paragraph{Design allocation across time points and replication.}
-Evaluating the design grid across multiple values of $B$ also addresses the
-practical design question of how to divide a fixed subject budget $n$ between
-distinct time points $B$ and replication $m=n/B$.
-
-
+\bigr],
+\]
+where $\widehat{\mathrm{Power}}^{E}_{q}$ is the $q$-th empirical quantile
+across bootstrap replicates. Narrow intervals indicate stable power
+projections; wide intervals signal that the pilot is insufficiently
+informative to support a precise sample-size recommendation, and a larger pilot
+or additional assumptions are warranted.
 
 %% ====================================================================
 \section{Results}
@@ -784,7 +572,7 @@ intervals than the passive Seney design despite a smaller pilot sample.}
 
 \subsection{Active Design: Multi-Dataset Power and Effect-Size Scaling}
 
-To evaluate \software{DiffCircaPower} across a wider range of study designs and effect sizes, we analyzed three additional pilot datasets spanning a 5-fold range in effect size. The mouse LIV vs.\ CER comparison (GSE54651; $n_{\text{pilot}} = 8$, $B = 8$, $m = 1$; Zhang et al.\ \citep{zhang2014comprehensive}) has median signal-to-noise ratio $\tilde{r} = 2.88$ and $\hat{\pi}_{\mathrm{DR}} = 29.6\%$, representing the highest-signal scenario. The baboon LUN vs.\ CER comparison ($n_{\text{pilot}} = 12$, $B = 12$, $m = 1$) has $\tilde{r} = 1.72$ and $\hat{\pi}_{\mathrm{DR}} = 40.7\%$. The mouse D1 vs.\ D2 striatal neuron comparison ($n_{\text{pilot}} = 45$, $B = 6$, $m \approx 7.5$) has $\tilde{r} = 0.65$ and $\hat{\pi}_{\mathrm{DR}} = 19.9\%$ (Table~\ref{tab:signal_summary}).
+To evaluate \textsc{SCP} across a wider range of study designs and effect sizes, we analyzed three additional pilot datasets spanning a 5-fold range in effect size. The mouse LIV vs.\ CER comparison (GSE54651; $n_{\text{pilot}} = 8$, $B = 8$, $m = 1$; Zhang et al.\ \citep{zhang2014comprehensive}) has median signal-to-noise ratio $\tilde{r} = 2.88$ and $\hat{\pi}_{\mathrm{DR}} = 29.6\%$, representing the highest-signal scenario. The baboon LUN vs.\ CER comparison ($n_{\text{pilot}} = 12$, $B = 12$, $m = 1$) has $\tilde{r} = 1.72$ and $\hat{\pi}_{\mathrm{DR}} = 40.7\%$. The mouse D1 vs.\ D2 striatal neuron comparison ($n_{\text{pilot}} = 45$, $B = 6$, $m \approx 7.5$) has $\tilde{r} = 0.65$ and $\hat{\pi}_{\mathrm{DR}} = 19.9\%$ (Table~\ref{tab:signal_summary}).
 
 \begin{table}[H]
 \centering
@@ -884,7 +672,7 @@ Power depends strongly on the magnitude of the phase difference (Figure~\ref{fig
 
 \subsection{Case Study: Comparing Detection Methods}
 
-A key feature of \software{DiffCircaPower}'s modular architecture is its ability to evaluate competing detection methods on identical simulated data, enabling objective comparisons of power and false discovery rate (FDR). Methods such as \software{JTK\_CYCLE}, \software{RAIN}, and \software{MetaCycle} focus on rhythmicity detection and do not test individual circadian parameters. We therefore focus on \software{DiffCircaPipeline} (DCP) and \software{CircaCompare} (CC), which conduct gene-level inference on circadian parameters.
+A key feature of \textsc{SCP}'s modular architecture is its ability to evaluate competing detection methods on identical simulated data, enabling objective comparisons of power and false discovery rate (FDR). Methods such as \textsc{JTK\_CYCLE}, \textsc{RAIN}, and \textsc{MetaCycle} focus on rhythmicity detection and do not test individual circadian parameters. We therefore focus on \textsc{DiffCircaPipeline} (DCP) and \textsc{CircaCompare} (CC), which conduct gene-level inference on circadian parameters.
 
 DCP and CircaCompare differ in both scope and statistical approach. DCP provides a complete differential analysis pipeline: it tests DR (gain/loss of rhythmicity) via a $\Delta R^2$ LRT, then tests DP among jointly rhythmic genes via constrained-MLE LRTs. CircaCompare tests per-parameter differences (DP and differential mesor) via Wald $t$-tests from per-gene NLS fits; it has no DR test equivalent because it lacks a $\Delta R^2$-type statistic for overall rhythm gain/loss. Thus, when DR is the primary question (e.g., identifying genes that lose rhythmicity in disease), DCP is the only available option.
 
@@ -934,7 +722,7 @@ Second, \textbf{stratified power analysis is essential}. Marginal power averages
 
 Third, \textbf{phase shift power saturates around 8 hours}. This reflects the geometric limit of cosine separation: for two cosines with identical $A$ and phase difference $\Delta\phi$, the squared amplitude of $y_1(t) - y_2(t)$ is proportional to $\sin^2(\pi\Delta\phi/\tau)$, which plateaus for $\Delta\phi > \tau/3 \approx 8$\,h.
 
-Fourth, \textbf{the case study comparing DCP and CircaCompare illustrates how \software{DiffCircaPower} can guide method selection}. The two methods occupy complementary niches. DCP is the only tool providing a DR test for overall gain/loss of rhythmicity, making it indispensable when DR is the primary scientific question. For the shared test type (DP), CircaCompare offers 9--12 percentage points higher power but at the cost of inflated DP FDR (8.7--19.6\% vs.\ nominal 5\%) and ${\sim}75\times$ longer computation time. For DP, DCP is preferred in discovery studies where FDR control is critical, while CircaCompare may be considered when the power gain outweighs the inflation risk and findings will be independently validated.
+Fourth, \textbf{the case study comparing DCP and CircaCompare illustrates how \textsc{SCP} can guide method selection}. The two methods occupy complementary niches. DCP is the only tool providing a DR test for overall gain/loss of rhythmicity, making it indispensable when DR is the primary scientific question. For the shared test type (DP), CircaCompare offers 9--12 percentage points higher power but at the cost of inflated DP FDR (8.7--19.6\% vs.\ nominal 5\%) and ${\sim}75\times$ longer computation time. For DP, DCP is preferred in discovery studies where FDR control is critical, while CircaCompare may be considered when the power gain outweighs the inflation risk and findings will be independently validated.
 
 Fifth, \textbf{the two-stage plug-in method systematically overestimates projected power, and bootstrap resampling corrects this bias while quantifying pilot uncertainty}. By treating pilot parameter estimates as exact, the plug-in approach ignores the variability that would result from re-running the pilot study. On the baboon LUN pilot ($n = 12$ active samples), the plug-in recommendation was $\hat{n}_{80} = 36$, but at that sample size the bootstrap analysis shows projected power is only 76\% [74.8\%, 77.0\%]---a gap of 6\,pp that would result in an underpowered study. The bootstrap recommendation of $N = 48$ correctly accounts for this uncertainty. Crucially, tight bootstrap confidence intervals do not require a large pilot: the baboon design uses only 12 animals with $m = 1$ replicate per time point, yet CIs are $\leq 3$\,pp wide because 12 equally-spaced time points fully constrain the cosinor parameters. The key is design informativeness---an active design with full 24-h coverage---rather than pilot size per se.
 
@@ -947,11 +735,11 @@ $B\geq 4$; Supplementary~S7); gene types are modeled as mutually exclusive
 (compound DR+DP changes are not simulated); and passive-design results depend
 on the pilot's time-of-day distribution. Full discussion in Supplementary~S9.
 
-\paragraph{Software availability.} \software{DiffCircaPower} is available as an open-source R framework with a PROPER-style configuration system. An end-to-end pipeline (\texttt{examples/run\_pipeline.R}) reproduces all results in this paper, and a validation suite (\texttt{examples/run\_validation.R}) implements the checks described in Section~3.6.
+\paragraph{Software availability.} \textsc{SCP} is available as an open-source R framework with a PROPER-style configuration system. An end-to-end pipeline (\texttt{examples/run\_pipeline.R}) reproduces all results in this paper, and a validation suite (\texttt{examples/run\_validation.R}) implements the checks described in Section~3.6.
 
 \section*{Acknowledgments}
 
-This work builds on \software{CircaPower} \citep{zong2023circapower}, \software{PROPER} \citep{wu2015proper}, \software{DiffCircaPipeline} \citep{xue2023diffcircapipeline}, and \software{CircaCompare} \citep{parsons2020circacompare}.
+This work builds on \textsc{CircaPower} \citep{zong2023circapower}, \textsc{PROPER} \citep{wu2015proper}, \textsc{DiffCircaPipeline} \citep{xue2023diffcircapipeline}, and \textsc{CircaCompare} \citep{parsons2020circacompare}.
 
 \bibliographystyle{plain}
 \bibliography{references}
