@@ -63,7 +63,6 @@ framework for evaluating power and FDR under realistic study conditions.
 \subsection{SCP for Circadian Biomarker Detection (Single Cohort)}
 \label{sec:single_cohort}
 
-\paragraph{Cosinor model.}
 For a single group of $n$ subjects with collection times
 $t_1,\ldots,t_n\in[0,24)$, the expression of gene $g$ follows the cosinor model
 \begin{equation}
@@ -94,14 +93,14 @@ squares from the cosinor fit. Across $G$ genes, Benjamini--Hochberg (BH)
 correction at nominal FDR level $\alpha$ controls the false discovery rate for
 rhythmicity detection.
 
-\paragraph{CircaPower closed-form calculation.}
-Under the cosinor model, the noncentrality parameter of the $F$-test is
+The noncentrality parameter of the $F$-test depends jointly on the effect size
+and the sampling design:
 \begin{equation}
 \lambda_g = r_g^2 \cdot n \cdot d(\phi_g),
 \label{eq:ncp}
 \end{equation}
-where the sampling design factor $d(\phi_g)$ captures how well the collection
-times cover the gene's peak expression time:
+where the design factor $d(\phi_g)$ captures how well the collection times
+cover the gene's peak expression time:
 \begin{equation}
 d(\phi_g)
 =
@@ -123,50 +122,39 @@ balanced equally spaced active designs with $B\geq 3$ time points,
 $d(\phi_g)=1/2$ for all phases (B-invariance; see Supplementary~S8), so
 $\lambda_g = r_g^2 \cdot n / 2$ and power depends only on $r_g$ and $n$.
 
-\paragraph{Limitation of the single-$r$ assumption.}
-\textsc{CircaPower} applies \eqref{eq:circapower_formula} at a single
-representative $r$ specified by the user. In transcriptome-wide studies, $r_g$
-varies substantially across genes: core clock genes in mouse liver typically
-have $r \approx 3$--$6$, while the median $r$ across all expressed genes in
-human brain tissue is $\tilde{r}\approx 0.6$ \citep{zong2023circapower}. Using
-a single high $r$ therefore produces severely over-optimistic power projections
-for the majority of the transcriptome. Moreover, the per-gene formula
-\eqref{eq:circapower_formula} does not account for the multiple-testing
-correction applied when testing thousands of genes simultaneously.
+This closed-form approach, as implemented in \textsc{CircaPower}, evaluates
+\eqref{eq:circapower_formula} at a single representative $r$ specified by the
+user. In transcriptome-wide studies, however, $r_g$ varies substantially across
+genes: core clock genes in mouse liver typically have $r \approx 3$--$6$, while
+the median $r$ across all expressed genes in human brain tissue is
+$\tilde{r}\approx 0.6$ \citep{zong2023circapower}. Using a single high $r$
+therefore produces severely over-optimistic power projections for the majority
+of the transcriptome, and the per-gene formula \eqref{eq:circapower_formula}
+does not account for the multiple-testing correction applied when testing
+thousands of genes simultaneously.
 
-\paragraph{SCP extension: pilot-calibrated transcriptome-level power.}
-When a pilot dataset is available, \textsc{SCP} estimates gene-level
-parameters directly from the data. For each of the $G_0$ pilot genes, we fit
+\textsc{SCP} addresses these limitations by estimating gene-level parameters
+directly from a pilot dataset. For each of the $G_0$ pilot genes, we fit
 \eqref{eq:cosinor_model} by OLS, yielding estimates
 $(\hat{\mu}_g, \hat{A}_g, \hat{\sigma}_g, \hat{\phi}_g)$ and a BH-adjusted
-rhythmicity $q$-value $\hat{q}_g$. The rhythmic gene set is
+rhythmicity $q$-value $\hat{q}_g$; the rhythmic gene set is
 $\mathcal{G}_R = \{g : \hat{q}_g < 0.10\}$.
+Two modes of single-cohort power analysis are supported. In the closed-form
+mode, \eqref{eq:circapower_formula} is applied gene-by-gene using each pilot
+gene's estimated $\hat{r}_g = \hat{A}_g/\hat{\sigma}_g$ and design factor
+$\hat{d}(\hat{\phi}_g)$, and the results are averaged across genes to yield
+$\widehat{\mathrm{Power}}_{\mathrm{CF}}(n)$. This is computationally efficient
+and extends \textsc{CircaPower} to heterogeneous $r$, but does not model
+genome-wide FDR. The simulation-based
+mode is therefore recommended: single-group datasets are simulated from the
+pilot-estimated empirical distributions, the $F$-test with BH correction is
+applied, and empirical power and FDR are aggregated across replicates.
+Simulation naturally captures genome-wide multiplicity correction, the full
+joint heterogeneity of $(A_g, \sigma_g)$, and passive-design timing
+variability — features inaccessible to the closed-form approach.
 
-\textsc{SCP} supports two modes for single-cohort power analysis:
-
-\begin{enumerate}
-\item \textbf{Closed-form (fast):} Apply \eqref{eq:circapower_formula} to each
-  pilot gene's estimated $\hat{r}_g = \hat{A}_g/\hat{\sigma}_g$ and design factor
-  $\hat{d}(\hat{\phi}_g)$, then average across genes:
-  \[
-  \widehat{\mathrm{Power}}_{\mathrm{CF}}(n)
-  =
-  \frac{1}{G_0}\sum_{g=1}^{G_0} \mathrm{Power}_g(n;\,\hat{r}_g,\hat{d}_g).
-  \]
-  This is fast and directly extends \textsc{CircaPower} to heterogeneous $r$,
-  but does not model genome-wide FDR.
-
-\item \textbf{Simulation-based (recommended):} Simulate single-group datasets
-  from the pilot-estimated empirical distributions, apply the $F$-test with BH
-  correction, and aggregate empirical power and FDR across replicates (Step~I
-  and the data simulation step below). Simulation naturally captures
-  genome-wide multiplicity correction, the full joint heterogeneity of
-  $(A_g, \sigma_g)$, and passive-design timing variability — features that
-  are not accessible to the closed-form approach.
-\end{enumerate}
-
-\paragraph{Step I: Pilot parameter estimation.}
-From the pilot gene fits, we construct empirical distributions:
+The pilot dataset is summarized by constructing empirical distributions over
+the fitted gene-level parameters:
 \begin{equation}
 \hat{F}_\mu
 =
@@ -184,33 +172,29 @@ From the pilot gene fits, we construct empirical distributions:
 Sampling $(A,\sigma)$ jointly from $\hat{F}_{A,\sigma}$ preserves the empirical
 dependence between amplitude and noise, so the induced distribution of
 $r=A/\sigma$ reflects the pilot transcriptome without requiring $r$ to be
-specified separately. We denote the full pilot summary by
+specified separately. The full pilot summary is denoted
 $\hat{\Psi} = (\hat{F}_\mu, \hat{F}_{A,\sigma}, \hat{F}_\phi,
 \hat{F}_{\mathrm{TOD}}, \hat{\pi}_R)$,
 where $\hat{F}_{\mathrm{TOD}}$ is the empirical collection-time distribution
 (for passive designs) and $\hat{\pi}_R = |\mathcal{G}_R|/G_0$.
 
-\paragraph{Data simulation.}
-For simulation replicate $s$ and candidate sample size $n$, we generate
-$G$ genes as follows. Draw $\mu_g^{(s)}\sim\hat{F}_\mu$,
+For each simulation replicate $s$ and candidate sample size $n$, $G$ genes are
+generated by drawing $\mu_g^{(s)}\sim\hat{F}_\mu$,
 $(A_g^{(s)},\sigma_g^{(s)})\sim\hat{F}_{A,\sigma}$, and
-$\phi_g^{(s)}\sim\hat{F}_\phi$ for each gene, with rhythmicity status
-$Z_g^R\sim\mathrm{Bernoulli}(\hat\pi_R)$. For rhythmic genes, generate
-observations from \eqref{eq:cosinor_model}; for arrhythmic genes, set $A_g=0$.
-Collection times follow the active schedule or are drawn from
-$\hat{F}_{\mathrm{TOD}}$ for passive designs.
-
-\paragraph{Active vs.\ passive designs.}
-An \emph{active} design specifies the sampling schedule: the number $B$ of
-distinct time points and the replication $m_b$ at each, with total $n=\sum_b
-m_b$. A \emph{passive} design leaves collection times to the empirical
-time-of-day distribution of the cohort (e.g., post-mortem studies). For active
-designs with $B\geq 3$ equally spaced times and balanced replication,
-$d(\phi)=1/2$ for all phases (Supplementary~S8), so power depends only on
-total $n$. For passive designs, the design factor $d_{g} =
-n^{-1}\sum_{i=1}^n\cos^2(\omega t_i - \omega\phi_g)$ varies per gene,
-and \textsc{SCP} reports design-factor diagnostics to quantify how temporal
-coverage affects efficiency.
+$\phi_g^{(s)}\sim\hat{F}_\phi$, with rhythmicity status
+$Z_g^R\sim\mathrm{Bernoulli}(\hat\pi_R)$. For rhythmic genes, observations are
+generated from \eqref{eq:cosinor_model}; for arrhythmic genes, $A_g$ is set to
+zero. An \emph{active} design specifies the sampling schedule: the number $B$
+of distinct time points and the replication $m_b$ at each, with total
+$n=\sum_b m_b$. A \emph{passive} design leaves collection times to the
+empirical time-of-day distribution of the cohort --- for example, post-mortem
+studies or observational cohorts in which clinical timing governs sample
+collection. For active designs with $B\geq 3$ equally spaced times and
+balanced replication, $d(\phi)=1/2$ for all phases (Supplementary~S8), so
+power depends only on total $n$. For passive designs, the design factor
+$d_{g} = n^{-1}\sum_{i=1}^n\cos^2(\omega t_i - \omega\phi_g)$ varies per
+gene, and \textsc{SCP} reports design-factor diagnostics to quantify how
+temporal coverage affects efficiency.
 
 %% --------------------------------------------------------------------
 \subsection{Differential Circadian Analysis}
@@ -228,48 +212,36 @@ analysis pipeline is evaluated numerically, making it possible to characterize
 study performance under the actual inference procedure and under realistic
 parameter settings drawn from pilot data.
 
-\paragraph{Differential endpoints.}
-For two groups $k\in\{1,2\}$ and gene $g$, \textsc{SCP} supports three
-differential endpoints:
-\begin{itemize}
-\item \textbf{DR} (differential rhythmicity): gene is rhythmic in one group
-  but not the other (gain or loss of rhythmicity). Biologically, DR captures
-  clock gene disruption — for example, core oscillator genes that cycle in
-  healthy tissue but lose rhythmicity in tumor or neurodegenerative tissue.
-\item \textbf{DP} (differential phase): gene is rhythmic in both groups but
-  with a shifted acrophase, $\phi_{g,1}\neq\phi_{g,2}$. DP corresponds to
-  a change in the timing of peak expression, as seen in circadian misalignment,
-  shift work, or disease states that alter clock-output phasing without
-  abolishing the oscillation.
-\item \textbf{DM} (differential mesor): gene has the same rhythmic structure
-  in both groups but a shifted baseline expression level,
-  $\mu_{g,1}\neq\mu_{g,2}$. DM is the circadian analogue of differential
-  expression (DE) in standard RNA-seq analysis: the gene oscillates similarly
-  in both groups but at a different average level, as occurs when an
-  inflammatory or disease state elevates or suppresses a gene's baseline
-  while leaving its rhythmic pattern intact.
-\end{itemize}
-These endpoints are not mutually exclusive in real data; however, power
-analysis evaluates each in isolation to produce interpretable, endpoint-specific
-power curves --- the standard practice in multi-parameter power analysis.
+\textsc{SCP} evaluates three differential endpoints. Differential rhythmicity
+(DR) captures gain or loss of rhythmicity: the gene is rhythmic in one group
+but not the other. Biologically, DR corresponds to clock gene disruption ---
+for example, core oscillator genes that cycle in healthy tissue but lose
+rhythmicity in tumor or neurodegenerative tissue. Differential phase (DP)
+indicates a shifted acrophase, $\phi_{g,1}\neq\phi_{g,2}$, arising when the
+timing of peak expression changes, as seen in circadian misalignment, shift
+work, or disease states that alter clock-output phasing without abolishing the
+oscillation. Differential mesor (DM) captures a shifted baseline expression
+level, $\mu_{g,1}\neq\mu_{g,2}$, while the rhythmic structure is otherwise
+preserved; DM is the circadian analogue of differential expression in standard
+RNA-seq analysis, arising when an inflammatory or disease state elevates or
+suppresses a gene's average level while leaving its oscillation intact. These
+endpoints are not mutually exclusive in real data; power analysis evaluates
+each in isolation to produce interpretable, endpoint-specific power curves.
 
-\paragraph{Notation.}
-We index genes by $g=1,\ldots,G$, subjects by $i$, groups by $k\in\{1,2\}$,
-and simulation replicates by $s=1,\ldots,S$. For each endpoint
-$E\in\{\mathrm{DR},\mathrm{DP},\mathrm{DM}\}$, let $z_g^E\in\{0,1\}$ indicate
-a truly differential gene and $z_g^{*,E}\in\{0,1\}$ a targeted differential
-gene whose effect exceeds a user-specified minimum threshold $\Delta$
-(e.g., minimum amplitude ratio for DR, minimum phase shift for DP, or minimum
-mesor difference for DM); formally $z_g^{*,E} = z_g^E \cdot
-\mathbf{1}\{\mathrm{effect}_g^E \geq \Delta\}$. Let $D_{g,s}^E\in\{0,1\}$ indicate
+Throughout this section, genes are indexed by $g=1,\ldots,G$, subjects by
+$i$, groups by $k\in\{1,2\}$, and simulation replicates by $s=1,\ldots,S$.
+For each endpoint $E\in\{\mathrm{DR},\mathrm{DP},\mathrm{DM}\}$, $z_g^E\in\{0,1\}$
+indicates a truly differential gene and $z_g^{*,E}\in\{0,1\}$ a targeted
+differential gene whose effect exceeds a user-specified minimum threshold
+$\Delta$ (e.g., minimum amplitude ratio for DR, minimum phase shift for DP,
+or minimum mesor difference for DM); formally $z_g^{*,E} = z_g^E \cdot
+\mathbf{1}\{\mathrm{effect}_g^E \geq \Delta\}$. $D_{g,s}^E\in\{0,1\}$ denotes
 discovery by the pipeline in replicate $s$. The proportions of DR, DP, and DM
 genes are $\pi_{\mathrm{DR}}$, $\pi_{\mathrm{DP}}$, and $\pi_{\mathrm{DM}}$,
-and $\pi_{\mathrm{R}}$ denotes the proportion of jointly rhythmic
-(non-DR) genes.
+and $\pi_{\mathrm{R}}$ denotes the proportion of jointly rhythmic (non-DR) genes.
 
-\paragraph{Step II: Two-group data generation.}
-Building on the pilot summary $\hat{\Psi}$ from \S\ref{sec:single_cohort}, we
-extend Step~II to the two-group setting. Each gene is assigned a latent type
+Data generation for the two-group setting builds on the pilot summary
+$\hat{\Psi}$ from Section~\ref{sec:single_cohort}. Each gene is assigned a latent type
 $T_g\in\{0,1,2,3,4,5\}$ with probabilities determined by the four user-supplied
 proportions $(\pi_{\mathrm{DR}},\pi_R,\pi_{\mathrm{DP}},\pi_{\mathrm{DM}})$:
 $P(T_g=2)=P(T_g=3)=\pi_{\mathrm{DR}}/2$ (DR genes split equally between
@@ -328,10 +300,9 @@ baseline expression.}
 \label{tab:type_mapping}
 \end{table}
 
-\paragraph{Step III: Inference via DiffCircaPipeline.}
-Given simulated dataset $\{y_{g,k,i}^{(s)}, t_{k,i}^{(s)}\}$, the
-\textsc{DiffCircaPipeline} (DCP) \citep{xue2023diffcircapipeline} applies
-the following three-stage procedure.
+Given a simulated dataset $\{y_{g,k,i}^{(s)}, t_{k,i}^{(s)}\}$, inference
+proceeds via \textsc{DiffCircaPipeline} (DCP; \citealt{xue2023diffcircapipeline})
+in three stages.
 
 \emph{Stage 1 --- Group-level rhythmicity.} For each group $k$ and gene $g$,
 fit the linearized cosinor model by OLS and compute an $F$-test
@@ -371,17 +342,12 @@ is reserved for the endpoint-specific tests below.
   class, since a mesor shift can occur regardless of rhythmicity status.
 \end{itemize}
 
-\paragraph{Step IV: Power and FDR metrics.}
-For each endpoint $E\in\{\mathrm{DR},\mathrm{DP},\mathrm{DM}\}$ and simulation
+Study performance is summarized by computing power and FDR across simulation
+replicates. For each endpoint $E\in\{\mathrm{DR},\mathrm{DP},\mathrm{DM}\}$ and
 replicate $s$, let $R_s^E=\sum_g D_{g,s}^E$ denote the number of discoveries
-and $V_s^E=\sum_g D_{g,s}^E(1-z_g^E)$ the number of false discoveries.
-The per-replicate FDR is
-\[
-\widehat{\mathrm{FDR}}_s^E
-=
-\frac{V_s^E}{R_s^E}\,\mathbf{1}\{R_s^E>0\}.
-\]
-Let $S_s^{*,E}=\sum_g D_{g,s}^E z_g^{*,E}$ and
+and $V_s^E=\sum_g D_{g,s}^E(1-z_g^E)$ the number of false discoveries;
+the per-replicate FDR is $\widehat{\mathrm{FDR}}_s^E = V_s^E/R_s^E$ when
+$R_s^E>0$ and zero otherwise. Let $S_s^{*,E}=\sum_g D_{g,s}^E z_g^{*,E}$ and
 $G_1^{*,E}=\sum_g z_g^{*,E}$. The per-replicate targeted power is
 \begin{equation}
 \widehat{\mathrm{TPower}}_s^E(\Delta)
@@ -391,16 +357,10 @@ $G_1^{*,E}=\sum_g z_g^{*,E}$. The per-replicate targeted power is
 \end{equation}
 Design-level summaries are obtained by averaging across $S$ replicates.
 Genes may additionally be stratified by $r_g = A_g/\sigma_g$, phase $\phi_g$,
-or design efficiency $d(\phi_g)$ to reveal which classes of genes are
-detectable under a given design:
-\begin{equation}
-\widehat{\mathrm{TPower}}_{s,j}^E(\Delta)
-=
-\frac{\sum_{g: W_g\in B_j} D_{g,s}^E z_g^{*,E}}
-     {\sum_{g: W_g\in B_j} z_g^{*,E}},
-\label{eq:tpower_strat_def}
-\end{equation}
-where $W_g$ is the stratification variable and $\{B_j\}$ are the strata.
+or design efficiency $d(\phi_g)$: stratum-specific targeted power is computed
+as the fraction of truly differential, above-threshold genes in stratum $j$
+that are discovered, revealing which classes of genes are detectable under a
+given design.
 
 %% --------------------------------------------------------------------
 \subsection{Design Considerations: B vs.\ m Trade-off}
@@ -434,51 +394,40 @@ whether the allocation matters for a given pilot dataset and target endpoint.
 \subsection{Sensitivity Analysis via Bootstrap}
 \label{sec:bootstrap}
 
-\paragraph{Two-stage plug-in baseline.}
 The workflow described above constitutes a \emph{two-stage plug-in} procedure:
-Step~I fits pilot parameters once, and Steps~II--IV are evaluated over a design
-grid treating those estimates as fixed. For endpoint $E$, the resulting
-power curve is
+pilot parameters are estimated once from the data, and the simulation
+grid is then evaluated treating those estimates as fixed. For
+endpoint $E$, the resulting power curve is
 $\widehat{\mathrm{Power}}_{\mathrm{TS}}^{E}(n)
-= S^{-1}\sum_{s=1}^{S}\widehat{\mathrm{TPower}}_s^{E}(n)$,
-and the minimum recommended sample size is
+= S^{-1}\sum_{s=1}^{S}\widehat{\mathrm{TPower}}_s^{E}(n)$, and the minimum
+recommended sample size is
 $\hat{n}_{80}^{E} = \min\{n: \widehat{\mathrm{Power}}_{\mathrm{TS}}^{E}(n)\geq 0.80\}$.
-This plug-in estimate is fast but treats pilot uncertainty as zero, which can
-lead to over-optimistic projections when the pilot is small ($n_0 < 20$) or
-the signal is weak ($\tilde{r} < 0.5$).
+This plug-in estimate is computationally efficient but treats pilot uncertainty
+as zero, which can lead to over-optimistic projections when the pilot is small
+($n_0 < 20$) or the signal is weak ($\tilde{r} < 0.5$).
 
-\paragraph{Bootstrap procedure.}
 To quantify pilot uncertainty, \textsc{SCP} augments the plug-in analysis
-with a nonparametric bootstrap over the fitted pilot parameter table. For each
-bootstrap replicate $b=1,\ldots,R_{\mathrm{boot}}$:
-\begin{enumerate}
-\item Draw $G_0$ gene-level rows $\hat{\Theta}_g=(\hat{\mu}_g,\hat{A}_g,\hat{\sigma}_g,\hat{\phi}_g,\hat{Z}_g^R)$
-  with replacement to form $\widehat{\Theta}^{(b)}$.
-\item Reconstruct bootstrap empirical distributions
-  $(\hat{F}_\mu^{(b)}, \hat{F}_{A,\sigma}^{(b)}, \hat{F}_\phi^{(b)})$.
-\item Run the data generation and inference pipeline (Steps~II--IV) over the
-  design grid using bootstrap inputs, averaging over $S_{\mathrm{inner}}$ inner
-  simulation replicates to obtain
-  $\widehat{\mathrm{Power}}^{E,(b)}(n,B)
-  = S_{\mathrm{inner}}^{-1}\sum_s \widehat{\mathrm{TPower}}_s^{E,(b)}(n,B)$.
-\end{enumerate}
+with a nonparametric bootstrap over the fitted pilot parameter table. In each
+bootstrap replicate $b=1,\ldots,R_{\mathrm{boot}}$, a resample of $G_0$
+gene-level rows
+$\hat{\Theta}_g=(\hat{\mu}_g,\hat{A}_g,\hat{\sigma}_g,\hat{\phi}_g,\hat{Z}_g^R)$
+is drawn with replacement to form $\widehat{\Theta}^{(b)}$; bootstrap
+empirical distributions
+$(\hat{F}_\mu^{(b)}, \hat{F}_{A,\sigma}^{(b)}, \hat{F}_\phi^{(b)})$
+are reconstructed from this resample; and the data generation and inference
+pipeline is run over the design grid using bootstrap inputs, averaging over
+$S_{\mathrm{inner}}$ inner simulation replicates to obtain
+$\widehat{\mathrm{Power}}^{E,(b)}(n,B)
+= S_{\mathrm{inner}}^{-1}\sum_s \widehat{\mathrm{TPower}}_s^{E,(b)}(n,B)$.
 Because the resampling unit is the entire fitted row $\hat{\Theta}_g$, the
 bootstrap preserves the empirical joint distribution of $(A,\sigma)$, from
-which all marginal simulator inputs are induced. The collection-time
-distribution $\hat{F}_{\mathrm{TOD}}$ is held fixed, so the bootstrap
-quantifies gene-level parameter uncertainty conditional on the observed
-sampling schedule.
+which all other simulator inputs are derived. The collection-time distribution
+$\hat{F}_{\mathrm{TOD}}$ is held fixed, so the bootstrap quantifies gene-level
+parameter uncertainty conditional on the observed sampling schedule.
 
-\paragraph{Inference from bootstrap replicates.}
-The bootstrap mean power and pointwise $(1-\alpha_{\mathrm{CI}})$ confidence
-interval at design point $(n,B)$ are
-\[
-\bar{P}^{E}(n,B)
-=
-\frac{1}{R_{\mathrm{boot}}}
-\sum_{b=1}^{R_{\mathrm{boot}}}
-\widehat{\mathrm{Power}}^{E,(b)}(n,B),
-\]
+The bootstrap mean power $\bar{P}^{E}(n,B)$ is the average of
+$\widehat{\mathrm{Power}}^{E,(b)}(n,B)$ across $b=1,\ldots,R_{\mathrm{boot}}$
+replicates, and the pointwise $(1-\alpha_{\mathrm{CI}})$ confidence interval is
 \[
 \mathrm{CI}^{E}(n,B)
 =
@@ -487,7 +436,7 @@ interval at design point $(n,B)$ are
 \widehat{\mathrm{Power}}^{E}_{\,1-\alpha_{\mathrm{CI}}/2}(n,B)
 \bigr],
 \]
-where $\widehat{\mathrm{Power}}^{E}_{q}$ is the $q$-th empirical quantile
+where $\widehat{\mathrm{Power}}^{E}_{q}$ denotes the $q$-th empirical quantile
 across bootstrap replicates. Narrow intervals indicate stable power
 projections; wide intervals signal that the pilot is insufficiently
 informative to support a precise sample-size recommendation, and a larger pilot
@@ -583,21 +532,6 @@ the active design: with $B = 12$ equally-spaced time points and one animal per
 time point, the cosinor parameters are well identified even at $n = 12$. A
 passive pilot of similar size would yield substantially wider intervals.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/bootstrap_summary.pdf}
-\caption{Bootstrap vs.\ two-stage projected DR power across three pilot datasets.
-Left: Baboon LUN vs.\ CER ($n=12$, active $B=12$, $m=1$).
-Centre: Mouse D1 vs.\ D2 ($n=45$, active $B=6$).
-Right: Seney MDD vs.\ Control ACC ($n=60$, passive).
-Solid lines: two-stage plug-in power. Dashed lines: bootstrap mean power.
-Shaded bands: 95\% bootstrap CI (pointwise). For Baboon, the plug-in
-overestimates power by 5--7\,pp. CI width reflects pilot informativeness:
-the active Baboon design ($B=12$, full 24\,h coverage) yields tighter
-intervals than the passive Seney design despite a smaller pilot sample.}
-\label{fig:bootstrap_baboon}
-\end{figure}
-
 \subsection{Active Design: Multi-Dataset Power and Effect-Size Scaling}
 
 To evaluate \textsc{SCP} across a wider range of study designs and effect sizes, we analyzed three additional pilot datasets spanning a 5-fold range in effect size. The mouse LIV vs.\ CER comparison (GSE54651; $n_{\text{pilot}} = 8$, $B = 8$, $m = 1$; Zhang et al.\ \citep{zhang2014comprehensive}) has median signal-to-noise ratio $\tilde{r} = 2.88$ and $\hat{\pi}_{\mathrm{DR}} = 29.6\%$, representing the highest-signal scenario. The baboon LUN vs.\ CER comparison ($n_{\text{pilot}} = 12$, $B = 12$, $m = 1$) has $\tilde{r} = 1.72$ and $\hat{\pi}_{\mathrm{DR}} = 40.7\%$. The mouse D1 vs.\ D2 striatal neuron comparison ($n_{\text{pilot}} = 45$, $B = 6$, $m \approx 7.5$) has $\tilde{r} = 0.65$ and $\hat{\pi}_{\mathrm{DR}} = 19.9\%$ (Table~\ref{tab:signal_summary}).
@@ -621,13 +555,6 @@ Human PFC aging \citep{chen2016aging} & Passive & PFC & 0.56 & 14\% & 62 \\
 
 Effect size ($\tilde{r}$) is the primary determinant of required sample size (Figure~\ref{fig:multi_dr_power}). For mouse LIV vs.\ CER ($\tilde{r} = 2.88$), DR power reaches 80\% at $N \approx 24$--$28$ per group, confirming that strong liver rhythms require very modest sample sizes even with $m = 1$. For baboon ($\tilde{r} = 1.72$, $\hat{\pi}_{\mathrm{DR}} = 40.7\%$), 80\% power is achieved at $N \approx 34$--$36$. For mouse D1D2 ($\tilde{r} = 0.65$, $\hat{\pi}_{\mathrm{DR}} = 19.9\%$), power is substantially lower: even at $N = 150$ per group, DR power reaches only ${\sim}43\%$. Together with the human PFC result ($\tilde{r} = 0.56$, $n_{80} > 100$), these four datasets span a 5-fold range in $\tilde{r}$ and a $>$3-fold range in $\hat{\pi}_{\mathrm{DR}}$, yielding $n_{80}$ estimates that differ by more than an order of magnitude. This reinforces the need for effect-size-aware, dataset-specific simulation rather than a one-size-fits-all power calculation.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/multi_dataset_dr_power.pdf}
-\caption{DR power vs.\ $N$ for four pilot datasets at FDR 5\% (mean $\pm$ SE across 50 simulations). Panels ordered by effect size (left to right: $\tilde{r} = 2.88$, $1.72$, $0.65$, $0.56$). Dashed line: 80\% power target. Vertical dashed line: interpolated $n_{80}$. The 5-fold range in $\tilde{r}$ translates to more than an order-of-magnitude difference in required sample size.}
-\label{fig:multi_dr_power}
-\end{figure}
-
 \subsection{Maximizing Power: Time-Point Coverage vs.\ Replication}
 
 For active designs, total sample size $N$ is allocated across $B$ distinct collection time points with $m = N/B$ replicates per time point. Here $B$ is the number of distinct time points and $m$ is the replication per time point. Proposition~\ref{prop:b_invariance} (Section~\ref{sec:design_theory}) establishes that for a pure sinusoidal waveform, DR power depends only on $N$ (not on $B$), implying that B and m are interchangeable given fixed $N$. We evaluate this proposition empirically using bootstrap power grids over $(N, B)$ for the baboon and D1D2 datasets.
@@ -637,13 +564,6 @@ For the baboon dataset ($\tilde{r} = 1.72$), B-invariance holds approximately: D
 For the mouse D1D2 dataset ($\tilde{r} = 0.65$), the B effect is more pronounced: $B = 6$ gives more than twice the DR power of $B = 3$ at all tested $N$ (e.g., $N = 150$: $B = 6$ gives 42.8\% vs.\ $B = 3$ gives 18.3\%). This departure from B-invariance reflects the pilot data's real gene expression structure---including non-sinusoidal waveforms and temporal autocorrelation---which the pure-sinusoid simulation ($\alpha_2 = 0$) does not capture. In practice, denser temporal coverage ($B \geq 6$) improves cosinor model fit when $\tilde{r}$ is low and the sinusoidal assumption may not hold precisely.
 
 For robustness of the cosinor assumption to non-sinusoidal waveforms, see Supplementary Section~S7. Briefly, at second-harmonic strength $\alpha_2 = 0.5$ and $N \geq 48$, DR power loss relative to the pure-sinusoid baseline is at most 2--9\,pp for $B \geq 4$, confirming that the cosinor model is adequate for the active designs considered here.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/bm_tradeoff.pdf}
-\caption{B vs.\ m tradeoff across datasets (from left: Mouse LIV vs.\ CER, Baboon LUN vs.\ CER, Mouse D1 vs.\ D2). Each line is a $B$ value; shaded bands show 95\% bootstrap CIs. For the high-signal datasets (Mouse LIV, Baboon), $B$ and $m$ are approximately interchangeable for $B \geq 6$ (B-invariance holds). For the weak-signal D1D2 dataset, $B = 6$ substantially outperforms $B = 3$ at all $N$, demonstrating that denser temporal coverage is essential when $\tilde{r}$ is low.}
-\label{fig:bm_tradeoff}
-\end{figure}
 
 \subsection{Differential Rhythmicity Power}
 
@@ -672,31 +592,10 @@ $n$ & DR & DP & DR & DP & DR & DP \\
 \label{tab:main_power}
 \end{table}
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/dr_power.pdf}
-\caption{DR power analysis. (A) Power by $r$ stratum at FDR 5\%. (B) Power by FDR threshold ($n=60$; sensitivity to nominal FDR). (C) Overall (marginal) per-gene power vs.\ sample size. (D) Overall (marginal) per-gene power by FDR threshold (sensitivity to nominal FDR). (E) True discoveries by $r$ stratum. (F) Empirical distribution of DR targets across $r$ strata.}
-\label{fig:dr_power}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/dp_power.pdf}
-\caption{DP power analysis ($\pm$6\,h phase shift). (B,D) show sensitivity to nominal FDR; (F) shows the empirical distribution of DP targets across $r$ strata. Panel layout otherwise matches Figure~\ref{fig:dr_power}.}
-\label{fig:dp_power}
-\end{figure}
-
 
 \subsection{Phase Shift Sensitivity}
 
 Power depends strongly on the magnitude of the phase difference (Figure~\ref{fig:phase_shift_abdf}), which motivates a sensitivity analysis based on the phase shift magnitude $\Delta\phi$ (hours). Because a 12\,h shift is anti-phase and maximal, $\Delta\phi$ is naturally bounded to $[0,12]$\,h. At $n = 60$, marginal power increases from 0.2\% (0.5\,h shift) to 39.0\% (4\,h) and 52.6\% (8\,h), then saturates beyond 8 hours (8\,h/12\,h power ratio $= 0.99$). Even at maximal (12\,h anti-phase) shifts, marginal power does not exceed 71.3\% ($n = 100$). Stratified analysis shows that genes with $r > 0.75$ achieve $\geq$80\% power for 4\,h shifts at $n = 60$ (Figure~\ref{fig:phase_shift_abdf}A). Full results are in Supplementary Section~S2.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/phase_shift_abdf.pdf}
-\caption{Phase shift sensitivity (5,000 genes, 50 simulations). (A) Power by $r$ stratum at $n=60$ across phase shifts. (B) Power heatmap ($r$ by phase shift). (C) Overall (marginal) per-gene power vs.\ sample size across phase shifts. (D) Minimum detectable phase shift by $r$ at $n=60$ (80\% power threshold).}
-\label{fig:phase_shift_abdf}
-\end{figure}
 
 \subsection{Case Study: Comparing Detection Methods}
 
@@ -727,13 +626,6 @@ $n$ & DCP & CC & DCP & CC \\
 \label{tab:method_comparison}
 \end{table}
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{method_comparison/figures/method_comparison_combined.pdf}
-\caption{Method comparison: DCP (LRT) vs.\ CircaCompare (Wald NLS) for DP. (A) Marginal power at FDR 5\%. CircaCompare achieves consistently higher power. (B) Empirical FDR. CircaCompare inflates empirical FDR to 8.7--19.6\%, far above the nominal threshold (dashed line), while DCP maintains proper control. Error bars show $\pm$1.96 SE across 50 simulations.}
-\label{fig:method_comparison}
-\end{figure}
-
 \subsection{Validation}
 
 Framework validity was confirmed through four checks (details in Supplementary Section~S5). Under the complete null, raw $p$-value rejection rates are near nominal $\alpha = 0.05$ for DR (0.054--0.072) and DP (0.052--0.065); after BH correction the false positive rate is 0.000 for all tests, confirming multiple-testing control. Power increases monotonically with sample size for all tests and $r$-strata. Power also increases with phase shift magnitude and saturates near 8\,h. Empirical FDR is at or below nominal for DR (0.018--0.028) and DP (0.020--0.063), with slight inflation only at $n = 20$.
@@ -754,16 +646,16 @@ Fourth, \textbf{the case study comparing DCP and CircaCompare illustrates how \t
 
 Fifth, \textbf{the two-stage plug-in method systematically overestimates projected power, and bootstrap resampling corrects this bias while quantifying pilot uncertainty}. By treating pilot parameter estimates as exact, the plug-in approach ignores the variability that would result from re-running the pilot study. On the baboon LUN pilot ($n = 12$ active samples), the plug-in recommendation was $\hat{n}_{80} = 36$, but at that sample size the bootstrap analysis shows projected power is only 76\% [74.8\%, 77.0\%]---a gap of 6\,pp that would result in an underpowered study. The bootstrap recommendation of $N = 48$ correctly accounts for this uncertainty. Crucially, tight bootstrap confidence intervals do not require a large pilot: the baboon design uses only 12 animals with $m = 1$ replicate per time point, yet CIs are $\leq 3$\,pp wide because 12 equally-spaced time points fully constrain the cosinor parameters. The key is design informativeness---an active design with full 24-h coverage---rather than pilot size per se.
 
-\paragraph{Practical recommendations.} For DR in human brain tissue: $n \geq 80$ for modest marginal per-gene power; targeted analyses of high-$r$ genes can succeed with $n = 40$--60. For DP ($\pm$6\,h shifts): $n = 60$ achieves 50\% marginal per-gene power. These recommendations are specific to human post-mortem brain, which has among the lowest circadian effect sizes of any tissue \citep{zong2023circapower} and therefore represents a conservative design baseline. For actively-designed mouse studies, where core-gene $r$ values are typically 3--10$\times$ higher ($r \approx 2$--$6$; CircaPower Table~1), substantially smaller sample sizes would suffice. Active designs also benefit from a higher design factor ($d = 0.5$ vs.\ ${\sim}0.24$ for passive), further reducing sample requirements. In all cases, we recommend reporting stratified alongside marginal per-gene power, as the latter can be misleading when $r$ is heterogeneous and can obscure actionable design guidance.
+These findings translate into concrete design guidance. For DR in human brain tissue: $n \geq 80$ for modest marginal per-gene power; targeted analyses of high-$r$ genes can succeed with $n = 40$--60. For DP ($\pm$6\,h shifts): $n = 60$ achieves 50\% marginal per-gene power. These recommendations are specific to human post-mortem brain, which has among the lowest circadian effect sizes of any tissue \citep{zong2023circapower} and therefore represents a conservative design baseline. For actively-designed mouse studies, where core-gene $r$ values are typically 3--10$\times$ higher ($r \approx 2$--$6$; CircaPower Table~1), substantially smaller sample sizes would suffice. Active designs also benefit from a higher design factor ($d = 0.5$ vs.\ ${\sim}0.24$ for passive), further reducing sample requirements. In all cases, we recommend reporting stratified alongside marginal per-gene power, as the latter can be misleading when $r$ is heterogeneous and can obscure actionable design guidance.
 
 
-\paragraph{Limitations.} Key limitations include: the cosinor model assumes
+Several limitations should be noted. The cosinor model assumes
 sinusoidal waveforms (power loss $\leq$9\,pp for $\alpha_2\leq 0.5$,
 $B\geq 4$; Supplementary~S7); gene types are modeled as mutually exclusive
 (compound DR+DP changes are not simulated); and passive-design results depend
 on the pilot's time-of-day distribution. Full discussion in Supplementary~S9.
 
-\paragraph{Software availability.} \textsc{SCP} is available as an open-source R framework with a PROPER-style configuration system. An end-to-end pipeline (\texttt{examples/run\_pipeline.R}) reproduces all results in this paper, and a validation suite (\texttt{examples/run\_validation.R}) implements the checks described in Section~3.6.
+\textsc{SCP} is available as an open-source R framework. An end-to-end pipeline (\texttt{examples/run\_pipeline.R}) reproduces all results in this paper, and a validation suite (\texttt{examples/run\_validation.R}) implements the checks described in Section~3.6.
 
 \section*{Acknowledgments}
 
@@ -771,5 +663,68 @@ This work builds on \textsc{CircaPower} \citep{zong2023circapower}, \textsc{PROP
 
 \bibliographystyle{plain}
 \bibliography{references}
+
+
+
+%% ====================================================================
+\section*{Figures}
+%% ====================================================================
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/bootstrap_summary.pdf}
+\caption{Bootstrap vs.\ two-stage projected DR power across three pilot datasets.
+Left: Baboon LUN vs.\ CER ($n=12$, active $B=12$, $m=1$).
+Centre: Mouse D1 vs.\ D2 ($n=45$, active $B=6$).
+Right: Seney MDD vs.\ Control ACC ($n=60$, passive).
+Solid lines: two-stage plug-in power. Dashed lines: bootstrap mean power.
+Shaded bands: 95\% bootstrap CI (pointwise). For Baboon, the plug-in
+overestimates power by 5--7\,pp. CI width reflects pilot informativeness:
+the active Baboon design ($B=12$, full 24\,h coverage) yields tighter
+intervals than the passive Seney design despite a smaller pilot sample.}
+\label{fig:bootstrap_baboon}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/multi_dataset_dr_power.pdf}
+\caption{DR power vs.\ $N$ for four pilot datasets at FDR 5\% (mean $\pm$ SE across 50 simulations). Panels ordered by effect size (left to right: $\tilde{r} = 2.88$, $1.72$, $0.65$, $0.56$). Dashed line: 80\% power target. Vertical dashed line: interpolated $n_{80}$. The 5-fold range in $\tilde{r}$ translates to more than an order-of-magnitude difference in required sample size.}
+\label{fig:multi_dr_power}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/bm_tradeoff.pdf}
+\caption{B vs.\ m tradeoff across datasets (from left: Mouse LIV vs.\ CER, Baboon LUN vs.\ CER, Mouse D1 vs.\ D2). Each line is a $B$ value; shaded bands show 95\% bootstrap CIs. For the high-signal datasets (Mouse LIV, Baboon), $B$ and $m$ are approximately interchangeable for $B \geq 6$ (B-invariance holds). For the weak-signal D1D2 dataset, $B = 6$ substantially outperforms $B = 3$ at all $N$, demonstrating that denser temporal coverage is essential when $\tilde{r}$ is low.}
+\label{fig:bm_tradeoff}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/dr_power.pdf}
+\caption{DR power analysis. (A) Power by $r$ stratum at FDR 5\%. (B) Power by FDR threshold ($n=60$; sensitivity to nominal FDR). (C) Overall (marginal) per-gene power vs.\ sample size. (D) Overall (marginal) per-gene power by FDR threshold (sensitivity to nominal FDR). (E) True discoveries by $r$ stratum. (F) Empirical distribution of DR targets across $r$ strata.}
+\label{fig:dr_power}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/dp_power.pdf}
+\caption{DP power analysis ($\pm$6\,h phase shift). (B,D) show sensitivity to nominal FDR; (F) shows the empirical distribution of DP targets across $r$ strata. Panel layout otherwise matches Figure~\ref{fig:dr_power}.}
+\label{fig:dp_power}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/phase_shift_abdf.pdf}
+\caption{Phase shift sensitivity (5,000 genes, 50 simulations). (A) Power by $r$ stratum at $n=60$ across phase shifts. (B) Power heatmap ($r$ by phase shift). (C) Overall (marginal) per-gene power vs.\ sample size across phase shifts. (D) Minimum detectable phase shift by $r$ at $n=60$ (80\% power threshold).}
+\label{fig:phase_shift_abdf}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{method_comparison/figures/method_comparison_combined.pdf}
+\caption{Method comparison: DCP (LRT) vs.\ CircaCompare (Wald NLS) for DP. (A) Marginal power at FDR 5\%. CircaCompare achieves consistently higher power. (B) Empirical FDR. CircaCompare inflates empirical FDR to 8.7--19.6\%, far above the nominal threshold (dashed line), while DCP maintains proper control. Error bars show $\pm$1.96 SE across 50 simulations.}
+\label{fig:method_comparison}
+\end{figure}
 
 \end{document}
