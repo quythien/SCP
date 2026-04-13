@@ -230,6 +230,7 @@ better (same point estimate, adds CI at modest computational cost).
 | Layer 2 — Fourier robustness (extreme) | `examples/exploratory/07e_fourier_extreme.R` | **TODO** — test α₂ up to 1.0 (near square-wave) |
 | Layer 3 — 2-stage vs bootstrap (synthetic) | `examples/publication/02_calibration.R` | Smoke-tested (synthetic pilot n=30) |
 | Layer 3 — 2-stage vs bootstrap (real data) | `examples/publication/08_two_stage_vs_bootstrap_realdata.R` | **Crashed S2** — relaunch as 08a/b/c |
+| DM endpoint + single-cohort sim smoke test | `examples/publication/09_dm_singlecohort_smoke.R` | **Complete** (2026-04-13) — all 3 sections pass |
 
 ---
 

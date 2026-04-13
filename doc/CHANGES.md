@@ -2,6 +2,43 @@
 
 ---
 
+## Session: 2026-04-13
+
+### New Features (code/)
+
+**DM (Differential Mesor) endpoint — Type 5**
+- `CircadianBioOptions()`: added `prop_DM` (default 0.10), `mesor_diff` (default c(0.5, 2.0)),
+  and `lBaselineExpr2` (group-2 mesor distribution from two-pilot estimation)
+- `CircadianDesignOptions()`: default `test_types` changed from `c("DR","DP","DA")` to
+  `c("DR","DP","DM")`; DA retained as legacy type 6 (both groups rhythmic, different amplitudes)
+- `simCircadianDiff()`: DM genes (type 5) receive mesor shift drawn from
+  Uniform[mesor_diff[1], mesor_diff[2]] with random sign; `lBaselineExpr2` parameter sets
+  group-2 baseline independently (enables two-pilot scenario); DA genes now assigned type 6
+- `runSimsDiff()` / `runner.R`: wires `prop_DM`, `mesor_diff`, `lBaselineExpr2` from bio.opts;
+  stores `effectsize_mesor`; adds DM dispatch to `runPowerAnalysis()`
+- `estCircadianParamTwoGroup()`: extracts `lBaselineExpr2` (group-2 mesor distribution) from
+  pilot and passes it through to `CircadianBioOptions`; `prop_DM = 0` (user sets this)
+
+**Single-cohort simulation-based power — `runSimsSingleCohort()`**
+- New function in `runner.R` complementing the closed-form `runPowerAnalysis()` single-cohort mode
+- Simulates full datasets from pilot parameter distributions, applies cosinor F-test + BH per gene,
+  aggregates empirical power and FDR across `nsims` for each sample size
+- Works for both active and passive designs; handles joint A-sigma sampling when `sigma_rhythmic`
+  is available
+- Returns `marginal_power[sample_sizes, nsims]` and `marginal_FDR[sample_sizes, nsims]`
+
+### New Scripts
+
+**`examples/publication/09_dm_singlecohort_smoke.R`**
+Smoke test script covering all three new scenarios:
+- Section 1: DM detection — `CircadianBioOptions(prop_DM=0.15)` + `runSimsDiff()` with DM test
+- Section 2: Single-cohort simulation — `runSimsSingleCohort()` power vs N (12, 24, 48)
+- Section 3: Two-pilot mesor — `lBaselineExpr2` offset propagated through sim; DM genes get
+  additional shift on top of group-2 baseline
+All sections pass.
+
+---
+
 ## Session: 2026-04-01
 
 ### New Scripts
