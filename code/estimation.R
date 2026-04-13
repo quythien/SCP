@@ -479,6 +479,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
                                       phase_shift_threshold = 2,
                                       prop_DM = 0.00,
                                       mesor_diff = c(0.5, 2.0),
+                                      dp_shift_mode = c("uniform", "fixed"),
                                       sim.seed = 12345,
                                       verbose = TRUE) {
 
@@ -662,7 +663,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
     mesor_diff      = mesor_diff,
     phase_diff      = phase_diff_emp,
     amp_diff        = amp_diff_emp,
-    dp_shift_mode   = "uniform",
+    dp_shift_mode   = match.arg(dp_shift_mode),
     sim.seed        = sim.seed
   )
 

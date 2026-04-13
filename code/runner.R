@@ -37,7 +37,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
                         amp_diff = NULL,
                         design = c("active", "passive"),
                         cts = NULL,
-                        test_types = c("DR", "DP", "DA"),
+                        test_types = c("DR", "DP", "DM"),
                         verbose = TRUE,
                         harmonics = NULL,
                         # New config-object arguments (used when first arg is CircadianBioOptions)
@@ -388,7 +388,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
 #'
 #' @return List compatible with plotWithSE()
 runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
-                             test_type = "DR") {
+                             test_type = "DR", verbose = TRUE) {
 
   sample_sizes  <- design.opts$sample_sizes
   nsims         <- design.opts$nsims
@@ -430,7 +430,7 @@ runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
 
   for (j in seq_along(sample_sizes)) {
     n <- sample_sizes[j]
-    cat(sprintf("  >>> n = %d\n", n))
+    if (verbose) cat(sprintf("  >>> n = %d\n", n))
 
     # Create single-n design for this iteration
     iter_design <- CircadianDesignOptions(
@@ -525,12 +525,14 @@ runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
       marginal_FD[j, i]    <- total_FD_marginal
     }
 
-    cat(sprintf("    n=%d: ", n))
-    for (k in 1:n_r_strata) {
-      mean_p <- mean(strat_power[j, k, ], na.rm = TRUE)
-      if (!is.nan(mean_p)) cat(sprintf("%s=%.0f%% ", strata_labels[k], 100 * mean_p))
+    if (verbose) {
+      cat(sprintf("    n=%d: ", n))
+      for (k in 1:n_r_strata) {
+        mean_p <- mean(strat_power[j, k, ], na.rm = TRUE)
+        if (!is.nan(mean_p)) cat(sprintf("%s=%.0f%% ", strata_labels[k], 100 * mean_p))
+      }
+      cat("\n")
     }
-    cat("\n")
   }
 
   list(

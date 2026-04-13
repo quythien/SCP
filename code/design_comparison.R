@@ -44,7 +44,8 @@ runTwoStagePower <- function(pilot_data,
                               bio_diff.opts,
                               min_rhythm_pval = 0.1,
                               test_type       = "DR",
-                              verbose         = TRUE) {
+                              verbose         = TRUE,
+                              mc.cores        = 1L) {
 
   stopifnot(inherits(design.opts,   "CircadianDesignOptions"))
   stopifnot(inherits(analysis.opts, "CircadianAnalysisOptions"))
@@ -87,7 +88,7 @@ runTwoStagePower <- function(pilot_data,
 
   marginal_power <- matrix(NA_real_, nrow = n_sizes, ncol = nsims)
 
-  for (j in seq_len(n_sizes)) {
+  run_one_n <- function(j) {
     n <- sample_sizes[j]
     if (verbose) cat(sprintf("  >>> n = %d\n", n))
 
@@ -108,36 +109,19 @@ runTwoStagePower <- function(pilot_data,
       test_types   = c(test_type)
     )
 
+    pow_row <- rep(NA_real_, nsims)
     tryCatch({
       sim_out <- runSimsDiff(bio_pilot, iter_design, analysis.opts)
-
-      fdr_key <- paste0("fdr_", test_type)
-      fdr_arr <- sim_out[[fdr_key]]  # [genes, 1, nsims]
-
-      for (sim_i in seq_len(nsims)) {
-        fdr_vec   <- fdr_arr[, 1, sim_i]
-        diff_type <- sim_out$diff_type[[sim_i]]
-
-        if (test_type == "DR") {
-          target_idx <- diff_type %in% c(2, 3)
-        } else if (test_type == "DP") {
-          target_idx <- diff_type == 4
-        } else if (test_type == "DM") {
-          target_idx <- diff_type == 5
-        } else if (test_type == "DA") {
-          target_idx <- diff_type == 6
-        } else {
-          target_idx <- rep(FALSE, length(fdr_vec))
-        }
-
-        n_target <- sum(target_idx)
-        if (n_target == 0) next
-        marginal_power[j, sim_i] <-
-          sum(fdr_vec[target_idx] <= fdr_threshold, na.rm = TRUE) / n_target
-      }
+      pow_row <- .computeMarginalPower(sim_out, test_type, fdr_threshold, nsims)
     }, error = function(e) {
       if (verbose) warning(sprintf("  Two-stage n=%d failed: %s", n, e$message))
     })
+    pow_row
+  }
+
+  results <- parallel::mclapply(seq_len(n_sizes), run_one_n, mc.cores = mc.cores)
+  for (j in seq_len(n_sizes)) {
+    if (!is.null(results[[j]])) marginal_power[j, ] <- results[[j]]
   }
 
   if (verbose) cat("Two-stage power analysis complete.\n")
