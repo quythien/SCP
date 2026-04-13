@@ -359,6 +359,7 @@ sample_params = function(params, n = 1000) {
 estCircadianParam <- function(data, times, period = 24,
                               min_rhythm_pval = 0.1,
                               prop_DR = 0.15, prop_DP = 0.10, prop_DA = 0.10,
+                              prop_DM = 0.00, mesor_diff = c(0.5, 2.0),
                               phase_diff = c(-6, 6), amp_diff = c(0.5, 2),
                               dp_shift_mode = c("fixed", "uniform"),
                               dr_amp_scale = 1.0,
@@ -393,20 +394,21 @@ estCircadianParam <- function(data, times, period = 24,
   phase_emp <- params$raw$phi[rhythmic_idx & !is.na(params$raw$phi)]
 
   # Cap differential proportions at the estimated rhythmic budget.
-  # CircadianBioOptions requires prop_DR + prop_DP + prop_DA <= prop_rhythmic
+  # CircadianBioOptions requires prop_DR + prop_DP + prop_DA + prop_DM <= prop_rhythmic
   # because every differential gene must be rhythmic in at least one group.
-  total_diff <- prop_DR + prop_DP + prop_DA
+  total_diff <- prop_DR + prop_DP + prop_DA + prop_DM
   if (total_diff > params$prop_rhythmic && total_diff > 0) {
     scale_factor <- params$prop_rhythmic / total_diff
     if (verbose) {
       message(sprintf(
-        paste0("estCircadianParam: prop_DR+prop_DP+prop_DA (%.3f) exceeds estimated ",
+        paste0("estCircadianParam: prop_DR+prop_DP+prop_DA+prop_DM (%.3f) exceeds estimated ",
                "prop_rhythmic (%.3f). Scaling differential props by %.3f to fit budget."),
         total_diff, params$prop_rhythmic, scale_factor))
     }
     prop_DR <- prop_DR * scale_factor
     prop_DP <- prop_DP * scale_factor
     prop_DA <- prop_DA * scale_factor
+    prop_DM <- prop_DM * scale_factor
   }
 
   CircadianBioOptions(
@@ -421,6 +423,8 @@ estCircadianParam <- function(data, times, period = 24,
     prop_DR = prop_DR,
     prop_DP = prop_DP,
     prop_DA = prop_DA,
+    prop_DM = prop_DM,
+    mesor_diff = mesor_diff,
     phase_diff = phase_diff,
     amp_diff = amp_diff,
     dp_shift_mode = dp_shift_mode,

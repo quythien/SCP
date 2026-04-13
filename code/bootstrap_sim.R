@@ -136,15 +136,18 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
     cts2          = NULL,
     phase         = phase_vec,
     phase_spec    = phase_vec,
-    prop_DR       = bio_diff.opts$prop_DR,
-    prop_DP       = bio_diff.opts$prop_DP,
-    prop_DA       = bio_diff.opts$prop_DA,
-    phase_diff    = bio_diff.opts$phase_diff,
-    amp_diff      = bio_diff.opts$amp_diff,
-    dp_shift_mode = bio_diff.opts$dp_shift_mode,
-    dr_amp_scale  = bio_diff.opts$dr_amp_scale %||% 1.0,
+    prop_DR        = bio_diff.opts$prop_DR,
+    prop_DP        = bio_diff.opts$prop_DP,
+    prop_DA        = bio_diff.opts$prop_DA,
+    prop_DM        = bio_diff.opts$prop_DM   %||% 0,
+    mesor_diff     = bio_diff.opts$mesor_diff %||% c(0.5, 2.0),
+    lBaselineExpr2 = bio_diff.opts$lBaselineExpr2,
+    phase_diff     = bio_diff.opts$phase_diff,
+    amp_diff       = bio_diff.opts$amp_diff,
+    dp_shift_mode  = bio_diff.opts$dp_shift_mode,
+    dr_amp_scale   = bio_diff.opts$dr_amp_scale %||% 1.0,
     dr_sigma_scale = bio_diff.opts$dr_sigma_scale %||% 1.0,
-    sim.seed      = sample.int(.Machine$integer.max, 1)
+    sim.seed       = sample.int(.Machine$integer.max, 1)
   )
   class(opts) <- "CircadianBioOptions"
   opts
@@ -212,7 +215,8 @@ runBootstrapDesignGrid <- function(pilot_data,
   all_tests <- c()
   if (bio_diff.opts$prop_DR > 0) all_tests <- c(all_tests, "DR")
   if (bio_diff.opts$prop_DP > 0) all_tests <- c(all_tests, "DP")
-  if (bio_diff.opts$prop_DA > 0) all_tests <- c(all_tests, "DA")
+  if (!is.null(bio_diff.opts$prop_DM) && bio_diff.opts$prop_DM > 0) all_tests <- c(all_tests, "DM")
+  if (!is.null(bio_diff.opts$prop_DA) && bio_diff.opts$prop_DA > 0) all_tests <- c(all_tests, "DA")
   if (length(all_tests) == 0) all_tests <- "DR"
   n_tests <- length(all_tests)
 
@@ -307,8 +311,10 @@ runBootstrapDesignGrid <- function(pilot_data,
                 diff_type_vec %in% c(2, 3)
               } else if (tt == "DP") {
                 diff_type_vec == 4
-              } else if (tt == "DA") {
+              } else if (tt == "DM") {
                 diff_type_vec == 5
+              } else if (tt == "DA") {
+                diff_type_vec == 6
               } else {
                 rep(FALSE, length(fdr_vec))
               }

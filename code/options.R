@@ -540,15 +540,16 @@ updateBioOptions <- function(opts, ...) {
   updates <- list(...)
   # Re-call constructor with merged args
   current_args <- opts[c("ngenes", "prop_rhythmic", "period",
-                         "prop_DR", "prop_DP", "prop_DA",
+                         "prop_DR", "prop_DP", "prop_DA", "prop_DM",
                          "phase_diff", "amp_diff", "dp_shift_mode",
                          "dr_amp_scale", "dr_sigma_scale",
-                         "sim.seed")]
+                         "mesor_diff", "sim.seed")]
   # Use _spec versions for distribution params
-  current_args$lBaselineExpr <- opts$lBaselineExpr_spec
-  current_args$lOD <- opts$lOD_spec
-  current_args$amplitude <- opts$amplitude_spec
-  current_args$phase <- opts$phase_spec
+  current_args$lBaselineExpr  <- opts$lBaselineExpr_spec
+  current_args$lBaselineExpr2 <- opts$lBaselineExpr2
+  current_args$lOD            <- opts$lOD_spec
+  current_args$amplitude      <- opts$amplitude_spec
+  current_args$phase          <- opts$phase_spec
   merged <- modifyList(current_args, updates)
   do.call(CircadianBioOptions, merged)
 }
@@ -566,6 +567,7 @@ print.CircadianBioOptions <- function(x, ...) {
   cat(sprintf("  prop_DR:        %.0f%%\n", 100 * x$prop_DR))
   cat(sprintf("  prop_DP:        %.0f%%\n", 100 * x$prop_DP))
   cat(sprintf("  prop_DA:        %.0f%%\n", 100 * x$prop_DA))
+  cat(sprintf("  prop_DM:        %.0f%%\n", 100 * (x$prop_DM %||% 0)))
   cat(sprintf("  phase_diff:     [%g, %g] h\n", x$phase_diff[1], x$phase_diff[2]))
   cat(sprintf("  amp_diff:       [%g, %g]\n", x$amp_diff[1], x$amp_diff[2]))
   cat(sprintf("  dp_shift_mode:  %s\n", x$dp_shift_mode))

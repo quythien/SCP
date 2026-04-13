@@ -2,6 +2,34 @@
 
 ---
 
+## Session: 2026-04-13 (round 2)
+
+### Bug Fixes
+
+**Type-numbering bugs after DM addition (DA=6, DM=5)**
+- `bootstrap_sim.R` `.buildBioFromBoot()`: added `prop_DM`, `mesor_diff`, `lBaselineExpr2`
+  passthrough from `bio_diff.opts` — bootstrap grid can now run DM tests
+- `bootstrap_sim.R` `runBootstrapDesignGrid()` `all_tests`: added DM check
+  (`if prop_DM > 0 → include "DM"`); fixed DA check to guard against NULL
+- `bootstrap_sim.R` target dispatch (line ~311): `"DA" → diff_type_vec == 5` corrected to
+  `"DM" → 5` and `"DA" → 6` to match post-DM type numbering
+- `design_comparison.R` `runTwoStagePower()` target dispatch: same fix — DA was targeting
+  type 5 (DM); now DA=6, DM=5
+- `design_comparison.R` `runTwoStagePower()`: passes `prop_DM` and `mesor_diff` through
+  to `estCircadianParam()` so two-stage can include DM endpoint
+- `options.R` `updateBioOptions()`: added `prop_DM`, `mesor_diff`, `lBaselineExpr2` to
+  `current_args` — calling `updateBioOptions(opts, prop_DM=0.1)` no longer silently drops DM
+- `options.R` `print.CircadianBioOptions()`: added `prop_DM` display line
+- `estimation.R` `estCircadianParam()`: added `prop_DM=0` and `mesor_diff=c(0.5,2.0)` to
+  signature; included in proportion budget check; passed through to `CircadianBioOptions()`
+
+### New Documentation
+- `doc/TUTORIAL.md`: comprehensive tutorial with 6 scenarios — (A) single-cohort closed-form,
+  (B) single-cohort simulation-based, (C) two-group DR, (D) DM endpoint + two-pilot mesor,
+  (E) B vs m tradeoff with bootstrap grid, (F) two-stage vs bootstrap comparison
+
+---
+
 ## Session: 2026-04-13
 
 ### New Features (code/)

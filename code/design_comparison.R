@@ -61,6 +61,8 @@ runTwoStagePower <- function(pilot_data,
     prop_DR          = bio_diff.opts$prop_DR,
     prop_DP          = bio_diff.opts$prop_DP,
     prop_DA          = bio_diff.opts$prop_DA,
+    prop_DM          = bio_diff.opts$prop_DM   %||% 0,
+    mesor_diff       = bio_diff.opts$mesor_diff %||% c(0.5, 2.0),
     min_rhythm_pval  = min_rhythm_pval,
     verbose          = verbose
   )
@@ -120,8 +122,10 @@ runTwoStagePower <- function(pilot_data,
           target_idx <- diff_type %in% c(2, 3)
         } else if (test_type == "DP") {
           target_idx <- diff_type == 4
-        } else if (test_type == "DA") {
+        } else if (test_type == "DM") {
           target_idx <- diff_type == 5
+        } else if (test_type == "DA") {
+          target_idx <- diff_type == 6
         } else {
           target_idx <- rep(FALSE, length(fdr_vec))
         }
