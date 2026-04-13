@@ -435,11 +435,17 @@ simCircadianDiff <- function(ngenes = 5000,
   # Generate time points (depends on n1, n2)
   if (design == "active") {
     # If fixed times are provided, use them (enables replicated active designs).
+    # If cts is a ZT template shorter than n1 (e.g., a 6-ZT grid passed from
+    # runner.R before expansion), expand it by repeating to match n1.
     if (!is.null(cts)) {
-      if (length(cts) != n1) stop("Active design: length(cts) must equal n1")
+      if (length(cts) != n1) {
+        cts <- sort(rep_len(cts, n1))
+      }
       times1 = cts
       if (!is.null(cts2)) {
-        if (length(cts2) != n2) stop("Active design: length(cts2) must equal n2")
+        if (length(cts2) != n2) {
+          cts2 <- sort(rep_len(cts2, n2))
+        }
         times2 = cts2
       } else {
         times2 = cts

@@ -184,7 +184,16 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
       sim_args$sigma_rhythmic <- bio.opts$sigma_rhythmic * dr_sigma_scale
     }
     if (!is.null(bio.opts$cts2)) {
-      sim_args$cts2 <- bio.opts$cts2
+      # For active design, cts2 from the pilot may differ in length from the
+      # target n (the pilot had a different number of samples). Expand the
+      # ZT template (or, if length matches cts_n, use directly).
+      cts2_raw <- bio.opts$cts2
+      cts2_n <- if (design == "active" && length(cts2_raw) != n) {
+        sort(rep_len(cts2_raw, n))
+      } else {
+        cts2_raw
+      }
+      sim_args$cts2 <- cts2_n
     }
       }
       sim_data = do.call(simCircadianDiff, sim_args)
