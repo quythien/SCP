@@ -351,7 +351,8 @@ boot_res <- runBootstrapDesignGrid(
   boot.opts     = boot_opts,
   analysis.opts = analysis_opts,
   bio_diff.opts = bio_diff,
-  verbose       = TRUE
+  verbose       = TRUE,
+  mc.cores      = 1L        # increase to use parallel cores (see Parallelization below)
 )
 
 # Summarize: power ± 95% CI for DR test
@@ -394,7 +395,8 @@ two_stage_res <- runTwoStagePower(
   analysis.opts = analysis_opts,
   bio_diff.opts = bio_diff,
   test_type     = "DR",
-  verbose       = TRUE
+  verbose       = TRUE,
+  mc.cores      = 1L   # parallelizes over sample_sizes
 )
 
 # Bootstrap (single fixed B for apples-to-apples CI comparison)
@@ -435,6 +437,50 @@ cmp <- compareDesignApproaches(two_stage_res, boot_res_fixed, test_type = "DR")
 - If CI is narrow: pilot is large enough that two-stage and bootstrap agree — either is reliable.
 - If CI is wide: pilot is small (e.g., baboon n=12) — two-stage's single number is misleadingly precise; trust the bootstrap CI for study planning.
 - Practical rule of thumb: if the 95% CI width on n80 exceeds ±50%, consider collecting more pilot samples before committing to a study design.
+
+---
+
+## Parallelization
+
+Two functions support parallel execution via `mc.cores` (uses `parallel::mclapply`
+internally — works on Linux/macOS; on Windows use `mc.cores = 1L`):
+
+| Function | What is parallelized | Typical speedup |
+|----------|---------------------|-----------------|
+| `runBootstrapDesignGrid()` | Outer bootstrap draws (each `nboot` draw is independent) | ~linear up to `nboot` cores |
+| `runTwoStagePower()` | Per-`sample_sizes` iterations | ~linear up to `length(sample_sizes)` cores |
+
+```r
+# Detect available cores (leave one free for the OS)
+n_cores <- max(1L, parallel::detectCores() - 1L)
+
+# Bootstrap grid — parallelized over nboot=50 draws
+boot_res <- runBootstrapDesignGrid(
+  pilot_data    = pilot_data,
+  pilot_times   = pilot_times,
+  boot.opts     = boot_opts,
+  analysis.opts = analysis_opts,
+  bio_diff.opts = bio_diff,
+  mc.cores      = n_cores
+)
+
+# Two-stage — parallelized over sample_sizes
+ts_res <- runTwoStagePower(
+  pilot_data    = pilot_data,
+  pilot_times   = pilot_times,
+  design.opts   = design_opts,
+  analysis.opts = analysis_opts,
+  bio_diff.opts = bio_diff,
+  test_type     = "DR",
+  mc.cores      = n_cores
+)
+```
+
+**Practical guidance:**
+- `nboot = 50`, `mc.cores = 8` → bootstrap grid runs in ~1/8 the time
+- `nsims_inner` is NOT parallelized — keep it moderate (10–30) and increase `nboot` for precision
+- On a cluster with SLURM, set `mc.cores = as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))`
+- Seeds: each bootstrap draw gets its own independent seed derived from `boot.opts$seed`; results are reproducible regardless of `mc.cores`
 
 ---
 

@@ -99,6 +99,8 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     dp_shift_mode  <- "fixed"
     dr_amp_scale   <- 1.0
     dr_sigma_scale <- 1.0
+    prop_DM        <- 0
+    mesor_diff     <- c(0.5, 2.0)
   }
 
   # For passive design, use TOD distribution
