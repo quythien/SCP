@@ -122,84 +122,126 @@ where each matrix is [n_sizes × nsims].
 
 ---
 
-## Scenario C — Two-Group Differential Rhythmicity (DR)
+## Scenario C — Two-Group Differential Power (DR / DP / DM)
 
-**When to use:** You have two groups (tissue A vs tissue B, or disease vs control)
-and want to detect genes that gain or lose rhythmicity between groups.
+**When to use:** You have two groups (tissue A vs tissue B, disease vs control)
+and want to detect genes that differ in rhythmicity (DR), peak timing (DP), or
+baseline expression (DM) between groups.
 
-The primary differential endpoint is **DR (Differential Rhythmicity)** — tested
-with the TOJR classifier + DCP likelihood-ratio test.
+### Pilot estimation: one pilot vs two pilots
+
+All differential endpoints use the same two estimation paths — the choice
+depends on what pilot data you have:
+
+**One shared pilot** (one dataset that spans both groups, or a single-group
+dataset used as a proxy for both): use `estCircadianParam()`. It estimates
+the base parameter distribution (A, σ, φ, mesor) from that single dataset
+and you specify the differential proportions (prop_DR, prop_DP, prop_DM) by
+hand based on prior knowledge.
+
+**Two separate pilots** (one pilot per group, e.g., pilot tissue A + pilot
+tissue B): use `estCircadianParamTwoGroup()`. It fits cosinor models
+independently for each group and derives differential simulation inputs
+directly from the empirical between-group differences — `prop_DR`, `prop_DP`,
+`phase_diff`, and the group-2 mesor distribution (`lBaselineExpr2`) are all
+estimated from data rather than guessed. This applies equally to DR, DP,
+and DM scenarios.
 
 ```r
-# --- Two-group DR power from real pilot data ---
+# --- Two-group differential power from two separate pilots ---
 
-# Load pilot data for two groups
-# data_g1 <- ...  # genes x n1 matrix, group 1
-# data_g2 <- ...  # genes x n2 matrix, group 2
-# times_g1 <- ...
-# times_g2 <- ...
-
-# For this example, simulate a baboon-like active design
 set.seed(7L)
-n_pilot <- 12L
-times_pilot <- rep(seq(0, 22, by = 2), 1)  # 12 ZT points, n=1 each
-data_g1 <- matrix(rnorm(500 * n_pilot, 5, 1), nrow = 500)
-data_g2 <- matrix(rnorm(500 * n_pilot, 5, 1), nrow = 500)
+n_pilot     <- 12L
+times_pilot <- seq(0, 22, by = 2)   # 12 ZT points, n=1 each
+data_g1     <- matrix(rnorm(500 * n_pilot, 5.0, 1), nrow = 500)
+data_g2     <- matrix(rnorm(500 * n_pilot, 5.3, 1), nrow = 500)  # shifted mesor
 
-# Estimate differential parameters from two-group pilot
+# estCircadianParamTwoGroup estimates prop_DR, prop_DP, phase_diff, amp_diff,
+# and lBaselineExpr2 (group-2 mesor distribution) from the two pilots.
+# This is the recommended path when pilot data exists for both groups.
 bio_twog <- estCircadianParamTwoGroup(
-  data_1 = data_g1, data_2 = data_g2,
+  data_1  = data_g1, data_2 = data_g2,
   times_1 = times_pilot, times_2 = times_pilot,
-  period = 24,
+  period  = 24,
   verbose = TRUE
 )
 
-# Override differential proportions if desired
+# Adjust differential proportions if prior knowledge warrants it.
+# prop_DM can also be set here — it applies to the same two-group simulation.
 bio_twog <- updateBioOptions(bio_twog,
   prop_DR = 0.20,   # 20% of genes differentially rhythmic
   prop_DP = 0.05,   # 5% phase-shifted
-  prop_DM = 0.00
+  prop_DM = 0.08    # 8% have shifted baseline (DM); lBaselineExpr2 from pilot
 )
 
-# Design: sweep N per group
+# Design: sweep N per group, test DR + DP + DM simultaneously
 design_dr <- CircadianDesignOptions(
   sample_sizes = c(12L, 24L, 36L, 48L, 60L),
   nsims        = 30L,
   design       = "active",
   cts          = rep(seq(0, 22, by = 2), 2),   # 24 samples, 12 ZTs
-  test_types   = c("DR", "DP")
+  test_types   = c("DR", "DP", "DM")
 )
 
+analysis_opts <- CircadianAnalysisOptions(alpha = 0.05, p.adjust.method = "BH")
 sims_dr <- runSimsDiff(bio_twog, design_dr, analysis_opts)
 
-# Power at each N for DR test
-# fdr_DR is [ngenes x n_sizes x nsims]
-dr_power <- sapply(seq_along(design_dr$sample_sizes), function(j) {
-  mean(sapply(seq_len(design_dr$nsims), function(sim_i) {
-    fdr_vec  <- sims_dr$fdr_DR[, j, sim_i]
-    is_target <- sims_dr$diff_type[[sim_i]] %in% c(2, 3)
-    if (sum(is_target) == 0) return(NA_real_)
-    sum(fdr_vec[is_target] <= 0.05, na.rm = TRUE) / sum(is_target)
-  }), na.rm = TRUE)
-})
-
-cat("DR power by N:\n")
-for (i in seq_along(design_dr$sample_sizes)) {
-  cat(sprintf("  N = %3d: %.1f%%\n", design_dr$sample_sizes[i], 100 * dr_power[i]))
+# Power at each N — helper to avoid repeating the loop
+power_by_N <- function(fdr_arr, target_fn, nsims) {
+  sapply(seq_len(dim(fdr_arr)[2]), function(j) {
+    mean(sapply(seq_len(nsims), function(s) {
+      fdr_vec <- fdr_arr[, j, s]
+      idx <- target_fn(sims_dr$diff_type[[s]])
+      if (sum(idx) == 0) return(NA_real_)
+      sum(fdr_vec[idx] <= 0.05, na.rm = TRUE) / sum(idx)
+    }), na.rm = TRUE)
+  })
 }
+
+dr_power <- power_by_N(sims_dr$fdr_DR, function(dt) dt %in% c(2, 3), design_dr$nsims)
+dp_power <- power_by_N(sims_dr$fdr_DP, function(dt) dt == 4,          design_dr$nsims)
+dm_power <- power_by_N(sims_dr$fdr_DM, function(dt) dt == 5,          design_dr$nsims)
+
+cat("Power by N:\n")
+for (i in seq_along(design_dr$sample_sizes)) {
+  cat(sprintf("  N = %3d  DR=%.1f%%  DP=%.1f%%  DM=%.1f%%\n",
+              design_dr$sample_sizes[i],
+              100 * dr_power[i], 100 * dp_power[i], 100 * dm_power[i]))
+}
+```
+
+### When only one pilot is available
+
+If you only have data from one group (or want to specify priors by hand),
+use `estCircadianParam()` and set the differential proportions manually:
+
+```r
+bio_onepilot <- estCircadianParam(
+  data   = data_g1, times = times_pilot,
+  period = 24,
+  prop_DR = 0.20, prop_DP = 0.05, prop_DM = 0.08,
+  mesor_diff = c(0.5, 2.0),   # assumed DM shift range
+  verbose = TRUE
+)
+# lBaselineExpr2 defaults to NULL → group-2 mesor drawn from same
+# distribution as group-1 mesor, plus the DM shift for DM genes.
 ```
 
 ---
 
-## Scenario D — Differential Mesor (DM) Endpoint
+## Scenario D — Differential Mesor (DM) as a Primary Endpoint
 
-**When to use:** You expect a condition (e.g., inflammatory disease, metabolic
-state) to shift the baseline expression of rhythmic genes without disrupting
-their rhythmicity or peak timing. DM genes are rhythmic in both groups but at
-different mesor levels — the circadian analogue of classical differential expression.
+**When to use:** You want to focus specifically on DM power — e.g., you expect
+an inflammatory or metabolic condition to shift baseline expression of rhythmic
+genes without disrupting their timing or amplitude. DM genes are rhythmic in
+both groups at the same A and φ, but at different mesor levels.
+
+This scenario shows DM-only power with synthetic parameters. For real-pilot
+DM estimation alongside DR/DP, use `estCircadianParamTwoGroup()` as shown in
+Scenario C.
 
 ```r
-# --- DM endpoint: rhythmic genes with shifted baseline ---
+# --- DM-focused power sweep: synthetic parameters ---
 
 set.seed(42L)
 
@@ -211,16 +253,15 @@ bio_dm <- CircadianBioOptions(
   amplitude     = abs(rnorm(350, 0.5, 0.2)) + 0.05,
   sigma_rhythmic = NULL,
   phase         = "uniform",
-  prop_DR       = 0.10,   # also include DR for context
+  prop_DR       = 0.10,
   prop_DP       = 0.00,
-  prop_DA       = 0.00,
-  prop_DM       = 0.15,   # 15% of genes have differential mesor
-  mesor_diff    = c(0.8, 2.5),   # mesor shift magnitude: Uniform[0.8, 2.5]
+  prop_DM       = 0.15,   # 15% of genes: both rhythmic, mesor shifted
+  mesor_diff    = c(0.8, 2.5),   # shift magnitude ~ Uniform[0.8, 2.5]
   period        = 24L,
   sim.seed      = 42L
 )
 
-# Active design: 6 ZT points, 8 replicates each → N=48 per group
+# Active design: 6 ZT points, 8 replicates → N=48 per group
 cts_active <- rep(seq(0, 20, by = 4), each = 8)
 
 design_dm <- CircadianDesignOptions(
@@ -231,13 +272,14 @@ design_dm <- CircadianDesignOptions(
   test_types   = c("DR", "DM")
 )
 
+analysis_opts <- CircadianAnalysisOptions(alpha = 0.05, p.adjust.method = "BH")
 sims_dm <- runSimsDiff(bio_dm, design_dm, analysis_opts)
 
-# DM power
+# DM power at each N
 dm_power <- sapply(seq_along(design_dm$sample_sizes), function(j) {
   mean(sapply(seq_len(design_dm$nsims), function(sim_i) {
-    fdr_vec  <- sims_dm$fdr_DM[, j, sim_i]
-    is_dm    <- sims_dm$diff_type[[sim_i]] == 5
+    fdr_vec <- sims_dm$fdr_DM[, j, sim_i]
+    is_dm   <- sims_dm$diff_type[[sim_i]] == 5
     if (sum(is_dm) == 0) return(NA_real_)
     sum(fdr_vec[is_dm] <= 0.05, na.rm = TRUE) / sum(is_dm)
   }), na.rm = TRUE)
@@ -249,35 +291,12 @@ for (i in seq_along(design_dm$sample_sizes)) {
 }
 ```
 
-### Two-Pilot DM: separate group-2 mesor from a second pilot
-
-When you have a second pilot dataset from group 2, you can estimate the
-group-2 baseline independently rather than assuming shared mesors:
-
-```r
-# Fit group-2 mesors from a second pilot
-params_g2 <- estimate_circadian_params(data_g2, times_g2, verbose = FALSE)
-lBaselineExpr2_emp <- params_g2$raw$M[!is.na(params_g2$raw$M)]
-
-# Add to bio options
-bio_dm_twopilot <- CircadianBioOptions(
-  ngenes         = 1000L,
-  prop_rhythmic  = 0.35,
-  lBaselineExpr  = rnorm(1000, 5, 1),        # group 1 mesor
-  lBaselineExpr2 = lBaselineExpr2_emp,        # group 2 mesor from second pilot
-  lOD            = rnorm(1000, -0.5, 0.3),
-  amplitude      = abs(rnorm(350, 0.5, 0.2)) + 0.05,
-  sigma_rhythmic = NULL,
-  phase          = "uniform",
-  prop_DR        = 0.10,
-  prop_DM        = 0.15,
-  mesor_diff     = c(0.8, 2.5),
-  period         = 24L,
-  sim.seed       = 99L
-)
-# Now non-DM genes use lBaselineExpr2 as their group-2 mesor,
-# and DM genes get an additional shift on top of that.
-```
+**Note on `mesor_diff`:** Each DM gene receives a shift drawn from
+`Uniform[mesor_diff[1], mesor_diff[2]]` with a random sign (up or down).
+The shift is applied on top of whatever `lBaselineExpr2` provides as the
+group-2 background mesor — so when `estCircadianParamTwoGroup()` is used,
+the simulation already captures any population-level mesor difference between
+groups, and `mesor_diff` specifies the *additional* per-gene DM effect.
 
 ---
 
