@@ -176,7 +176,7 @@ sampleTimesFromDist <- function(n, cts) {
 #'   \item{Type 2}{DR: Rhythmic in Group 1 only}
 #'   \item{Type 3}{DR: Rhythmic in Group 2 only}
 #'   \item{Type 4}{DP: Differential phase (both rhythmic, different peak times)}
-#'   \item{Type 5}{DA: Differential amplitude (both rhythmic, different amplitudes)}
+#'   \item{Type 5}{DM: Differential mesor (both rhythmic, same A/phi, different mean level)}
 #' }
 #'
 #' @param ngenes Number of genes
@@ -202,6 +202,7 @@ simCircadianDiff <- function(ngenes = 5000,
                            n1 = 24,
                            n2 = 24,
                            lBaselineExpr,
+                           lBaselineExpr2 = NULL,
                            lOD,
                            lOD2 = NULL,
                            amplitude,
@@ -215,7 +216,7 @@ simCircadianDiff <- function(ngenes = 5000,
                            phase_diff = c(-6, 6),
                            dp_shift_mode = c("fixed", "uniform"),
                            amp_diff = c(0.5, 2),
-                           mesor_diff = c(-1, 1),
+                           mesor_diff = c(0.5, 2.0),
                            period = 24,
                            design = c("active", "passive"),
                            cts = NULL,
@@ -259,6 +260,11 @@ simCircadianDiff <- function(ngenes = 5000,
   # Initialize parameters for both groups
   mesor = lBaselineExpr
   sigma = exp(lOD)   # group-1 noise
+  # Group-2 baseline: use lBaselineExpr2 if provided (two-group pilot), else share group-1
+  if (!is.null(lBaselineExpr2)) {
+    lBaselineExpr2 <- if (length(lBaselineExpr2) == ngenes) lBaselineExpr2
+                      else sample(lBaselineExpr2, ngenes, replace = TRUE)
+  }
   # Group-2 noise: use lOD2 if provided (two-group pilot), else share with group 1
   sigma2_vec <- if (!is.null(lod_dist2)) {
     lod2_res <- if (length(lod_dist2) == ngenes) lod_dist2
@@ -272,13 +278,14 @@ simCircadianDiff <- function(ngenes = 5000,
   # Initialize classification BEFORE time sampling (n-independent)
   # Categories: 0=non-rhythmic both, 1=rhythmic both (same),
   # 2=DR (only g1 rhythmic), 3=DR (only g2 rhythmic),
-  # 4=DP (diff phase), 5=DA (diff amplitude)
+  # 4=DP (diff phase), 5=DM (diff mesor, same A/phi)
   diff_type = rep(0, ngenes)
 
   # Count differentially rhythmic genes
   n_DR = round(ngenes * prop_DR)
   n_DP = round(ngenes * prop_DP)
   n_DA = round(ngenes * prop_DA)
+  n_DM = round(ngenes * prop_DM)
 
   # Assign categories
   gene_idx = 1:ngenes
@@ -295,12 +302,12 @@ simCircadianDiff <- function(ngenes = 5000,
     DR_g1_only = DR_g2_only = integer(0)
   }
 
-  # Rhythmic in both (for DP, DA, or same)
+  # Rhythmic in both (for DP, DA, DM, or same)
   # prop_rhythmic = total fraction rhythmic in at least one group.
   # DR genes already count toward that budget; rhythmic_both fills the remainder.
   remaining = setdiff(gene_idx, DR_genes)
   n_rhythmic_total <- round(ngenes * prop_rhythmic)
-  n_rhythmic_both  <- max(n_DP + n_DA, n_rhythmic_total - n_DR)  # must fit DP + DA
+  n_rhythmic_both  <- max(n_DP + n_DA + n_DM, n_rhythmic_total - n_DR)  # must fit DP + DA + DM
   n_rhythmic_both  <- min(n_rhythmic_both, length(remaining))
   rhythmic_both    <- if (n_rhythmic_both > 0) sample(remaining, n_rhythmic_both) else integer(0)
 
@@ -312,18 +319,28 @@ simCircadianDiff <- function(ngenes = 5000,
     DP_genes = integer(0)
   }
 
-  # Differential Amplitude (DA)
+  # Differential Amplitude (DA) — legacy, prop_DA defaults to 0
   if (n_DA > 0 && length(rhythmic_both) > 0) {
     DA_pool = setdiff(rhythmic_both, c(DR_genes, DP_genes))
     n_DA_actual = min(n_DA, length(DA_pool))
     DA_genes = sample(DA_pool, n_DA_actual)
-    diff_type[DA_genes] = 5
+    diff_type[DA_genes] = 6L   # type 6 = DA (legacy, not primary endpoint)
   } else {
     DA_genes = integer(0)
   }
 
+  # Differential Mesor (DM) — Type 5: both rhythmic, same A/phi, different mean
+  if (n_DM > 0 && length(rhythmic_both) > 0) {
+    DM_pool = setdiff(rhythmic_both, c(DR_genes, DP_genes, DA_genes))
+    n_DM_actual = min(n_DM, length(DM_pool))
+    DM_genes = sample(DM_pool, n_DM_actual)
+    diff_type[DM_genes] = 5L
+  } else {
+    DM_genes = integer(0)
+  }
+
   # Rhythmic in both, same (control genes)
-  rhythmic_same = setdiff(rhythmic_both, c(DP_genes, DA_genes))
+  rhythmic_same = setdiff(rhythmic_both, c(DP_genes, DA_genes, DM_genes))
   if (length(rhythmic_same) > 0) {
     diff_type[rhythmic_same] = 1
   }
@@ -333,7 +350,7 @@ simCircadianDiff <- function(ngenes = 5000,
   amplitude1 = rep(0, ngenes)
 
   # All rhythmic genes get base phase and amplitude
-  rhythmic_idx = c(rhythmic_same, DP_genes, DA_genes, DR_g1_only)
+  rhythmic_idx = c(rhythmic_same, DP_genes, DA_genes, DM_genes, DR_g1_only)
 
   if (length(rhythmic_idx) > 0) {
     # phi_g ~ Uniform(0, 24)  (no preferred peak time)
@@ -392,10 +409,21 @@ simCircadianDiff <- function(ngenes = 5000,
     phase2[DP_genes] = (phase1[DP_genes] + phase_shift) %% period
   }
 
-  # DA: Modify amplitude for group 2
+  # DA: Modify amplitude for group 2 (legacy)
   if (length(DA_genes) > 0) {
     amp_ratio = runif(length(DA_genes), amp_diff[1], amp_diff[2])
     amplitude2[DA_genes] = amplitude1[DA_genes] * amp_ratio
+  }
+
+  # DM: group-2 mesor is shifted; amplitude and phase unchanged.
+  # mesor2 starts as a copy of group-1 mesor (or two-pilot group-2 baseline).
+  mesor2 <- if (!is.null(lBaselineExpr2)) lBaselineExpr2 else mesor
+  if (length(DM_genes) > 0) {
+    # Draw shift magnitude from Uniform[mesor_diff[1], mesor_diff[2]] (log-scale units).
+    # Sign is random (up- or down-shift equally likely) to avoid directional bias.
+    shift_mag  <- runif(length(DM_genes), mesor_diff[1], mesor_diff[2])
+    shift_sign <- sample(c(-1L, 1L), length(DM_genes), replace = TRUE)
+    mesor2[DM_genes] <- mesor[DM_genes] + shift_sign * shift_mag
   }
 
   # ---------------------------------------------------------------
@@ -444,8 +472,8 @@ simCircadianDiff <- function(ngenes = 5000,
     }
     expr1[g, ] = rnorm(n1, mu1, sigma[g])
 
-    # Group 2
-    mu2 = mesor[g] + amplitude2[g] * cos(omega * times2 - omega * phase2[g])
+    # Group 2 (uses mesor2 which equals mesor unless two-pilot or DM perturbation)
+    mu2 = mesor2[g] + amplitude2[g] * cos(omega * times2 - omega * phase2[g])
     if (!is.null(harmonics) && length(harmonics) >= 1 && harmonics[1] != 0) {
       mu2 = mu2 + amplitude2[g] * harmonics[1] * cos(2 * omega * times2 - omega * phase2[g])
     }
@@ -469,8 +497,9 @@ simCircadianDiff <- function(ngenes = 5000,
     diff_type = diff_type,
     diff_type_label = c("Non-rhythmic both", "Rhythmic both (same)",
                      "DR: G1 only", "DR: G2 only",
-                     "DP: Diff phase", "DA: Diff amp")[diff_type + 1],
-    mesor = mesor,
+                     "DP: Diff phase", "DM: Diff mesor", "DA: Diff amp")[diff_type + 1],
+    mesor1 = mesor,
+    mesor2 = mesor2,
     amplitude1 = amplitude1,
     amplitude2 = amplitude2,
     phase1 = phase1,
@@ -491,7 +520,8 @@ simCircadianDiff <- function(ngenes = 5000,
     amplitude1^2 + amplitude2^2 -
       2*amplitude1*amplitude2*cos(omega*(phase2-phase1))
   ) / sigma   # displacement relative to group-1 noise as reference
-  effectsize_amp = abs(amplitude2 - amplitude1) / sigma  # relative to group-1 noise
+  effectsize_amp   = abs(amplitude2 - amplitude1) / sigma  # relative to group-1 noise
+  effectsize_mesor = abs(mesor2 - mesor) / sigma           # |Δμ| / sigma_g1
 
   return(list(
     expr1 = expr1,
@@ -503,6 +533,7 @@ simCircadianDiff <- function(ngenes = 5000,
     effectsize_DR2 = effectsize_DR2,
     effectsize_phase = effectsize_phase,
     effectsize_amp = effectsize_amp,
+    effectsize_mesor = effectsize_mesor,
     simOptions = list(
       ngenes = ngenes,
       n1 = n1,
@@ -511,6 +542,7 @@ simCircadianDiff <- function(ngenes = 5000,
       prop_DR = prop_DR,
       prop_DP = prop_DP,
       prop_DA = prop_DA,
+      prop_DM = prop_DM,
       period = period,
       design = design
     )

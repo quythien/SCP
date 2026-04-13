@@ -216,9 +216,11 @@ setPhase <- function(input, n_rhythmic, period) {
 #' @param phase Phase for rhythmic genes ("uniform", scalar/vector/function)
 #' @param prop_DR Proportion with differential rhythmicity
 #' @param prop_DP Proportion with differential phase
-#' @param prop_DA Proportion with differential amplitude
+#' @param prop_DA Proportion with differential amplitude (legacy; kept for back-compat)
+#' @param prop_DM Proportion with differential mesor (mean shift, both groups rhythmic)
 #' @param phase_diff Range of phase shift for DP genes c(min, max)
 #' @param amp_diff Range of amplitude ratio for DA genes c(min, max)
+#' @param mesor_diff Range of mesor shift for DM genes c(min, max) (additive, log-scale units)
 #' @param dp_shift_mode "fixed" (use phase_diff[2]) or "uniform" (sample within phase_diff range)
 #' @param dr_amp_scale Scale factor for amplitude (A) to adjust DR strength
 #' @param dr_sigma_scale Scale factor for sigma to adjust DR strength
@@ -229,6 +231,7 @@ CircadianBioOptions <- function(ngenes = 5000,
                                 prop_rhythmic = NULL,
                                 period = 24,
                                 lBaselineExpr = "ba11_ba47_younger",
+                                lBaselineExpr2 = NULL,
                                 lOD = "ba11_ba47_younger",
                                 lOD2 = NULL,
                                 amplitude = "ba11_ba47_younger",
@@ -238,9 +241,11 @@ CircadianBioOptions <- function(ngenes = 5000,
                                 phase = "uniform",
                                 prop_DR = 0.15,
                                 prop_DP = 0.10,
-                                prop_DA = 0.10,
+                                prop_DA = 0.00,
+                                prop_DM = 0.10,
                                 phase_diff = c(-6, 6),
                                 amp_diff = c(0.5, 2),
+                                mesor_diff = c(0.5, 2.0),
                                 dp_shift_mode = c("fixed", "uniform"),
                                 dr_amp_scale = 1.0,
                                 dr_sigma_scale = 1.0,
@@ -271,18 +276,20 @@ CircadianBioOptions <- function(ngenes = 5000,
   stopifnot(prop_DR >= 0, prop_DR <= 1)
   stopifnot(prop_DP >= 0, prop_DP <= 1)
   stopifnot(prop_DA >= 0, prop_DA <= 1)
-  total_diff <- prop_DR + prop_DP + prop_DA
-  if (total_diff > 1) stop("prop_DR + prop_DP + prop_DA must be <= 1")
+  stopifnot(prop_DM >= 0, prop_DM <= 1)
+  total_diff <- prop_DR + prop_DP + prop_DA + prop_DM
+  if (total_diff > 1) stop("prop_DR + prop_DP + prop_DA + prop_DM must be <= 1")
 
   # All differential genes are rhythmic in at least one group, so prop_rhythmic
   # cannot be smaller than their combined fraction without contradicting the truth.
-  # Silently inflating n_rhythmic_both in simulation.R to accommodate DP/DA would
-  # produce a realized truth that does not match the requested scenario.
-  if (prop_rhythmic < total_diff - 1e-9) {
+  # DM genes are rhythmic in both (same A/phi, different mesor), so they count
+  # toward the rhythmic budget along with DR, DP, DA genes.
+  rhythmic_required <- prop_DR + prop_DP + prop_DA + prop_DM
+  if (prop_rhythmic < rhythmic_required - 1e-9) {
     stop(sprintf(
-      "prop_rhythmic (%.3f) must be >= prop_DR + prop_DP + prop_DA (%.3f + %.3f + %.3f = %.3f).\n%s",
-      prop_rhythmic, prop_DR, prop_DP, prop_DA, total_diff,
-      "All DR/DP/DA genes are rhythmic in at least one group and count toward the rhythmic budget."
+      "prop_rhythmic (%.3f) must be >= prop_DR + prop_DP + prop_DA + prop_DM (%.3f).\n%s",
+      prop_rhythmic, rhythmic_required,
+      "All DR/DP/DA/DM genes are rhythmic in at least one group and count toward the rhythmic budget."
     ))
   }
 
@@ -294,7 +301,8 @@ CircadianBioOptions <- function(ngenes = 5000,
   n_rhythmic <- round(ngenes * prop_rhythmic)
 
   # Resolve distributions using existing set*() helpers, store specs for re-seeding
-  lBaselineExpr_resolved <- setBaselineExpr(lBaselineExpr, ngenes)
+  lBaselineExpr_resolved  <- setBaselineExpr(lBaselineExpr, ngenes)
+  lBaselineExpr2_resolved <- if (!is.null(lBaselineExpr2)) setBaselineExpr(lBaselineExpr2, ngenes) else NULL
   lOD_resolved  <- setOD(lOD,  ngenes)
   lOD2_resolved <- if (!is.null(lOD2)) setOD(lOD2, ngenes) else NULL
   amplitude_resolved  <- setAmplitude(amplitude,  n_rhythmic)
@@ -307,6 +315,7 @@ CircadianBioOptions <- function(ngenes = 5000,
     period = period,
     lBaselineExpr = lBaselineExpr_resolved,
     lBaselineExpr_spec = lBaselineExpr,
+    lBaselineExpr2 = lBaselineExpr2_resolved,
     lOD = lOD_resolved,
     lOD_spec = lOD,
     lOD2 = lOD2_resolved,
@@ -320,8 +329,10 @@ CircadianBioOptions <- function(ngenes = 5000,
     prop_DR = prop_DR,
     prop_DP = prop_DP,
     prop_DA = prop_DA,
+    prop_DM = prop_DM,
     phase_diff = phase_diff,
     amp_diff = amp_diff,
+    mesor_diff = mesor_diff,
     dp_shift_mode = dp_shift_mode,
     dr_amp_scale = dr_amp_scale,
     dr_sigma_scale = dr_sigma_scale,
@@ -338,14 +349,14 @@ CircadianBioOptions <- function(ngenes = 5000,
 #' @param nsims Number of simulation replicates
 #' @param design "active" or "passive"
 #' @param cts Time-of-day distribution for passive design (numeric vector)
-#' @param test_types Character vector of tests to run ("DR", "DP", "DA")
+#' @param test_types Character vector of tests to run ("DR", "DP", "DA", "DM")
 #'
 #' @return Object of class "CircadianDesignOptions"
 CircadianDesignOptions <- function(sample_sizes = c(10, 20, 40, 60, 80, 100),
                                    nsims = 100,
                                    design = c("active", "passive"),
                                    cts = NULL,
-                                   test_types = c("DR", "DP", "DA")) {
+                                   test_types = c("DR", "DP", "DM")) {
 
   design <- match.arg(design)
   stopifnot(all(sample_sizes > 0), nsims > 0)

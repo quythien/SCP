@@ -71,8 +71,10 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     prop_DR       <- bio.opts$prop_DR
     prop_DP       <- bio.opts$prop_DP
     prop_DA       <- bio.opts$prop_DA
+    prop_DM       <- bio.opts$prop_DM %||% 0
     phase_diff    <- bio.opts$phase_diff
     amp_diff      <- bio.opts$amp_diff
+    mesor_diff    <- bio.opts$mesor_diff %||% c(0.5, 2.0)
     dp_shift_mode <- bio.opts$dp_shift_mode %||% "fixed"
     dr_amp_scale  <- bio.opts$dr_amp_scale %||% 1.0
     dr_sigma_scale <- bio.opts$dr_sigma_scale %||% 1.0
@@ -152,9 +154,11 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
         prop_DR = prop_DR,
         prop_DP = prop_DP,
         prop_DA = prop_DA,
+        prop_DM = prop_DM,
         phase_diff = phase_diff,
         dp_shift_mode = dp_shift_mode,
         amp_diff = amp_diff,
+        mesor_diff = mesor_diff,
         design = design,
         cts = cts_n,
         sim.seed = i * 1000,
@@ -163,6 +167,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
       # Pass empirical distributions when available (config-object path)
       if (exists("bio.opts", inherits = FALSE) && !is.null(bio.opts)) {
     if (!is.null(bio.opts$lBaselineExpr)) sim_args$lBaselineExpr <- bio.opts$lBaselineExpr
+    if (!is.null(bio.opts$lBaselineExpr2)) sim_args$lBaselineExpr2 <- bio.opts$lBaselineExpr2
     if (!is.null(bio.opts$lOD)) {
       sim_args$lOD <- bio.opts$lOD + log(dr_sigma_scale)
     }
@@ -191,7 +196,8 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
           DR1 = sim_data$effectsize_DR1,
           DR2 = sim_data$effectsize_DR2,
           phase = sim_data$effectsize_phase,
-          amp = sim_data$effectsize_amp
+          amp = sim_data$effectsize_amp,
+          mesor = sim_data$effectsize_mesor
         )
       }
 
@@ -454,8 +460,13 @@ runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
       } else if (test_type == "DA") {
         r_values <- pmin(effectsize_DR1, effectsize_DR2)
         effectsize_amp <- sim_out$effectsize[[i]]$amp
-        is_diff <- diff_type == 5
+        is_diff <- diff_type == 6   # DA is now type 6 (legacy)
         is_target <- is_diff & (effectsize_amp >= target_effect)
+      } else if (test_type == "DM") {
+        r_values <- pmin(effectsize_DR1, effectsize_DR2)
+        effectsize_m <- sim_out$effectsize[[i]]$mesor
+        is_diff  <- diff_type == 5   # DM is type 5
+        is_target <- is_diff & (effectsize_m >= target_effect)
       }
       is_null <- !is_diff
 
@@ -788,4 +799,179 @@ summaryRunPower <- function(powerOutput, verbose = TRUE) {
   }
 
   invisible(res)
+}
+
+
+# =====================================================================
+# Simulation-Based Single-Cohort Power
+# =====================================================================
+#' Simulation-Based Power for Single-Cohort Rhythmicity Detection
+#'
+#' Extends the closed-form CircaPower approach by running full simulations:
+#' for each sample size and simulation replicate, generates data from the
+#' empirical pilot parameter distributions, applies the cosinor F-test per
+#' gene, applies BH correction, and aggregates empirical power and FDR.
+#'
+#' This is the simulation counterpart to \code{runPowerAnalysis()} for the
+#' single-cohort (one-group) scenario.  It does not require a closed-form
+#' solution and therefore works for any design (active or passive) and any
+#' pilot parameter distribution.
+#'
+#' @param bio.opts      \code{CircadianBioOptions} — pilot parameter distributions.
+#'   Use \code{estCircadianParam()} to build from real data.
+#' @param design.opts   \code{CircadianDesignOptions} — sample sizes, nsims, design.
+#' @param analysis.opts \code{CircadianAnalysisOptions} — alpha, p.adjust.method.
+#' @param verbose       Print progress (default TRUE).
+#'
+#' @return List with:
+#'   \item{marginal_power}{Matrix [sample_sizes x nsims] — per-simulation power}
+#'   \item{marginal_FDR}{Matrix [sample_sizes x nsims] — per-simulation FDR}
+#'   \item{sample_sizes}{Vector of sample sizes}
+#'   \item{nsims}{Number of simulation replicates}
+#'
+#' @examples
+#' \dontrun{
+#' bio  <- estCircadianParam(expr, times)
+#' dopt <- CircadianDesignOptions(sample_sizes = c(20, 40, 80), nsims = 50)
+#' aopt <- CircadianAnalysisOptions(alpha = 0.05)
+#' res  <- runSimsSingleCohort(bio, dopt, aopt)
+#' rowMeans(res$marginal_power)  # mean power at each N
+#' }
+#'
+#' @export
+runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
+                                verbose = TRUE) {
+
+  stopifnot(inherits(bio.opts, "CircadianBioOptions"))
+  stopifnot(inherits(design.opts, "CircadianDesignOptions"))
+  if (missing(analysis.opts)) analysis.opts <- CircadianAnalysisOptions()
+
+  sample_sizes    <- design.opts$sample_sizes
+  nsims           <- design.opts$nsims
+  design          <- design.opts$design
+  cts             <- design.opts$cts
+  alpha           <- analysis.opts$alpha
+  p.adjust.method <- analysis.opts$p.adjust.method
+
+  ngenes        <- bio.opts$ngenes
+  prop_rhythmic <- bio.opts$prop_rhythmic
+  period        <- bio.opts$period
+
+  # Storage
+  marginal_power <- matrix(NA_real_, nrow = length(sample_sizes), ncol = nsims)
+  marginal_FDR   <- matrix(NA_real_, nrow = length(sample_sizes), ncol = nsims)
+  marginal_TD    <- matrix(NA_real_, nrow = length(sample_sizes), ncol = nsims)
+  marginal_FD    <- matrix(NA_real_, nrow = length(sample_sizes), ncol = nsims)
+
+  # Build simOptions structure expected by simCircadian()
+  sim_base <- list(
+    ngenes        = ngenes,
+    prop_rhythmic = prop_rhythmic,
+    period        = period,
+    lBaselineExpr = bio.opts$lBaselineExpr,
+    lOD           = bio.opts$lOD,
+    amplitude     = bio.opts$amplitude,
+    phase         = bio.opts$phase,
+    sim.seed      = bio.opts$sim.seed %||% 42L
+  )
+
+  for (j in seq_along(sample_sizes)) {
+    n <- sample_sizes[j]
+    if (verbose) cat(sprintf("  >>> n = %d\n", n))
+
+    cts_n <- if (design == "active" && !is.null(cts) && length(cts) != n) {
+      sort(rep_len(cts, n))
+    } else {
+      cts
+    }
+
+    for (i in seq_len(nsims)) {
+      # Re-seed per (j, i) so results are reproducible and independent
+      sim_opts_i <- sim_base
+      sim_opts_i$sim.seed <- (j * 1000L + i) * 7919L
+      set.seed(sim_opts_i$sim.seed)
+
+      # Assign rhythmic gene indices and draw parameters
+      n_rhythmic <- round(ngenes * prop_rhythmic)
+      rhythmic_id <- sample(ngenes, n_rhythmic)
+      is_rhythmic <- rep(FALSE, ngenes)
+      is_rhythmic[rhythmic_id] <- TRUE
+
+      mesor_g  <- bio.opts$lBaselineExpr
+      sigma_g  <- exp(bio.opts$lOD)
+
+      amp_g   <- rep(0, ngenes)
+      phase_g <- rep(0, ngenes)
+      if (n_rhythmic > 0) {
+        # Joint sampling of A and sigma if sigma_rhythmic is available
+        if (!is.null(bio.opts$sigma_rhythmic) &&
+            length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)) {
+          joint_idx <- sample(length(bio.opts$amplitude), n_rhythmic, replace = TRUE)
+          amp_g[rhythmic_id]   <- pmax(bio.opts$amplitude[joint_idx], 0.05)
+          sigma_g[rhythmic_id] <- pmax(bio.opts$sigma_rhythmic[joint_idx], 1e-6)
+        } else {
+          amp_g[rhythmic_id] <- pmax(
+            sample(bio.opts$amplitude, n_rhythmic, replace = TRUE), 0.05)
+        }
+        phase_g[rhythmic_id] <- sample(bio.opts$phase, n_rhythmic, replace = TRUE)
+      }
+
+      # Generate time points
+      if (design == "active") {
+        if (!is.null(cts_n)) {
+          times_i <- cts_n
+        } else {
+          times_i <- seq(0, period, length.out = n + 1L)[seq_len(n)]
+        }
+      } else {
+        times_i <- sampleTimesFromDist(n, cts_n)
+      }
+
+      # Simulate expression matrix [ngenes x n]
+      omega <- 2 * pi / period
+      expr  <- matrix(NA_real_, nrow = ngenes, ncol = n)
+      for (g in seq_len(ngenes)) {
+        mu <- mesor_g[g] + amp_g[g] * cos(omega * times_i - omega * phase_g[g])
+        expr[g, ] <- rnorm(n, mu, sigma_g[g])
+      }
+
+      # Fit cosinor F-test per gene and compute p-values
+      pvals <- tryCatch({
+        fitCosinorAll(expr, times_i, period = period)$pvalue
+      }, error = function(e) {
+        rep(NA_real_, ngenes)
+      })
+
+      # BH correction
+      pvals[is.na(pvals)] <- 1
+      fdr_g <- p.adjust(pvals, method = p.adjust.method)
+
+      discoveries  <- fdr_g <= alpha
+      TD <- sum(discoveries &  is_rhythmic, na.rm = TRUE)
+      FD <- sum(discoveries & !is_rhythmic, na.rm = TRUE)
+      n_tgt <- sum(is_rhythmic)
+      n_disc <- TD + FD
+
+      marginal_power[j, i] <- if (n_tgt  > 0) TD / n_tgt else NA_real_
+      marginal_FDR[j, i]   <- if (n_disc > 0) FD / n_disc else NA_real_
+      marginal_TD[j, i]    <- TD
+      marginal_FD[j, i]    <- FD
+    }
+
+    if (verbose) {
+      cat(sprintf("    n=%d: mean power = %.1f%%  mean FDR = %.3f\n",
+                  n,
+                  100 * mean(marginal_power[j, ], na.rm = TRUE),
+                  mean(marginal_FDR[j, ], na.rm = TRUE)))
+    }
+  }
+
+  list(
+    marginal_power = marginal_power,
+    marginal_FDR   = marginal_FDR,
+    marginal_TD    = marginal_TD,
+    marginal_FD    = marginal_FD,
+    sample_sizes   = sample_sizes,
+    nsims          = nsims
+  )
 }

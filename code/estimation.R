@@ -585,10 +585,11 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   phase_emp          <- p1$raw$phi[rhythmic_idx & !is.na(p1$raw$phi)]
 
   # Group-2 distributions for fully symmetric two-group simulation -----------
-  rhythmic_idx_2 <- p2$raw$is_rhythmic
-  amp_emp2       <- p2$raw$A[rhythmic_idx_2 & !is.na(p2$raw$A) & p2$raw$A > 0]
-  sigma_valid_2  <- p2$raw$sigma[!is.na(p2$raw$sigma) & p2$raw$sigma > 0]
-  lOD_emp2       <- log(sigma_valid_2)
+  rhythmic_idx_2     <- p2$raw$is_rhythmic
+  amp_emp2           <- p2$raw$A[rhythmic_idx_2 & !is.na(p2$raw$A) & p2$raw$A > 0]
+  sigma_valid_2      <- p2$raw$sigma[!is.na(p2$raw$sigma) & p2$raw$sigma > 0]
+  lOD_emp2           <- log(sigma_valid_2)
+  lBaselineExpr2_emp <- p2$raw$M[!is.na(p2$raw$M)]   # group-2 mesor distribution
 
   # Diagnostics ---------------------------------------------------------------
   diagnostics <- list(
@@ -635,24 +636,26 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   }
 
   opts <- CircadianBioOptions(
-    ngenes         = ngenes,
-    prop_rhythmic  = prop_union_rhy,
-    period         = period,
-    lBaselineExpr  = lBaselineExpr_emp,
-    lOD            = lOD_emp,
-    lOD2           = lOD_emp2,    # F̂_σ2: group-2 noise distribution
-    amplitude      = amp_emp,
-    sigma_rhythmic = sigma_rhythmic_emp,
-    amplitude2     = amp_emp2,    # F̂_A2: used for g2-only DR genes
-    cts2          = times_2,     # F̂_TOD2: group-2 sampling time distribution
-    phase         = phase_emp,
-    prop_DR       = prop_DR_emp,
-    prop_DP       = prop_DP_emp,
-    prop_DA       = 0,
-    phase_diff    = phase_diff_emp,
-    amp_diff      = amp_diff_emp,
-    dp_shift_mode = "uniform",
-    sim.seed      = sim.seed
+    ngenes          = ngenes,
+    prop_rhythmic   = prop_union_rhy,
+    period          = period,
+    lBaselineExpr   = lBaselineExpr_emp,
+    lBaselineExpr2  = lBaselineExpr2_emp,  # F̂_M2: group-2 mesor distribution
+    lOD             = lOD_emp,
+    lOD2            = lOD_emp2,            # F̂_σ2: group-2 noise distribution
+    amplitude       = amp_emp,
+    sigma_rhythmic  = sigma_rhythmic_emp,
+    amplitude2      = amp_emp2,            # F̂_A2: used for g2-only DR genes
+    cts2            = times_2,             # F̂_TOD2: group-2 sampling time distribution
+    phase           = phase_emp,
+    prop_DR         = prop_DR_emp,
+    prop_DP         = prop_DP_emp,
+    prop_DA         = 0,
+    prop_DM         = 0,                   # user sets this; we don't estimate from pilot
+    phase_diff      = phase_diff_emp,
+    amp_diff        = amp_diff_emp,
+    dp_shift_mode   = "uniform",
+    sim.seed        = sim.seed
   )
 
   opts$diagnostics <- diagnostics
