@@ -249,11 +249,15 @@ comparePowerDiff <- function(simOutput,
       effectsize_phase = simOutput$effectsize[[i]]$phase
       is_target = diff_type == 4 & effectsize_phase >= target_effect
 
+    } else if (test_type == "DM") {
+      # DM genes: type 5 (differential mesor, both rhythmic)
+      is_target = diff_type == 5
+
     } else if (test_type == "DA") {
-      # DA genes: type 5
+      # DA genes: type 6
       # Only include if amplitude effect is large enough
       effectsize_amp = simOutput$effectsize[[i]]$amp
-      is_target = diff_type == 5 & effectsize_amp >= target_effect
+      is_target = diff_type == 6 & effectsize_amp >= target_effect
     }
 
     # Non-target (null) genes
@@ -1488,8 +1492,10 @@ runSimsDensity <- function(n_subjects = c(10, 20, 30, 60),
           is_target <- diff_type == 4
           effectsize_phase <- sim_out$effectsize[[s]]$phase
           is_target <- is_target & effectsize_phase >= 6  # 6 hour phase shift
-        } else if (test_type == "DA") {
+        } else if (test_type == "DM") {
           is_target <- diff_type == 5
+        } else if (test_type == "DA") {
+          is_target <- diff_type == 6
           effectsize_amp <- sim_out$effectsize[[s]]$amp
           is_target <- is_target & abs(effectsize_amp) >= 0.1
         }

@@ -177,6 +177,7 @@ sampleTimesFromDist <- function(n, cts) {
 #'   \item{Type 3}{DR: Rhythmic in Group 2 only}
 #'   \item{Type 4}{DP: Differential phase (both rhythmic, different peak times)}
 #'   \item{Type 5}{DM: Differential mesor (both rhythmic, same A/phi, different mean level)}
+#'   \item{Type 6}{DA: Differential amplitude (both rhythmic, same M/phi, different A)}
 #' }
 #'
 #' @param ngenes Number of genes
@@ -364,6 +365,13 @@ simCircadianDiff <- function(ngenes = 5000,
       amplitude1[rhythmic_idx] <- pmax(amplitude[joint_idx], 0.05)
       sigma[rhythmic_idx]      <- pmax(sigma_rhythmic[joint_idx], 1e-6)
     } else if (!missing(amplitude)) {
+      if (!is.null(sigma_rhythmic) && length(sigma_rhythmic) != length(amplitude)) {
+        warning(sprintf(
+          "sigma_rhythmic length (%d) != amplitude length (%d): falling back to marginal sampling. ",
+          length(sigma_rhythmic), length(amplitude)),
+          "Empirical A-sigma correlation from pilot will not be preserved.",
+          call. = FALSE)
+      }
       amplitude1[rhythmic_idx] = pmax(sample(amplitude, length(rhythmic_idx), replace = TRUE), 0.05)
     } else {
       # A_g ~ max(LogNormal(mu=log(0.4), sd=0.5), 0.05)

@@ -451,7 +451,8 @@ plotDesignComparison <- function(comparison,
     target_idx <- switch(test_type,
       DR = diff_type %in% c(2, 3),
       DP = diff_type == 4,
-      DA = diff_type == 5,
+      DM = diff_type == 5,
+      DA = diff_type == 6,
       rep(FALSE, length(fdr_vec))
     )
 

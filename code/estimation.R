@@ -477,6 +477,8 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
                                       period = 24,
                                       min_rhythm_pval = 0.1,
                                       phase_shift_threshold = 2,
+                                      prop_DM = 0.00,
+                                      mesor_diff = c(0.5, 2.0),
                                       sim.seed = 12345,
                                       verbose = TRUE) {
 
@@ -522,14 +524,15 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   dp_among_joint <- abs(delta_phi) > phase_shift_threshold & !is.na(delta_phi)
   prop_DP_emp    <- prop_joint * mean(dp_among_joint, na.rm = TRUE)
 
-  # Budget guard: cap prop_DR + prop_DP to fit within union rhythmic budget.
-  # Floating-point arithmetic can cause prop_DR + prop_DP to exactly equal or
-  # fractionally exceed prop_union_rhy, which would error in CircadianBioOptions.
-  total_diff <- prop_DR_emp + prop_DP_emp
+  # Budget guard: cap prop_DR + prop_DP + prop_DM to fit within union rhythmic budget.
+  # Floating-point arithmetic can cause the sum to equal or fractionally exceed
+  # prop_union_rhy, which would error in CircadianBioOptions.
+  total_diff <- prop_DR_emp + prop_DP_emp + prop_DM
   if (total_diff >= prop_union_rhy && total_diff > 0) {
     scale_factor <- prop_union_rhy * 0.999 / total_diff
     prop_DR_emp  <- prop_DR_emp * scale_factor
     prop_DP_emp  <- prop_DP_emp * scale_factor
+    prop_DM      <- prop_DM    * scale_factor
   }
 
   # phase_diff range: signed IQR among DP genes (fallback to +/- threshold)
@@ -655,7 +658,8 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
     prop_DR         = prop_DR_emp,
     prop_DP         = prop_DP_emp,
     prop_DA         = 0,
-    prop_DM         = 0,                   # user sets this; we don't estimate from pilot
+    prop_DM         = prop_DM,             # user-specified; not estimated from pilot
+    mesor_diff      = mesor_diff,
     phase_diff      = phase_diff_emp,
     amp_diff        = amp_diff_emp,
     dp_shift_mode   = "uniform",
