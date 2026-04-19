@@ -147,8 +147,6 @@ plotSingleCohortFig1 <- function(res, out_pdf = NULL, title = "",
   abline(h = 80, lty = 2, col = "gray")
   if (!is.null(reference_n)) {
     abline(v = reference_n, lty = 3, col = "darkgreen", lwd = 1.5)
-    text(reference_n + diff(range(sample_sizes)) * 0.02, 5,
-         paste0("n=", reference_n), cex = 0.6, col = "darkgreen", pos = 4)
   }
   grid()
   legend("bottomright", thresh_labels,
@@ -184,7 +182,6 @@ plotSingleCohortFig1 <- function(res, out_pdf = NULL, title = "",
   axis(4, at = pretty(c(0, y_max_TD), 4),
        labels = round(pretty(c(0, y_max_TD), 4) / count_scale),
        las = 1, cex.axis = 0.65, col.axis = "grey50")
-  mtext("No. rhythmic genes", side = 4, line = 2.5, cex = 0.7, col = "grey50")
 
   for (j in seq_len(n_sizes)) {
     lines(seq_len(n_strata), mean_TD[j, ], col = size_colors[j], lwd = 2)

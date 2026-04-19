@@ -55,22 +55,7 @@ timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
 cat(sprintf("\n=== Single-Cohort Power Analysis  [%s] ===\n", timestamp))
 
 # =====================================================================
-# 1. Load pilot data
-# =====================================================================
-pilot_path <- "data/gse160521_nac_ctrl_pilot.rds"
-if (!file.exists(pilot_path)) {
-  stop("Pilot file not found: ", pilot_path,
-       "\nRun data/estimate_pilot_params.R first, or see session notes.")
-}
-
-bio <- readRDS(pilot_path)
-cat(sprintf("Pilot: n_genes=%d  prop_rhythmic=%.1f%%  r_med=%.3f\n",
-            bio$ngenes,
-            100 * bio$prop_rhythmic,
-            median(bio$amplitude / bio$sigma_rhythmic, na.rm = TRUE)))
-
-# =====================================================================
-# 2. Design & analysis options
+# 1. Simulation grid
 # =====================================================================
 if (SMOKE_TEST) {
   sample_sizes <- c(20, 40, 60)
@@ -82,72 +67,98 @@ if (SMOKE_TEST) {
   n_cores      <- as.integer(Sys.getenv("MC_CORES", unset = "4"))
 }
 
-design <- CircadianDesignOptions(
-  sample_sizes = sample_sizes,
-  nsims        = nsims,
-  design       = "passive",
-  cts          = bio$cts    # pilot TOD distribution for passive sampling
+cat(sprintf("Sample sizes : %s\n", paste(sample_sizes, collapse = ", ")))
+cat(sprintf("nsims        : %d\n", nsims))
+cat(sprintf("mc.cores     : %d\n", n_cores))
+cat(sprintf("alpha (BH)   : 0.05\n"))
+cat(sprintf("design       : passive (pilot TOD distribution)\n"))
+cat(sprintf("bin_width    : 0.25\n\n"))
+
+# =====================================================================
+# 2. Loop over brain regions
+# =====================================================================
+regions <- list(
+  NAc     = "data/gse160521_nac_ctrl_pilot.rds",
+  Caudate = "data/gse160521_caudate_ctrl_pilot.rds",
+  Putamen = "data/gse160521_putamen_ctrl_pilot.rds"
 )
 
-analysis <- CircadianAnalysisOptions(
-  alpha           = 0.05,
-  p.adjust.method = "BH",
-  r_strata        = makeAdaptiveRStrata(bio, bin_width = 0.25)
-)
+for (region_name in names(regions)) {
 
-cat(sprintf("Sample sizes: %s\n", paste(sample_sizes, collapse = ", ")))
-cat(sprintf("nsims = %d   mc.cores = %d\n", nsims, n_cores))
+  pilot_path <- regions[[region_name]]
+  if (!file.exists(pilot_path)) {
+    warning("Pilot not found, skipping: ", pilot_path); next
+  }
 
-# =====================================================================
-# 3. Run simulation
-# =====================================================================
-cat("\n--- Running runSimsSingleCohort ---\n")
-t_start <- proc.time()
+  cat(sprintf("\n====================================================\n"))
+  cat(sprintf("  Region: %s\n", region_name))
+  cat(sprintf("====================================================\n"))
 
-res <- runSimsSingleCohort(bio, design, analysis,
-                           verbose = TRUE, mc.cores = n_cores)
+  bio <- readRDS(pilot_path)
+  cat(sprintf("Pilot: n_genes=%d  prop_rhythmic=%.1f%%  r_med=%.3f  n_pilot=%d\n",
+              bio$ngenes,
+              100 * bio$prop_rhythmic,
+              median(bio$amplitude / bio$sigma_rhythmic, na.rm = TRUE),
+              length(bio$cts)))
 
-elapsed <- (proc.time() - t_start)[["elapsed"]]
-cat(sprintf("\nDone in %.1f seconds.\n", elapsed))
-cat(sprintf("CircaPower n80 estimate (median r=%.3f): n0=%s\n",
-            median(bio$amplitude / bio$sigma_rhythmic, na.rm = TRUE),
-            ifelse(is.na(res$n0_circapower), "NA", as.character(res$n0_circapower))))
+  design <- CircadianDesignOptions(
+    sample_sizes = sample_sizes,
+    nsims        = nsims,
+    design       = "passive",
+    cts          = bio$cts
+  )
 
-# =====================================================================
-# 4. Console summary
-# =====================================================================
-cat("\n--- Marginal power summary ---\n")
-cat(sprintf("%-6s  %-8s  %-8s  %-8s\n", "n", "Power", "FDR", "Avg TD"))
-for (j in seq_along(sample_sizes)) {
-  cat(sprintf("%-6d  %6.1f%%  %6.4f  %7.1f\n",
-              sample_sizes[j],
-              100 * mean(res$marginal_power[j, ], na.rm = TRUE),
-              mean(res$marginal_FDR[j, ], na.rm = TRUE),
-              mean(res$marginal_TD[j, ], na.rm = TRUE)))
+  analysis <- CircadianAnalysisOptions(
+    alpha           = 0.05,
+    p.adjust.method = "BH",
+    r_strata        = makeAdaptiveRStrata(bio, bin_width = 0.25)
+  )
+
+  cat(sprintf("r_strata: %s\n",
+              paste(round(analysis$r_strata[is.finite(analysis$r_strata)], 2),
+                    collapse = ", "), "Inf"))
+
+  # --- Run simulation ---
+  cat("\n--- Running runSimsSingleCohort ---\n")
+  t_start <- proc.time()
+  res <- runSimsSingleCohort(bio, design, analysis,
+                             verbose = TRUE, mc.cores = n_cores)
+  elapsed <- (proc.time() - t_start)[["elapsed"]]
+  cat(sprintf("\nDone in %.1f seconds.  n0_CircaPower = %s\n",
+              elapsed,
+              ifelse(is.na(res$n0_circapower), "NA", as.character(res$n0_circapower))))
+
+  # --- Console summary ---
+  cat(sprintf("\n%-6s  %-8s  %-8s  %-8s\n", "n", "Power", "FDR", "Avg TD"))
+  for (j in seq_along(sample_sizes)) {
+    cat(sprintf("%-6d  %6.1f%%  %6.4f  %7.1f\n",
+                sample_sizes[j],
+                100 * mean(res$marginal_power[j, ], na.rm = TRUE),
+                mean(res$marginal_FDR[j, ], na.rm = TRUE),
+                mean(res$marginal_TD[j, ], na.rm = TRUE)))
+  }
+
+  # --- Figure ---
+  fig_path <- file.path(out_dir_fig,
+    sprintf("single_cohort_power_GSE160521_%s_Control.pdf", region_name))
+  cat(sprintf("\nGenerating Figure → %s\n", fig_path))
+  plotSingleCohortFig1(
+    res            = res,
+    out_pdf        = fig_path,
+    title          = sprintf("Single-cohort rhythmicity power — GSE160521 %s Control (n=%d)",
+                             region_name, length(bio$cts)),
+    fdr_thresholds = c(0.01, 0.05, 0.10, 0.20),
+    reference_n    = NULL,
+    width          = 15,
+    height         = 5.5
+  )
+
+  # --- Save results ---
+  rds_path <- file.path(out_dir_res,
+    sprintf("single_cohort_power_GSE160521_%s_Control_%s.rds",
+            region_name, timestamp))
+  saveRDS(res, rds_path)
+  cat(sprintf("Results saved → %s\n", rds_path))
 }
 
-# =====================================================================
-# 5. Figure 1 — 3 panels
-# =====================================================================
-fig_path <- file.path(out_dir_fig, "single_cohort_power.pdf")
-cat(sprintf("\nGenerating Figure 1 → %s\n", fig_path))
-
-plotSingleCohortFig1(
-  res          = res,
-  out_pdf      = fig_path,
-  title        = "Single-cohort rhythmicity power (GSE160521 NAc Control, n0=59)",
-  fdr_thresholds = c(0.01, 0.05, 0.10, 0.20),
-  reference_n  = 60,
-  width  = 15,
-  height = 5.5
-)
-
-# =====================================================================
-# 6. Save results
-# =====================================================================
-rds_path <- file.path(out_dir_res,
-                      sprintf("single_cohort_power_%s.rds", timestamp))
-saveRDS(res, rds_path)
-cat(sprintf("Results saved → %s\n", rds_path))
-
-cat("\n=== Done ===\n")
+cat("\n=== All regions done ===\n")
