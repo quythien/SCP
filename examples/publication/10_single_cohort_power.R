@@ -26,9 +26,10 @@
 #'   results/single_cohort_power.rds — full simulation results
 #'
 #' PILOT DATA:
-#'   data/seney_ctrl_pilot.rds  — pre-estimated CircadianBioOptions
-#'   Source: Seney et al., human ACC RNA-seq, Disease=1 (control)
-#'           n=60, TOD via official time-of-death (OFFC_TIME)
+#'   data/gse160521_nac_ctrl_pilot.rds — pre-estimated CircadianBioOptions
+#'   Source: GSE160521, Human NAc (nucleus accumbens), Control group
+#'           n=59, 15,330 genes, r range 0.43-2.01, r_med=0.55
+#'   Metadata: Kyle_multiBrainRegion/NAc_clinical_*_matchIndex34.csv
 #'
 #' USAGE:
 #'   cd /path/to/PowerSim
@@ -56,7 +57,7 @@ cat(sprintf("\n=== Single-Cohort Power Analysis  [%s] ===\n", timestamp))
 # =====================================================================
 # 1. Load pilot data
 # =====================================================================
-pilot_path <- "data/seney_ctrl_pilot.rds"
+pilot_path <- "data/gse160521_nac_ctrl_pilot.rds"
 if (!file.exists(pilot_path)) {
   stop("Pilot file not found: ", pilot_path,
        "\nRun data/estimate_pilot_params.R first, or see session notes.")
@@ -89,9 +90,9 @@ design <- CircadianDesignOptions(
 )
 
 analysis <- CircadianAnalysisOptions(
-  alpha          = 0.05,
+  alpha           = 0.05,
   p.adjust.method = "BH",
-  r_strata       = c(0, 0.25, 0.5, 0.75, 1.0, 1.5, Inf)
+  r_strata        = makeAdaptiveRStrata(bio, n_bins = 8)
 )
 
 cat(sprintf("Sample sizes: %s\n", paste(sample_sizes, collapse = ", ")))
@@ -134,7 +135,7 @@ cat(sprintf("\nGenerating Figure 1 → %s\n", fig_path))
 plotSingleCohortFig1(
   res          = res,
   out_pdf      = fig_path,
-  title        = "Single-cohort rhythmicity power (Seney PFC Control, n0=60)",
+  title        = "Single-cohort rhythmicity power (GSE160521 NAc Control, n0=59)",
   fdr_thresholds = c(0.01, 0.05, 0.10, 0.20),
   reference_n  = 60,
   width  = 15,

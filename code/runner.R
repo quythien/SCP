@@ -1093,3 +1093,36 @@ circaPowerApproxN80 <- function(bio.opts, alpha = 0.05, target_power = 0.80,
   if (length(found) == 0L) return(NA_integer_)
   n_search[found[1L]]
 }
+
+
+# =====================================================================
+# Adaptive r-strata from pilot data
+# =====================================================================
+#' Compute quantile-based r-strata breakpoints from pilot data
+#'
+#' Generates breakpoints spanning the empirical r = A/sigma distribution
+#' of the pilot rhythmic genes, so every bin is populated.
+#'
+#' @param bio.opts \code{CircadianBioOptions} with amplitude and sigma_rhythmic.
+#' @param n_bins   Number of bins (default 8).
+#' @param probs    Quantile probabilities defining interior breaks.
+#'   Defaults to evenly-spaced quantiles from 0 to 1 with n_bins-1 cut points.
+#'   Pass NULL to use evenly-spaced values on the r scale instead.
+#' @return Numeric vector of breakpoints (length n_bins+1), starting at 0
+#'   and ending at Inf, suitable for passing to \code{CircadianAnalysisOptions}.
+#' @export
+makeAdaptiveRStrata <- function(bio.opts, n_bins = 8, probs = NULL) {
+  if (!is.null(bio.opts$sigma_rhythmic) &&
+      length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)) {
+    r_vec <- bio.opts$amplitude / bio.opts$sigma_rhythmic
+  } else {
+    sigma_med <- exp(median(bio.opts$lOD, na.rm = TRUE))
+    r_vec     <- bio.opts$amplitude / sigma_med
+  }
+  r_vec <- r_vec[is.finite(r_vec) & r_vec > 0]
+  if (is.null(probs)) {
+    probs <- seq(0, 1, length.out = n_bins + 1)[-c(1, n_bins + 1)]
+  }
+  interior <- unique(round(quantile(r_vec, probs), 3))
+  c(0, interior, Inf)
+}
