@@ -1098,20 +1098,19 @@ circaPowerApproxN80 <- function(bio.opts, alpha = 0.05, target_power = 0.80,
 # =====================================================================
 # Adaptive r-strata from pilot data
 # =====================================================================
-#' Compute quantile-based r-strata breakpoints from pilot data
+#' Compute adaptive r-strata breakpoints with fixed bin width
 #'
-#' Generates breakpoints spanning the empirical r = A/sigma distribution
-#' of the pilot rhythmic genes, so every bin is populated.
+#' Generates breakpoints from 0 to ceiling(r_max / bin_width) * bin_width,
+#' stepping by bin_width, then appends Inf. Every bin width is identical,
+#' but the number of bins adapts to the empirical r range of the pilot data.
 #'
-#' @param bio.opts \code{CircadianBioOptions} with amplitude and sigma_rhythmic.
-#' @param n_bins   Number of bins (default 8).
-#' @param probs    Quantile probabilities defining interior breaks.
-#'   Defaults to evenly-spaced quantiles from 0 to 1 with n_bins-1 cut points.
-#'   Pass NULL to use evenly-spaced values on the r scale instead.
-#' @return Numeric vector of breakpoints (length n_bins+1), starting at 0
-#'   and ending at Inf, suitable for passing to \code{CircadianAnalysisOptions}.
+#' @param bio.opts  \code{CircadianBioOptions} with amplitude and sigma_rhythmic.
+#' @param bin_width Width of each r bin (default 0.25).
+#' @param r_min_pct Lower percentile of pilot r used as range floor (default 0
+#'   = always start from 0).
+#' @return Numeric vector of breakpoints starting at 0 and ending at Inf.
 #' @export
-makeAdaptiveRStrata <- function(bio.opts, n_bins = 8, probs = NULL) {
+makeAdaptiveRStrata <- function(bio.opts, bin_width = 0.25, r_min_pct = 0) {
   if (!is.null(bio.opts$sigma_rhythmic) &&
       length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)) {
     r_vec <- bio.opts$amplitude / bio.opts$sigma_rhythmic
@@ -1119,10 +1118,8 @@ makeAdaptiveRStrata <- function(bio.opts, n_bins = 8, probs = NULL) {
     sigma_med <- exp(median(bio.opts$lOD, na.rm = TRUE))
     r_vec     <- bio.opts$amplitude / sigma_med
   }
-  r_vec <- r_vec[is.finite(r_vec) & r_vec > 0]
-  if (is.null(probs)) {
-    probs <- seq(0, 1, length.out = n_bins + 1)[-c(1, n_bins + 1)]
-  }
-  interior <- unique(round(quantile(r_vec, probs), 3))
-  c(0, interior, Inf)
+  r_vec  <- r_vec[is.finite(r_vec) & r_vec > 0]
+  r_max  <- quantile(r_vec, 0.99, na.rm = TRUE)   # cap at 99th pct to avoid outlier-driven bins
+  breaks <- seq(0, ceiling(r_max / bin_width) * bin_width, by = bin_width)
+  c(breaks, Inf)
 }

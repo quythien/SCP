@@ -92,7 +92,7 @@ design <- CircadianDesignOptions(
 analysis <- CircadianAnalysisOptions(
   alpha           = 0.05,
   p.adjust.method = "BH",
-  r_strata        = makeAdaptiveRStrata(bio, n_bins = 8)
+  r_strata        = makeAdaptiveRStrata(bio, bin_width = 0.25)
 )
 
 cat(sprintf("Sample sizes: %s\n", paste(sample_sizes, collapse = ", ")))
