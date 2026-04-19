@@ -836,9 +836,26 @@ summaryRunPower <- function(powerOutput, verbose = TRUE) {
 #' @param analysis.opts \code{CircadianAnalysisOptions} — alpha, p.adjust.method.
 #' @param verbose       Print progress (default TRUE).
 #'
+#' @param mc.cores  Number of cores for parallel simulation replicates (default 1).
+#'
 #' @return List with:
-#'   \item{marginal_power}{Matrix [sample_sizes x nsims] — per-simulation power}
-#'   \item{marginal_FDR}{Matrix [sample_sizes x nsims] — per-simulation FDR}
+#'   \item{marginal_power}{Matrix [sample_sizes x nsims]}
+#'   \item{marginal_FDR}{Matrix [sample_sizes x nsims]}
+#'   \item{marginal_TD}{Matrix [sample_sizes x nsims]}
+#'   \item{marginal_FD}{Matrix [sample_sizes x nsims]}
+#'   \item{marginal_alpha}{Matrix [sample_sizes x nsims] — empirical type-I error}
+#'   \item{pvalues}{Array [sample_sizes x ngenes x nsims] — raw p-values}
+#'   \item{r_values_list}{List[[sample_size]][[sim]] — per-gene A/sigma}
+#'   \item{strat_power}{Array [sample_sizes x n_strata x nsims]}
+#'   \item{strat_TD}{Array [sample_sizes x n_strata x nsims]}
+#'   \item{strat_FD}{Array [sample_sizes x n_strata x nsims]}
+#'   \item{strat_n_targets}{Array [sample_sizes x n_strata x nsims]}
+#'   \item{strat_n_nulls}{Array [sample_sizes x n_strata x nsims]}
+#'   \item{strat_FDR}{Array [sample_sizes x n_strata x nsims]}
+#'   \item{strat_alpha}{Array [sample_sizes x n_strata x nsims]}
+#'   \item{r_strata}{Stratum breakpoints (from analysis.opts)}
+#'   \item{strata_labels}{Stratum labels}
+#'   \item{n0_circapower}{CircaPower n80 estimate from pilot median r}
 #'   \item{sample_sizes}{Vector of sample sizes}
 #'   \item{nsims}{Number of simulation replicates}
 #'
@@ -853,7 +870,7 @@ summaryRunPower <- function(powerOutput, verbose = TRUE) {
 #'
 #' @export
 runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
-                                verbose = TRUE) {
+                                verbose = TRUE, mc.cores = 1L) {
 
   stopifnot(inherits(bio.opts, "CircadianBioOptions"))
   stopifnot(inherits(design.opts, "CircadianDesignOptions"))
@@ -865,28 +882,38 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
   cts             <- design.opts$cts
   alpha           <- analysis.opts$alpha
   p.adjust.method <- analysis.opts$p.adjust.method
+  r_strata        <- analysis.opts$r_strata
+  strata_labels   <- analysis.opts$strata_labels
+  n_r_strata      <- length(r_strata) - 1
 
   ngenes        <- bio.opts$ngenes
   prop_rhythmic <- bio.opts$prop_rhythmic
   period        <- bio.opts$period
 
-  # Storage
-  marginal_power <- matrix(NA_real_, nrow = length(sample_sizes), ncol = nsims)
-  marginal_FDR   <- matrix(NA_real_, nrow = length(sample_sizes), ncol = nsims)
-  marginal_TD    <- matrix(NA_real_, nrow = length(sample_sizes), ncol = nsims)
-  marginal_FD    <- matrix(NA_real_, nrow = length(sample_sizes), ncol = nsims)
+  has_joint <- !is.null(bio.opts$sigma_rhythmic) &&
+               length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)
 
-  # Build simOptions structure expected by simCircadian()
-  sim_base <- list(
-    ngenes        = ngenes,
-    prop_rhythmic = prop_rhythmic,
-    period        = period,
-    lBaselineExpr = bio.opts$lBaselineExpr,
-    lOD           = bio.opts$lOD,
-    amplitude     = bio.opts$amplitude,
-    phase         = bio.opts$phase,
-    sim.seed      = bio.opts$sim.seed %||% 42L
-  )
+  # CircaPower n80 estimate from median r
+  n0_circapower <- circaPowerApproxN80(bio.opts, alpha = alpha)
+
+  # Storage
+  pvalues         <- array(NA_real_, dim = c(length(sample_sizes), ngenes, nsims))
+  r_values_list   <- vector("list", length(sample_sizes))
+  for (.j in seq_along(sample_sizes)) r_values_list[[.j]] <- vector("list", nsims)
+
+  marginal_power  <- matrix(NA_real_, nrow = length(sample_sizes), ncol = nsims)
+  marginal_FDR    <- matrix(NA_real_, nrow = length(sample_sizes), ncol = nsims)
+  marginal_alpha  <- matrix(NA_real_, nrow = length(sample_sizes), ncol = nsims)
+  marginal_TD     <- matrix(NA_real_, nrow = length(sample_sizes), ncol = nsims)
+  marginal_FD     <- matrix(NA_real_, nrow = length(sample_sizes), ncol = nsims)
+
+  strat_power     <- array(NA_real_, dim = c(length(sample_sizes), n_r_strata, nsims))
+  strat_TD        <- array(NA_real_, dim = c(length(sample_sizes), n_r_strata, nsims))
+  strat_FD        <- array(NA_real_, dim = c(length(sample_sizes), n_r_strata, nsims))
+  strat_n_targets <- array(NA_real_, dim = c(length(sample_sizes), n_r_strata, nsims))
+  strat_n_nulls   <- array(NA_real_, dim = c(length(sample_sizes), n_r_strata, nsims))
+  strat_FDR       <- array(NA_real_, dim = c(length(sample_sizes), n_r_strata, nsims))
+  strat_alpha     <- array(NA_real_, dim = c(length(sample_sizes), n_r_strata, nsims))
 
   for (j in seq_along(sample_sizes)) {
     n <- sample_sizes[j]
@@ -898,30 +925,26 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
       cts
     }
 
-    for (i in seq_len(nsims)) {
-      # Re-seed per (j, i) so results are reproducible and independent
-      sim_opts_i <- sim_base
-      sim_opts_i$sim.seed <- (j * 1000L + i) * 7919L
-      set.seed(sim_opts_i$sim.seed)
+    # Run nsims replicates (parallel if mc.cores > 1)
+    sim_results <- parallel::mclapply(seq_len(nsims), function(i) {
+      set.seed((j * 1000L + i) * 7919L)
 
-      # Assign rhythmic gene indices and draw parameters
-      n_rhythmic <- round(ngenes * prop_rhythmic)
+      # Draw gene parameters
+      n_rhythmic  <- round(ngenes * prop_rhythmic)
       rhythmic_id <- sample(ngenes, n_rhythmic)
-      is_rhythmic <- rep(FALSE, ngenes)
+      is_rhythmic <- logical(ngenes)
       is_rhythmic[rhythmic_id] <- TRUE
 
-      mesor_g  <- bio.opts$lBaselineExpr
-      sigma_g  <- exp(bio.opts$lOD)
+      mesor_g <- bio.opts$lBaselineExpr
+      sigma_g <- exp(bio.opts$lOD)
+      amp_g   <- numeric(ngenes)
+      phase_g <- numeric(ngenes)
 
-      amp_g   <- rep(0, ngenes)
-      phase_g <- rep(0, ngenes)
       if (n_rhythmic > 0) {
-        # Joint sampling of A and sigma if sigma_rhythmic is available
-        if (!is.null(bio.opts$sigma_rhythmic) &&
-            length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)) {
-          joint_idx <- sample(length(bio.opts$amplitude), n_rhythmic, replace = TRUE)
-          amp_g[rhythmic_id]   <- pmax(bio.opts$amplitude[joint_idx], 0.05)
-          sigma_g[rhythmic_id] <- pmax(bio.opts$sigma_rhythmic[joint_idx], 1e-6)
+        if (has_joint) {
+          ji <- sample(length(bio.opts$amplitude), n_rhythmic, replace = TRUE)
+          amp_g[rhythmic_id]   <- pmax(bio.opts$amplitude[ji], 0.05)
+          sigma_g[rhythmic_id] <- pmax(bio.opts$sigma_rhythmic[ji], 1e-6)
         } else {
           amp_g[rhythmic_id] <- pmax(
             sample(bio.opts$amplitude, n_rhythmic, replace = TRUE), 0.05)
@@ -929,18 +952,18 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
         phase_g[rhythmic_id] <- sample(bio.opts$phase, n_rhythmic, replace = TRUE)
       }
 
-      # Generate time points
-      if (design == "active") {
-        if (!is.null(cts_n)) {
-          times_i <- cts_n
-        } else {
-          times_i <- seq(0, period, length.out = n + 1L)[seq_len(n)]
-        }
+      # Per-gene true r = A/sigma
+      r_values <- amp_g / sigma_g
+
+      # Time points
+      times_i <- if (design == "active") {
+        if (!is.null(cts_n)) cts_n
+        else seq(0, period, length.out = n + 1L)[seq_len(n)]
       } else {
-        times_i <- sampleTimesFromDist(n, cts_n)
+        sampleTimesFromDist(n, cts_n)
       }
 
-      # Simulate expression matrix [ngenes x n]
+      # Simulate expression [ngenes x n]
       omega <- 2 * pi / period
       expr  <- matrix(NA_real_, nrow = ngenes, ncol = n)
       for (g in seq_len(ngenes)) {
@@ -948,27 +971,63 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
         expr[g, ] <- rnorm(n, mu, sigma_g[g])
       }
 
-      # Fit cosinor F-test per gene and compute p-values
-      pvals <- tryCatch({
-        fitCosinorAll(expr, times_i, period = period)$pvalue
-      }, error = function(e) {
-        rep(NA_real_, ngenes)
-      })
-
-      # BH correction
+      # Cosinor F-test
+      pvals <- tryCatch(
+        fitCosinorAll(expr, times_i, period = period)$pvalue,
+        error = function(e) rep(NA_real_, ngenes)
+      )
       pvals[is.na(pvals)] <- 1
       fdr_g <- p.adjust(pvals, method = p.adjust.method)
 
-      discoveries  <- fdr_g <= alpha
+      list(pvals = pvals, fdr_g = fdr_g, is_rhythmic = is_rhythmic, r_values = r_values)
+    }, mc.cores = mc.cores)
+
+    for (i in seq_len(nsims)) {
+      res_i       <- sim_results[[i]]
+      pvals       <- res_i$pvals
+      fdr_g       <- res_i$fdr_g
+      is_rhythmic <- res_i$is_rhythmic
+      r_values    <- res_i$r_values
+
+      pvalues[j, , i]        <- pvals
+      r_values_list[[j]][[i]] <- r_values
+
+      discoveries <- fdr_g <= alpha
+      n_rhythmic  <- sum(is_rhythmic)
+
+      # r-stratum assignment for rhythmic genes only
+      r_for_strat <- ifelse(is_rhythmic, r_values, 0)
+      xgr <- cut(r_for_strat, breaks = r_strata, include.lowest = TRUE, labels = FALSE)
+      xgr[!is_rhythmic] <- NA
+
+      # Stratified quantities
+      for (k in seq_len(n_r_strata)) {
+        in_k  <- !is.na(xgr) & xgr == k
+        TD_k  <- sum(discoveries &  is_rhythmic & in_k, na.rm = TRUE)
+        FD_k  <- sum(discoveries & !is_rhythmic & in_k, na.rm = TRUE)  # 0 by construction
+        n_tgt_k  <- sum(is_rhythmic & in_k)
+        n_nul_k  <- sum(!is_rhythmic & in_k)
+
+        strat_power[j, k, i]     <- if (n_tgt_k > 0) TD_k / n_tgt_k else NA_real_
+        strat_TD[j, k, i]        <- TD_k
+        strat_FD[j, k, i]        <- FD_k
+        strat_n_targets[j, k, i] <- n_tgt_k
+        strat_n_nulls[j, k, i]   <- n_nul_k
+        disc_k <- TD_k + FD_k
+        strat_FDR[j, k, i]   <- if (disc_k > 0) FD_k / disc_k else NA_real_
+        strat_alpha[j, k, i] <- if (n_nul_k > 0) FD_k / n_nul_k else NA_real_
+      }
+
+      # Marginal
       TD <- sum(discoveries &  is_rhythmic, na.rm = TRUE)
       FD <- sum(discoveries & !is_rhythmic, na.rm = TRUE)
-      n_tgt <- sum(is_rhythmic)
-      n_disc <- TD + FD
-
-      marginal_power[j, i] <- if (n_tgt  > 0) TD / n_tgt else NA_real_
-      marginal_FDR[j, i]   <- if (n_disc > 0) FD / n_disc else NA_real_
-      marginal_TD[j, i]    <- TD
-      marginal_FD[j, i]    <- FD
+      n_null  <- ngenes - n_rhythmic
+      n_disc  <- TD + FD
+      marginal_power[j, i]  <- if (n_rhythmic > 0) TD / n_rhythmic else NA_real_
+      marginal_FDR[j, i]    <- if (n_disc > 0) FD / n_disc else NA_real_
+      marginal_alpha[j, i]  <- if (n_null > 0) FD / n_null else NA_real_
+      marginal_TD[j, i]     <- TD
+      marginal_FD[j, i]     <- FD
     }
 
     if (verbose) {
@@ -980,11 +1039,57 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
   }
 
   list(
-    marginal_power = marginal_power,
-    marginal_FDR   = marginal_FDR,
-    marginal_TD    = marginal_TD,
-    marginal_FD    = marginal_FD,
-    sample_sizes   = sample_sizes,
-    nsims          = nsims
+    sample_sizes    = sample_sizes,
+    nsims           = nsims,
+    n0_circapower   = n0_circapower,
+    r_strata        = r_strata,
+    strata_labels   = strata_labels,
+    pvalues         = pvalues,
+    r_values_list   = r_values_list,
+    marginal_power  = marginal_power,
+    marginal_FDR    = marginal_FDR,
+    marginal_alpha  = marginal_alpha,
+    marginal_TD     = marginal_TD,
+    marginal_FD     = marginal_FD,
+    strat_power     = strat_power,
+    strat_TD        = strat_TD,
+    strat_FD        = strat_FD,
+    strat_n_targets = strat_n_targets,
+    strat_n_nulls   = strat_n_nulls,
+    strat_FDR       = strat_FDR,
+    strat_alpha     = strat_alpha
   )
+}
+
+
+# =====================================================================
+# CircaPower grid initialisation helper
+# =====================================================================
+#' Estimate n for 80% power using CircaPower at median pilot r
+#'
+#' @param bio.opts \code{CircadianBioOptions} with amplitude and sigma_rhythmic.
+#' @param alpha    Significance level (default 0.05).
+#' @param target_power Target power (default 0.80).
+#' @param n_search Integer vector of candidate sample sizes.
+#' @return Single integer — smallest n achieving target_power, or NA if not found.
+#' @export
+circaPowerApproxN80 <- function(bio.opts, alpha = 0.05, target_power = 0.80,
+                                n_search = seq(5, 500, by = 5)) {
+  if (!is.null(bio.opts$sigma_rhythmic) &&
+      length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)) {
+    r_vec <- bio.opts$amplitude / bio.opts$sigma_rhythmic
+  } else {
+    # Fallback: assume sigma ≈ exp(median lOD)
+    sigma_med <- exp(median(bio.opts$lOD, na.rm = TRUE))
+    r_vec     <- bio.opts$amplitude / sigma_med
+  }
+  r_med <- median(r_vec, na.rm = TRUE)
+  power_n <- vapply(n_search, function(n) {
+    lam <- r_med^2 * n / 2
+    q   <- qf(1 - alpha, 2, n - 3)
+    1 - pf(q, 2, n - 3, ncp = lam)
+  }, numeric(1))
+  found <- which(power_n >= target_power)
+  if (length(found) == 0L) return(NA_integer_)
+  n_search[found[1L]]
 }
