@@ -58,11 +58,11 @@ cat(sprintf("\n=== Single-Cohort Power Analysis  [%s] ===\n", timestamp))
 # 1. Simulation grid
 # =====================================================================
 if (SMOKE_TEST) {
-  sample_sizes <- c(20, 40, 60)
+  sample_sizes <- c(20, 40, 60, 80, 100)
   nsims        <- 5L
   n_cores      <- 1L
 } else {
-  sample_sizes <- c(20, 30, 40, 50, 60, 80, 100, 120, 150, 200)
+  sample_sizes <- c(20, 30, 40, 50, 60, 70, 80, 90, 100)
   nsims        <- 200L
   n_cores      <- as.integer(Sys.getenv("MC_CORES", unset = "4"))
 }
