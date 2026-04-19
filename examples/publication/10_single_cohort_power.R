@@ -62,7 +62,7 @@ if (SMOKE_TEST) {
   nsims        <- 5L
   n_cores      <- 1L
 } else {
-  sample_sizes <- c(20, 30, 40, 50, 60, 70, 80, 90, 100)
+  sample_sizes <- c(20, 30, 40, 50, 60, 70, 80, 100, 120, 150, 200)
   nsims        <- 200L
   n_cores      <- as.integer(Sys.getenv("MC_CORES", unset = "4"))
 }
