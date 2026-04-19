@@ -133,15 +133,12 @@ cat(sprintf("\nGenerating Figure 1 → %s\n", fig_path))
 
 plotSingleCohortFig1(
   res          = res,
-  bio.opts     = bio,
   out_pdf      = fig_path,
   title        = "Single-cohort rhythmicity power (Seney PFC Control, n0=60)",
-  alpha        = 0.05,
-  strata_to_show = which(res$strata_labels %in%
-                           c("(0,0.25]", "(0.25,0.5]", "(0.5,0.75]",
-                             "(0.75,1]", "(1,1.5]")),
-  width  = 12,
-  height = 4.5
+  fdr_thresholds = c(0.01, 0.05, 0.10, 0.20),
+  reference_n  = 60,
+  width  = 15,
+  height = 5.5
 )
 
 # =====================================================================

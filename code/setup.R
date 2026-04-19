@@ -51,6 +51,7 @@ source_files = c(
   "power.R",                     # Power computation and comparison
   "utils.R",                     # Plotting and reporting
   "plot_dr_power.R",             # Stratified power plotting functions
+  "plot_with_se.R",              # SE-bar helpers + DR/DP 6-panel figures
   "plot_single_cohort.R",        # Single-cohort Figure 1 (3-panel)
   "LRTest_diff_phase.R",         # LR test for differential phase
   "LRTest_diff_amp.R",           # LR test for differential amplitude
