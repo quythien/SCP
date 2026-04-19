@@ -41,6 +41,8 @@
 # 0. Setup
 # =====================================================================
 SMOKE_TEST <- identical(Sys.getenv("SMOKE_TEST"), "true")
+GLOBAL_SEED <- 2025L
+set.seed(GLOBAL_SEED)
 
 old_wd <- setwd("code")
 source("setup.R")
@@ -67,6 +69,7 @@ if (SMOKE_TEST) {
   n_cores      <- as.integer(Sys.getenv("MC_CORES", unset = "4"))
 }
 
+cat(sprintf("Global seed  : %d\n", GLOBAL_SEED))
 cat(sprintf("Sample sizes : %s\n", paste(sample_sizes, collapse = ", ")))
 cat(sprintf("nsims        : %d\n", nsims))
 cat(sprintf("mc.cores     : %d\n", n_cores))
