@@ -116,7 +116,7 @@ bootstrap uncertainty"]
     classDef input   fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f
     classDef est     fill:#ede9fe,stroke:#7c3aed,color:#2e1065
     classDef opts    fill:#fef9c3,stroke:#ca8a04,color:#422006
-    classDef decide  fill:#fce7f3,stroke:#db2777,color:#500724
+    classDef decide  fill:#f3f4f6,stroke:#6b7280,color:#111827
     classDef runner  fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef result  fill:#ffedd5,stroke:#ea580c,color:#431407
     classDef hidden  fill:none,stroke:none,color:none
@@ -137,13 +137,11 @@ bootstrap uncertainty"]
 | 🔵 Blue | Raw inputs and pilot data |
 | 🟣 Purple | Pilot estimation |
 | 🟡 Yellow | Options |
-| 🔴 Pink | Scientific question |
+| ⬜ Gray | Scientific question |
 | 🟢 Green | Analysis runners |
 | 🟠 Orange | Results |
 
-Nodes at the same depth share the same colour: all inputs are blue, both estimation nodes are purple, both option nodes are yellow, all four result nodes are orange. Mermaid sizes each node to its text content, so result nodes are given two lines of similar length to keep them visually uniform.
-
-**n_power** — the smallest sample size N at which simulated power first reaches the target level (default 80%). Returned alongside the full power-vs-N curve so researchers can read off power at any N, not just the threshold crossing.
+**n_power** — the smallest sample size N at which simulated power first reaches the target level (default 80%). Returned alongside the full power-vs-N curve.
 
 ### Design options
 
