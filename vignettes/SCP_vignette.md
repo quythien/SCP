@@ -438,8 +438,8 @@ Do you have a pilot dataset?
     │
     ├── No ──► Use CircaPower() with a target r
     │          (feasibility check; DCP only)
-    │       ──► Use a bundled reference pilot (baboon, mouse, human brain)
-    │           estCircadianParam(scp_pilots$baboon_LUN, ...); full simulation
+    │       ──► Use a bundled reference pilot (see scp$pilot for available datasets)
+    │           estCircadianParam(scp$pilot$baboon$LUN, ...); full simulation
     │
     └── Yes ──► Are you using DCP only and active equispaced design?
                     │
