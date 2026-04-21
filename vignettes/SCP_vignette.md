@@ -10,7 +10,7 @@
 
 1. [Overview](#1-overview)
 2. [Pipeline Flowchart](#2-pipeline-flowchart)
-3. [Quick Start](#3-quick-start)
+3. [Quick Start](#3-quick-start) — including data format requirements
 4. [Single-Cohort Power](#4-single-cohort-power)
 5. [Differential Power](#5-differential-power)
 6. [B vs m Trade-off and Method Recommendation](#6-b-vs-m-trade-off-and-method-recommendation)
@@ -64,91 +64,104 @@ and options, then branches by the scientific question.
 
 ```mermaid
 flowchart TD
-    %% ── Inputs ────────────────────────────────────────────────────────
-    A["🧬 Pilot expression matrix\n(genes × samples, log2-CPM)"]
-    B["🕐 Time-of-day vector\n(hours, 0–24)"]
 
-    %% ── Estimation ───────────────────────────────────────────────────
-    C["estCircadianParam()\nSingle-group pilot\n(A, σ, prop rhythmic, TOD)"]
-    D["estCircadianParamTwoGroup()\nTwo-group pilot\n(+ DR / DP / DM proportions)"]
+    A["Pilot expression matrix"]
+    B["Time-of-day vector"]
+    I["Pilot inputs"]
 
-    %% ── Options ──────────────────────────────────────────────────────
-    E["CircadianDesignOptions()\nsample_sizes, nsims,\ndesign, B_values"]
-    F["CircadianAnalysisOptions()\nalpha, p.adjust.method,\nr_strata"]
+    C["Single-group pilot
+estCircadianParam()"]
+    D["Two-group pilot
+estCircadianParamTwoGroup()"]
 
-    %% ── Analysis branches ────────────────────────────────────────────
-    G{"Scientific\nquestion?"}
+    E["Design options
+N grid · B · active/passive · nsims"]
 
-    SC["runSingleCohortPower()\nMethods: DCP | JTK | RAIN | MH\nSweep: N × B × α₂"]
-    DF["runDifferentialPower()\nMethods: DCP | CircaCompare\n  LimoRhyde | DODR\nSweep: N × test_type × α₂"]
-    BM["recommendDesign()\nB vs m orchestrator\n① Guidance table\n② CircaPower (analytical)\n③ Simulation sweep"]
-    BS["runBootstrapDesignGrid()\nPilot uncertainty\nBootstrap CIs on power"]
+    F["Analysis options
+FDR level · correction · SNR strata"]
 
-    %% ── Results ──────────────────────────────────────────────────────
-    R1["SCPSingleResult\n$power_df  $n80_df"]
-    R2["SCPDiffResult\n$power_df  $n80_df"]
-    R3["SCPRecommendResult\nAnalytical + simulated n80"]
-    R4["Bootstrap CI list\nMedian power + 95% CI"]
+    G{"Scientific question?"}
 
-    %% ── Outputs ──────────────────────────────────────────────────────
-    O["print() · plot() · npower()\nPDF figures · RDS results"]
+    subgraph RUNNERS[" "]
+        direction LR
+        SC["runSingleCohortPower()"]
+        DF["runDifferentialPower()"]
+        BM["recommendDesign()"]
+        BS["runBootstrapDesignGrid()"]
+    end
 
-    %% ── Flow ─────────────────────────────────────────────────────────
-    A & B --> C
-    A & B --> D
+    R1["Power vs N · n80
+per method · B · waveform"]
+    R2["DR / DP / DM power vs N
+per method · endpoint"]
+    R3["Optimal B per method
+analytical + simulated n80"]
+    R4["Bootstrap CI on power
+n80 uncertainty range"]
+
+    A --> I
+    B --> I
+    I --> C
+    I --> D
     C --> E
     D --> E
-    E & F --> G
+    E --> F
+    F --> G
 
-    G -- "One group\nrhythmicity" --> SC
-    G -- "Two groups\nDR / DP / DM" --> DF
-    G -- "B vs m\ntrade-off" --> BM
-    G -- "Pilot\nuncertainty" --> BS
+    G -- "How many samples for rhythmicity?" --> SC
+    G -- "How many samples for DR / DP / DM?" --> DF
+    G -- "Best B vs m at fixed N?" --> BM
+    G -- "How sensitive to pilot size?" --> BS
 
     SC --> R1
     DF --> R2
     BM --> R3
     BS --> R4
 
-    R1 & R2 & R3 & R4 --> O
-
-    %% ── Re-use arrow ─────────────────────────────────────────────────
-    R1 -. "prior_result\n(skip re-run)" .-> BM
-    R2 -. "prior_result\n(skip re-run)" .-> BM
-
-    %% ── Styles ───────────────────────────────────────────────────────
     classDef input   fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f
     classDef est     fill:#ede9fe,stroke:#7c3aed,color:#2e1065
     classDef opts    fill:#fef9c3,stroke:#ca8a04,color:#422006
+    classDef decide  fill:#fce7f3,stroke:#db2777,color:#500724
     classDef runner  fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef result  fill:#ffedd5,stroke:#ea580c,color:#431407
-    classDef output  fill:#f1f5f9,stroke:#64748b,color:#0f172a
-    classDef decide  fill:#fce7f3,stroke:#db2777,color:#500724
+    classDef hidden  fill:none,stroke:none,color:none
 
-    class A,B input
+    class A,B,I input
     class C,D est
     class E,F opts
     class G decide
     class SC,DF,BM,BS runner
     class R1,R2,R3,R4 result
-    class O output
+    class RUNNERS hidden
 ```
 
 ### Reading the diagram
 
 | Color | Role |
 |-------|------|
-| 🔵 Blue | Raw input data |
+| 🔵 Blue | Raw inputs and pilot data |
 | 🟣 Purple | Pilot estimation functions |
 | 🟡 Yellow | Options builders |
 | 🔴 Pink | Scientific question branch |
 | 🟢 Green | Analysis runners |
 | 🟠 Orange | Result objects |
-| ⬜ Grey | Final output (figures, tables, RDS) |
 
-The dashed arrows show the **`prior_result` reuse pattern**: if you have
-already run `runSingleCohortPower()` or `runDifferentialPower()`, pass that
-result directly to `recommendDesign()` to skip re-running the simulation.
+### Design options legend
+
+| Abbreviation | Full name | Notes |
+|---|---|---|
+| **N grid** | Sample sizes to evaluate | e.g. `c(20, 40, 60, 80, 100)` |
+| **B** | Number of distinct time points | Active designs only; `m = N/B` replicates per time point is derived |
+| **active / passive** | Study design type | Active = equispaced ZTs; passive = observed (e.g. post-mortem) TOD |
+| **nsims** | Simulations per (N, B) cell | Higher = smoother power curve; 30–200 typical |
+
+### Analysis options legend
+
+| Abbreviation | Full name | Notes |
+|---|---|---|
+| **FDR level** | `fdr_thresholds` | One or more thresholds, e.g. `c(0.01, 0.05, 0.10)`; power is evaluated at each |
+| **correction** | `p.adjust.method` | Multiple-testing correction applied across genes; default `"BH"` (Benjamini-Hochberg) |
+| **SNR strata** | `r_strata` | Breakpoints on $r = A/\sigma$ for stratified power reporting; auto-set by `makeAdaptiveRStrata()` |
 
 ---
 
@@ -161,6 +174,79 @@ old_wd <- setwd("code")
 source("setup.R")
 setwd(old_wd)
 ```
+
+### Preparing your data
+
+All analyses start with `prepCircadianData()`, which normalises and validates your expression data before pilot estimation.
+
+**Accepted input formats**
+
+| `expr` argument | Example |
+|-----------------|---------|
+| `matrix` | `as.matrix(count_matrix)` |
+| `data.frame` | `read.table(...)` output |
+| File path (CSV or TSV) | `"data/counts.csv"` |
+
+The function coerces the input to a numeric matrix internally; rows must be genes and columns must be samples.
+
+**Required arguments**
+
+| Argument | Type | Notes |
+|----------|------|-------|
+| `expr` | matrix / data.frame / file path | genes × samples |
+| `times` | numeric vector | time-of-day in hours, range [0, 24); length must equal `ncol(expr)` |
+| `input_type` | `"counts"` / `"cpm"` / `"log2"` | see table below |
+
+**`input_type` transforms**
+
+| Value | What it expects | What it does |
+|-------|----------------|--------------|
+| `"counts"` | Raw integer read counts | → log₂(CPM + 1) |
+| `"cpm"` | Counts-per-million (linear scale) | → log₂(CPM + 1) |
+| `"log2"` | Already log₂-transformed | Passes through unchanged |
+
+**Row and column names**
+
+- Row names (gene IDs) are optional for computation but are carried through to results and figures. Provide them if you want gene-level output to be interpretable.
+- Column names (sample IDs) are optional unless you supply a `pheno` data frame for sample-level metadata; in that case column names must match the `sample_col` column of `pheno`.
+
+**NA handling**
+
+- Samples with `NA` time-of-day are silently dropped (a warning is printed).
+- `NA` expression values in the remaining samples are not imputed; remove or impute them before calling `prepCircadianData()`.
+
+**Example**
+
+```r
+# Matrix input — already log2 transformed
+mat    <- as.matrix(read.csv("data/expr_log2.csv", row.names = 1))
+times  <- as.numeric(meta$hour)                # same length as ncol(mat)
+
+prep   <- prepCircadianData(mat, times = times, input_type = "log2")
+expr   <- prep$data    # filtered, log2-scale matrix (genes × samples)
+tod    <- prep$times   # times vector, NAs removed
+
+# CSV file path — raw counts
+prep2  <- prepCircadianData(
+  "data/counts_raw.csv",
+  times      = "time",      # column name in pheno
+  input_type = "counts",
+  pheno      = sample_meta, # data.frame with sample metadata
+  sample_col = "sample_id"
+)
+```
+
+**Pre-filtering recommendation**
+
+`prepCircadianData()` performs basic zero-count filtering. For circadian analysis, additionally remove genes with very low expression variance before calling `estCircadianParam()`:
+
+```r
+# Keep genes with at least one log2-CPM > 1 in at least half the samples
+keep <- rowSums(expr > 1) >= floor(ncol(expr) / 2)
+expr <- expr[keep, ]
+```
+
+---
 
 ### Build option objects
 

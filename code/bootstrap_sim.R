@@ -224,13 +224,17 @@ runBootstrapDesignGrid <- function(pilot_data,
   period <- bio_diff.opts$period %||% 24
 
   test_types  <- analysis.opts$fdr_thresholds  # just used for labeling below
-  # Use DR as primary; include all test types that bio_diff.opts has non-zero props for
-  all_tests <- c()
-  if (bio_diff.opts$prop_DR > 0) all_tests <- c(all_tests, "DR")
-  if (bio_diff.opts$prop_DP > 0) all_tests <- c(all_tests, "DP")
-  if (!is.null(bio_diff.opts$prop_DM) && bio_diff.opts$prop_DM > 0) all_tests <- c(all_tests, "DM")
-  if (!is.null(bio_diff.opts$prop_DA) && bio_diff.opts$prop_DA > 0) all_tests <- c(all_tests, "DA")
-  if (length(all_tests) == 0) all_tests <- "DR"
+  # Single-cohort mode uses one test type ("rhythmic"); differential uses DR/DP/DM/DA
+  if (mode == "single") {
+    all_tests <- "rhythmic"
+  } else {
+    all_tests <- c()
+    if (bio_diff.opts$prop_DR > 0) all_tests <- c(all_tests, "DR")
+    if (bio_diff.opts$prop_DP > 0) all_tests <- c(all_tests, "DP")
+    if (!is.null(bio_diff.opts$prop_DM) && bio_diff.opts$prop_DM > 0) all_tests <- c(all_tests, "DM")
+    if (!is.null(bio_diff.opts$prop_DA) && bio_diff.opts$prop_DA > 0) all_tests <- c(all_tests, "DA")
+    if (length(all_tests) == 0) all_tests <- "DR"
+  }
   n_tests <- length(all_tests)
 
   # m matrix: m[i, j] = N / B (exact integer division only).
@@ -305,37 +309,45 @@ runBootstrapDesignGrid <- function(pilot_data,
           nsims        = nsims_inner,
           design       = design,
           cts          = cts_exp,
+          B_values     = B,
           test_types   = all_tests
         )
 
         tryCatch({
-          sim_out <- runSimsDiff(bio_b_n, iter_design, analysis.opts)
+          if (mode == "single") {
+            sim_out <- runSingleCohortPower(bio_b_n, iter_design, analysis.opts,
+                         methods = "DCP", alpha2 = 0,
+                         mc.cores = 1L, plot = FALSE, verbose = FALSE)
+            result_b[n_idx, B_idx, 1L] <- sim_out$power_df$power[1L]
+          } else {
+            sim_out <- runSimsDiff(bio_b_n, iter_design, analysis.opts)
 
-          for (t_idx in seq_len(n_tests)) {
-            tt      <- all_tests[t_idx]
-            fdr_key <- paste0("fdr_", tt)
-            fdr_arr <- sim_out[[fdr_key]]
-            if (is.null(fdr_arr)) next
+            for (t_idx in seq_len(n_tests)) {
+              tt      <- all_tests[t_idx]
+              fdr_key <- paste0("fdr_", tt)
+              fdr_arr <- sim_out[[fdr_key]]
+              if (is.null(fdr_arr)) next
 
-            powers <- sapply(seq_len(nsims_inner), function(sim_i) {
-              fdr_vec      <- fdr_arr[, 1, sim_i]
-              diff_type_vec <- sim_out$diff_type[[sim_i]]
-              target_idx <- if (tt == "DR") {
-                diff_type_vec %in% c(2, 3)
-              } else if (tt == "DP") {
-                diff_type_vec == 4
-              } else if (tt == "DM") {
-                diff_type_vec == 5
-              } else if (tt == "DA") {
-                diff_type_vec == 6
-              } else {
-                rep(FALSE, length(fdr_vec))
-              }
-              n_target <- sum(target_idx)
-              if (n_target == 0) return(NA_real_)
-              sum(fdr_vec[target_idx] <= fdr_threshold, na.rm = TRUE) / n_target
-            })
-            result_b[n_idx, B_idx, t_idx] <- mean(powers, na.rm = TRUE)
+              powers <- sapply(seq_len(nsims_inner), function(sim_i) {
+                fdr_vec       <- fdr_arr[, 1, sim_i]
+                diff_type_vec <- sim_out$diff_type[[sim_i]]
+                target_idx <- if (tt == "DR") {
+                  diff_type_vec %in% c(2, 3)
+                } else if (tt == "DP") {
+                  diff_type_vec == 4
+                } else if (tt == "DM") {
+                  diff_type_vec == 5
+                } else if (tt == "DA") {
+                  diff_type_vec == 6
+                } else {
+                  rep(FALSE, length(fdr_vec))
+                }
+                n_target <- sum(target_idx)
+                if (n_target == 0) return(NA_real_)
+                sum(fdr_vec[target_idx] <= fdr_threshold, na.rm = TRUE) / n_target
+              })
+              result_b[n_idx, B_idx, t_idx] <- mean(powers, na.rm = TRUE)
+            }
           }
         }, error = function(e) NULL)  # NA stays in result_b on error
       }
@@ -375,7 +387,8 @@ runBootstrapDesignGrid <- function(pilot_data,
 
   for (n_idx in seq_len(n_N)) {
     mean_by_B  <- power_mean[n_idx, , 1]
-    optimal_B[n_idx] <- B_values[which.max(mean_by_B)]
+    best_idx   <- which.max(mean_by_B)
+    optimal_B[n_idx] <- if (length(best_idx) > 0L) B_values[best_idx] else NA_integer_
 
     # Bootstrap distribution of optimal B
     # Explicitly reshape to [nboot, n_B] to avoid dimension-drop when n_B == 1

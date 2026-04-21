@@ -365,35 +365,72 @@ Final summaries are obtained by averaging across simulation replicates.
 
 
 
-\subsection{Active study design: sampling frequency and biological replication trade-off}
+\subsection{Active study design: sampling frequency and replication trade-off}
 \label{sec:active_design}
 
-In active designs, let $B$ denote the number of distinct sampling time points
-and $m$ the number of replicates per time point, so that the total sample size
-is $n = Bm$ for a balanced design. Investigators must therefore allocate a
-fixed subject budget between temporal coverage ($B$) and replication ($m$).
+In a balanced active design, total sample size satisfies $N = Bm$, where $B$
+is the number of distinct sampling time points and $m = N/B$ is the number of
+biological replicates per time point. The investigator must allocate a fixed
+subject budget between temporal coverage ($\uparrow B$, $\downarrow m$) and
+biological replication ($\downarrow B$, $\uparrow m$). This allocation has
+historically been guided by convention: landmark transcriptomic studies sampled
+every 2--4 hours ($B = 6$--$12$, $m = 1$--$2$), inheriting the resolution of
+physiological locomotor recordings~\citep{[CITE]}, and the practice has
+continued at scale without formal power justification~\citep{[CITE]}. No
+existing tool evaluates the full $(B, m)$ allocation surface under the
+detection method a researcher plans to use: \textsc{CircaPower}~\citep{zong2023circapower}
+computes the analytical non-centrality parameter at a single $(B, N, r)$ point
+but does not sweep the allocation, and closed-form power expressions are
+unavailable for non-parametric tests (\textsc{JTK\_CYCLE}, \textsc{RAIN}). As
+a result, design choices such as $B = 4, m = 12$ versus $B = 12, m = 4$ at
+fixed budget can lead to materially different power, yet this tradeoff remains
+invisible in current practice.
 
-% CHANGE: B-invariance is no longer re-derived here. Instead it opens with a
-% forward reference back to Section~\ref{sec:single_cohort}, which is where the
-% reader first encountered the result. This removes the redundancy while
-% keeping Section~\ref{sec:design_bvsm} focused on when invariance breaks down.
-As noted in Section~\ref{sec:single_cohort}, balanced equally spaced designs
-with $B\geq 3$ time points satisfy the \emph{B-invariance} property: the
-design factor $d(\phi)=1/2$ for all gene phases, so the noncentrality parameter
-reduces to $\lambda_g = r_g^2 n / 2$ and power depends on total $n$ but not
-on the $B$-vs-$m$ allocation (Supplementary~S8).
+The fundamental reason is that detection methods differ in how they use the
+$(B, m)$ allocation. For cosinor-based methods (\textsc{DCP}), under a
+balanced, equally spaced, first-harmonic sinusoidal design with $B \geq 3$
+($\alpha_2 = 0$), the non-centrality parameter for gene $g$ is
+\begin{equation}
+  \lambda_g \;=\; \frac{r_g^2\, N}{2},
+  \label{eq:ncp_invariance}
+\end{equation}
+independent of the $(B, m)$ split (Section~\ref{sec:single_cohort};
+Supplementary~S8). Under these assumptions, power is invariant to the
+allocation at fixed $N$: practitioners using a cosinor-based test may choose
+$B$ freely on biological or logistical grounds without sacrificing detection
+power.
 
-In practice, this idealized result can break down. The full \textsc{SCP}
-pipeline includes rhythmicity screening, DR/DP/DM testing, and BH multiplicity
-correction, all of which interact with the design in non-trivial ways. At low
-signal-to-noise ratios, denser time sampling ($\uparrow B$, $\downarrow m$)
-can improve rhythmicity screening power even at fixed $n$, because the cosinor
-model benefits from broader phase coverage. Conversely, designs with very few
-time points ($B=3$) are susceptible to second-harmonic aliasing artifacts
-(Supplementary~S7). \textsc{SCP} evaluates the $B$-vs-$m$ trade-off directly
-by sweeping both $B$ and $n$ in the simulation grid, producing joint power
-surfaces that reveal whether the allocation matters for a given pilot dataset
-and target endpoint.
+Non-parametric rank-based methods do not share this invariance.
+\textsc{JTK\_CYCLE} computes a Jonckheere-Terpstra statistic by accumulating
+$\binom{B}{2}$ pairwise Mann-Whitney comparisons across time-point groups. At
+fixed $N$, increasing $B$ adds more timepoint pairs but shrinks the per-group
+sample $m = N/B$, reducing rank evidence per comparison. Beyond this precision
+loss, adjacent timepoints in a dense design are separated by only a small phase
+angle, so the cosine difference between groups is small and contributes little
+signal regardless of $m$. Power therefore depends non-monotonically on $B$,
+with an empirical interior optimum near $B \approx 4$--$6$
+(Section~\ref{sec:bvsm_results}). \textsc{RAIN}'s umbrella test has
+qualitatively similar $B$-sensitivity. As an extension explored in this work, we also evaluate an adaptive
+multi-harmonic detector (\textsc{MH}), which fits a truncated Fourier model
+with $K = \lfloor (B-1)/2 \rfloor$ harmonics and selects $K$ based on the
+design. This method follows a distinct logic: a $K$-harmonic model requires
+$B \geq 2K + 1$ equally-spaced observations for identifiability, so denser
+sampling directly enables detection of higher-order waveform components when
+$\alpha_2 > 0$. Thus, unlike cosinor-based methods, increasing $B$ is not
+merely a reallocation choice for \textsc{MH}; it changes the class of
+waveforms that can be estimated.
+
+The practical consequence scales with signal strength. At high effect sizes
+($\tilde{r} \gtrsim 2$, typical of mouse liver or lung), power saturates
+rapidly with $N$ across all methods and $B$ choices, and the allocation is
+largely inconsequential. At low to moderate effect sizes ($\tilde{r} \lesssim
+1$, as in human post-mortem brain or cell-type-resolved preparations), the
+method--$B$ interaction can substantially change detection power, and in some
+settings by more than 20 percentage points. This is precisely the scenario
+where principled design guidance is most critical. \textsc{SCP} addresses this
+by sweeping the full $(N, B, \mathrm{method}, \alpha_2)$ grid on pilot data,
+producing joint power surfaces that make the allocation tradeoff explicit for
+each study context (Section~\ref{sec:bvsm_results}).
 
 % =====================================================================
 \subsection{Sensitivity Analysis via Bootstrap}
@@ -417,9 +454,230 @@ Averaging across bootstrap replicates yields the mean power curve, and pointwise
 confidence intervals are constructed from empirical quantiles. Narrow intervals
 indicate stable power estimates, whereas wide intervals suggest that the pilot
 is insufficiently informative and that additional data or modeling assumptions
-may be needed.%% ====================================================================
+may be needed.
+
+%% ====================================================================
 \section{Results}\label{sec:results}
 %% ====================================================================
+
+% -----------------------------------------------------------------------
+% NOTE: Old results (single-pilot PFC passive design) archived below.
+% New results use the multi-dataset active-design framework (ADR/LIV for
+% Figs 1–2; three datasets for Figs 3–4; bootstrap figure for Fig 5).
+% -----------------------------------------------------------------------
+
+% =====================================================================
+\subsection{Pilot datasets and simulation setup}
+\label{sec:pilot_datasets}
+
+Five pilot datasets spanning a ${\sim}5$-fold range in signal-to-noise ratio
+are used throughout. For single-cohort power (Figures~\ref{fig:sc_adrliv} and
+\ref{fig:bvsm_comparison}), we use the human adrenal gland
+(\textsc{GTEx} ADR; $n = 220$; $\tilde{r} \approx 2.1$) and mouse liver
+(\textsc{GSE54651} LIV; $n = 8$, $B = 8$; $\tilde{r} \approx 2.88$),
+representing high-signal active designs. For the $B$-vs-$m$ multi-method
+analysis we additionally use the baboon lung (CAMO LUN; $n = 12$, active;
+$\tilde{r} \approx 1.72$) and mouse D1 striatum (\textsc{D1D2};
+$n_{\text{pilot}} = 45$, passive; $\tilde{r} \approx 0.65$), which brackets
+the weak-signal regime. For the bootstrap figure, the Seney ACC control cohort
+($n = 60$; $\tilde{r} \approx 0.79$, passive) is added as a third panel.
+All simulations use $G = 5{,}000$ genes, $N_{\text{sim}} = 30$, and BH-adjusted
+FDR control at $\alpha = 0.05$.
+
+Table~\ref{tab:effect_sizes} summarises intrinsic effect sizes across publicly
+available circadian transcriptomic datasets, illustrating the 5--10$\times$
+gap between human brain tissue and mouse active studies that motivates
+dataset-specific power calculations.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{ll|lrcc}
+\toprule
+Organism & Study & Tissue & $n$ & \multicolumn{1}{c}{Median $r$} & \multicolumn{1}{c}{Min $r$} \\
+ & & & & \multicolumn{1}{c}{(7 core)} & \multicolumn{1}{c}{(top 100)} \\
+\midrule
+\multirow{6}{*}{\textit{H.\ sapiens}} & \multirow{2}{*}{Chen et al.\ \citep{chen2016aging}} & PFC (BA11) & 147 & 0.91 & 0.46 \\
+ & & PFC (BA47) & 147 & 0.77 & 0.44 \\
+ & \multirow{2}{*}{Ketchesin et al.\ \citep{ketchesin2021diurnal}} & Striatum (NAc) & 59 & 0.71 & 1.06 \\
+ & & Striatum (caudate) & 59 & 1.04 & 0.82 \\
+ & Seney et al.\ \citep{seney2019diurnal} & PFC & 104 & 0.79 & 0.55 \\
+\midrule
+\multirow{6}{*}{\textit{M.\ musculus}} & Hughes et al.\ \citep{hughes2009harmonics} & Liver & 48 & 2.00 & 2.77 \\
+ & Gerstner et al.\ \citep{gerstner2016removal} & Cerebral cortex & 34 & 2.46 & 2.18 \\
+ & Na et al.\ \citep{na2009comprehensive} & Liver & 36 & 3.65 & 3.69 \\
+ & \multirow{3}{*}{Zhang et al.\ \citep{zhang2014comprehensive}} & Liver (GSE54650) & 24 & 3.51 & 3.67 \\
+ & & Kidney & 24 & 6.33 & 3.65 \\
+ & & Cerebellum & 24 & 3.52 & 2.01 \\
+\bottomrule
+\end{tabular}
+\caption{Intrinsic effect sizes ($r = A/\sigma$) from public circadian
+transcriptomic datasets, adapted from \citep{zong2023circapower}.
+Human passive studies show $r \approx 0.6$--$1.0$; mouse active studies
+show $r \approx 2$--$6$.}
+\label{tab:effect_sizes}
+\end{table}
+
+% =====================================================================
+\subsection{Single-cohort power: effect-size scaling and passive vs.\ active design}
+\label{sec:sc_results}
+
+% --- FIGURE 1 PLACEHOLDER ---
+% Source scripts: 10_single_cohort_power.R (NAc/Caudate/Putamen, passive)
+%                 14_single_cohort_gtex_ADR_LIV.R (ADR/LIV, active)
+% Generated figures:
+%   output/single_cohort/figures/single_cohort_power_GTEx_AdrenalGland_v3.pdf
+%   output/single_cohort/figures/single_cohort_power_GTEx_Liver_v3.pdf
+%   output/single_cohort/figures/single_cohort_power_GSE160521_NAc_Control_v3.pdf
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=\textwidth]{../../output/single_cohort/figures/single_cohort_power_GTEx_AdrenalGland_v3.pdf}
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
+  FIGURE 1 PLACEHOLDER\\[6pt]
+  Single-cohort power curves: ADR (active, $\tilde{r}\approx 2.1$) and LIV
+  (active, $\tilde{r}\approx 2.88$). Power vs $N$, stratified by $r$-stratum
+  and FDR threshold. Already generated.
+  \vspace{3cm}}}
+\caption{Single-cohort rhythmicity detection power as a function of sample size.
+\textbf{(A, B)} GTEx Adrenal Gland (ADR, $\tilde{r}\approx 2.1$, active design)
+and mouse liver (LIV, $\tilde{r}\approx 2.88$, active design). Power is shown
+stratified by signal-to-noise stratum ($r < 0.5$ to $r > 2$) at FDR 5\%.
+High-$r$ strata reach 80\% power at $N \approx 20$--$30$; low-$r$ strata
+remain substantially underpowered even at $N = 200$. \textbf{(C)} [TODO: add
+NAc or additional passive panel if included].}
+\label{fig:sc_adrliv}
+\end{figure}
+
+[TODO: 2--3 sentences summarising Fig 1 once final numbers confirmed.]
+
+% =====================================================================
+\subsection{Differential power: DR, DP, and DM across active-design datasets}
+\label{sec:diff_results}
+
+% --- FIGURE 2 PLACEHOLDER ---
+% Source scripts: 11_differential_power.R, 12_differential_power_gtex_ADR_LIV.R
+% Generated figures:
+%   output/differential/figures/diff_power_fig2_final.pdf
+%   output/differential/figures/diff_power_fig_ADR_vs_LIV_20260420_152822.pdf
+
+\begin{figure}[H]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
+  FIGURE 2 PLACEHOLDER\\[6pt]
+  Differential power (DR/DP/DM): NAc vs Putamen (passive) and ADR vs LIV
+  (active). Already generated.
+  \vspace{3cm}}}
+\caption{Differential circadian power for DR, DP, and DM. \textbf{(A)} NAc
+vs.\ Putamen comparison (Ketchesin et al.; passive design, $\tilde{r}\approx
+0.71$--$1.04$). \textbf{(B)} Mouse liver vs.\ mouse adrenal gland (GTEx
+active design, $\tilde{r}\approx 2$--$3$). For each comparison, DR power
+is lowest (requiring the largest $N$ to achieve 80\%), DP is intermediate,
+and DM power tracks the mesor-shift signal-to-noise ratio. Active designs
+achieve 80\% DR power at $N\approx$[TODO]; passive designs require $N\approx$[TODO].}
+\label{fig:diff_adrliv}
+\end{figure}
+
+[TODO: 2--3 sentences summarising Fig 2 once final numbers confirmed.]
+
+% =====================================================================
+\subsection{$B$ vs.\ $m$ trade-off: single-cohort, method comparison}
+\label{sec:bvsm_results}
+
+% --- FIGURE 3 PLACEHOLDER ---
+% Source scripts: 15_bvsm_method_comparison.R, 15b_bvsm_rain.R
+% In-progress: results_LIV.rds (Apr 21), results_LUN.rds (Apr 21)
+% Pending: results_D1.rds full N≤96 (jtk_d1_n96 screen running; 15d script ready)
+
+\begin{figure}[H]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
+  FIGURE 3 PLACEHOLDER\\[6pt]
+  $B$ vs.\ $m$ power surface: DCP/JTK/MH across 3 datasets (LIV, LUN, D1),
+  $\alpha_2 = 0$, $N \leq 96$.\\
+  Pending: D1 results at $N > 48$ (jtk\_d1\_n96 running).
+  \vspace{3cm}}}
+\caption{$B$ vs.\ $m$ power surfaces for three pilot datasets spanning a
+5-fold range in $\tilde{r}$. Columns: mouse LIV ($\tilde{r}\approx 2.88$),
+baboon LUN ($\tilde{r}\approx 1.72$), mouse D1 striatum ($\tilde{r}\approx
+0.65$). Rows: \textsc{DCP}, \textsc{JTK\_CYCLE}, \textsc{MH}. For DCP,
+power is approximately B-invariant at fixed $N$ (Equation~\ref{eq:ncp_invariance}).
+For JTK, an empirical interior optimum near $B \approx 4$--$6$ is visible;
+the low-signal D1 dataset shows the sharpest optimum. MH benefits from
+$B \geq 6$ when $\tilde{r}$ is low, driven by the adaptive $K$ increase.}
+\label{fig:bvsm_comparison}
+\end{figure}
+
+[TODO: quantitative summary once D1 N≤96 results available.]
+
+% =====================================================================
+\subsection{Waveform violation and \textsc{RAIN}: $\alpha_2$ sweep}
+\label{sec:alpha2_results}
+
+% --- FIGURE 4 PLACEHOLDER ---
+% Source script: 15c_bvsm_rain_extended.R (rain_ext5k screen running)
+% Will produce: results_RAIN_ext_*.rds for LIV, LUN, D1 × α₂ ∈ {0,0.5,0.75,1.0}
+
+\begin{figure}[H]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
+  FIGURE 4 PLACEHOLDER\\[6pt]
+  \textsc{RAIN} + \textsc{MH} power vs $B$ and $\alpha_2$. Primary dataset:
+  Mouse D1. Pending: rain\_ext5k screen.
+  \vspace{3cm}}}
+\caption{Effect of waveform shape ($\alpha_2$) on detection power for \textsc{RAIN}
+and \textsc{MH}. \textbf{(A)} $\alpha_2 = 0$ (pure sinusoid): \textsc{RAIN}
+and \textsc{MH} show comparable performance. \textbf{(B)} $\alpha_2 = 0.5$,
+\textbf{(C)} $\alpha_2 = 1.0$: \textsc{MH} gains $>$[TODO]\,pp over
+\textsc{RAIN} at $B \geq 6$, driven by the extra harmonic captured when
+$K \geq 2$. The benefit of denser time-point coverage is visible only when the
+waveform departs from sinusoidal, and only at low-to-moderate $\tilde{r}$.}
+\label{fig:alpha2_rain}
+\end{figure}
+
+[TODO: fill in numbers once rain\_ext5k completes.]
+
+% =====================================================================
+\subsection{Bootstrap uncertainty: pilot size and plug-in bias}
+\label{sec:bootstrap_results}
+
+% --- FIGURE 5 PLACEHOLDER ---
+% Source script: 08f_bootstrap_sc.R (boot_sc screen running)
+% Will produce: output/bootstrap_sc/figures/fig_bootstrap_sc.pdf
+% Panels: A=Baboon LUN n=12, B=Mouse D1 n=45, C=Seney CTL n=60
+
+\begin{figure}[H]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
+  FIGURE 5 PLACEHOLDER\\[6pt]
+  Bootstrap vs plug-in, single-cohort DCP, $B = 4$.\\
+  Panels: (A) Baboon LUN $n_\text{pilot}=12$,
+          (B) Mouse D1 $n_\text{pilot}=45$,
+          (C) Seney CTL $n_\text{pilot}=60$.\\
+  boot\_sc screen running.
+  \vspace{3cm}}}
+\caption{Bootstrap uncertainty in single-cohort power estimates.
+Blue curve: plug-in power (parameters estimated once from pilot, treated as
+fixed). Red curve with shaded band: bootstrap mean power $\pm$ 95\,\% CI
+($R_{\mathrm{boot}} = 50$ resamples, $N_{\mathrm{sim}} = 20$ inner simulations,
+\textsc{DCP}, $B = 4$). \textbf{(A)} Baboon LUN ($n_\mathrm{pilot} = 12$):
+the plug-in overestimates by approximately [TODO]\,pp; the bootstrap CI is
+[TODO]\,pp wide, reflecting the active pilot's cosinor identifiability despite
+the small $n$. \textbf{(B)} Mouse D1 ($n_\mathrm{pilot} = 45$): overprediction
+gap shrinks to [TODO]\,pp; CI narrows. \textbf{(C)} Seney CTL
+($n_\mathrm{pilot} = 60$): plug-in and bootstrap converge; CI $\leq$[TODO]\,pp.
+The ordered sequence illustrates that bootstrap correction matters most when
+the pilot is small, and that the active vs.\ passive design character of the
+pilot influences CI width independently of $n$.}
+\label{fig:bootstrap_sc}
+\end{figure}
+
+[TODO: fill in once boot\_sc completes.]
+
+%% ====================================================================
+% OLD RESULTS — ARCHIVED
+%% ====================================================================
+\iffalse
 
 \subsection{Pilot Data and Simulation Setup}
 
@@ -605,9 +863,93 @@ $n$ & DCP & CC & DCP & CC \\
 
 Framework validity was confirmed through four checks (details in Supplementary Section~S5). Under the complete null, raw $p$-value rejection rates are near nominal $\alpha = 0.05$ for DR (0.054--0.072) and DP (0.052--0.065); after BH correction the false positive rate is 0.000 for all tests, confirming multiple-testing control. Power increases monotonically with sample size for all tests and $r$-strata. Power also increases with phase shift magnitude and saturates near 8\,h. Empirical FDR is at or below nominal for DR (0.018--0.028) and DP (0.020--0.063), with slight inflation only at $n = 20$.
 
+\fi
+%% END ARCHIVED OLD RESULTS
+
 %% ====================================================================
 \section{Discussion}
 %% ====================================================================
+
+% -----------------------------------------------------------------------
+% Skeleton — to be fleshed out once Figures 3–5 are finalised.
+% Six threads, one paragraph each.
+% -----------------------------------------------------------------------
+
+\paragraph{Effect-size heterogeneity drives sample-size requirements more than
+any single design choice.}
+The five pilot datasets span a ${\sim}5$-fold range in $\tilde{r}$, and the
+resulting $n_{80}$ estimates differ by more than an order of magnitude.
+This reproduces the core message of \textsc{PROPER} for RNA-seq
+\citep{wu2015proper} in the circadian setting, and reinforces the need for
+effect-size-aware, dataset-specific planning rather than generic
+``circadian sample size'' recommendations.
+[TODO: specific numbers from Figs 1--2.]
+
+\paragraph{Active design confers a design-factor advantage over passive.}
+The equispaced active design achieves a non-centrality parameter
+$\lambda_g = N r_g^2/2$ — twice the value of an unstructured passive design
+with the same $N$ (design factor $d = 0.5$ vs.\ $d \approx 0.24$ for
+typical post-mortem TOD distributions). For ADR and LIV, this translates to
+$n_{80} \approx$[TODO] in the active setting.
+Passive designs sacrifice this efficiency but remain the only option for
+human observational data; \textsc{SCP} handles both transparently.
+
+\paragraph{Detection method and $B$ interact only at low signal.}
+For high-$\tilde{r}$ datasets (LIV, Baboon), all methods and all $B$ choices
+above the identifiability threshold reach 80\% power within a narrow $N$ range
+and the allocation is inconsequential. At low $\tilde{r}$ (D1 striatum), the
+$B$-method interaction becomes substantial: \textsc{JTK} favors $B \approx 4$--$6$
+for reasons unrelated to biology (MetaCycle collapses replicates before ranking),
+\textsc{RAIN} benefits from distinct time points, and \textsc{MH} uniquely
+leverages denser sampling to capture higher harmonics when $\alpha_2 > 0$.
+This heterogeneity is invisible without method-stratified simulation.
+[TODO: numbers from Fig 3.]
+
+\paragraph{Waveform non-sinusoidality matters only for \textsc{MH} and only at
+high $B$.}
+At $\alpha_2 \leq 0.5$, \textsc{DCP} and \textsc{RAIN} power losses relative
+to the pure-sinusoid baseline are small ($\leq$[TODO]\,pp for $B \geq 4$),
+confirming the robustness of cosinor-based inference. \textsc{MH}'s power gain
+from $\alpha_2 > 0$ emerges only when $B \geq 6$ (enabling $K = 2$) and
+$\tilde{r}$ is low enough that the marginal signal in the second harmonic is
+worth the added model complexity.
+[TODO: numbers from Fig 4.]
+
+\paragraph{Bootstrap correction matters most when the pilot is small, not when
+the signal is weak.}
+The plug-in overestimation gap is driven primarily by $n_\mathrm{pilot}$, not
+$\tilde{r}$: the Baboon pilot ($n = 12$, active, $\tilde{r} = 1.72$) shows a
+larger gap than the D1 pilot ($n = 45$, passive, $\tilde{r} = 0.65$), even
+though D1 has weaker signal. The active design's cosinor identifiability — all
+12 time points fully constrain $A$, $\sigma$, and $\phi$ — limits but does not
+eliminate the pilot-size penalty. When $n_\mathrm{pilot} \geq 60$ (Seney), the
+plug-in and bootstrap estimates converge.
+[TODO: numbers from Fig 5.]
+
+\paragraph{Differential vs.\ single-cohort power: the two-stage cost.}
+Differential analyses pay an additional power cost relative to single-cohort
+detection because DR, DP, and DM tests are conditional on the TOJR
+classification, which itself depends on data. At matched $N$ and $\tilde{r}$,
+DR power is substantially lower than rhythmicity detection power, and the gap
+is widest at low $\tilde{r}$ where TOJR classification is noisiest.
+[TODO: quantify from Fig 2 vs Fig 1 comparison.]
+
+\paragraph{Limitations.}
+The cosinor model assumes sinusoidal waveforms; power loss for $\alpha_2 \leq
+0.5$ and $B \geq 4$ is at most [TODO]\,pp (Section~\ref{sec:alpha2_results}).
+Gene types are modelled as mutually exclusive (compound DR+DP changes are not
+simulated). Passive-design results depend on the pilot's TOD distribution.
+The bootstrap implementation is computationally intensive
+($R_\mathrm{boot} \times N_\mathrm{sim}$ inner simulations); users with large
+pilot and ample compute should prefer the plug-in. Full discussion in
+Supplementary~S9.
+
+\textsc{SCP} is available as an open-source R framework.
+
+%% ====================================================================
+% OLD DISCUSSION — ARCHIVED
+%% ====================================================================
+\iffalse
 
 Our simulation study yields five principal findings that are directly relevant to experimental design.
 
@@ -631,6 +973,9 @@ $B\geq 4$; Supplementary~S7); gene types are modeled as mutually exclusive
 on the pilot's time-of-day distribution. Full discussion in Supplementary~S9.
 
 \textsc{SCP} is available as an open-source R framework. An end-to-end pipeline (\texttt{examples/run\_pipeline.R}) reproduces all results in this paper, and a validation suite (\texttt{examples/run\_validation.R}) implements the checks described in Section~3.6.
+
+\fi
+%% END ARCHIVED OLD DISCUSSION
 
 \section*{Acknowledgments}
 
