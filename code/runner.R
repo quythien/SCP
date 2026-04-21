@@ -1640,15 +1640,15 @@ runDifferentialPower <- function(bio.opts,
         harmonics      = c(a2, a3),
         sim.seed       = GLOBAL_SEED + i * 1000L + s
       )
-      res  <- fn(dat$data_A, dat$times_A, dat$data_B, dat$times_B, period = period)
+      res  <- fn(dat$expr1, dat$times1, dat$expr2, dat$times2, period = period)
       pvec <- res[[pv_key]]
       if (all(is.na(pvec))) return(NA_real_)
       adj  <- p.adjust(pvec, method = analysis.opts$p.adjust.method)
       is_target <- switch(tt,
-        DR = dat$diff_type %in% c(2L, 3L),
-        DP = dat$diff_type == 4L,
-        DM = dat$diff_type == 5L,
-        DA = dat$diff_type == 6L
+        DR = dat$ground_truth$diff_type %in% c(2L, 3L),
+        DP = dat$ground_truth$diff_type == 4L,
+        DM = dat$ground_truth$diff_type == 5L,
+        DA = dat$ground_truth$diff_type == 6L
       )
       n_target <- sum(is_target)
       if (n_target == 0L) return(NA_real_)
