@@ -358,6 +358,7 @@ CircadianDesignOptions <- function(sample_sizes = c(10, 20, 40, 60, 80, 100),
                                    nsims = 100,
                                    design = c("active", "passive"),
                                    cts = NULL,
+                                   B_values = NULL,
                                    test_types = c("DR", "DP", "DM")) {
 
   design <- match.arg(design)
@@ -368,10 +369,11 @@ CircadianDesignOptions <- function(sample_sizes = c(10, 20, 40, 60, 80, 100),
 
   opts <- list(
     sample_sizes = sample_sizes,
-    nsims = nsims,
-    design = design,
-    cts = cts,
-    test_types = test_types
+    nsims        = nsims,
+    design       = design,
+    cts          = cts,
+    B_values     = B_values,
+    test_types   = test_types
   )
   class(opts) <- "CircadianDesignOptions"
   opts
@@ -609,6 +611,9 @@ print.CircadianDesignOptions <- function(x, ...) {
   cat(sprintf("  nsims:          %d\n", x$nsims))
   cat(sprintf("  design:         %s\n", x$design))
   cat(sprintf("  test_types:     %s\n", paste(x$test_types, collapse = ", ")))
+  if (!is.null(x$B_values)) {
+    cat(sprintf("  B_values:       %s\n", paste(x$B_values, collapse = ", ")))
+  }
   if (!is.null(x$cts)) {
     cat(sprintf("  cts:            %d time points\n", length(x$cts)))
   }

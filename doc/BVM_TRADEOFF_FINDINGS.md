@@ -111,22 +111,29 @@ Crossover B=6 > B=3 requires: α₂ ≥ 0.5 AND N ≥ 48
 
 ---
 
-## 5. Figure Concepts
+## 5. Figure Concepts [→ Paper Figs 3–4]
 
-### Figure 1: Method comparison under cosinor truth (regular scenario)
-- 3-panel: DCP(K=1) / JTK / RAIN
-- X-axis: B ∈ {3,4,6,8}; lines: N={24,48,72}
-- Shows: DCP flat, JTK favors low B, RAIN favors high B
-- Dataset: D1D2 (r=0.65)
-- Caption: "Detection power under standard cosinor truth is method-dependent:
-  DCP is B-invariant, JTK favors replication depth, RAIN favors temporal coverage."
+**Scope:** Both figures evaluate single-cohort biomarker detection power (one-group setting).
+Primary dataset: Mouse D1 (r≈0.65). LUN and LIV go to supplementary.
 
-### Figure 2: Cosinor violation — DCP vs multi-harmonic
-- 2-panel: DCP(K=1) | Multi-harmonic(adaptive K)
-- X-axis: α₂ ∈ {0, 0.3, 0.5, 0.75, 1.0}; lines: B={3,6,8} at N=48
-- Shows: DCP → B=3 flat/increases (aliasing); multi-harmonic → B=6 crosses over at α₂≈0.5
-- Caption: "Adaptive multi-harmonic regression unlocks the B advantage:
-  at α₂≥0.5 and N≥48, B=6 (K=2) yields 15–20pp more power than B=3 (K=1)."
+### Figure 3 (paper): Method choice determines whether B matters
+- 4-panel: DCP(K=1) / JTK / RAIN / Multi-harmonic(adaptive K)
+- X-axis: B ∈ {3,4,6,8,12}; lines: N ∈ {24,48,72}; α₂=0 (cosinor truth only)
+- Dataset: Mouse D1 (r≈0.65)
+- Shows: DCP flat (N-driven), JTK favors low B (mean-collapse artifact),
+  RAIN favors high B, MH flat under α₂=0
+- Message: DCP and JTK cannot answer the B vs m question — power is N-driven.
+  RAIN uniquely resolves B preference even under cosinor truth.
+
+### Figure 4 (paper): Waveform violation amplifies the B advantage
+- 6-panel: 2 methods (RAIN / Multi-harmonic) × 3 α₂ values (0, 0.5, 1.0)
+- X-axis: B ∈ {3,4,6,8,12}; lines: N ∈ {24,48,72}
+- Dataset: Mouse D1 (r≈0.65); DCP and JTK dropped (story established in Fig 3)
+- Shows: RAIN maintains B preference across all α₂; MH gains additional
+  B advantage at α₂≥0.5 (B=6/K=2 crossover at N≥48)
+- Message: Adaptive multi-harmonic regression unlocks further B advantage
+  when waveform deviates from cosinor. At α₂≥0.5 and N≥48, B=6 yields
+  15–20pp more power than B=3.
 
 ---
 

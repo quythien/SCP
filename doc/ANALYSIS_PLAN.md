@@ -118,6 +118,25 @@ in ACC and in MDD biology; stratifying by sex reduces r penalty and cuts n80 by 
 
 ---
 
+## Publication Figure Plan (2026-04-21)
+
+| Fig | Title | Dataset | Script(s) |
+|-----|-------|---------|-----------|
+| 0 | Flow diagram | — | (manual) |
+| 1 | Single-cohort rhythmicity power | GTEx ADR (Human, Active) | `14_single_cohort_gtex_ADR_LIV.R` |
+| 2 | Differential power (DR/DP/DM) | GTEx ADR vs LIV (Human) | `12_differential_power_gtex_ADR_LIV.R` |
+| 3 | B vs m: method choice determines whether B matters | Mouse D1 (r≈0.65), α₂=0 | `15_bvsm_method_comparison.R` + `15c_bvsm_rain_extended.R` |
+| 4 | B vs m: waveform violation amplifies the B advantage | Mouse D1, α₂ ∈ {0, 0.5, 1.0} | same scripts |
+| 5 | Bootstrap uncertainty — pilot n × signal strength | Baboon LUN (n=12) + Human Seney (n=62) | `08a_bootstrap_baboon.R` + `08c_bootstrap_seney.R` |
+
+**Figs 3–4 scope and narrative:**
+- Both figures evaluate **single-cohort rhythmicity detection** (biomarker discovery). Differential analysis (DR/DP/DM) is in Fig 2 only.
+- Primary dataset: Mouse D1 (r≈0.65, weak signal) — most illustrative because B effects are largest at low SNR. LUN and LIV results (r≈1.72, 2.88) go to supplementary to show effect disappears at high r.
+- **Fig 3** (α₂=0 only): 4 panels, one per method. X-axis = B, lines = N. Message: DCP and JTK are B-flat (N-driven); RAIN and MH respond to B. Establishes which methods can answer the B vs m question.
+- **Fig 4** (RAIN vs MH only, α₂ ∈ {0, 0.5, 1.0}): DCP/JTK dropped after Fig 3. 2×3 = 6 panels (method × α₂). X-axis = B, lines = N. Message: MH gains additional B advantage at α₂≥0.5; RAIN maintains B preference regardless of waveform.
+
+---
+
 ## Analysis Layer 1: Bootstrap Design Grid (main analysis)
 
 **Script:** `examples/exploratory/05_multi_dataset_DR.R` (4 datasets: GSE54651 + baboon + D1D2 + human)
@@ -135,30 +154,33 @@ For each of the 4 datasets:
 
 ---
 
-## Analysis Layer 1b: B vs m Tradeoff — Method-Dependent Optimality (2026-04-20)
+## Analysis Layer 1b: B vs m Tradeoff — Method-Dependent Optimality (2026-04-20) [→ Figs 3–4]
 
-**New question (extends Q3):** Q3 previously asked "is B↑ or m↑ better?" using the
-bootstrap DCP framework alone. We now ask the same question for four single-cohort
-detection methods, because the answer depends on which test is used.
+**Scope:** Single-cohort rhythmicity detection (biomarker discovery). Differential endpoints
+(DR/DP/DM) are NOT evaluated here — see Fig 2. The core finding is that DCP and JTK are
+N-driven (cannot resolve B vs m), while RAIN and multi-harmonic K=⌊(B−1)/2⌋ show genuine
+B sensitivity. Figures 3 and 4 compare these four method classes across the D1 dataset
+(r≈0.65), with LUN/LIV in supplementary to show the effect disappears at high r.
 
 **Three pilot datasets (single group):**
 
-| Dataset | r_median | Signal | Tissue |
-|---------|----------|--------|--------|
-| Mouse LIV (GSE54651) | ~2.88 | Strong | Liver |
-| Baboon LUN (CAMO) | ~1.72 | Moderate | Lung |
-| Mouse D1 (D1D2) | ~0.65 | Weak | Striatum Drd1+ MSNs |
+| Dataset | r_median | Signal | Tissue | Role |
+|---------|----------|--------|--------|------|
+| Mouse D1 (D1D2) | ~0.65 | Weak | Striatum Drd1+ MSNs | **Primary** — Fig 3 + 4 |
+| Baboon LUN (CAMO) | ~1.72 | Moderate | Lung | Supplementary |
+| Mouse LIV (GSE54651) | ~2.88 | Strong | Liver | Supplementary |
 
 **Grid:** B ∈ {3,4,6,8,12}, N ∈ {12,24,...,144} (factors of 12), α₂ ∈ {0, 0.5, 0.75, 1.0}
 
 **Scripts:**
 - `15_bvsm_method_comparison.R` — DCP (K=1), JTK, adaptive multi-harmonic; NGENES=5000; NSIMS=100; N_CORES=60
-- `15b_bvsm_rain.R` — RAIN only; N capped at 48 (permutation cost); NGENES=1000; NSIMS=30
+- `15b_bvsm_rain.R` — RAIN only; N capped at 48, α₂=0 only; NGENES=1000; NSIMS=30
+- `15c_bvsm_rain_extended.R` — RAIN extended; N≤72, α₂ ∈ {0, 0.5, 1.0}; NGENES=5000; NSIMS=30; joint (N,B,α₂) parallelization
 
 **Key findings (full details in `doc/BVM_TRADEOFF_FINDINGS.md`):**
 - DCP (K=1): B-invariant under cosinor truth; B=3 inflated at α₂≥0.5 (aliasing)
-- JTK: always favors low B (B=3–4); collapses to B means internally
-- RAIN: favors higher B (B=6–8) at low N; converges at large N
+- JTK: always favors low B (B=3–4); mean-collapse artifact — not a generalizable finding
+- RAIN: favors higher B (B=6–8) at low N; genuine B sensitivity
 - Multi-harmonic K=⌊(B−1)/2⌋: B=6 (K=2) optimal when α₂≥0.5 AND N≥48
 
 ---

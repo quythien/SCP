@@ -1758,3 +1758,179 @@ detect_RAIN <- function(expr, times, gene_names = NULL, period = 24) {
 
   rep(1, ngenes)
 }
+
+
+# ==============================================================================
+# SECTION 13: UNIFIED SINGLE-COHORT DETECTION WRAPPERS
+# All return numeric[G] of raw p-values (caller handles FDR adjustment).
+# ==============================================================================
+
+#' DCP single-cohort rhythmicity detection
+#' @param expr   Gene x sample expression matrix
+#' @param times  Numeric time vector (length = ncol(expr))
+#' @param period Period (default 24)
+#' @return Numeric vector of p-values, length nrow(expr)
+#' @export
+detect_DCP <- function(expr, times, period = 24) {
+  pvals <- tryCatch(
+    fitCosinorAll(expr, times = times, period = period)$pvalue,
+    error = function(e) rep(NA_real_, nrow(expr))
+  )
+  pvals[is.na(pvals)] <- 1
+  pvals
+}
+
+
+#' Multi-harmonic rhythmicity detection (adaptive K = floor((B-1)/2))
+#'
+#' Fits K harmonics where B = number of unique time points.
+#' Tests all harmonic terms jointly via an F-test against intercept-only null.
+#'
+#' @param expr   Gene x sample expression matrix
+#' @param times  Numeric time vector (length = ncol(expr))
+#' @param period Period (default 24)
+#' @return Numeric vector of p-values, length nrow(expr)
+#' @export
+detect_MH <- function(expr, times, period = 24) {
+  B     <- length(unique(times))
+  K     <- max(1L, floor((B - 1L) / 2L))
+  omega <- 2 * pi / period
+  N     <- length(times)
+
+  dm_full <- matrix(1, nrow = N, ncol = 1L + 2L * K)
+  for (k in seq_len(K)) {
+    dm_full[, 2L * k]      <- cos(k * omega * times)
+    dm_full[, 2L * k + 1L] <- sin(k * omega * times)
+  }
+  dm_null <- matrix(1, nrow = N, ncol = 1L)
+  df1 <- 2L * K
+  df2 <- N - 1L - 2L * K
+  if (df2 < 1L) return(rep(1, nrow(expr)))
+
+  apply(expr, 1L, function(y) {
+    tryCatch({
+      rss_full <- sum(lm.fit(dm_full, y)$residuals^2)
+      rss_null <- sum(lm.fit(dm_null, y)$residuals^2)
+      F_stat   <- ((rss_null - rss_full) / df1) / (rss_full / df2)
+      pf(F_stat, df1, df2, lower.tail = FALSE)
+    }, error = function(e) 1)
+  })
+}
+
+
+# ==============================================================================
+# SECTION 14: UNIFIED TWO-GROUP DIFFERENTIAL DETECTION WRAPPERS
+# All return list(pval_DR, pval_DP, pval_DM, pval_DA).
+# NA for test types the method does not support.
+#
+# Method × test_type support:
+#   DCP          DR  DP  --  DA
+#   CircaCompare --  DP  DM  DA
+#   LimoRhyde    DR  --  --  --
+#   DODR         DR  --  --  --
+# ==============================================================================
+
+#' DCP two-group differential detection
+#'
+#' Wraps run_DCP_pipeline() (TOJR → DiffR2 → DiffPar).
+#' DM is not tested by DCP; pval_DM is returned as NA.
+#'
+#' @param expr1,expr2   Gene x sample matrices for groups 1 and 2
+#' @param times1,times2 Numeric time vectors
+#' @param period        Period (default 24)
+#' @return list(pval_DR, pval_DP, pval_DM=NA, pval_DA) each numeric[G]
+#' @export
+detect_DCP_diff <- function(expr1, times1, expr2, times2, period = 24) {
+  ngenes     <- nrow(expr1)
+  gene_names <- rownames(expr1) %||% paste0("G", seq_len(ngenes))
+
+  res <- tryCatch(
+    run_DCP_pipeline(expr1, expr2, times1, times2,
+                     gene_names = gene_names, period = period,
+                     test_DR = TRUE, test_DP = TRUE, test_DA = TRUE),
+    error = function(e) NULL
+  )
+
+  if (is.null(res)) {
+    return(list(pval_DR = rep(1, ngenes), pval_DP = rep(1, ngenes),
+                pval_DM = rep(NA_real_, ngenes), pval_DA = rep(NA_real_, ngenes)))
+  }
+  list(
+    pval_DR = replace(res$p_DR, is.na(res$p_DR), 1),
+    pval_DP = replace(res$p_DP, is.na(res$p_DP), 1),
+    pval_DM = rep(NA_real_, ngenes),
+    pval_DA = replace(res$p_DA, is.na(res$p_DA), 1)
+  )
+}
+
+
+#' LimoRhyde two-group differential rhythmicity
+#'
+#' limma interaction model: group × cosinor (cos + sin terms).
+#' Tests H0: no group × rhythm interaction. DR only.
+#'
+#' @param expr1,expr2   Gene x sample matrices
+#' @param times1,times2 Numeric time vectors
+#' @param period        Period (default 24)
+#' @return list(pval_DR, pval_DP=NA, pval_DM=NA, pval_DA=NA)
+#' @export
+detect_LimoRhyde <- function(expr1, times1, expr2, times2, period = 24) {
+  if (!requireNamespace("limma", quietly = TRUE))
+    stop("Package 'limma' is required for detect_LimoRhyde()")
+
+  ngenes <- nrow(expr1)
+  omega  <- 2 * pi / period
+  times  <- c(times1, times2)
+  g      <- c(rep(0L, ncol(expr1)), rep(1L, ncol(expr2)))
+  expr   <- cbind(expr1, expr2)
+
+  cos_t  <- cos(omega * times)
+  sin_t  <- sin(omega * times)
+  design <- model.matrix(~ g + cos_t + sin_t + g:cos_t + g:sin_t)
+
+  pval_DR <- tryCatch({
+    fit      <- limma::lmFit(expr, design)
+    fit      <- limma::eBayes(fit)
+    int_cols <- grep("g:cos_t|g:sin_t", colnames(design))
+    ct       <- limma::topTable(fit, coef = int_cols, number = ngenes,
+                                 sort.by = "none", adjust.method = "none")
+    p        <- ct$P.Value
+    p[is.na(p)] <- 1
+    p
+  }, error = function(e) rep(1, ngenes))
+
+  list(pval_DR = pval_DR,
+       pval_DP = rep(NA_real_, ngenes),
+       pval_DM = rep(NA_real_, ngenes),
+       pval_DA = rep(NA_real_, ngenes))
+}
+
+
+#' DODR two-group differential oscillation detection
+#'
+#' Wraps DODR::dodr(). DR only.
+#'
+#' @param expr1,expr2   Gene x sample matrices
+#' @param times1,times2 Numeric time vectors
+#' @param period        Period (default 24)
+#' @return list(pval_DR, pval_DP=NA, pval_DM=NA, pval_DA=NA)
+#' @export
+detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
+  if (!requireNamespace("DODR", quietly = TRUE))
+    stop("Package 'DODR' is required. Install with: install.packages('DODR')")
+
+  ngenes  <- nrow(expr1)
+  pval_DR <- tryCatch({
+    res <- DODR::dodr(t(expr1), t(expr2),
+                      times1 = times1, times2 = times2,
+                      period = period, method = "both")
+    p   <- res$p.value
+    p[is.na(p)] <- 1
+    p
+  }, error = function(e) rep(1, ngenes))
+
+  list(pval_DR = pval_DR,
+       pval_DP = rep(NA_real_, ngenes),
+       pval_DM = rep(NA_real_, ngenes),
+       pval_DA = rep(NA_real_, ngenes))
+}

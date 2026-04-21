@@ -244,20 +244,75 @@ Both return a `CircadianBioOptions` object with per-gene empirical distributions
 ### Options objects
 ```r
 CircadianBootstrapOptions(B_values, N_values, nboot, nsims_inner, design, seed)
-CircadianDesignOptions(sample_sizes, nsims, design, cts, test_types)
+CircadianDesignOptions(sample_sizes, nsims, design, cts, B_values, test_types)
 CircadianAnalysisOptions(alpha, p.adjust.method, fdr_thresholds, reference_n)
 ```
 
-### Power analysis
+### Power analysis — main runners
+
 ```r
-# Bootstrap (recommended) — sweep B, returns CI
-runBootstrapDesignGrid(pilot_data, pilot_times, boot.opts, bio_diff.opts, analysis.opts, ...)
+# Single-cohort rhythmicity power (Figs 1, 3, 4)
+# Sweeps N × B × alpha2 × alpha3 × method in one call.
+# Auto-plots and computes n80 on completion (plot=FALSE to suppress).
+runSingleCohortPower(
+  bio.opts, design.opts, analysis.opts,
+  methods  = "DCP",          # c("DCP", "JTK", "RAIN", "MH") — any combination
+  alpha2   = 0,              # scalar or vector: sweeps 2nd-harmonic deviation
+  alpha3   = 0,
+  mc.cores = 1L,
+  plot     = TRUE,           # auto-plot; set FALSE to call plot(result) post hoc
+  output_file = NULL         # PDF path; NULL = screen
+)
+# Returns SCPSingleResult with $power_df, $n80_df. Methods: print(), plot(), npower().
 
-# Two-stage — single power curve, no CI
-runTwoStagePower(pilot_data, pilot_times, design.opts, bio_diff.opts, analysis.opts, ...)
+# Two-group differential power (Fig 2)
+# Sweeps N × alpha2 × alpha3 × method × test_type.
+runDifferentialPower(
+  bio.opts, design.opts, analysis.opts,
+  methods    = "DCP",        # c("DCP", "CircaCompare", "LimoRhyde", "DODR")
+  test_types = c("DR","DP","DM"),  # NA returned silently for unsupported combinations
+  alpha2     = 0,
+  alpha3     = 0,
+  mc.cores   = 1L,
+  plot       = TRUE,
+  output_file = NULL
+)
+# Returns SCPDiffResult with $power_df, $n80_df. Methods: print(), plot(), npower().
 
-# Single-group rhythmicity power only
-runPowerAnalysis(bio.opts, design.opts, analysis.opts, ...)
+# Bootstrap uncertainty wrapper — works for BOTH single-cohort and differential (Fig 5/6)
+# mode auto-detected: "single" if pilot_data_2 is NULL, "differential" otherwise.
+runBootstrapDesignGrid(
+  pilot_data, pilot_times,                   # group 1 (or only group)
+  boot.opts, bio_diff.opts, analysis.opts,
+  pilot_data_2  = NULL, pilot_times_2 = NULL,  # group 2 for differential mode
+  mode       = NULL,     # "single" | "differential" (auto-detected)
+  methods    = "DCP",
+  test_types = c("DR","DP","DM"),
+  alpha2     = 0,
+  alpha3     = 0
+)
+# Returns SCPBootstrapResult with bootstrap CI on power curve and n80.
+```
+
+### Detection method support matrix
+
+| Method | Single-cohort | DR | DP | DM | DA |
+|--------|--------------|----|----|----|----|
+| `"DCP"` | ✓ (detect_DCP) | ✓ | ✓ | — | ✓ |
+| `"JTK"` | ✓ (detect_JTK) | — | — | — | — |
+| `"RAIN"` | ✓ (detect_RAIN) | — | — | — | — |
+| `"MH"` | ✓ (detect_MH) | — | — | — | — |
+| `"CircaCompare"` | — | — | ✓ | ✓ | ✓ |
+| `"LimoRhyde"` | — | ✓ | — | — | — |
+| `"DODR"` | — | ✓ | — | — | — |
+
+### Post-hoc calls
+```r
+result <- runSingleCohortPower(..., plot = FALSE)
+plot(result)                        # default B vs power figure
+plot(result, type = "violation")    # alpha2-stratified layout
+npower(result, target = 0.80)       # n80 table for any target power
+print(result)                       # summary table
 ```
 
 ### Comparison and visualization

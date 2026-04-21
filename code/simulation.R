@@ -879,3 +879,76 @@ simulate_two_group = function(G = 1000,
     period = period
   ))
 }
+
+
+# =====================================================================
+# Single-cohort data generator (method-agnostic, harmonic support)
+# =====================================================================
+
+#' Simulate single-cohort circadian expression data
+#'
+#' Internal data generator used by runSingleCohortPower() and
+#' runBootstrapDesignGrid(mode="single"). Supports harmonic waveform
+#' deviation (alpha2, alpha3) so the same function feeds both standard
+#' power analysis and waveform-violation experiments.
+#'
+#' @param bio.opts   CircadianBioOptions from estCircadianParam()
+#' @param cts        Numeric vector of time points, length = N (already expanded)
+#' @param alpha2     2nd harmonic relative amplitude (0 = pure cosinor)
+#' @param alpha3     3rd harmonic relative amplitude
+#' @param seed       Optional random seed
+#'
+#' @return list(expr = matrix[G x N], is_rhythmic = logical[G], r_values = numeric[G])
+simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
+                                     seed = NULL) {
+  stopifnot(inherits(bio.opts, "CircadianBioOptions"))
+
+  if (!is.null(seed)) set.seed(seed)
+
+  ngenes        <- bio.opts$ngenes
+  prop_rhythmic <- bio.opts$prop_rhythmic
+  period        <- bio.opts$period %||% 24
+  N             <- length(cts)
+  omega         <- 2 * pi / period
+
+  has_joint <- !is.null(bio.opts$sigma_rhythmic) &&
+               length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)
+
+  # --- gene assignment ---
+  n_rhythmic  <- round(ngenes * prop_rhythmic)
+  rhythmic_id <- sample(ngenes, n_rhythmic)
+  is_rhythmic <- logical(ngenes)
+  is_rhythmic[rhythmic_id] <- TRUE
+
+  # --- parameter draws ---
+  mesor_g <- bio.opts$lBaselineExpr
+  sigma_g <- exp(bio.opts$lOD)
+  amp_g   <- numeric(ngenes)
+  phase_g <- numeric(ngenes)
+
+  if (n_rhythmic > 0) {
+    if (has_joint) {
+      ji <- sample(length(bio.opts$amplitude), n_rhythmic, replace = TRUE)
+      amp_g[rhythmic_id]   <- pmax(bio.opts$amplitude[ji], 0.05)
+      sigma_g[rhythmic_id] <- pmax(bio.opts$sigma_rhythmic[ji], 1e-6)
+    } else {
+      amp_g[rhythmic_id] <- pmax(
+        sample(bio.opts$amplitude, n_rhythmic, replace = TRUE), 0.05)
+    }
+    phase_g[rhythmic_id] <- sample(bio.opts$phase, n_rhythmic, replace = TRUE)
+  }
+
+  r_values <- amp_g / sigma_g
+
+  # --- expression matrix ---
+  expr <- matrix(NA_real_, nrow = ngenes, ncol = N)
+  for (g in seq_len(ngenes)) {
+    mu <- mesor_g[g] +
+          amp_g[g] * (cos(omega * cts - omega * phase_g[g]) +
+                      alpha2 * cos(2 * omega * cts - omega * phase_g[g]) +
+                      alpha3 * cos(3 * omega * cts - omega * phase_g[g]))
+    expr[g, ] <- rnorm(N, mu, sigma_g[g])
+  }
+
+  list(expr = expr, is_rhythmic = is_rhythmic, r_values = r_values)
+}

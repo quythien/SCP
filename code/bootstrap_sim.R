@@ -190,13 +190,26 @@ runBootstrapDesignGrid <- function(pilot_data,
                                    boot.opts,
                                    analysis.opts,
                                    bio_diff.opts,
-                                   verbose = TRUE,
-                                   mc.cores = 1L) {
+                                   pilot_data_2  = NULL,
+                                   pilot_times_2 = NULL,
+                                   mode          = NULL,
+                                   methods       = "DCP",
+                                   test_types    = c("DR", "DP", "DM"),
+                                   alpha2        = 0,
+                                   alpha3        = 0,
+                                   verbose       = TRUE,
+                                   mc.cores      = 1L) {
 
   stopifnot(inherits(boot.opts, "CircadianBootstrapOptions"))
   stopifnot(inherits(analysis.opts, "CircadianAnalysisOptions"))
   stopifnot(inherits(bio_diff.opts, "CircadianBioOptions"))
   stopifnot(ncol(pilot_data) == length(pilot_times))
+
+  # Auto-detect mode from pilot data and bio.opts
+  if (is.null(mode)) {
+    mode <- if (!is.null(pilot_data_2)) "differential" else "single"
+  }
+  mode <- match.arg(mode, c("single", "differential"))
 
   N_values    <- boot.opts$N_values
   B_values    <- boot.opts$B_values

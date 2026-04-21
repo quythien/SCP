@@ -24,9 +24,11 @@ required_packages = c(
 
 optional_packages = c(
   "Matrix",        # Matrix operations (for some DCP functions)
-  "MetaCycle",     # For JTK_CYCLE rhythmicity detection
-  "rain",          # For RAIN rhythmicity detection
-  "circacompare"   # For CircaCompare differential analysis
+  "MetaCycle",     # For JTK_CYCLE rhythmicity detection (detect_JTK)
+  "rain",          # For RAIN rhythmicity detection (detect_RAIN)
+  "circacompare",  # For CircaCompare differential analysis (detect_CircaCompare)
+  "limorhyde",     # For LimoRhyde differential rhythmicity (detect_LimoRhyde)
+  "DODR"           # For DODR differential oscillation (detect_DODR)
 )
 
 cat("Checking required packages...\n")

@@ -1073,7 +1073,360 @@ makeAdaptiveRStrata <- function(bio.opts, bin_width = 0.25, r_min_pct = 0) {
     r_vec     <- bio.opts$amplitude / sigma_med
   }
   r_vec  <- r_vec[is.finite(r_vec) & r_vec > 0]
-  r_max  <- quantile(r_vec, 0.99, na.rm = TRUE)   # cap at 99th pct to avoid outlier-driven bins
+  r_max  <- quantile(r_vec, 0.99, na.rm = TRUE)
   breaks <- seq(0, ceiling(r_max / bin_width) * bin_width, by = bin_width)
   c(breaks, Inf)
+}
+
+
+# =====================================================================
+# Unified single-cohort power runner
+# =====================================================================
+
+#' Run single-cohort rhythmicity power analysis
+#'
+#' Sweeps N x B x alpha2 x alpha3 x method and returns a tidy power table.
+#' B values come from design.opts$B_values; if NULL, B is inferred from cts.
+#' Automatically calls plot() and npower() unless plot=FALSE.
+#'
+#' @param bio.opts      CircadianBioOptions from estCircadianParam()
+#' @param design.opts   CircadianDesignOptions (sample_sizes, B_values, cts, design)
+#' @param analysis.opts CircadianAnalysisOptions
+#' @param methods       Character vector: any of "DCP","JTK","RAIN","MH"
+#' @param alpha2        Scalar or vector of 2nd-harmonic amplitudes to sweep
+#' @param alpha3        Scalar or vector of 3rd-harmonic amplitudes to sweep
+#' @param mc.cores      Parallel cores
+#' @param plot          Auto-plot on completion
+#' @param output_file   PDF path for auto-plot (NULL = screen)
+#' @param verbose       Print progress
+#'
+#' @return Object of class "SCPSingleResult" with $power_df, $n80_df, $opts
+#' @export
+runSingleCohortPower <- function(bio.opts,
+                                  design.opts,
+                                  analysis.opts,
+                                  methods     = "DCP",
+                                  alpha2      = 0,
+                                  alpha3      = 0,
+                                  mc.cores    = 1L,
+                                  plot        = TRUE,
+                                  output_file = NULL,
+                                  verbose     = TRUE) {
+
+  stopifnot(inherits(bio.opts,      "CircadianBioOptions"))
+  stopifnot(inherits(design.opts,   "CircadianDesignOptions"))
+  stopifnot(inherits(analysis.opts, "CircadianAnalysisOptions"))
+
+  valid_methods <- c("DCP", "JTK", "RAIN", "MH")
+  methods <- match.arg(methods, valid_methods, several.ok = TRUE)
+
+  N_vals  <- design.opts$sample_sizes
+  B_vals  <- design.opts$B_values %||% length(unique(design.opts$cts))
+  period  <- bio.opts$period %||% 24
+  fdr     <- min(analysis.opts$fdr_thresholds)
+  nsims   <- design.opts$nsims
+  GLOBAL_SEED <- bio.opts$sim.seed %||% 2025L
+
+  detect_fn <- list(
+    DCP  = function(expr, cts) detect_DCP(expr,  cts, period = period),
+    JTK  = function(expr, cts) detect_JTK(expr,  cts, period = period),
+    RAIN = function(expr, cts) detect_RAIN(expr, cts, period = period),
+    MH   = function(expr, cts) detect_MH(expr,   cts, period = period)
+  )
+
+  grid <- expand.grid(N = N_vals, B = B_vals, alpha2 = alpha2, alpha3 = alpha3,
+                      method = methods, stringsAsFactors = FALSE)
+  grid <- grid[grid$N %% grid$B == 0, ]
+
+  if (verbose) {
+    cat(sprintf("runSingleCohortPower: %d cells x %d sims = %d runs\n",
+                nrow(grid), nsims, nrow(grid) * nsims))
+    cat(sprintf("  methods: %s\n", paste(methods, collapse = ", ")))
+    cat(sprintf("  N: %s\n", paste(N_vals,  collapse = ", ")))
+    cat(sprintf("  B: %s\n", paste(B_vals,  collapse = ", ")))
+    cat(sprintf("  alpha2: %s\n", paste(alpha2, collapse = ", ")))
+  }
+
+  run_cell <- function(i) {
+    N   <- grid$N[i];  B  <- grid$B[i]
+    a2  <- grid$alpha2[i]; a3 <- grid$alpha3[i]
+    mth <- grid$method[i]
+    cts <- rep(seq(0, period * (1 - 1/B), length.out = B), each = N / B)
+    fn  <- detect_fn[[mth]]
+
+    sims <- vapply(seq_len(nsims), function(s) {
+      dat  <- simCircadianSingleCohort(bio.opts, cts, alpha2 = a2, alpha3 = a3,
+                                        seed = GLOBAL_SEED + i * 1000L + s)
+      pv   <- fn(dat$expr, cts)
+      adj  <- p.adjust(pv, method = analysis.opts$p.adjust.method)
+      sum(adj[dat$is_rhythmic] <= fdr, na.rm = TRUE) / sum(dat$is_rhythmic)
+    }, numeric(1))
+
+    c(power = mean(sims, na.rm = TRUE), power_se = sd(sims, na.rm = TRUE) / sqrt(nsims))
+  }
+
+  t0 <- proc.time()[["elapsed"]]
+  results <- parallel::mclapply(seq_len(nrow(grid)), run_cell, mc.cores = mc.cores)
+  if (verbose) cat(sprintf("  Done in %.1f min\n", (proc.time()[["elapsed"]] - t0) / 60))
+
+  grid$power    <- vapply(results, `[[`, 0, "power")
+  grid$power_se <- vapply(results, `[[`, 0, "power_se")
+
+  n80_df <- do.call(rbind, lapply(
+    split(grid, interaction(grid$method, grid$B, grid$alpha2, grid$alpha3)),
+    function(sub) {
+      n80 <- tryCatch(npower(sub$N, sub$power, target = 0.80), error = function(e) NA_real_)
+      data.frame(method = sub$method[1], B = sub$B[1],
+                 alpha2 = sub$alpha2[1], alpha3 = sub$alpha3[1],
+                 n80 = n80, stringsAsFactors = FALSE)
+    }
+  ))
+
+  out <- structure(
+    list(power_df = grid, n80_df = n80_df,
+         bio.opts = bio.opts, design.opts = design.opts, analysis.opts = analysis.opts),
+    class = "SCPSingleResult"
+  )
+
+  if (plot) plot(out, output_file = output_file)
+  out
+}
+
+#' @export
+print.SCPSingleResult <- function(x, ...) {
+  cat("SCPSingleResult\n")
+  cat(sprintf("  methods: %s\n", paste(unique(x$power_df$method), collapse = ", ")))
+  cat(sprintf("  N range: %d – %d\n", min(x$power_df$N), max(x$power_df$N)))
+  cat(sprintf("  B values: %s\n", paste(sort(unique(x$power_df$B)), collapse = ", ")))
+  cat(sprintf("  alpha2: %s\n", paste(sort(unique(x$power_df$alpha2)), collapse = ", ")))
+  cat("\nn80 summary:\n")
+  print(x$n80_df)
+  invisible(x)
+}
+
+#' @export
+plot.SCPSingleResult <- function(x, output_file = NULL, ...) {
+  if (requireNamespace("ggplot2", quietly = TRUE)) {
+    df <- x$power_df
+    p  <- ggplot2::ggplot(df, ggplot2::aes(x = B, y = power, colour = factor(N),
+                                            group = factor(N))) +
+      ggplot2::geom_line() + ggplot2::geom_point() +
+      ggplot2::facet_grid(alpha2 ~ method, labeller = ggplot2::label_both) +
+      ggplot2::geom_hline(yintercept = 0.8, linetype = "dashed", colour = "grey40") +
+      ggplot2::labs(x = "B (time points)", y = "Power", colour = "N",
+                    title = "Single-cohort rhythmicity power") +
+      ggplot2::theme_bw()
+    if (!is.null(output_file)) {
+      ggplot2::ggsave(output_file, p, width = 3 * length(unique(df$method)), height = 4)
+    } else {
+      print(p)
+    }
+  }
+  invisible(x)
+}
+
+
+# =====================================================================
+# Unified two-group differential power runner
+# =====================================================================
+
+#' Run two-group differential circadian power analysis
+#'
+#' Sweeps N x alpha2 x alpha3 x method x test_type and returns a tidy power table.
+#' Automatically calls plot() and npower() unless plot=FALSE.
+#'
+#' @param bio.opts      CircadianBioOptions from estCircadianParamTwoGroup()
+#' @param design.opts   CircadianDesignOptions (sample_sizes, design, cts)
+#' @param analysis.opts CircadianAnalysisOptions
+#' @param methods       Any of "DCP","CircaCompare","LimoRhyde","DODR"
+#' @param test_types    Any of "DR","DP","DM","DA" (silently NA if method lacks support)
+#' @param alpha2        Scalar or vector swept for both groups
+#' @param alpha3        Scalar or vector swept for both groups
+#' @param mc.cores      Parallel cores
+#' @param plot          Auto-plot on completion
+#' @param output_file   PDF path (NULL = screen)
+#' @param verbose       Print progress
+#'
+#' @return Object of class "SCPDiffResult" with $power_df, $n80_df, $opts
+#' @export
+runDifferentialPower <- function(bio.opts,
+                                  design.opts,
+                                  analysis.opts,
+                                  methods     = "DCP",
+                                  test_types  = c("DR", "DP", "DM"),
+                                  alpha2      = 0,
+                                  alpha3      = 0,
+                                  mc.cores    = 1L,
+                                  plot        = TRUE,
+                                  output_file = NULL,
+                                  verbose     = TRUE) {
+
+  stopifnot(inherits(bio.opts,      "CircadianBioOptions"))
+  stopifnot(inherits(design.opts,   "CircadianDesignOptions"))
+  stopifnot(inherits(analysis.opts, "CircadianAnalysisOptions"))
+
+  valid_methods <- c("DCP", "CircaCompare", "LimoRhyde", "DODR")
+  methods    <- match.arg(methods,    valid_methods, several.ok = TRUE)
+  test_types <- match.arg(test_types, c("DR","DP","DM","DA"), several.ok = TRUE)
+
+  N_vals  <- design.opts$sample_sizes
+  period  <- bio.opts$period %||% 24
+  fdr     <- min(analysis.opts$fdr_thresholds)
+  nsims   <- design.opts$nsims
+  GLOBAL_SEED <- bio.opts$sim.seed %||% 2025L
+
+  detect_fn <- list(
+    DCP          = detect_DCP_diff,
+    CircaCompare = detect_CircaCompare,
+    LimoRhyde    = detect_LimoRhyde,
+    DODR         = detect_DODR
+  )
+
+  type_to_pval <- c(DR = "pval_DR", DP = "pval_DP", DM = "pval_DM", DA = "pval_DA")
+  type_to_gene <- c(DR = "is_DR",   DP = "is_DP",   DM = "is_DM",   DA = "is_DA")
+
+  grid <- expand.grid(N = N_vals, alpha2 = alpha2, alpha3 = alpha3,
+                      method = methods, test_type = test_types,
+                      stringsAsFactors = FALSE)
+
+  if (verbose) {
+    cat(sprintf("runDifferentialPower: %d cells x %d sims\n", nrow(grid), nsims))
+    cat(sprintf("  methods: %s\n",    paste(methods,    collapse = ", ")))
+    cat(sprintf("  test_types: %s\n", paste(test_types, collapse = ", ")))
+    cat(sprintf("  N: %s\n",          paste(N_vals,     collapse = ", ")))
+    cat(sprintf("  alpha2: %s\n",     paste(alpha2,     collapse = ", ")))
+  }
+
+  run_cell <- function(i) {
+    N   <- grid$N[i]; a2 <- grid$alpha2[i]; a3 <- grid$alpha3[i]
+    mth <- grid$method[i]; tt <- grid$test_type[i]
+    fn  <- detect_fn[[mth]]
+    pv_key <- type_to_pval[tt]
+
+    cts <- if (!is.null(design.opts$cts)) {
+      sort(rep_len(design.opts$cts, N))
+    } else {
+      seq(0, period * (1 - 1/12), length.out = 12)
+    }
+
+    sims <- vapply(seq_len(nsims), function(s) {
+      dat <- simCircadianDiff(
+        ngenes       = bio.opts$ngenes,
+        n1 = N, n2  = N,
+        lBaselineExpr  = bio.opts$lBaselineExpr,
+        lBaselineExpr2 = bio.opts$lBaselineExpr2,
+        lOD            = bio.opts$lOD,
+        lOD2           = bio.opts$lOD2,
+        amplitude      = bio.opts$amplitude,
+        amplitude2     = bio.opts$amplitude2,
+        sigma_rhythmic = bio.opts$sigma_rhythmic,
+        prop_rhythmic  = bio.opts$prop_rhythmic,
+        prop_DR        = bio.opts$prop_DR  %||% 0,
+        prop_DP        = bio.opts$prop_DP  %||% 0,
+        prop_DM        = bio.opts$prop_DM  %||% 0,
+        prop_DA        = bio.opts$prop_DA  %||% 0,
+        phase_diff     = bio.opts$phase_diff %||% c(-6, 6),
+        amp_diff       = bio.opts$amp_diff   %||% c(0.5, 2),
+        mesor_diff     = bio.opts$mesor_diff %||% c(0.5, 2),
+        period         = period,
+        design         = design.opts$design,
+        cts            = cts, cts2 = cts,
+        harmonics      = c(a2, a3),
+        sim.seed       = GLOBAL_SEED + i * 1000L + s
+      )
+      res  <- fn(dat$data_A, dat$times_A, dat$data_B, dat$times_B, period = period)
+      pvec <- res[[pv_key]]
+      if (all(is.na(pvec))) return(NA_real_)
+      adj  <- p.adjust(pvec, method = analysis.opts$p.adjust.method)
+      is_target <- switch(tt,
+        DR = dat$diff_type %in% c(2L, 3L),
+        DP = dat$diff_type == 4L,
+        DM = dat$diff_type == 5L,
+        DA = dat$diff_type == 6L
+      )
+      n_target <- sum(is_target)
+      if (n_target == 0L) return(NA_real_)
+      sum(adj[is_target] <= fdr, na.rm = TRUE) / n_target
+    }, numeric(1))
+
+    c(power = mean(sims, na.rm = TRUE), power_se = sd(sims, na.rm = TRUE) / sqrt(nsims))
+  }
+
+  t0 <- proc.time()[["elapsed"]]
+  results <- parallel::mclapply(seq_len(nrow(grid)), run_cell, mc.cores = mc.cores)
+  if (verbose) cat(sprintf("  Done in %.1f min\n", (proc.time()[["elapsed"]] - t0) / 60))
+
+  grid$power    <- vapply(results, `[[`, 0, "power")
+  grid$power_se <- vapply(results, `[[`, 0, "power_se")
+
+  n80_df <- do.call(rbind, lapply(
+    split(grid, interaction(grid$method, grid$test_type, grid$alpha2, grid$alpha3)),
+    function(sub) {
+      n80 <- tryCatch(npower(sub$N, sub$power, target = 0.80), error = function(e) NA_real_)
+      data.frame(method = sub$method[1], test_type = sub$test_type[1],
+                 alpha2 = sub$alpha2[1],  alpha3    = sub$alpha3[1],
+                 n80 = n80, stringsAsFactors = FALSE)
+    }
+  ))
+
+  out <- structure(
+    list(power_df = grid, n80_df = n80_df,
+         bio.opts = bio.opts, design.opts = design.opts, analysis.opts = analysis.opts),
+    class = "SCPDiffResult"
+  )
+
+  if (plot) plot(out, output_file = output_file)
+  out
+}
+
+#' @export
+print.SCPDiffResult <- function(x, ...) {
+  cat("SCPDiffResult\n")
+  cat(sprintf("  methods:    %s\n", paste(unique(x$power_df$method),    collapse = ", ")))
+  cat(sprintf("  test_types: %s\n", paste(unique(x$power_df$test_type), collapse = ", ")))
+  cat(sprintf("  N range:    %d – %d\n", min(x$power_df$N), max(x$power_df$N)))
+  cat(sprintf("  alpha2:     %s\n", paste(sort(unique(x$power_df$alpha2)), collapse = ", ")))
+  cat("\nn80 summary:\n")
+  print(x$n80_df)
+  invisible(x)
+}
+
+#' @export
+plot.SCPDiffResult <- function(x, output_file = NULL, ...) {
+  if (requireNamespace("ggplot2", quietly = TRUE)) {
+    df <- x$power_df[!is.na(x$power_df$power), ]
+    p  <- ggplot2::ggplot(df, ggplot2::aes(x = N, y = power, colour = method,
+                                            group = method)) +
+      ggplot2::geom_line() + ggplot2::geom_point() +
+      ggplot2::facet_grid(test_type ~ alpha2, labeller = ggplot2::label_both) +
+      ggplot2::geom_hline(yintercept = 0.8, linetype = "dashed", colour = "grey40") +
+      ggplot2::labs(x = "N per group", y = "Power", colour = "Method",
+                    title = "Differential rhythmicity power") +
+      ggplot2::theme_bw()
+    if (!is.null(output_file)) {
+      ggplot2::ggsave(output_file, p,
+                      width  = 3 * length(unique(df$alpha2)),
+                      height = 3 * length(unique(df$test_type)))
+    } else {
+      print(p)
+    }
+  }
+  invisible(x)
+}
+
+# Soft-deprecation shims
+#' @export
+runPowerAnalysis <- function(...) {
+  .Deprecated("runDifferentialPower",
+              msg = "runPowerAnalysis() is deprecated. Use runDifferentialPower().")
+  runDifferentialPower(...)
+}
+
+#' @export
+runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
+                                verbose = TRUE, mc.cores = 1L) {
+  .Deprecated("runSingleCohortPower",
+              msg = "runSimsSingleCohort() is deprecated. Use runSingleCohortPower().")
+  runSingleCohortPower(bio.opts, design.opts, analysis.opts,
+                       mc.cores = mc.cores, verbose = verbose)
 }
