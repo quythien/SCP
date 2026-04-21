@@ -1,7 +1,7 @@
 # Ignore everything
 *
 
-# Except code/, examples/, doc/, paper/, and .claude/
+# Except code/, examples/, doc/, paper/, vignettes/, and .claude/
 !code/
 !code/**
 !examples/
@@ -10,6 +10,8 @@
 !doc/**
 !paper/
 !paper/**
+!vignettes/
+!vignettes/**
 !.claude/
 !.claude/**
 

@@ -1,0 +1,432 @@
+---
+title: "SCP: Semiparametric Circadian Power — User Guide"
+author: "Thien Pham"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+vignette: >
+  %\VignetteIndexEntry{SCP: Semiparametric Circadian Power — User Guide}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  eval     = FALSE   # examples use real data; set eval=TRUE when running locally
+)
+```
+
+# Overview
+
+**SCP** (Semiparametric Circadian Power) is an R framework for transcriptome-wide
+power analysis of circadian rhythm studies. It supports:
+
+1. **Single-cohort power** — how many samples are needed to detect rhythmic genes
+   in one group?
+2. **Differential power** — how many samples per group are needed to detect
+   differential rhythmicity (DR), differential phase (DP), or differential mesor
+   (DM) between two conditions?
+3. **B vs m trade-off** — given a fixed total N, how should samples be spread
+   across time points (B) versus replicates per time point (m = N/B)?
+4. **Bootstrap uncertainty** — how wide are power estimates when the pilot is small?
+
+The framework is *semiparametric*: effect-size distributions (amplitude A,
+noise σ, proportion rhythmic) are estimated from real pilot data, while the
+cosinor waveform structure is used for simulation.
+
+---
+
+# Quick Start
+
+## Load the framework
+
+```{r load}
+# From the PowerSim project root:
+old_wd <- setwd("code")
+source("setup.R")
+setwd(old_wd)
+```
+
+## Build options objects
+
+Three option objects drive every analysis:
+
+```{r options}
+# CircadianBioOptions — biological parameters estimated from pilot data
+bio <- estCircadianParam(
+  data    = pilot_expr,   # gene × sample expression matrix (log2-CPM or similar)
+  times   = pilot_times,  # collection time of day (hours, 0–24)
+  period  = 24,
+  verbose = TRUE
+)
+
+# CircadianDesignOptions — study design
+design <- CircadianDesignOptions(
+  sample_sizes = c(20, 30, 40, 50, 60, 80, 100),
+  nsims        = 200L,
+  design       = "passive",   # "passive" uses pilot TOD; "active" = equispaced
+  cts          = bio$cts      # pilot TOD vector (passive design)
+)
+
+# CircadianAnalysisOptions — multiple-testing settings
+analysis <- CircadianAnalysisOptions(
+  alpha           = 0.05,
+  p.adjust.method = "BH",
+  r_strata        = makeAdaptiveRStrata(bio, bin_width = 0.25)
+)
+```
+
+---
+
+# Single-Cohort Power
+
+Use `runSingleCohortPower()` to evaluate detection power for one group.
+It sweeps all combinations of N × B × α₂ × method and returns an
+`SCPSingleResult` object.
+
+## Minimal example (DCP only)
+
+```{r single-dcp}
+bio <- readRDS("data/gse160521_nac_ctrl_pilot.rds")
+
+design <- CircadianDesignOptions(
+  sample_sizes = c(20, 40, 60, 80, 100),
+  nsims        = 200L,
+  design       = "passive",
+  cts          = bio$cts
+)
+
+analysis <- CircadianAnalysisOptions(
+  alpha           = 0.05,
+  p.adjust.method = "BH",
+  r_strata        = makeAdaptiveRStrata(bio, bin_width = 0.25)
+)
+
+res <- runSingleCohortPower(
+  bio.opts    = bio,
+  design.opts = design,
+  analysis.opts = analysis,
+  methods     = "DCP",         # DCP | JTK | RAIN | MH
+  mc.cores    = 4L,
+  plot        = TRUE,
+  output_file = "figures/single_cohort_power.pdf"
+)
+
+print(res)       # n80 summary table
+plot(res)        # power vs N, faceted by B × method
+npower(res)      # sample size for 80% power
+```
+
+## Multi-method comparison (B vs m study)
+
+```{r single-multi-method}
+design_bvsm <- CircadianDesignOptions(
+  sample_sizes = seq(12, 96, by = 12),
+  nsims        = 100L,
+  design       = "active",
+  cts          = seq(0, 20, by = 4),   # placeholder — overridden by B_values
+  B_values     = c(3L, 4L, 6L, 8L, 12L)
+)
+
+# Print method guidance before running
+printMethodGuidance(methods = c("DCP", "JTK", "RAIN", "MH"), verbose = TRUE)
+
+res_multi <- runSingleCohortPower(
+  bio.opts      = bio,
+  design.opts   = design_bvsm,
+  analysis.opts = analysis,
+  methods       = c("DCP", "JTK", "MH"),
+  alpha2        = c(0, 0.5, 1.0),   # cosinor violation sweep
+  mc.cores      = 8L,
+  plot          = FALSE
+)
+
+# Access the tidy power table
+head(res_multi$power_df)
+#   N  B alpha2 alpha3 method    power power_se
+#  12  3      0      0    DCP 0.143...    ...
+```
+
+## Cosinor violation parameter (α₂)
+
+The `alpha2` argument adds a second harmonic to the simulated signal:
+
+$$y \sim M + A\bigl[\cos(\omega t - \phi) + \alpha_2 \cos(2\omega t - \phi)\bigr] + \varepsilon$$
+
+- `alpha2 = 0`: pure sinusoid (cosinor truth)
+- `alpha2 = 0.5`: moderate non-sinusoidal waveform
+- `alpha2 = 1.0`: equal first and second harmonic (highly non-sinusoidal)
+
+DCP power is insensitive to α₂ (its F-test is omnibus); MH power *increases*
+with α₂ because its adaptive K captures extra signal in higher harmonics.
+
+---
+
+# Differential Power
+
+Use `runDifferentialPower()` for two-group designs. Pilot parameters are
+estimated with `estCircadianParamTwoGroup()`.
+
+## Supported methods and endpoints
+
+| Method | DR | DP | DM | Notes |
+|--------|----|----|-----|-------|
+| DCP | ✓ | ✓ | ✓ | Full pipeline: DCP_Rhythmicity → DCP_DiffR² → DCP_DiffPar |
+| CircaCompare | — | ✓ | ✓ | Parametric; no DR test |
+| LimoRhyde | ✓ | — | — | limma interaction model |
+| DODR | ✓ | — | — | Differential oscillation |
+
+Unsupported combinations return `NA` silently — no error.
+
+## Example
+
+```{r differential}
+bio_diff <- readRDS("data/gse160521_nac_vs_putamen_ctrl_pilot.rds")
+
+design <- CircadianDesignOptions(
+  sample_sizes = c(20, 40, 60, 80, 100, 120),
+  nsims        = 200L,
+  design       = "passive",
+  cts          = bio_diff$cts,
+  test_types   = c("DR", "DP", "DM")
+)
+
+analysis <- CircadianAnalysisOptions(alpha = 0.05, p.adjust.method = "BH")
+
+res_diff <- runDifferentialPower(
+  bio.opts      = bio_diff,
+  design.opts   = design,
+  analysis.opts = analysis,
+  methods       = "DCP",
+  test_types    = c("DR", "DP", "DM"),
+  mc.cores      = 4L,
+  plot          = TRUE,
+  output_file   = "figures/diff_power.pdf"
+)
+
+print(res_diff)
+```
+
+## Biological interpretation of endpoints
+
+- **DR** (differential rhythmicity): gene oscillates in one condition but not
+  the other — e.g., clock-regulated genes disrupted in neurodegeneration.
+- **DP** (differential phase): gene oscillates in both conditions but peak
+  shifts — e.g., circadian misalignment, tissue-specific timing differences.
+- **DM** (differential mesor): gene oscillates in both but baseline shifts —
+  e.g., inflammatory state superimposed on an intact oscillation. Analogous
+  to differential expression in RNA-seq.
+
+---
+
+# B vs m Trade-off and Method Recommendation
+
+`recommendDesign()` is the high-level entry point for the B vs m analysis.
+It runs in three steps:
+
+1. **Guidance** — prints method-specific B sensitivity table
+2. **Analytical** — DCP closed-form CircaPower estimate (fast baseline)
+3. **Simulation** — calls `runSingleCohortPower()` or `runDifferentialPower()`
+   over the B × N grid
+
+```{r recommend}
+bio <- readRDS("data/gse160521_nac_ctrl_pilot.rds")
+
+design_bvsm <- CircadianDesignOptions(
+  sample_sizes = seq(12, 96, by = 12),
+  nsims        = 100L,
+  design       = "active",
+  cts          = seq(0, 20, by = 4),
+  B_values     = c(3L, 4L, 6L, 8L, 12L)
+)
+
+analysis <- CircadianAnalysisOptions(alpha = 0.05, p.adjust.method = "BH")
+
+rec <- recommendDesign(
+  bio.opts      = bio,
+  design.opts   = design_bvsm,
+  analysis.opts = analysis,
+  methods       = c("DCP", "MH"),
+  target_power  = 0.80,
+  mode          = "single",
+  run_simulation = TRUE,
+  mc.cores      = 8L
+)
+
+print(rec)   # prints CircaPower estimate + simulation n80 per method×B
+```
+
+### Reusing previous results
+
+If you have already run `runSingleCohortPower()`, pass it as `prior_result`
+to skip re-running the simulation:
+
+```{r recommend-reuse}
+rec2 <- recommendDesign(
+  bio.opts      = bio,
+  design.opts   = design_bvsm,
+  analysis.opts = analysis,
+  methods       = c("DCP", "MH"),
+  prior_result  = res_multi,   # SCPSingleResult from earlier
+  target_power  = 0.80,
+  mode          = "single"
+)
+```
+
+### Method guidance table
+
+You can print the guidance table independently before committing to a run:
+
+```{r guidance}
+printMethodGuidance(methods = c("DCP", "JTK", "RAIN", "MH"), verbose = TRUE)
+```
+
+Expected output:
+
+```
+Method    B-sensitive?  Why
+------    ------------  ---
+DCP       No            NCP = N·r²/2 for equispaced B≥3; B cancels analytically
+JTK       Favors low B  MetaCycle averages replicates before ranking — always prefer m
+RAIN      Yes (genuine) Umbrella test uses individual obs; more distinct ZTs help
+MH        Yes           Adaptive K = floor((B-1)/2); more harmonics captured at B≥6
+```
+
+---
+
+# Bootstrap Uncertainty
+
+`runBootstrapDesignGrid()` quantifies pilot uncertainty by re-sampling the
+pilot with replacement and re-estimating power at each draw.
+
+```{r bootstrap}
+boot_opts <- CircadianBootstrapOptions(
+  design_vector = seq(0, 22, by = 2),   # active: 12 equispaced ZTs
+  B_values      = 12L,
+  N_values      = c(20, 40, 60, 80, 100),
+  nboot         = 50L,
+  nsims_inner   = 20L,
+  design        = "active",
+  seed          = 42L
+)
+
+boot_res <- runBootstrapDesignGrid(
+  pilot_data    = pilot_expr,
+  pilot_times   = pilot_times,
+  boot.opts     = boot_opts,
+  analysis.opts = analysis,
+  bio_diff.opts = bio_diff,
+  mode          = "differential",
+  methods       = "DCP",
+  test_types    = "DR",
+  mc.cores      = 8L
+)
+```
+
+Bootstrap CIs are wide when pilot n < 20 or signal-to-noise r̃ < 0.5. In
+those cases, treat the median power estimate conservatively and consider
+collecting additional pilot data before designing the full study.
+
+---
+
+# Working with Result Objects
+
+All three runners return S3 objects with consistent `print`, `plot`, and
+`npower` methods.
+
+```{r s3-methods}
+# SCPSingleResult
+res        # prints n80 summary
+plot(res)  # power curves
+npower(res, target = 0.80)  # interpolated N for 80% power
+
+# SCPDiffResult
+res_diff
+plot(res_diff)
+npower(res_diff, target = 0.80)
+
+# SCPRecommendResult
+rec
+plot(rec)
+```
+
+The raw power table is always at `$power_df`:
+
+```{r power-df}
+# Tidy data frame: N, B, alpha2, alpha3, method, test_type, power, power_se
+df <- res$power_df
+df[df$method == "MH" & df$B == 6, c("N", "power")]
+```
+
+---
+
+# Complete Publication Example
+
+This is the pattern used for all paper figures.
+
+```{r publication-pattern}
+# 0. Setup
+old_wd <- setwd("code"); source("setup.R"); setwd(old_wd)
+GLOBAL_SEED <- 2025L
+
+# 1. Load pilot
+bio <- readRDS("data/gse160521_nac_ctrl_pilot.rds")
+
+# 2. Options
+design <- CircadianDesignOptions(
+  sample_sizes = c(20, 30, 40, 50, 60, 80, 100, 120, 150, 200),
+  nsims        = 200L, design = "passive", cts = bio$cts
+)
+analysis <- CircadianAnalysisOptions(
+  alpha = 0.05, p.adjust.method = "BH",
+  r_strata = makeAdaptiveRStrata(bio, bin_width = 0.25)
+)
+
+# 3. Run
+set.seed(GLOBAL_SEED)
+res <- runSingleCohortPower(
+  bio, design, analysis,
+  methods     = "DCP",
+  mc.cores    = as.integer(Sys.getenv("MC_CORES", "4")),
+  plot        = TRUE,
+  output_file = "output/single_cohort/figures/fig1_nac.pdf"
+)
+
+# 4. Save
+saveRDS(res, sprintf("output/single_cohort/results/fig1_nac_%s.rds",
+                     format(Sys.time(), "%Y%m%d_%H%M%S")))
+```
+
+---
+
+# Function Reference
+
+| Function | Purpose |
+|----------|---------|
+| `estCircadianParam()` | Estimate single-group pilot parameters |
+| `estCircadianParamTwoGroup()` | Estimate two-group pilot parameters |
+| `CircadianDesignOptions()` | Build design option object |
+| `CircadianAnalysisOptions()` | Build analysis option object |
+| `makeAdaptiveRStrata()` | Build adaptive r-strata breaks from pilot |
+| `runSingleCohortPower()` | Single-cohort power sweep (methods × B × N × α₂) |
+| `runDifferentialPower()` | Differential power sweep (methods × test_type × N × α₂) |
+| `recommendDesign()` | Full B vs m orchestrator (guidance → analytical → simulation) |
+| `printMethodGuidance()` | Print method × B sensitivity table |
+| `runBootstrapDesignGrid()` | Bootstrap pilot uncertainty quantification |
+| `npower()` | Interpolate N for target power from result object |
+| `plot.SCPSingleResult()` | Plot single-cohort power curves |
+| `plot.SCPDiffResult()` | Plot differential power curves |
+| `print.SCPRecommendResult()` | Print recommendation summary |
+
+---
+
+# Session Info
+
+```{r session}
+sessionInfo()
+```
