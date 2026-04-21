@@ -306,6 +306,25 @@ runBootstrapDesignGrid(
 | `"LimoRhyde"` | — | ✓ | — | — | — |
 | `"DODR"` | — | ✓ | — | — | — |
 
+### B vs m design guidance
+
+Before running, call `recommendDesign()` to get method-specific B vs m advice:
+
+```r
+recommendDesign(methods = c("DCP","JTK","RAIN","MH"))
+# === B vs m Design Recommendation ===
+# Method          Recommended B              Preference    Reason
+# DCP             ≥4, any                    N-driven      NCP = N·r²/2 is B-invariant...
+# JTK             4–6                        ↑m            Collapses replicates to means...
+# RAIN            6–8                        ↑B            Umbrella test gains rank resolution...
+# MH              6 (or 3–4 if sinusoidal)   ↑B (α₂≥0.5)  Adaptive K=2 at B=6 captures harmonics...
+```
+
+`runSingleCohortPower()` prints this table automatically when `verbose=TRUE`.
+The key insight: **if you plan to use DCP or JTK for your final analysis, B choice
+doesn't matter — invest in N. If you plan to use RAIN or multi-harmonic regression,
+B=6–8 gives meaningful gains over B=3–4 at fixed N.**
+
 ### Post-hoc calls
 ```r
 result <- runSingleCohortPower(..., plot = FALSE)
@@ -313,6 +332,7 @@ plot(result)                        # default B vs power figure
 plot(result, type = "violation")    # alpha2-stratified layout
 npower(result, target = 0.80)       # n80 table for any target power
 print(result)                       # summary table
+recommendDesign(methods = "RAIN")   # standalone guidance for a specific method
 ```
 
 ### Comparison and visualization

@@ -1080,6 +1080,63 @@ makeAdaptiveRStrata <- function(bio.opts, bin_width = 0.25, r_min_pct = 0) {
 
 
 # =====================================================================
+# B vs m design guidance
+# =====================================================================
+
+#' Recommend B vs m design for a given analysis method
+#'
+#' Different detection methods have fundamentally different statistical
+#' sensitivity to B (time points) vs m (replicates per time point).
+#' This function prints a recommendation table and returns it invisibly.
+#'
+#' @param methods Character vector of intended analysis methods.
+#'   Any of "DCP", "JTK", "RAIN", "MH", "LimoRhyde", "DODR".
+#'   Default: all single-cohort methods.
+#' @param verbose Print the recommendation table (default TRUE)
+#'
+#' @return Invisible data.frame with columns: method, recommended_B, B_vs_m, reason
+#' @export
+recommendDesign <- function(methods = c("DCP","JTK","RAIN","MH"),
+                             verbose = TRUE) {
+  tbl <- data.frame(
+    method        = c("DCP",   "JTK",     "RAIN",    "MH",
+                      "LimoRhyde", "DODR"),
+    recommended_B = c("≥4, any",  "4–6",   "6–8",     "6 (or 3–4 if sinusoidal)",
+                      "≥4, any",  "≥4, any"),
+    B_vs_m        = c("N-driven", "↑m",    "↑B",      "↑B (if α₂≥0.5)",
+                      "N-driven", "N-driven"),
+    reason        = c(
+      "NCP = N·r²/2 is B-invariant for equispaced B≥3; adding time points does not help",
+      "Collapses replicates to per-ZT means before ranking; more m = cleaner means = stronger test",
+      "Umbrella test uses individual observations; more distinct ZTs improve rank resolution",
+      "Adaptive K=⌊(B-1)/2⌋: K=2 at B=6 captures 2nd-harmonic signal; K≥5 (B≥12) over-fits",
+      "limma interaction model: power scales with N, not B; same as DCP for B-invariance",
+      "Regression-based; power scales with N; B does not change sensitivity"
+    ),
+    stringsAsFactors = FALSE
+  )
+
+  tbl <- tbl[tbl$method %in% methods, ]
+
+  if (verbose) {
+    cat("\n=== B vs m Design Recommendation ===\n")
+    cat(sprintf("%-14s  %-26s  %-12s  %s\n",
+                "Method", "Recommended B", "Preference", "Reason"))
+    cat(strrep("-", 100), "\n")
+    for (i in seq_len(nrow(tbl))) {
+      cat(sprintf("%-14s  %-26s  %-12s  %s\n",
+                  tbl$method[i], tbl$recommended_B[i],
+                  tbl$B_vs_m[i], tbl$reason[i]))
+    }
+    cat("\nKey: N-driven = B choice doesn't matter; ↑B = more time points helps;\n")
+    cat("     ↑m = more replicates per ZT helps.\n\n")
+  }
+
+  invisible(tbl)
+}
+
+
+# =====================================================================
 # Unified single-cohort power runner
 # =====================================================================
 
@@ -1139,6 +1196,7 @@ runSingleCohortPower <- function(bio.opts,
   grid <- grid[grid$N %% grid$B == 0, ]
 
   if (verbose) {
+    recommendDesign(methods = methods, verbose = TRUE)
     cat(sprintf("runSingleCohortPower: %d cells x %d sims = %d runs\n",
                 nrow(grid), nsims, nrow(grid) * nsims))
     cat(sprintf("  methods: %s\n", paste(methods, collapse = ", ")))
