@@ -42,7 +42,7 @@ runTwoStagePower <- function(pilot_data,
                               design.opts,
                               analysis.opts,
                               bio_diff.opts,
-                              min_rhythm_pval = 0.1,
+                              min_rhythm_pval = 0.01,
                               test_type       = "DR",
                               verbose         = TRUE,
                               mc.cores        = 1L) {

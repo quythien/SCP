@@ -95,7 +95,6 @@ all_N <- sort(unique(unlist(lapply(results_all, `[[`, "N_grid"))))
 plot(NA, xlim = range(all_N), ylim = c(0, 1),
      xlab = "N per group", ylab = "Power",
      main = "Two-stage (solid) vs Bootstrap (dashed +/- CI)\nby dataset", las = 1)
-abline(h = 0.80, lty = 3, col = "gray50")
 
 for (nm in names(results_all)) {
   sc  <- results_all[[nm]]

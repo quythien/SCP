@@ -32,7 +32,7 @@
 #' @param min_rhythm_pval P-value threshold for classifying rhythmic genes
 #'
 #' @return Data frame: gene, M, A, phi, sigma, pvalue, is_rhythmic
-fitCosinorAll <- function(data, times, period = 24, min_rhythm_pval = 0.1) {
+fitCosinorAll <- function(data, times, period = 24, min_rhythm_pval = 0.01) {
   G <- nrow(data)
   omega <- 2 * pi / period
 

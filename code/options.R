@@ -551,6 +551,8 @@ updateBioOptions <- function(opts, ...) {
   current_args$lBaselineExpr2 <- opts$lBaselineExpr2
   current_args$lOD            <- opts$lOD_spec
   current_args$amplitude      <- opts$amplitude_spec
+  current_args$sigma_rhythmic <- opts$sigma_rhythmic
+  current_args$amplitude2     <- opts$amplitude2
   current_args$phase          <- opts$phase_spec
   merged <- modifyList(current_args, updates)
   do.call(CircadianBioOptions, merged)

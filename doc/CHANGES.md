@@ -2,6 +2,107 @@
 
 ---
 
+## Session: 2026-04-20 — B vs m method comparison + single-cohort extension
+
+### New Code Files (`code/`)
+
+**`npower.R`** — `npower(res, target_power, fdr, endpoint, interpolate)`
+Finds the smallest N achieving target power at a given FDR from any
+`runSimsSingleCohort()` or `runSimsDiff()` output. Linearly interpolates
+between grid points. Replaces ad-hoc thresholding in example scripts.
+
+**`plot_diff.R`** — `plotDiffPower(res_list, comp_labels, ...)`
+18-panel differential power figure (6 rows × 3 columns):
+rows = DR×2 / DP×2 / DM×2 comparisons; columns = marginal power / TD by r-stratum / power by r-stratum.
+Used by 11_differential_power.R and 12_differential_power_gtex_ADR_LIV.R.
+
+**`summarize_dcp_pairs.R`** — `summarizeDcpPairs(rds_paths, pair_meta, ...)`
+Loads saved DCP_Analyze RDS files and computes a wide-format summary table
+(gene counts, TOD coverage, rhythmicity at multiple thresholds, DR/DP/DM
+counts, r statistics, effect sizes). Used by 13_supp_tissue_summary.R.
+
+### Code Changes
+
+**`code/detection.R`** — `detect_RAIN()` fix (line ~1730)
+- **Bug:** `deltat <- median(diff(times_sorted))` returned 0 for replicated
+  designs (multiple samples at the same ZT), causing RAIN to error or produce
+  wrong results. `nr.series` was not passed, so RAIN treated replicates as
+  independent time points instead of a replicated series.
+- **Fix:** `deltat` now computed from `median(diff(unique_times))`; `nr.series`
+  set to the replicate count when all time points have equal replication.
+- Impact: RAIN power estimates at B<N are now correct; prior estimates were
+  biased (effectively treating nr.series=1 for all designs).
+
+**`code/options.R`** — `updateBioOptions()` passthrough (line ~551)
+Added `sigma_rhythmic` and `amplitude2` to the `current_args` passthrough.
+Previously, calling `updateBioOptions(opts, someArg=x)` would silently drop
+`sigma_rhythmic` and `amplitude2` from the returned object.
+
+**`code/runner.R`** — `runSimsDiff()` parallelization
+Added `mc.cores = 1L` parameter. When `mc.cores > 1`, the outer simulation
+loop (`for i in 1:nsims`) is replaced by `parallel::mclapply`, parallelizing
+over simulation replicates. The inner `for j in seq_along(sample_sizes)` loop
+remains sequential within each replicate. No change in output format or semantics.
+
+**`code/estimation.R`** — parameter estimation updates
+- `min_rhythm_pval` default changed from 0.1 → 0.01 (stricter pilot filter)
+- Introduced "estimation set" G_R: top min(300, |G_R^cand|) genes by p-value
+  are used for F_{A,sigma} and F_phi estimation; all genes passing the p-value
+  threshold still count for `pi_R`. Improves distribution stability in large
+  pilot datasets with heterogeneous signal.
+
+**`code/plot_single_cohort.R`** — `plotSingleCohortFig1` renamed → `plotSingleCohortPower`
+Added parameters: `display_sizes`, `r_max`, `panel_fdr`, `vline_power`, `vline_fdr`.
+All callers (10_single_cohort_power.R, 14_single_cohort_gtex_ADR_LIV.R) updated.
+
+**`code/setup.R`** — added new files to `source_files`:
+`plot_diff.R`, `npower.R`, `summarize_dcp_pairs.R`
+
+### New Production Scripts (`examples/publication/`)
+
+| Script | Purpose |
+|--------|---------|
+| `10_single_cohort_power.R` | Single-cohort rhythmicity power for 3 datasets (Mouse LIV, Baboon LUN, Mouse D1); uses `runSimsSingleCohort()` |
+| `11_differential_power.R` | Figure 2: DR/DP/DM differential power (D1 vs D2 and Baboon LUN vs CER) |
+| `12_differential_power_gtex_ADR_LIV.R` | Figure 2 variant: GTEx Adrenal vs Liver |
+| `13_supp_tissue_summary.R` | Supplementary table: tissue-level circadian signal summary |
+| `14_single_cohort_gtex_ADR_LIV.R` | Single-cohort power for GTEx ADR and LIV |
+| `15_bvsm_method_comparison.R` | B vs m tradeoff: DCP (K=1), JTK, adaptive multi-harmonic; 3 datasets; N up to 144; α₂ ∈ {0, 0.5, 0.75, 1.0}; NGENES=5000; NSIMS=100 |
+| `15b_bvsm_rain.R` | B vs m tradeoff: RAIN only; N capped at 48 (permutation limit); 3 datasets; NGENES=1000; NSIMS=30 |
+| `bm_tradeoff_twostage.R` | Regenerates `paper/PowerSim/figures/bm_tradeoff.pdf` using two-stage DR framework |
+
+### B vs m Tradeoff Analysis — Key Findings
+
+Comprehensive investigation comparing four detection methods across the full
+(B, N, α₂) grid. Full documentation in `doc/BVM_TRADEOFF_FINDINGS.md`.
+
+**Core result: optimal B is method-dependent.**
+
+| Method | Cosinor truth | Favors | Reason |
+|--------|--------------|--------|--------|
+| DCP (K=1 cosinor F-test) | B-invariant | neither | NCP = N·r²/2 is equispaced-B-invariant |
+| JTK (MetaCycle) | B=3–4 | m | Collapses replicates to means; test runs on B means |
+| RAIN (nr.series) | B=6–8 | B | Preserves individual obs; umbrella test gains rank resolution |
+| Multi-harmonic (K=⌊(B−1)/2⌋) | B=3–4, B=6 when α₂≥0.5 | B (conditional) | K grows with B; B=6 (K=2) captures A₁²+A₂² |
+
+**Identifiability constraint:** K_max = ⌊(B−1)/2⌋ (Fourier design matrix needs
+B distinct times for 1+2K columns to be full rank). B=4: K_max=1 (not 2,
+because sin(2ωt)=0 at equispaced t={0,6,12,18}). Explains why B=4 and B=3
+give identical DCP power.
+
+**LimoRhyde (Singer & Hughey 2019) relationship:** LimoRhyde implements K=1
+only; their Discussion calls multi-harmonic detection "future work." Their
+simulations use B=12×m=2 without any B vs m analysis. Our K=⌊(B−1)/2⌋
+identifiability characterization and its power consequences are novel.
+
+### Pilot Proportion Fix in New Scripts
+
+`15_bvsm_method_comparison.R` and `15b_bvsm_rain.R` sample NGENES total
+genes following the pilot π_R fraction (not a fixed 50:50 split). This gives
+more realistic FDR simulation: D1 (π_R≈12%), LIV (π_R≈24%), LUN (π_R≈38%).
+
+---
+
 ## Session: 2026-04-13 (round 2)
 
 ### Bug Fixes

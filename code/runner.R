@@ -40,6 +40,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
                         test_types = c("DR", "DP", "DM"),
                         verbose = TRUE,
                         harmonics = NULL,
+                        mc.cores = 1L,
                         # New config-object arguments (used when first arg is CircadianBioOptions)
                         design.opts = NULL,
                         analysis.opts = NULL) {
@@ -115,39 +116,34 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     cts = cts %% 24
   }
 
-  # Initialize results
-  pval_DR = fdr_DR = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
-  pval_DP = fdr_DP = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
-  pval_DA = fdr_DA = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
-  pval_DM = fdr_DM = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
-
-  # Ground truth storage
-  diff_type_list = vector("list", nsims)
-  effectsize_list = vector("list", nsims)
-
   # Gene names
   gene_names = paste0("Gene", 1:ngenes)
 
-  # Loop over simulations
-  for (i in 1:nsims) {
-    if (verbose && i %% 10 == 0) {
-      cat("Simulation", i, "of", nsims, "\n")
-    }
+  # Capture bio.opts for use inside mclapply closure
+  bio_opts_inner <- if (exists("bio.opts", inherits = FALSE)) bio.opts else NULL
 
-    # Loop over sample sizes
+  # Run simulations (parallel over sims if mc.cores > 1)
+  sim_results <- parallel::mclapply(seq_len(nsims), function(i) {
+    pval_DR_i <- matrix(1,   nrow = ngenes, ncol = length(sample_sizes))
+    pval_DP_i <- matrix(1,   nrow = ngenes, ncol = length(sample_sizes))
+    pval_DA_i <- matrix(1,   nrow = ngenes, ncol = length(sample_sizes))
+    pval_DM_i <- matrix(1,   nrow = ngenes, ncol = length(sample_sizes))
+    fdr_DR_i  <- matrix(NA,  nrow = ngenes, ncol = length(sample_sizes))
+    fdr_DP_i  <- matrix(NA,  nrow = ngenes, ncol = length(sample_sizes))
+    fdr_DA_i  <- matrix(NA,  nrow = ngenes, ncol = length(sample_sizes))
+    fdr_DM_i  <- matrix(NA,  nrow = ngenes, ncol = length(sample_sizes))
+    diff_type_i  <- NULL
+    effectsize_i <- NULL
+
     for (j in seq_along(sample_sizes)) {
       n = sample_sizes[j]
 
-      # For active design, cts is the ZT template (length B). Expand to length n
-      # by repeating the template so each ZT gets floor(n/B) or ceil(n/B) replicates.
       cts_n <- if (design == "active" && !is.null(cts) && length(cts) != n) {
         sort(rep_len(cts, n))
       } else {
         cts
       }
 
-      # Simulate two-group data
-      # Build call args; include empirical params only when using config objects
       sim_args <- list(
         ngenes = ngenes,
         n1 = n,
@@ -166,71 +162,46 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
         sim.seed = i * 1000,
         harmonics = harmonics
       )
-      # Pass empirical distributions when available (config-object path)
-      if (exists("bio.opts", inherits = FALSE) && !is.null(bio.opts)) {
-    if (!is.null(bio.opts$lBaselineExpr)) sim_args$lBaselineExpr <- bio.opts$lBaselineExpr
-    if (!is.null(bio.opts$lBaselineExpr2)) sim_args$lBaselineExpr2 <- bio.opts$lBaselineExpr2
-    if (!is.null(bio.opts$lOD)) {
-      sim_args$lOD <- bio.opts$lOD + log(dr_sigma_scale)
-    }
-    if (!is.null(bio.opts$lOD2)) {
-      sim_args$lOD2 <- bio.opts$lOD2 + log(dr_sigma_scale)
-    }
-    if (!is.null(bio.opts$amplitude)) {
-      sim_args$amplitude <- bio.opts$amplitude * dr_amp_scale
-    }
-    if (!is.null(bio.opts$amplitude2)) {
-      sim_args$amplitude2 <- bio.opts$amplitude2 * dr_amp_scale
-    }
-    if (!is.null(bio.opts$sigma_rhythmic)) {
-      sim_args$sigma_rhythmic <- bio.opts$sigma_rhythmic * dr_sigma_scale
-    }
-    if (!is.null(bio.opts$cts2)) {
-      # For active design, cts2 from the pilot may differ in length from the
-      # target n (the pilot had a different number of samples). Expand the
-      # ZT template (or, if length matches cts_n, use directly).
-      cts2_raw <- bio.opts$cts2
-      cts2_n <- if (design == "active" && length(cts2_raw) != n) {
-        sort(rep_len(cts2_raw, n))
-      } else {
-        cts2_raw
+
+      if (!is.null(bio_opts_inner)) {
+        bo <- bio_opts_inner
+        if (!is.null(bo$lBaselineExpr))  sim_args$lBaselineExpr  <- bo$lBaselineExpr
+        if (!is.null(bo$lBaselineExpr2)) sim_args$lBaselineExpr2 <- bo$lBaselineExpr2
+        if (!is.null(bo$lOD))  sim_args$lOD  <- bo$lOD  + log(dr_sigma_scale)
+        if (!is.null(bo$lOD2)) sim_args$lOD2 <- bo$lOD2 + log(dr_sigma_scale)
+        if (!is.null(bo$amplitude))      sim_args$amplitude      <- bo$amplitude  * dr_amp_scale
+        if (!is.null(bo$amplitude2))     sim_args$amplitude2     <- bo$amplitude2 * dr_amp_scale
+        if (!is.null(bo$sigma_rhythmic)) sim_args$sigma_rhythmic <- bo$sigma_rhythmic * dr_sigma_scale
+        if (!is.null(bo$cts2)) {
+          cts2_raw <- bo$cts2
+          sim_args$cts2 <- if (design == "active" && length(cts2_raw) != n)
+                             sort(rep_len(cts2_raw, n)) else cts2_raw
+        }
       }
-      sim_args$cts2 <- cts2_n
-    }
-      }
+
       sim_data = do.call(simCircadianDiff, sim_args)
 
-      # Store ground truth (only need to do this once per simulation)
       if (j == 1) {
-        diff_type_list[[i]] = sim_data$ground_truth$diff_type
-        effectsize_list[[i]] = list(
-          DR1 = sim_data$effectsize_DR1,
-          DR2 = sim_data$effectsize_DR2,
+        diff_type_i  <- sim_data$ground_truth$diff_type
+        effectsize_i <- list(
+          DR1   = sim_data$effectsize_DR1,
+          DR2   = sim_data$effectsize_DR2,
           phase = sim_data$effectsize_phase,
-          amp = sim_data$effectsize_amp,
+          amp   = sim_data$effectsize_amp,
           mesor = sim_data$effectsize_mesor
         )
       }
 
-      # Initialize p-values (default to 1 for untested genes)
       pval_DR_g = rep(1, ngenes)
       pval_DP_g = rep(1, ngenes)
       pval_DA_g = rep(1, ngenes)
       pval_DM_g = rep(1, ngenes)
 
-      # =================================================================
-      # DIFFERENTIAL TESTING (method dispatcher)
-      # =================================================================
-
       if (DCmethod == "DCP") {
-        # ---------------------------------------------------------------
-        # DCP Pipeline: TOJR + LR tests (rigorous hierarchical approach)
-        # ---------------------------------------------------------------
         tryCatch({
           x1_dcp = format_for_DCP(sim_data$expr1, sim_data$times1, gene_names)
           x2_dcp = format_for_DCP(sim_data$expr2, sim_data$times2, gene_names)
 
-          # Step 1: TOJR classification with hierarchical Sidak testing
           rhythm_res = DCP_Rhythmicity(
             x1 = x1_dcp, x2 = x2_dcp,
             method = "Sidak_FS",
@@ -240,7 +211,6 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
             parallel.ncores = parallel.ncores
           )
 
-          # Step 2: DR test (genes not "arrhy")
           if ("DR" %in% test_types) {
             n_testable_DR = sum(rhythm_res$rhythm.joint$TOJR != "arrhy")
             if (n_testable_DR > 0) {
@@ -254,12 +224,10 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
             }
           }
 
-          # Step 3: DP, DA, DM tests (only for "both" genes)
           needs_par <- any(c("DP", "DA", "DM") %in% test_types)
           if (needs_par) {
             n_testable = sum(rhythm_res$rhythm.joint$TOJR == "both")
             if (n_testable > 0) {
-              # Use A&phase&M to get all three parameter tests
               Par_mode <- if ("DM" %in% test_types) "A&phase&M" else "A&phase"
               dp_da_results = DCP_DiffPar(
                 rhythm_res, Par = Par_mode, TOJR = NULL,
@@ -267,31 +235,19 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
                 parallel.ncores = parallel.ncores
               )
               match_idx = match(gene_names, dp_da_results$gname)
-
-              if ("DP" %in% test_types) {
+              if ("DP" %in% test_types)
                 pval_DP_g[!is.na(match_idx)] = dp_da_results$p.delta.peak[match_idx[!is.na(match_idx)]]
-              }
-              if ("DA" %in% test_types) {
+              if ("DA" %in% test_types)
                 pval_DA_g[!is.na(match_idx)] = dp_da_results$p.delta.A[match_idx[!is.na(match_idx)]]
-              }
-              if ("DM" %in% test_types && "p.delta.M" %in% colnames(dp_da_results)) {
+              if ("DM" %in% test_types && "p.delta.M" %in% colnames(dp_da_results))
                 pval_DM_g[!is.na(match_idx)] = dp_da_results$p.delta.M[match_idx[!is.na(match_idx)]]
-              }
             }
           }
-
         }, error = function(e) {
-          if (verbose) {
-            warning(sprintf("DCP pipeline failed for sim %d, n=%d: %s",
-                           i, n, e$message))
-          }
+          warning(sprintf("DCP pipeline failed for sim %d, n=%d: %s", i, n, e$message))
         })
 
       } else if (DCmethod == "CircaCompare") {
-        # ---------------------------------------------------------------
-        # CircaCompare: per-gene NLS with Wald t-tests for DA, DP, DM
-        # No DR test available (CircaCompare has no delta-R2 equivalent)
-        # ---------------------------------------------------------------
         tryCatch({
           cc_result = detect_CircaCompare(
             expr1 = sim_data$expr1, times1 = sim_data$times1,
@@ -301,52 +257,50 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
           pval_DP_g = cc_result$pval_DP
           pval_DA_g = cc_result$pval_DA
           pval_DM_g = cc_result$pval_DM
-          # pval_DR_g stays at 1 (CircaCompare has no DR test)
         }, error = function(e) {
-          if (verbose) {
-            warning(sprintf("CircaCompare failed for sim %d, n=%d: %s",
-                           i, n, e$message))
-          }
+          warning(sprintf("CircaCompare failed for sim %d, n=%d: %s", i, n, e$message))
         })
       }
 
-      # Adjust for multiple testing (BH correction)
-      fdr_DR_g = pval_DR_g
-      fdr_DP_g = pval_DP_g
-      fdr_DA_g = pval_DA_g
-      fdr_DM_g = pval_DM_g
+      fdr_DR_g = pval_DR_g; fdr_DP_g = pval_DP_g
+      fdr_DA_g = pval_DA_g; fdr_DM_g = pval_DM_g
 
-      # Only adjust p-values that were actually tested (< 1)
-      ix.tested = pval_DR_g < 1
-      if (sum(ix.tested) > 0) {
-        fdr_DR_g[ix.tested] = p.adjust(pval_DR_g[ix.tested], method = p.adjust.method)
-      }
+      ix <- pval_DR_g < 1; if (any(ix)) fdr_DR_g[ix] <- p.adjust(pval_DR_g[ix], method = p.adjust.method)
+      ix <- pval_DP_g < 1; if (any(ix)) fdr_DP_g[ix] <- p.adjust(pval_DP_g[ix], method = p.adjust.method)
+      ix <- pval_DA_g < 1; if (any(ix)) fdr_DA_g[ix] <- p.adjust(pval_DA_g[ix], method = p.adjust.method)
+      ix <- pval_DM_g < 1; if (any(ix)) fdr_DM_g[ix] <- p.adjust(pval_DM_g[ix], method = p.adjust.method)
 
-      ix.tested = pval_DP_g < 1
-      if (sum(ix.tested) > 0) {
-        fdr_DP_g[ix.tested] = p.adjust(pval_DP_g[ix.tested], method = p.adjust.method)
-      }
-
-      ix.tested = pval_DA_g < 1
-      if (sum(ix.tested) > 0) {
-        fdr_DA_g[ix.tested] = p.adjust(pval_DA_g[ix.tested], method = p.adjust.method)
-      }
-
-      ix.tested = pval_DM_g < 1
-      if (sum(ix.tested) > 0) {
-        fdr_DM_g[ix.tested] = p.adjust(pval_DM_g[ix.tested], method = p.adjust.method)
-      }
-
-      # Store results
-      pval_DR[, j, i] = pval_DR_g
-      fdr_DR[, j, i] = fdr_DR_g
-      pval_DP[, j, i] = pval_DP_g
-      fdr_DP[, j, i] = fdr_DP_g
-      pval_DA[, j, i] = pval_DA_g
-      fdr_DA[, j, i] = fdr_DA_g
-      pval_DM[, j, i] = pval_DM_g
-      fdr_DM[, j, i] = fdr_DM_g
+      pval_DR_i[, j] = pval_DR_g; fdr_DR_i[, j] = fdr_DR_g
+      pval_DP_i[, j] = pval_DP_g; fdr_DP_i[, j] = fdr_DP_g
+      pval_DA_i[, j] = pval_DA_g; fdr_DA_i[, j] = fdr_DA_g
+      pval_DM_i[, j] = pval_DM_g; fdr_DM_i[, j] = fdr_DM_g
     }
+
+    list(pval_DR = pval_DR_i, fdr_DR = fdr_DR_i,
+         pval_DP = pval_DP_i, fdr_DP = fdr_DP_i,
+         pval_DA = pval_DA_i, fdr_DA = fdr_DA_i,
+         pval_DM = pval_DM_i, fdr_DM = fdr_DM_i,
+         diff_type = diff_type_i, effectsize = effectsize_i)
+  }, mc.cores = mc.cores, mc.set.seed = TRUE)
+
+  if (verbose) cat(sprintf("Completed %d simulations.\n", nsims))
+
+  # Combine parallel results into arrays
+  pval_DR = fdr_DR = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
+  pval_DP = fdr_DP = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
+  pval_DA = fdr_DA = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
+  pval_DM = fdr_DM = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
+  diff_type_list  <- vector("list", nsims)
+  effectsize_list <- vector("list", nsims)
+
+  for (i in seq_len(nsims)) {
+    r <- sim_results[[i]]
+    pval_DR[,,i] <- r$pval_DR; fdr_DR[,,i] <- r$fdr_DR
+    pval_DP[,,i] <- r$pval_DP; fdr_DP[,,i] <- r$fdr_DP
+    pval_DA[,,i] <- r$pval_DA; fdr_DA[,,i] <- r$fdr_DA
+    pval_DM[,,i] <- r$pval_DM; fdr_DM[,,i] <- r$fdr_DM
+    diff_type_list[[i]]  <- r$diff_type
+    effectsize_list[[i]] <- r$effectsize
   }
 
   return(list(

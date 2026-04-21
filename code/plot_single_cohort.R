@@ -13,7 +13,7 @@ if (!exists("add_se_bars")) {
 # Panel B: true discoveries by r-stratum (lines per n) + overlay of gene distribution
 # Panel C: stratified power by r-stratum, lines per n
 
-#' Plot single-cohort Figure 1 (3 panels)
+#' Plot single-cohort circadian power (3 panels)
 #'
 #' @param res        Output from \code{runSimsSingleCohort()}.
 #' @param out_pdf    Path for PDF output. If NULL, plots to current device.
@@ -25,10 +25,15 @@ if (!exists("add_se_bars")) {
 #' @param height     PDF height in inches (default 5.5).
 #' @return Invisibly returns list of data used per panel.
 #' @export
-plotSingleCohortFig1 <- function(res, out_pdf = NULL, title = "",
+plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                                  fdr_thresholds = c(0.01, 0.05, 0.10, 0.20),
+                                 panel_fdr = 0.05,
+                                 vline_power = 0.80,
+                                 vline_fdr   = 0.20,
                                  p.adjust.method = "BH",
                                  reference_n = NULL,
+                                 display_sizes = NULL,
+                                 r_max = 5,
                                  width = 15, height = 5.5) {
 
   sample_sizes  <- res$sample_sizes
@@ -42,6 +47,11 @@ plotSingleCohortFig1 <- function(res, out_pdf = NULL, title = "",
   thresh_cols   <- c("darkgreen", "steelblue", "orange", "red")[seq_len(n_thresh)]
   thresh_labels <- paste0("FDR ", round(100 * fdr_thresholds), "%")
   size_colors   <- rainbow(n_sizes, s = 0.6, v = 0.8)
+
+  # Which sample sizes to show in panels B and C (all by default)
+  disp_idx <- if (!is.null(display_sizes))
+                which(sample_sizes %in% display_sizes)
+              else seq_len(n_sizes)
 
   # ------------------------------------------------------------------
   # Recompute power and TD at each FDR threshold from raw pvalues
@@ -101,21 +111,31 @@ plotSingleCohortFig1 <- function(res, out_pdf = NULL, title = "",
   marginal_se   <- apply(marginal_sim, c(1, 2),
                          function(x) sd(x, na.rm = TRUE) / sqrt(sum(!is.na(x))))
 
+  vline_n <- npower(res, target_power = vline_power, fdr = vline_fdr)$n
+
   # ------------------------------------------------------------------
-  # Panel B: TD by r-stratum at FDR 5% (use idx_fdr5 = closest to 0.05)
+  # Panels B & C: stratum-level results at panel_fdr (closest in fdr_thresholds)
   # ------------------------------------------------------------------
-  idx_fdr5 <- which.min(abs(fdr_thresholds - 0.05))
+  idx_fdr5  <- which.min(abs(fdr_thresholds - panel_fdr))
+  fdr_label <- sprintf("FDR %g%%", panel_fdr * 100)
   mean_TD <- apply(TD_arr[, , idx_fdr5, , drop = FALSE], c(1, 2),
                    mean, na.rm = TRUE)  # [size, stratum]
   se_TD   <- apply(TD_arr[, , idx_fdr5, , drop = FALSE], c(1, 2),
                    function(x) sd(x, na.rm = TRUE) / sqrt(sum(!is.na(x))))
 
-  # Gene distribution by r (use first sim of first n for representative counts)
-  r_sample  <- res$r_values_list[[1]][[1]]
-  is_rhy    <- r_sample > 0
-  xgr_dist  <- cut(r_sample[is_rhy], breaks = r_strata,
-                   include.lowest = TRUE, labels = FALSE)
-  gene_counts <- tabulate(xgr_dist, nbins = n_strata)
+  # Gene distribution by r: average counts across all sims and sample sizes
+  count_mat <- matrix(0L, nrow = n_sizes * nsims, ncol = n_strata)
+  row_i <- 1L
+  for (j in seq_len(n_sizes)) {
+    for (s in seq_len(nsims)) {
+      rv  <- res$r_values_list[[j]][[s]]
+      rhy <- rv > 0
+      xg  <- cut(rv[rhy], breaks = r_strata, include.lowest = TRUE, labels = FALSE)
+      count_mat[row_i, ] <- tabulate(xg, nbins = n_strata)
+      row_i <- row_i + 1L
+    }
+  }
+  gene_counts <- colMeans(count_mat)
 
   # ------------------------------------------------------------------
   # Panel C: stratified power at FDR 5% by r-stratum, lines per n
@@ -126,6 +146,42 @@ plotSingleCohortFig1 <- function(res, out_pdf = NULL, title = "",
                     function(x) sd(x, na.rm = TRUE) / sqrt(sum(!is.na(x))))
 
   # ------------------------------------------------------------------
+  # Collapse strata with r >= r_max into a single ">r_max" bin
+  # ------------------------------------------------------------------
+  left_bounds <- r_strata[-length(r_strata)]   # left boundary of each bin
+  collapse_from <- which(left_bounds >= r_max)
+
+  if (length(collapse_from) >= 2) {
+    keep <- seq_len(min(collapse_from) - 1)
+
+    gene_counts_plt <- c(gene_counts[keep], sum(gene_counts[collapse_from]))
+
+    mean_TD_plt <- cbind(mean_TD[, keep, drop = FALSE],
+                         rowSums(mean_TD[, collapse_from, drop = FALSE]))
+    se_TD_plt   <- cbind(se_TD[, keep, drop = FALSE],
+                         sqrt(rowSums(se_TD[, collapse_from, drop = FALSE]^2)))
+
+    gc_merged <- sum(gene_counts[collapse_from])
+    if (gc_merged > 0) {
+      pow_merged <- rowSums(mean_TD[, collapse_from, drop = FALSE]) / gc_merged
+    } else {
+      pow_merged <- rep(0, n_sizes)
+    }
+    mean_pow_plt <- cbind(mean_pow[, keep, drop = FALSE], pow_merged)
+    se_pow_plt   <- cbind(se_pow[, keep, drop = FALSE],
+                          matrix(NA_real_, n_sizes, 1))
+
+    strata_labels_plt <- c(strata_labels[keep], sprintf(">%g", r_max))
+    n_strata_plt      <- length(strata_labels_plt)
+  } else {
+    gene_counts_plt   <- gene_counts
+    mean_TD_plt       <- mean_TD;  se_TD_plt  <- se_TD
+    mean_pow_plt      <- mean_pow; se_pow_plt <- se_pow
+    strata_labels_plt <- strata_labels
+    n_strata_plt      <- n_strata
+  }
+
+  # ------------------------------------------------------------------
   # Open device
   # ------------------------------------------------------------------
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
@@ -134,84 +190,76 @@ plotSingleCohortFig1 <- function(res, out_pdf = NULL, title = "",
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
   # ---- Panel A: marginal power vs n, multiple FDR lines ----
-  matplot(sample_sizes, 100 * marginal_mean,
+  ss_disp_a <- sample_sizes[disp_idx]
+  matplot(ss_disp_a, 100 * marginal_mean[disp_idx, , drop = FALSE],
           type = "b", pch = 19, lwd = 2,
           col = thresh_cols, lty = 1,
-          xlim = c(0, max(sample_sizes) * 1.05), ylim = c(0, 100),
-          xlab = "Sample size (n)", ylab = "Marginal Power (%)",
-          main = "Marginal Power vs Sample Size")
+          xlim = c(0, max(ss_disp_a) * 1.05), ylim = c(0, 100),
+          xlab = "Sample size (n)", ylab = "Power (%)",
+          main = "Genome-wide Power vs Sample Size")
   for (t in seq_len(n_thresh)) {
-    add_se_bars(sample_sizes, 100 * marginal_mean[, t],
-                100 * marginal_se[, t], col = thresh_cols[t])
+    add_se_bars(ss_disp_a, 100 * marginal_mean[disp_idx, t],
+                100 * marginal_se[disp_idx, t], col = thresh_cols[t])
   }
-  abline(h = 80, lty = 2, col = "gray")
   if (!is.null(reference_n)) {
     abline(v = reference_n, lty = 3, col = "darkgreen", lwd = 1.5)
+  }
+  if (!is.na(vline_n)) {
+    abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.5)
+    text(vline_n, 5, sprintf("n=%d", vline_n), col = "steelblue", cex = 0.72, adj = -0.1)
   }
   grid()
   legend("bottomright", thresh_labels,
          col = thresh_cols, lty = 1, pch = 19, lwd = 2, cex = 0.7)
   mtext("A", side = 3, at = par("usr")[1], font = 2, line = 0.5)
 
-  # ---- Panel B: TD by r-stratum, n lines + overlaid gene distribution ----
-  y_max_TD <- max(mean_TD + se_TD, na.rm = TRUE) * 1.15
-  # Scale gene_counts to share axis
-  count_scale <- y_max_TD / max(gene_counts + 1)
-  scaled_counts <- gene_counts * count_scale
+  # ---- Panel B: stratified power by r, lines per n ----
+  matplot(seq_len(n_strata_plt), 100 * t(mean_pow_plt[disp_idx, , drop = FALSE]),
+          type = "l", lwd = 2, col = size_colors[disp_idx], lty = 1,
+          xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, 100), bty = "l",
+          xlab = "r = A/sigma", ylab = "Power (%)",
+          main = sprintf("Stratified Power by r (%s)", fdr_label), xaxt = "n")
+  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 0.6)
+  for (j in disp_idx) {
+    points(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
+           pch = 19, col = size_colors[j], cex = 0.6)
+    add_se_bars(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
+                100 * se_pow_plt[j, ], col = size_colors[j])
+  }
+  grid()
+  legend("bottomright", paste0("n=", sample_sizes[disp_idx]),
+         col = size_colors[disp_idx], lty = 1, lwd = 2, cex = 0.6)
+  mtext("B", side = 3, at = par("usr")[1], font = 2, line = 0.5)
 
-  plot(seq_len(n_strata), rep(0, n_strata),
-       type = "n",
-       xlim = c(0.5, n_strata + 0.5), ylim = c(0, y_max_TD),
-       xlab = "r = A/sigma", ylab = "Mean True Discoveries (per sim)",
-       main = "True Discoveries by r (FDR 5%)", xaxt = "n")
-  axis(1, at = seq_len(n_strata), labels = strata_labels, las = 2, cex.axis = 0.6)
+  # ---- Panel C: TD by r-stratum, n lines + overlaid gene distribution ----
+  # gene_counts and mean_TD are both in units of genes — use the same natural axis.
+  # y-axis set by gene_counts (the upper bound); TD lines sit below by construction.
+  y_max_TD      <- max(gene_counts_plt) * 1.15
+  scaled_counts <- gene_counts_plt
 
-  # Smoothed gene-count overlay (loess on stratum index, scaled to TD axis)
-  lo_counts <- tryCatch(
-    predict(loess(scaled_counts ~ seq_len(n_strata), span = 0.5),
-            newdata = data.frame(seq_len(n_strata))),
-    error = function(e) scaled_counts
-  )
-  lo_counts <- pmax(lo_counts, 0)
-  polygon(c(seq_len(n_strata), rev(seq_len(n_strata))),
-          c(lo_counts, rep(0, n_strata)),
-          col = "#cccccc55", border = NA)
-  lines(seq_len(n_strata), lo_counts, col = "grey60", lwd = 1.5, lty = 2)
+  plot(seq_len(n_strata_plt), rep(0, n_strata_plt),
+       type = "n", bty = "l",
+       xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, y_max_TD),
+       xlab = "r = A/sigma", ylab = "# True Discoveries",
+       main = sprintf("True Discoveries by r (%s)", fdr_label), xaxt = "n")
+  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 0.6)
 
-  # Secondary axis for gene counts
-  axis(4, at = pretty(c(0, y_max_TD), 4),
-       labels = round(pretty(c(0, y_max_TD), 4) / count_scale),
-       las = 1, cex.axis = 0.65, col.axis = "grey50")
+  # Gene-count overlay as step histogram (bars span k-0.5 to k+0.5, centered on labels)
+  step_x <- rep(seq(0.5, n_strata_plt + 0.5, by = 1), each = 2)
+  step_y <- c(0, rep(scaled_counts, each = 2), 0)
+  polygon(step_x, step_y, col = "#cccccc55", border = NA)
+  lines(step_x, step_y, col = "grey60", lwd = 1.5, lty = 2)
 
-  for (j in seq_len(n_sizes)) {
-    lines(seq_len(n_strata), mean_TD[j, ], col = size_colors[j], lwd = 2)
-    points(seq_len(n_strata), mean_TD[j, ], pch = 19, col = size_colors[j], cex = 0.6)
-    add_se_bars(seq_len(n_strata), mean_TD[j, ], se_TD[j, ], col = size_colors[j])
+  for (j in disp_idx) {
+    lines(seq_len(n_strata_plt), mean_TD_plt[j, ], col = size_colors[j], lwd = 2)
+    points(seq_len(n_strata_plt), mean_TD_plt[j, ], pch = 19, col = size_colors[j], cex = 0.6)
+    add_se_bars(seq_len(n_strata_plt), mean_TD_plt[j, ], se_TD_plt[j, ], col = size_colors[j])
   }
   grid()
   legend("topright",
-         c(paste0("n=", sample_sizes), "Gene density"),
-         col = c(size_colors, "grey60"), lty = c(rep(1, n_sizes), 2),
-         lwd = c(rep(2, n_sizes), 1.5), cex = 0.6)
-  mtext("B", side = 3, at = par("usr")[1], font = 2, line = 0.5)
-
-  # ---- Panel C: stratified power by r, lines per n ----
-  matplot(seq_len(n_strata), 100 * t(mean_pow),
-          type = "l", lwd = 2, col = size_colors, lty = 1,
-          xlim = c(0.5, n_strata + 0.5), ylim = c(0, 100),
-          xlab = "r = A/sigma", ylab = "Power (%)",
-          main = "Power by r (FDR 5%)", xaxt = "n")
-  axis(1, at = seq_len(n_strata), labels = strata_labels, las = 2, cex.axis = 0.6)
-  for (j in seq_len(n_sizes)) {
-    points(seq_len(n_strata), 100 * mean_pow[j, ],
-           pch = 19, col = size_colors[j], cex = 0.6)
-    add_se_bars(seq_len(n_strata), 100 * mean_pow[j, ],
-                100 * se_pow[j, ], col = size_colors[j])
-  }
-  abline(h = 80, lty = 2, col = "gray")
-  grid()
-  legend("bottomright", paste0("n=", sample_sizes),
-         col = size_colors, lty = 1, lwd = 2, cex = 0.6)
+         c(paste0("n=", sample_sizes[disp_idx]), "# Target Discoveries"),
+         col = c(size_colors[disp_idx], "grey60"), lty = c(rep(1, length(disp_idx)), 2),
+         lwd = c(rep(2, length(disp_idx)), 1.5), cex = 0.6)
   mtext("C", side = 3, at = par("usr")[1], font = 2, line = 0.5)
 
   if (nchar(title) > 0)

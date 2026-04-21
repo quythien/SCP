@@ -285,34 +285,50 @@ runFourierDeviationPower(
 ```
 SCP/
 ├── doc/
-│   ├── README.md          # This file
-│   ├── ANALYSIS_PLAN.md   # Publication datasets, research questions, script map
-│   └── CHANGES.md         # Session log
+│   ├── README.md                  # This file
+│   ├── ANALYSIS_PLAN.md           # Publication datasets, research questions, script map
+│   ├── CHANGES.md                 # Session log
+│   ├── BUGFIX_LOG.md              # Confirmed bugs and fixes
+│   └── BVM_TRADEOFF_FINDINGS.md   # B vs m method-dependence findings (2026-04-20)
 ├── code/
-│   ├── setup.R            # Entry point — sources all code below
-│   ├── options.R          # Options constructors (CircadianBioOptions, etc.)
-│   ├── runner.R           # runPowerAnalysis, runBootstrapDesignGrid, runTwoStagePower
-│   ├── bootstrap_sim.R    # Bootstrap logic, compareDesignApproaches
-│   ├── estimation.R       # estCircadianParam, estCircadianParamTwoGroup
-│   ├── simulation.R       # simCircadianDiff — joint A-sigma sampling
-│   ├── detection.R        # DCP pipeline (DR/DP/DM likelihood ratio tests)
-│   ├── fourier_sim.R      # runFourierDeviationPower
+│   ├── setup.R             # Entry point — sources all code below
+│   ├── options.R           # Options constructors (CircadianBioOptions, etc.)
+│   ├── runner.R            # runPowerAnalysis, runBootstrapDesignGrid, runTwoStagePower, runSimsSingleCohort
+│   ├── bootstrap_sim.R     # Bootstrap logic, compareDesignApproaches, fitCosinorAll
+│   ├── estimation.R        # estCircadianParam, estCircadianParamTwoGroup
+│   ├── simulation.R        # simCircadianDiff — joint A-sigma sampling
+│   ├── detection.R         # DCP pipeline + detect_JTK, detect_RAIN
+│   ├── fourier_sim.R       # runFourierDeviationPower
 │   ├── design_comparison.R # plotDesignComparison
-│   └── utils.R            # prepCircadianData, fitCosinorAll, helpers
+│   ├── plot_single_cohort.R # plotSingleCohortPower (3-panel)
+│   ├── plot_diff.R         # plotDiffPower (18-panel differential figure)
+│   ├── npower.R            # npower(): interpolated n for target power at given FDR
+│   ├── plot_dr_power.R     # Stratified DR power plotting
+│   ├── plot_with_se.R      # SE-bar helpers + DR/DP 6-panel figures
+│   ├── summarize_dcp_pairs.R # Cross-pair DCP summary table (supplementary)
+│   └── utils.R             # prepCircadianData, helpers
 ├── data/                  # Pilot datasets (not committed — see ANALYSIS_PLAN.md)
 ├── examples/
 │   ├── publication/       # Reproducible scripts for all paper figures
 │   │   ├── fig1_bootstrap_comparison.R   # Fig 1: two-stage vs bootstrap (3-panel)
 │   │   ├── fig3_multi_dataset_dr_power.R # Fig 3: DR power across 4 datasets
 │   │   ├── 03b_power_core_active.R       # Baboon B vs m bootstrap grid
-│   │   ├── 03c_power_core_d1d2.R         # D1D2 B vs m bootstrap grid
-│   │   ├── 03d_bvsm_mouse_gse_only.R     # Mouse GSE B vs m + bm_tradeoff figure
+│   │   ├── 03c_power_core_mouse.R         # D1D2 B vs m bootstrap grid
+│   │   ├── 03d_power_core_mouse_gse.R    # Mouse GSE B vs m + bm_tradeoff figure
 │   │   ├── 08a_bootstrap_baboon.R        # Bootstrap: Baboon LUN vs CER
 │   │   ├── 08b_bootstrap_d1d2.R          # Bootstrap: Mouse D1 vs D2
 │   │   ├── 08c_bootstrap_seney.R         # Bootstrap: Human PFC (Seney)
 │   │   ├── 08d_bootstrap_summary.R       # Summary: CI width across datasets
 │   │   ├── 08e_bootstrap_mouse_gse.R     # Bootstrap: Mouse LIV vs CER (GSE)
-│   │   └── auto_update_watcher.sh        # Watches for completed RDS and updates paper
+│   │   ├── 09_dm_singlecohort_smoke.R    # Smoke: DM endpoint + single-cohort sim
+│   │   ├── 10_single_cohort_power.R      # Single-cohort rhythmicity power (3 datasets)
+│   │   ├── 11_differential_power.R       # Figure 2: differential power (DR/DP/DM)
+│   │   ├── 12_differential_power_gtex_ADR_LIV.R  # Figure 2 variant: GTEx ADR vs LIV
+│   │   ├── 13_supp_tissue_summary.R      # Supplementary tissue-level signal table
+│   │   ├── 14_single_cohort_gtex_ADR_LIV.R       # Single-cohort power: GTEx ADR & LIV
+│   │   ├── 15_bvsm_method_comparison.R   # B vs m: DCP / JTK / multi-harmonic (3 datasets)
+│   │   ├── 15b_bvsm_rain.R              # B vs m: RAIN only (N ≤ 48, parallel companion)
+│   │   └── bm_tradeoff_twostage.R       # Regenerates bm_tradeoff.pdf via two-stage DR
 │   └── exploratory/       # Dataset-specific and sensitivity analyses
 ├── paper/
 │   └── PowerSim/

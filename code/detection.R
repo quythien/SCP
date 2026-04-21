@@ -1730,15 +1730,20 @@ detect_RAIN <- function(expr, times, gene_names = NULL, period = 24) {
   expr_sorted <- expr[, ord, drop = FALSE]
   times_sorted <- times[ord]
 
-  # Estimate deltat from median interval
-  deltat <- median(diff(times_sorted))
+  # deltat from unique time points; nr.series from replicate count
+  unique_times <- sort(unique(times_sorted))
+  B_pts  <- length(unique_times)
+  deltat <- if (B_pts > 1) median(diff(unique_times)) else period
+  counts <- tabulate(match(times_sorted, unique_times))
+  nr     <- if (length(unique(counts)) == 1L && counts[1L] > 1L) counts[1L] else 1L
 
   result <- tryCatch({
-    # rain expects: rows = time points (samples), columns = features (genes)
+    # rain expects: rows = samples (time-ordered), columns = genes
     rain::rain(
-      x      = t(expr_sorted),
-      deltat = deltat,
-      period = period
+      x         = t(expr_sorted),
+      deltat    = deltat,
+      period    = period,
+      nr.series = nr
     )
   }, error = function(e) {
     warning(sprintf("RAIN failed: %s", e$message))

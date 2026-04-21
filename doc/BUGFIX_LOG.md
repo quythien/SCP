@@ -5,6 +5,48 @@ affected files, and the fix applied. Ordered from most recent session backward.
 
 ---
 
+## Session 2026-04-20: RAIN replicated-design bug
+
+### BUG-RAIN-01: `detection.R` — `detect_RAIN()` broken for replicated designs
+
+**Root cause:** Two errors in the original `detect_RAIN()` wrapper:
+
+1. `deltat <- median(diff(times_sorted))` computes the median gap across all
+   consecutive sorted times. With m replicates per time point, consecutive
+   entries are at the same ZT → gap = 0 → `deltat = 0`. RAIN then errors or
+   produces degenerate results.
+
+2. `nr.series` was never passed to `rain::rain()`. RAIN's umbrella test assumes
+   a single time series when `nr.series=1`; without it, each replicate is treated
+   as an independent time point rather than a replicate within a series.
+
+**Effect:** For any replicated active design (B < N), RAIN either errored or
+treated the data as if m=1 with B×m distinct time points. Power estimates were
+wrong for all B < N cells.
+
+**Fix (`code/detection.R` line ~1730):**
+```r
+# Before
+deltat <- median(diff(times_sorted))
+rain::rain(x = t(expr_sorted), deltat = deltat, period = period)
+
+# After
+unique_times <- sort(unique(times_sorted))
+B_pts  <- length(unique_times)
+deltat <- if (B_pts > 1) median(diff(unique_times)) else period
+counts <- tabulate(match(times_sorted, unique_times))
+nr     <- if (length(unique(counts)) == 1L && counts[1L] > 1L) counts[1L] else 1L
+rain::rain(x = t(expr_sorted), deltat = deltat, period = period, nr.series = nr)
+```
+
+**Affected analyses:** Any `detect_RAIN()` call on a replicated design.
+`15b_bvsm_rain.R` is the first production script using the corrected version.
+Prior exploratory RAIN results (D1D2 smoke tests) were also wrong; the
+corrected results show RAIN favors higher B (not lower B as was initially
+suggested by the broken wrapper).
+
+---
+
 ## Session 2026-04-13 (Round 2): Post-DM type-numbering bugs
 
 After adding DM (Differential Mesor) as gene type 5 and reassigning DA

@@ -109,8 +109,7 @@ for (i in seq_along(datasets)) {
        xlab = "N per group", ylab = "DR power (FDR 5%)",
        main = d$label)
   axis(1, at = N)
-  abline(h = 80, lty = 2, col = "gray40")
-  abline(h = c(20, 40, 60), lty = 3, col = "gray85")
+  abline(h = c(20, 40, 60, 80), lty = 3, col = "gray85")
 
   # Bootstrap CI band
   polygon(c(N, rev(N)), c(lo, rev(hi)),
@@ -143,7 +142,7 @@ for (i in seq_along(datasets)) {
   }
 
   legend("bottomright",
-         legend = c("Two-stage (plug-in)", "Bootstrap mean", "Bootstrap 95% CI"),
+         legend = c("Two-stage (plug-in)", "Bootstrap", "Bootstrap 95% CI"),
          col    = c(d$col, d$col, adjustcolor(d$col, 0.4)),
          lwd    = c(2.5, 2, 6),
          lty    = c(1, 2, 1),

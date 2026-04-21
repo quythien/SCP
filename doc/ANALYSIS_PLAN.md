@@ -135,6 +135,34 @@ For each of the 4 datasets:
 
 ---
 
+## Analysis Layer 1b: B vs m Tradeoff — Method-Dependent Optimality (2026-04-20)
+
+**New question (extends Q3):** Q3 previously asked "is B↑ or m↑ better?" using the
+bootstrap DCP framework alone. We now ask the same question for four single-cohort
+detection methods, because the answer depends on which test is used.
+
+**Three pilot datasets (single group):**
+
+| Dataset | r_median | Signal | Tissue |
+|---------|----------|--------|--------|
+| Mouse LIV (GSE54651) | ~2.88 | Strong | Liver |
+| Baboon LUN (CAMO) | ~1.72 | Moderate | Lung |
+| Mouse D1 (D1D2) | ~0.65 | Weak | Striatum Drd1+ MSNs |
+
+**Grid:** B ∈ {3,4,6,8,12}, N ∈ {12,24,...,144} (factors of 12), α₂ ∈ {0, 0.5, 0.75, 1.0}
+
+**Scripts:**
+- `15_bvsm_method_comparison.R` — DCP (K=1), JTK, adaptive multi-harmonic; NGENES=5000; NSIMS=100; N_CORES=60
+- `15b_bvsm_rain.R` — RAIN only; N capped at 48 (permutation cost); NGENES=1000; NSIMS=30
+
+**Key findings (full details in `doc/BVM_TRADEOFF_FINDINGS.md`):**
+- DCP (K=1): B-invariant under cosinor truth; B=3 inflated at α₂≥0.5 (aliasing)
+- JTK: always favors low B (B=3–4); collapses to B means internally
+- RAIN: favors higher B (B=6–8) at low N; converges at large N
+- Multi-harmonic K=⌊(B−1)/2⌋: B=6 (K=2) optimal when α₂≥0.5 AND N≥48
+
+---
+
 ## Analysis Layer 2: Fourier Robustness Simulation
 
 **Purpose:** The cosinor model assumes a perfect sinusoidal waveform. Real circadian

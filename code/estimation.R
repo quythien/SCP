@@ -6,7 +6,7 @@
 #' @param data Gene expression matrix (genes x samples)
 #' @param times Time points for each sample
 #' @param period Period (default 24)
-#' @param min_rhythm_pval P-value threshold for including rhythmic genes (default 0.1)
+#' @param min_rhythm_pval P-value threshold for including rhythmic genes (default 0.01)
 #' @param verbose Print progress
 #'
 #' @return List with parameter distributions
@@ -26,7 +26,7 @@
 
 
 estimate_circadian_params = function(data, times, period = 24,
-                                     min_rhythm_pval = 0.1,
+                                     min_rhythm_pval = 0.01,
                                      verbose = TRUE) {
 
   if (verbose) {
@@ -67,51 +67,64 @@ estimate_circadian_params = function(data, times, period = 24,
   # Effect size
   r_vals = A_vals / sigma_vals
 
-  # Identify likely rhythmic genes for parameter estimation
+  # G_R^cand: all genes passing alpha_pilot (used for prop_rhythmic and is_rhythmic)
   rhythmic_genes = pvals < min_rhythm_pval & !is.na(A_vals) & A_vals > 0
+  n_cand <- sum(rhythmic_genes, na.rm = TRUE)
+
+  # G_R: top min(300, |G_R^cand|) by p-value (used for F_{A,sigma} and F_phi only)
+  # Ranking by p-value gives the strongest-signal genes, improving distribution stability
+  K <- min(300L, n_cand)
+  if (K > 0) {
+    cand_idx     <- which(rhythmic_genes)
+    top_idx      <- cand_idx[order(pvals[cand_idx])][seq_len(K)]
+    estim_set    <- rep(FALSE, G)
+    estim_set[top_idx] <- TRUE
+  } else {
+    estim_set <- rhythmic_genes
+  }
 
   if (verbose) {
     cat("Genes passing rhythm filter (p <", min_rhythm_pval, "):",
-        sum(rhythmic_genes), "\n")
+        n_cand, " |  estimation set K =", K, "\n")
   }
 
   # Estimate parameter distributions
   params = list(
-    # Mesor (baseline expression)
+    # Mesor: all G_0 genes (reflects shared baseline regardless of rhythmic status)
     M_mean = mean(M_vals, na.rm = TRUE),
     M_sd = sd(M_vals, na.rm = TRUE),
 
-    # Amplitude (among rhythmic genes)
-    A_mean = mean(A_vals[rhythmic_genes], na.rm = TRUE),
-    A_sd = sd(A_vals[rhythmic_genes], na.rm = TRUE),
-    A_median = median(A_vals[rhythmic_genes], na.rm = TRUE),
-    A_q25 = quantile(A_vals[rhythmic_genes], 0.25, na.rm = TRUE),
-    A_q75 = quantile(A_vals[rhythmic_genes], 0.75, na.rm = TRUE),
+    # Amplitude: top-K rhythmic genes only
+    A_mean = mean(A_vals[estim_set], na.rm = TRUE),
+    A_sd = sd(A_vals[estim_set], na.rm = TRUE),
+    A_median = median(A_vals[estim_set], na.rm = TRUE),
+    A_q25 = quantile(A_vals[estim_set], 0.25, na.rm = TRUE),
+    A_q75 = quantile(A_vals[estim_set], 0.75, na.rm = TRUE),
 
-    # Phase (among rhythmic genes)
-    phi_mean = circular_mean(phi_vals[rhythmic_genes], period),
-    phi_concentration = circular_concentration(phi_vals[rhythmic_genes], period),
-    phi_uniform = FALSE,  # Will be set to TRUE if distribution is uniform
+    # Phase: top-K rhythmic genes only
+    phi_mean = circular_mean(phi_vals[estim_set], period),
+    phi_concentration = circular_concentration(phi_vals[estim_set], period),
+    phi_uniform = FALSE,
 
     # Noise level (all genes)
     sigma_mean = mean(sigma_vals, na.rm = TRUE),
     sigma_sd = sd(sigma_vals, na.rm = TRUE),
     sigma_median = median(sigma_vals, na.rm = TRUE),
 
-    # Effect size (among rhythmic genes)
-    r_mean = mean(r_vals[rhythmic_genes], na.rm = TRUE),
-    r_sd = sd(r_vals[rhythmic_genes], na.rm = TRUE),
-    r_median = median(r_vals[rhythmic_genes], na.rm = TRUE),
-    r_q25 = quantile(r_vals[rhythmic_genes], 0.25, na.rm = TRUE),
-    r_q75 = quantile(r_vals[rhythmic_genes], 0.75, na.rm = TRUE),
+    # Effect size: top-K rhythmic genes only
+    r_mean = mean(r_vals[estim_set], na.rm = TRUE),
+    r_sd = sd(r_vals[estim_set], na.rm = TRUE),
+    r_median = median(r_vals[estim_set], na.rm = TRUE),
+    r_q25 = quantile(r_vals[estim_set], 0.25, na.rm = TRUE),
+    r_q75 = quantile(r_vals[estim_set], 0.75, na.rm = TRUE),
 
-    # Proportion rhythmic (empirical estimate)
-    prop_rhythmic = mean(rhythmic_genes, na.rm = TRUE)
+    # Proportion rhythmic: full candidate set / G_0 (not capped)
+    prop_rhythmic = n_cand / G
   )
 
-  # Test for uniform phase distribution
-  if (length(na.omit(phi_vals[rhythmic_genes])) > 10) {
-    rayleigh_test = rayleigh_test_circular(phi_vals[rhythmic_genes], period)
+  # Test for uniform phase distribution using top-K genes
+  if (length(na.omit(phi_vals[estim_set])) > 10) {
+    rayleigh_test = rayleigh_test_circular(phi_vals[estim_set], period)
     params$phi_uniform = rayleigh_test$pvalue > 0.05
     params$phi_rayleigh_p = rayleigh_test$pvalue
   }
@@ -124,7 +137,8 @@ estimate_circadian_params = function(data, times, period = 24,
     sigma = sigma_vals,
     r = r_vals,
     pvalue = pvals,
-    is_rhythmic = rhythmic_genes
+    is_rhythmic = rhythmic_genes,  # G_R^cand: full set for prop_rhythmic / DR/DP/DM typing
+    in_estim_set = estim_set       # G_R: top-K for F_{A,sigma}, F_phi
   )
 
   if (verbose) {
@@ -357,7 +371,7 @@ sample_params = function(params, n = 1000) {
 #'
 #' @return CircadianBioOptions with empirical parameter distributions
 estCircadianParam <- function(data, times, period = 24,
-                              min_rhythm_pval = 0.1,
+                              min_rhythm_pval = 0.01,
                               prop_DR = 0.15, prop_DP = 0.10, prop_DA = 0.10,
                               prop_DM = 0.00, mesor_diff = c(0.5, 2.0),
                               phase_diff = c(-6, 6), amp_diff = c(0.5, 2),
@@ -383,15 +397,15 @@ estCircadianParam <- function(data, times, period = 24,
   sigma_valid <- params$raw$sigma[!is.na(params$raw$sigma) & params$raw$sigma > 0]
   lOD_emp <- log(sigma_valid)
 
-  # Amplitude and sigma: use rhythmic genes only, keeping them paired (same gene index)
-  # to preserve the empirical A-sigma correlation in downstream joint sampling.
-  rhythmic_valid <- rhythmic_idx & !is.na(params$raw$A) & params$raw$A > 0 &
-                    !is.na(params$raw$sigma) & params$raw$sigma > 0
-  amp_emp         <- params$raw$A[rhythmic_valid]
-  sigma_rhythmic_emp <- params$raw$sigma[rhythmic_valid]   # paired with amp_emp
+  # Amplitude and sigma: top-K estimation set (G_R), paired to preserve A-sigma correlation
+  estim_idx   <- params$raw$in_estim_set
+  estim_valid <- estim_idx & !is.na(params$raw$A) & params$raw$A > 0 &
+                 !is.na(params$raw$sigma) & params$raw$sigma > 0
+  amp_emp            <- params$raw$A[estim_valid]
+  sigma_rhythmic_emp <- params$raw$sigma[estim_valid]
 
-  # Phase: use rhythmic genes
-  phase_emp <- params$raw$phi[rhythmic_idx & !is.na(params$raw$phi)]
+  # Phase: top-K estimation set only
+  phase_emp <- params$raw$phi[estim_idx & !is.na(params$raw$phi)]
 
   # Cap differential proportions at the estimated rhythmic budget.
   # CircadianBioOptions requires prop_DR + prop_DP + prop_DA + prop_DM <= prop_rhythmic
@@ -449,7 +463,7 @@ estCircadianParam <- function(data, times, period = 24,
 #' @param times_1 Time points for group 1
 #' @param times_2 Time points for group 2
 #' @param period Circadian period (default 24)
-#' @param min_rhythm_pval P-value threshold for rhythmic classification (default 0.1)
+#' @param min_rhythm_pval P-value threshold for rhythmic classification (default 0.01)
 #' @param phase_shift_threshold Minimum |delta_phi| in hours to classify a
 #'   jointly-rhythmic gene as differentially phased (default 2 h)
 #' @param sim.seed Random seed
@@ -476,10 +490,10 @@ estCircadianParam <- function(data, times, period = 24,
 #' from group 1, consistent with estCircadianParam() for a single group.
 estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
                                       period = 24,
-                                      min_rhythm_pval = 0.1,
+                                      min_rhythm_pval = 0.01,
                                       phase_shift_threshold = 2,
-                                      prop_DM = 0.00,
-                                      mesor_diff = c(0.5, 2.0),
+                                      prop_DM = NULL,
+                                      mesor_diff = NULL,
                                       dp_shift_mode = c("uniform", "fixed"),
                                       sim.seed = 12345,
                                       verbose = TRUE) {
@@ -524,17 +538,45 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
 
   # prop_DP: fraction of ALL genes that are jointly rhythmic AND |delta_phi| > threshold
   dp_among_joint <- abs(delta_phi) > phase_shift_threshold & !is.na(delta_phi)
-  prop_DP_emp    <- prop_joint * mean(dp_among_joint, na.rm = TRUE)
+  prop_DP_emp    <- if (length(dp_among_joint) > 0)
+    prop_joint * mean(dp_among_joint, na.rm = TRUE) else 0
+
+  # prop_DM: jointly rhythmic genes with significant mesor difference -----------
+  # SE(M) ≈ sigma/sqrt(n) for OLS intercept; two-sample z-test on mesor difference
+  n1 <- ncol(data_1); n2 <- ncol(data_2)
+  se_mesor_diff <- sqrt(p1$raw$sigma^2 / n1 + p2$raw$sigma^2 / n2)
+  valid_mesor   <- jointly & !is.na(p1$raw$M) & !is.na(p2$raw$M) &
+                   !is.na(se_mesor_diff) & se_mesor_diff > 0
+  z_DM          <- rep(NA_real_, length(jointly))
+  z_DM[valid_mesor] <- (p2$raw$M[valid_mesor] - p1$raw$M[valid_mesor]) /
+                        se_mesor_diff[valid_mesor]
+  p_DM_g        <- 2 * pnorm(-abs(z_DM))
+  dm_mask       <- jointly & !is.na(p_DM_g) & p_DM_g < min_rhythm_pval
+  prop_DM_emp   <- if (!is.null(prop_DM)) prop_DM else mean(dm_mask, na.rm = TRUE)
+  n_dm_pilot    <- sum(dm_mask, na.rm = TRUE)
+
+  # mesor_diff: IQR of |M2 - M1| among detected DM genes (simulation draw range)
+  dm_raw_diffs <- abs(p2$raw$M - p1$raw$M)[dm_mask & !is.na(p2$raw$M - p1$raw$M)]
+  if (!is.null(mesor_diff)) {
+    mesor_diff_emp <- mesor_diff
+  } else if (length(dm_raw_diffs) >= 5) {
+    mesor_diff_emp <- c(quantile(dm_raw_diffs, 0.25, names = FALSE),
+                        quantile(dm_raw_diffs, 0.75, names = FALSE))
+    if (diff(mesor_diff_emp) < 0.1)
+      mesor_diff_emp <- c(mesor_diff_emp[1] * 0.9, mesor_diff_emp[2] * 1.1 + 0.1)
+  } else {
+    mesor_diff_emp <- c(0.3, 1.0)   # conservative fallback when too few DM genes
+  }
 
   # Budget guard: cap prop_DR + prop_DP + prop_DM to fit within union rhythmic budget.
   # Floating-point arithmetic can cause the sum to equal or fractionally exceed
   # prop_union_rhy, which would error in CircadianBioOptions.
-  total_diff <- prop_DR_emp + prop_DP_emp + prop_DM
+  total_diff <- sum(c(prop_DR_emp, prop_DP_emp, prop_DM_emp), na.rm = TRUE)
   if (total_diff >= prop_union_rhy && total_diff > 0) {
     scale_factor <- prop_union_rhy * 0.999 / total_diff
-    prop_DR_emp  <- prop_DR_emp * scale_factor
-    prop_DP_emp  <- prop_DP_emp * scale_factor
-    prop_DM      <- prop_DM    * scale_factor
+    prop_DR_emp  <- prop_DR_emp  * scale_factor
+    prop_DP_emp  <- prop_DP_emp  * scale_factor
+    prop_DM_emp  <- prop_DM_emp  * scale_factor
   }
 
   # phase_diff range: signed IQR among DP genes (fallback to +/- threshold)
@@ -568,14 +610,38 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   r_dp_eff <- 2 * r_joint[valid_dp] * abs(sin(pi * delta_phi[valid_dp] / period))
   r_dp_snr <- snr_summary(r_dp_eff)
 
-  # Warn if too few DP genes to trust the phase_diff IQR ---------------------
   n_dp_pilot <- sum(valid_dp, na.rm = TRUE)
-  if (n_dp_pilot < 20 && verbose) {
+
+  # Warn if too few pilot genes for any endpoint to trust power estimates ------
+  n_dr_pilot <- sum(dr_mask, na.rm = TRUE)
+  min_pilot  <- 50L
+
+  if (n_dr_pilot < min_pilot && verbose) {
     warning(sprintf(
-      paste0("Only %d jointly-rhythmic DP genes found in pilot (|Δφ|>%.1fh).\n",
-             "  phase_diff IQR estimate may be unreliable.\n",
-             "  Consider using phase_diff = c(-6, 6) as a conservative default."),
-      n_dp_pilot, phase_shift_threshold))
+      paste0("Only %d DR genes found in pilot (rhythmic in exactly one group) — ",
+             "fewer than the recommended minimum of %d.\n",
+             "  DR power will be near zero and estimates unreliable.\n",
+             "  --> Remove 'DR' from test_types in CircadianDesignOptions() to skip this endpoint,\n",
+             "      or use a larger pilot / relax min_rhythm_pval (currently %.3f)."),
+      n_dr_pilot, min_pilot, min_rhythm_pval))
+  }
+  if (n_dp_pilot < min_pilot && verbose) {
+    warning(sprintf(
+      paste0("Only %d DP genes found in pilot (jointly rhythmic & |Δφ|>%.1fh) — ",
+             "fewer than the recommended minimum of %d.\n",
+             "  DP power will be near zero and estimates unreliable.\n",
+             "  --> Remove 'DP' from test_types in CircadianDesignOptions() to skip this endpoint,\n",
+             "      or reduce phase_shift_threshold (currently %.1fh) / use a larger pilot."),
+      n_dp_pilot, phase_shift_threshold, min_pilot, phase_shift_threshold))
+  }
+  if (n_dm_pilot < min_pilot && verbose) {
+    warning(sprintf(
+      paste0("Only %d DM genes found in pilot (jointly rhythmic & significant mesor diff) — ",
+             "fewer than the recommended minimum of %d.\n",
+             "  DM power will be near zero and estimates unreliable.\n",
+             "  --> Remove 'DM' from test_types in CircadianDesignOptions() to skip this endpoint,\n",
+             "      or use a larger pilot / relax min_rhythm_pval (currently %.3f)."),
+      n_dm_pilot, min_pilot, min_rhythm_pval))
   }
 
   # amp_diff: kept for CircadianBioOptions signature (prop_DA = 0, so unused) -
@@ -585,17 +651,16 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   lBaselineExpr_emp <- p1$raw$M[!is.na(p1$raw$M)]
   sigma_valid       <- p1$raw$sigma[!is.na(p1$raw$sigma) & p1$raw$sigma > 0]
   lOD_emp           <- log(sigma_valid)
-  rhythmic_idx      <- p1$raw$is_rhythmic
-  # Keep A and sigma paired from the same gene for joint sampling
-  rhythmic_valid    <- rhythmic_idx & !is.na(p1$raw$A) & p1$raw$A > 0 &
-                       !is.na(p1$raw$sigma) & p1$raw$sigma > 0
-  amp_emp            <- p1$raw$A[rhythmic_valid]
-  sigma_rhythmic_emp <- p1$raw$sigma[rhythmic_valid]
-  phase_emp          <- p1$raw$phi[rhythmic_idx & !is.na(p1$raw$phi)]
+  # F_{A,sigma} and F_phi: top-K estimation set (G_R), paired for joint sampling
+  estim_valid_1      <- p1$raw$in_estim_set & !is.na(p1$raw$A) & p1$raw$A > 0 &
+                        !is.na(p1$raw$sigma) & p1$raw$sigma > 0
+  amp_emp            <- p1$raw$A[estim_valid_1]
+  sigma_rhythmic_emp <- p1$raw$sigma[estim_valid_1]
+  phase_emp          <- p1$raw$phi[p1$raw$in_estim_set & !is.na(p1$raw$phi)]
 
   # Group-2 distributions for fully symmetric two-group simulation -----------
   rhythmic_idx_2     <- p2$raw$is_rhythmic
-  amp_emp2           <- p2$raw$A[rhythmic_idx_2 & !is.na(p2$raw$A) & p2$raw$A > 0]
+  amp_emp2           <- p2$raw$A[p2$raw$in_estim_set & !is.na(p2$raw$A) & p2$raw$A > 0]
   sigma_valid_2      <- p2$raw$sigma[!is.na(p2$raw$sigma) & p2$raw$sigma > 0]
   lOD_emp2           <- log(sigma_valid_2)
   lBaselineExpr2_emp <- p2$raw$M[!is.na(p2$raw$M)]   # group-2 mesor distribution
@@ -605,9 +670,13 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
     # Simulation hyperparameters
     prop_DR_emp           = prop_DR_emp,
     prop_DP_emp           = prop_DP_emp,
+    prop_DM_emp           = prop_DM_emp,
     phase_diff_emp        = phase_diff_emp,
+    mesor_diff_emp        = mesor_diff_emp,
     phase_shift_threshold = phase_shift_threshold,
+    n_DR_genes_pilot      = n_dr_pilot,
     n_DP_genes_pilot      = n_dp_pilot,
+    n_DM_genes_pilot      = n_dm_pilot,
     # Rhythmicity summary
     prop_rhythmic_1       = p1$prop_rhythmic,
     prop_rhythmic_2       = p2$prop_rhythmic,
@@ -630,6 +699,10 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
                 phase_shift_threshold, prop_DP_emp))
     cat(sprintf("  Estimated phase_diff IQR (DP genes, n=%d): [%.2f, %.2f] h\n",
                 n_dp_pilot, phase_diff_emp[1], phase_diff_emp[2]))
+    cat(sprintf("  Estimated prop_DM  (jointly rhythmic & sig. mesor diff, p<%.2f): %.4f  (n=%d genes)\n",
+                min_rhythm_pval, prop_DM_emp, n_dm_pilot))
+    cat(sprintf("  Estimated mesor_diff IQR (DM genes): [%.3f, %.3f] log-CPM units\n",
+                mesor_diff_emp[1], mesor_diff_emp[2]))
     cat("\n  --- Signal-to-Noise Ratio guidance (r = A/sigma) ---\n")
     cat(sprintf("  Group 1 rhythmic genes  r: median=%.2f  IQR [%.2f, %.2f]\n",
                 r1_snr["median"], r1_snr["q25"], r1_snr["q75"]))
@@ -640,7 +713,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
     cat("  --> Compare these SNR values to the stratified power curves to\n")
     cat("      identify which fraction of your pilot genes will be detectable\n")
     cat("      at your planned sample size.\n")
-    cat("\n  prop_DR, prop_DP, phase_diff are used directly in CircadianBioOptions.\n")
+    cat("\n  prop_DR, prop_DP, prop_DM, phase_diff, mesor_diff are used directly in CircadianBioOptions.\n")
     cat("  Inspect $diagnostics to review or override any estimate.\n")
   }
 
@@ -654,14 +727,15 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
     lOD2            = lOD_emp2,            # F̂_σ2: group-2 noise distribution
     amplitude       = amp_emp,
     sigma_rhythmic  = sigma_rhythmic_emp,
+    cts             = times_1,             # F̂_TOD1: group-1 sampling time distribution
     amplitude2      = amp_emp2,            # F̂_A2: used for g2-only DR genes
     cts2            = times_2,             # F̂_TOD2: group-2 sampling time distribution
     phase           = phase_emp,
     prop_DR         = prop_DR_emp,
     prop_DP         = prop_DP_emp,
     prop_DA         = 0,
-    prop_DM         = prop_DM,             # user-specified; not estimated from pilot
-    mesor_diff      = mesor_diff,
+    prop_DM         = prop_DM_emp,
+    mesor_diff      = mesor_diff_emp,
     phase_diff      = phase_diff_emp,
     amp_diff        = amp_diff_emp,
     dp_shift_mode   = match.arg(dp_shift_mode),

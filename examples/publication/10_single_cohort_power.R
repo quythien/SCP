@@ -80,11 +80,14 @@ cat(sprintf("bin_width    : 0.25\n\n"))
 # =====================================================================
 # 2. Loop over brain regions
 # =====================================================================
-regions <- list(
+regions_all <- list(
   NAc     = "data/gse160521_nac_ctrl_pilot.rds",
   Caudate = "data/gse160521_caudate_ctrl_pilot.rds",
   Putamen = "data/gse160521_putamen_ctrl_pilot.rds"
 )
+region_filter <- Sys.getenv("REGION", unset = "")
+regions <- if (nchar(region_filter) > 0 && region_filter %in% names(regions_all))
+             regions_all[region_filter] else regions_all
 
 for (region_name in names(regions)) {
 
@@ -145,7 +148,7 @@ for (region_name in names(regions)) {
   fig_path <- file.path(out_dir_fig,
     sprintf("single_cohort_power_GSE160521_%s_Control.pdf", region_name))
   cat(sprintf("\nGenerating Figure → %s\n", fig_path))
-  plotSingleCohortFig1(
+  plotSingleCohortPower(
     res            = res,
     out_pdf        = fig_path,
     title          = sprintf("Single-cohort rhythmicity power — GSE160521 %s Control (n=%d)",

@@ -53,11 +53,14 @@ source_files = c(
   "plot_dr_power.R",             # Stratified power plotting functions
   "plot_with_se.R",              # SE-bar helpers + DR/DP 6-panel figures
   "plot_single_cohort.R",        # Single-cohort Figure 1 (3-panel)
+  "plot_diff.R",                 # Differential power plot (18-panel)
+  "npower.R",                    # npower(): find n for target power at given FDR
   "LRTest_diff_phase.R",         # LR test for differential phase
   "LRTest_diff_amp.R",           # LR test for differential amplitude
   "bootstrap_sim.R",             # Bootstrap design grid
   "fourier_sim.R",               # Fourier deviation simulation
-  "design_comparison.R"          # Two-stage vs bootstrap comparison
+  "design_comparison.R",         # Two-stage vs bootstrap comparison
+  "summarize_dcp_pairs.R"        # Cross-pair DCP summary table (prelim supp table)
 )
 
 for (file in source_files) {
