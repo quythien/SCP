@@ -85,12 +85,14 @@ flowchart TD
         BS["runBootstrapDesignGrid()"]
     end
 
-    R1["Power curve and n_power"]
+    R1["Power curve and n_power
+single-cohort"]
     R2["Power curve and n_power
-per DR · DP · DM"]
+DR · DP · DM"]
     R3["Recommended (B, m) design
 per method"]
-    R4["Power curve with 95% CI"]
+    R4["Power curve with 95% CI
+bootstrap uncertainty"]
 
     A --> I
     B --> I
@@ -101,9 +103,9 @@ per method"]
     E --> F
     F --> G
 
-    G -- "Sample size for rhythmic biomarker detection?" --> SC
-    G -- "Sample size for differential rhythmicity, phase, or mesor?" --> DF
-    G -- "Best time points vs replicates at fixed sample size?" --> BM
+    G -- "Sample size (n_power) for rhythmic biomarker detection?" --> SC
+    G -- "Sample size (n_power) for differential rhythmicity, phase, or mesor?" --> DF
+    G -- "Best time point coverage (B) vs replicates (m) at fixed sample size?" --> BM
     G -- "How sensitive to pilot size and signal strength?" --> BS
 
     SC --> R1
@@ -139,6 +141,8 @@ per method"]
 | 🟢 Green | Analysis runners |
 | 🟠 Orange | Results |
 
+Nodes at the same depth share the same colour: all inputs are blue, both estimation nodes are purple, both option nodes are yellow, all four result nodes are orange. Mermaid sizes each node to its text content, so result nodes are given two lines of similar length to keep them visually uniform.
+
 **n_power** — the smallest sample size N at which simulated power first reaches the target level (default 80%). Returned alongside the full power-vs-N curve so researchers can read off power at any N, not just the threshold crossing.
 
 ### Design options
@@ -161,7 +165,6 @@ per method"]
 | **FDR threshold** (`alpha`, `fdr_thresholds`) | Significance level for calling discoveries | Default `0.05`; can pass a vector to compare power at multiple thresholds simultaneously |
 | **Correction method** (`p.adjust.method`) | Multiple-testing correction across genes | Default `"BH"` (Benjamini-Hochberg); controls genome-wide FDR; `"bonferroni"` available for FWER control |
 | **Target power** (`target_power`) | Power level used to compute n_power | Default `0.80`; passed to `npower()` and `recommendDesign()` |
-| **Reference N** (`reference_n`) | Anchor N for comparison tables | Used when summarising power at a specific study size alongside the full curve |
 
 
 ---
