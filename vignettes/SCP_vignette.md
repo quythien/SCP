@@ -9,14 +9,15 @@
 ## Table of Contents
 
 1. [Overview](#1-overview)
-2. [Quick Start](#2-quick-start)
-3. [Single-Cohort Power](#3-single-cohort-power)
-4. [Differential Power](#4-differential-power)
-5. [B vs m Trade-off and Method Recommendation](#5-b-vs-m-trade-off-and-method-recommendation)
-6. [Bootstrap Uncertainty](#6-bootstrap-uncertainty)
-7. [Working with Result Objects](#7-working-with-result-objects)
-8. [Complete Publication Example](#8-complete-publication-example)
-9. [Function Reference](#9-function-reference)
+2. [Pipeline Flowchart](#2-pipeline-flowchart)
+3. [Quick Start](#3-quick-start)
+4. [Single-Cohort Power](#4-single-cohort-power)
+5. [Differential Power](#5-differential-power)
+6. [B vs m Trade-off and Method Recommendation](#6-b-vs-m-trade-off-and-method-recommendation)
+7. [Bootstrap Uncertainty](#7-bootstrap-uncertainty)
+8. [Working with Result Objects](#8-working-with-result-objects)
+9. [Complete Publication Example](#9-complete-publication-example)
+10. [Function Reference](#10-function-reference)
 
 ---
 
@@ -55,7 +56,103 @@ The framework is **semiparametric**: amplitude, noise, and proportion-rhythmic d
 
 ---
 
-## 2. Quick Start
+## 2. Pipeline Flowchart
+
+The diagram below shows the full SCP workflow from raw expression data to
+publication-ready power estimates. Every path starts with pilot estimation
+and options, then branches by the scientific question.
+
+```mermaid
+flowchart TD
+    %% ── Inputs ────────────────────────────────────────────────────────
+    A["🧬 Pilot expression matrix\n(genes × samples, log2-CPM)"]
+    B["🕐 Time-of-day vector\n(hours, 0–24)"]
+
+    %% ── Estimation ───────────────────────────────────────────────────
+    C["estCircadianParam()\nSingle-group pilot\n(A, σ, prop rhythmic, TOD)"]
+    D["estCircadianParamTwoGroup()\nTwo-group pilot\n(+ DR / DP / DM proportions)"]
+
+    %% ── Options ──────────────────────────────────────────────────────
+    E["CircadianDesignOptions()\nsample_sizes, nsims,\ndesign, B_values"]
+    F["CircadianAnalysisOptions()\nalpha, p.adjust.method,\nr_strata"]
+
+    %% ── Analysis branches ────────────────────────────────────────────
+    G{"Scientific\nquestion?"}
+
+    SC["runSingleCohortPower()\nMethods: DCP | JTK | RAIN | MH\nSweep: N × B × α₂"]
+    DF["runDifferentialPower()\nMethods: DCP | CircaCompare\n  LimoRhyde | DODR\nSweep: N × test_type × α₂"]
+    BM["recommendDesign()\nB vs m orchestrator\n① Guidance table\n② CircaPower (analytical)\n③ Simulation sweep"]
+    BS["runBootstrapDesignGrid()\nPilot uncertainty\nBootstrap CIs on power"]
+
+    %% ── Results ──────────────────────────────────────────────────────
+    R1["SCPSingleResult\n$power_df  $n80_df"]
+    R2["SCPDiffResult\n$power_df  $n80_df"]
+    R3["SCPRecommendResult\nAnalytical + simulated n80"]
+    R4["Bootstrap CI list\nMedian power + 95% CI"]
+
+    %% ── Outputs ──────────────────────────────────────────────────────
+    O["print() · plot() · npower()\nPDF figures · RDS results"]
+
+    %% ── Flow ─────────────────────────────────────────────────────────
+    A & B --> C
+    A & B --> D
+    C --> E
+    D --> E
+    E & F --> G
+
+    G -- "One group\nrhythmicity" --> SC
+    G -- "Two groups\nDR / DP / DM" --> DF
+    G -- "B vs m\ntrade-off" --> BM
+    G -- "Pilot\nuncertainty" --> BS
+
+    SC --> R1
+    DF --> R2
+    BM --> R3
+    BS --> R4
+
+    R1 & R2 & R3 & R4 --> O
+
+    %% ── Re-use arrow ─────────────────────────────────────────────────
+    R1 -. "prior_result\n(skip re-run)" .-> BM
+    R2 -. "prior_result\n(skip re-run)" .-> BM
+
+    %% ── Styles ───────────────────────────────────────────────────────
+    classDef input   fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f
+    classDef est     fill:#ede9fe,stroke:#7c3aed,color:#2e1065
+    classDef opts    fill:#fef9c3,stroke:#ca8a04,color:#422006
+    classDef runner  fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef result  fill:#ffedd5,stroke:#ea580c,color:#431407
+    classDef output  fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef decide  fill:#fce7f3,stroke:#db2777,color:#500724
+
+    class A,B input
+    class C,D est
+    class E,F opts
+    class G decide
+    class SC,DF,BM,BS runner
+    class R1,R2,R3,R4 result
+    class O output
+```
+
+### Reading the diagram
+
+| Color | Role |
+|-------|------|
+| 🔵 Blue | Raw input data |
+| 🟣 Purple | Pilot estimation functions |
+| 🟡 Yellow | Options builders |
+| 🔴 Pink | Scientific question branch |
+| 🟢 Green | Analysis runners |
+| 🟠 Orange | Result objects |
+| ⬜ Grey | Final output (figures, tables, RDS) |
+
+The dashed arrows show the **`prior_result` reuse pattern**: if you have
+already run `runSingleCohortPower()` or `runDifferentialPower()`, pass that
+result directly to `recommendDesign()` to skip re-running the simulation.
+
+---
+
+## 3. Quick Start
 
 ### Load the framework
 
@@ -96,11 +193,75 @@ analysis <- CircadianAnalysisOptions(
 
 ---
 
-## 3. Single-Cohort Power
+## 4. Single-Cohort Power
 
-`runSingleCohortPower()` sweeps N × B × α₂ × method and returns an `SCPSingleResult` object.
+SCP provides **two complementary approaches** for single-cohort power evaluation.
+Choose based on how much you trust the pilot and how much compute you can spend.
 
-### Minimal example
+| | Fast (closed-form) | Simulation-based |
+|-|-------------------|-----------------|
+| **Function** | `CircaPower()` directly, or Step 2 of `recommendDesign()` | `runSingleCohortPower()` |
+| **Speed** | Milliseconds | Minutes to hours |
+| **Pilot required** | Scalar r = A/σ (SNR) | Full pilot expression matrix |
+| **Method support** | DCP only | DCP, JTK, RAIN, MH |
+| **B-sensitivity** | Assumes B-invariance (equispaced, B ≥ 3) | Empirical; captures JTK/RAIN/MH B-effects |
+| **Waveform violation** | No (pure sinusoid) | Yes (α₂, α₃ parameters) |
+| **Use when** | Exploring N range; no pilot yet | Pilot available; final study design |
+
+---
+
+### 4a. Fast path — closed-form CircaPower
+
+`CircaPower()` implements the DCP analytical formula directly:
+
+$$\text{Power}(N, r) = 1 - \beta\!\left(F_{2,\,N-3}^{-1}(1-\alpha),\;\lambda = \frac{N r^2}{2}\right)$$
+
+where r = A/σ is the signal-to-noise ratio and λ is the non-centrality parameter.
+
+```r
+# Single (r, N) point
+CircaPower(r = 1.0, n = 60, alpha = 0.05)
+#> [1] 0.847
+
+# Sweep over N for a fixed r
+n_grid <- seq(20, 150, by = 10)
+pwr    <- sapply(n_grid, function(n) CircaPower(r = 1.0, n = n, alpha = 0.05))
+
+plot(n_grid, pwr, type = "b",
+     xlab = "N", ylab = "Power",
+     main = "DCP closed-form power (r = 1.0)")
+abline(h = 0.80, lty = 2, col = "grey50")
+```
+
+When you have a pilot, use `estCircadianParam()` to extract the empirical
+r distribution and apply CircaPower gene-by-gene:
+
+```r
+bio <- estCircadianParam(pilot_expr, pilot_times, period = 24)
+
+# Marginal power averaged over the empirical r distribution
+r_vals <- bio$amplitude / bio$sigma_rhythmic
+marginal_pwr <- sapply(
+  seq(20, 150, by = 10),
+  function(n) mean(CircaPower(r = r_vals, n = n, alpha = 0.05), na.rm = TRUE)
+)
+```
+
+**When to use the fast path:**
+- Quick feasibility check before committing to a full pilot
+- Exploring what r is needed to reach 80% power at a target N
+- DCP is your planned analysis method and the design is equispaced active
+
+**Limitation:** The closed-form formula is derived under pure sinusoidal truth
+(α₂ = 0) and equispaced active design. It does not capture JTK/RAIN/MH
+behavior, passive-design TOD variability, or waveform violations.
+
+---
+
+### 4b. Simulation-based path — `runSingleCohortPower()`
+
+`runSingleCohortPower()` sweeps N × B × α₂ × method and returns an
+`SCPSingleResult` object with empirically estimated power at every cell.
 
 ```r
 bio <- readRDS("data/gse160521_nac_ctrl_pilot.rds")
@@ -132,6 +293,12 @@ print(res)        # n80 summary table
 plot(res)         # power vs N, faceted by B × method
 npower(res)       # interpolated N for 80% power
 ```
+
+**When to use the simulation path:**
+- You have a pilot dataset with ≥ 15 samples
+- You plan to use JTK, RAIN, or MH (B-sensitive methods)
+- You want to evaluate cosinor waveform violation (α₂ > 0)
+- Final study design requiring publication-quality power estimates
 
 ### Multi-method B vs m sweep
 
@@ -176,9 +343,26 @@ $$y \sim M + A\bigl[\cos(\omega t - \phi) + \alpha_2 \cos(2\omega t - \phi)\bigr
 
 DCP is omnibus and B-invariant; MH benefits from both higher B (more harmonics fit) and higher α₂ (more signal in harmonics).
 
+### Choosing between fast and simulation paths
+
+```
+Do you have a pilot dataset?
+    │
+    ├── No ──► Use CircaPower() with a target r
+    │          (feasibility check; DCP only)
+    │
+    └── Yes ──► Are you using DCP only and active equispaced design?
+                    │
+                    ├── Yes, need fast answer ──► CircaPower() over empirical r distribution
+                    │                             (seconds; good for grant writing)
+                    │
+                    └── No, or need full accuracy ──► runSingleCohortPower()
+                                                      (minutes–hours; publication quality)
+```
+
 ---
 
-## 4. Differential Power
+## 5. Differential Power
 
 `runDifferentialPower()` sweeps N × α₂ × method × test_type.  
 Pilot parameters come from `estCircadianParamTwoGroup()`.
@@ -239,7 +423,7 @@ res_diff_multi <- runDifferentialPower(
 
 ---
 
-## 5. B vs m Trade-off and Method Recommendation
+## 6. B vs m Trade-off and Method Recommendation
 
 `recommendDesign()` is the full B vs m orchestrator. It runs three steps:
 
@@ -314,7 +498,7 @@ MH        Yes            Adaptive K = floor((B-1)/2); more harmonics captured at
 
 ---
 
-## 6. Bootstrap Uncertainty
+## 7. Bootstrap Uncertainty
 
 `runBootstrapDesignGrid()` quantifies pilot uncertainty by re-sampling the pilot and re-estimating power at each draw, returning pointwise 95% CIs.
 
@@ -350,7 +534,7 @@ In those cases, treat the median power estimate conservatively and consider addi
 
 ---
 
-## 7. Working with Result Objects
+## 8. Working with Result Objects
 
 All runners return S3 objects with consistent `print`, `plot`, and `npower` methods.
 
@@ -387,7 +571,7 @@ res$n80_df
 
 ---
 
-## 8. Complete Publication Example
+## 9. Complete Publication Example
 
 ```r
 # 0. Load framework
@@ -435,7 +619,7 @@ saveRDS(res, sprintf("output/single_cohort/results/fig1_nac_%s.rds",
 
 ---
 
-## 9. Function Reference
+## 10. Function Reference
 
 ### Core runners
 
