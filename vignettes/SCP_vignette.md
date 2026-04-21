@@ -69,16 +69,11 @@ flowchart TD
     B["Time-of-day vector"]
     I["Pilot inputs"]
 
-    C["Single-group pilot
-estCircadianParam()"]
-    D["Two-group pilot
-estCircadianParamTwoGroup()"]
+    C["Single-group pilot"]
+    D["Two-group pilot"]
 
-    E["Design options
-N grid · B · active/passive · nsims"]
-
-    F["Analysis options
-FDR level · correction · SNR strata"]
+    E["Design options"]
+    F["Analysis options"]
 
     G{"Scientific question?"}
 
@@ -90,13 +85,13 @@ FDR level · correction · SNR strata"]
         BS["runBootstrapDesignGrid()"]
     end
 
-    R1["Power vs N · n80
-per method · B · waveform"]
-    R2["DR / DP / DM power vs N
-per method · endpoint"]
-    R3["Optimal B per method
-analytical + simulated n80"]
-    R4["Bootstrap CI on power
+    R1["n80 to reach target power
+method · B · waveform"]
+    R2["n80 to reach target power
+DR · DP · DM"]
+    R3["Recommended B per method
+analytical vs simulated n80"]
+    R4["Power curve with 95% CI
 n80 uncertainty range"]
 
     A --> I
@@ -108,8 +103,8 @@ n80 uncertainty range"]
     E --> F
     F --> G
 
-    G -- "How many samples for rhythmicity?" --> SC
-    G -- "How many samples for DR / DP / DM?" --> DF
+    G -- "How many samples to reach target power for rhythmicity?" --> SC
+    G -- "How many samples to reach target power for DR / DP / DM?" --> DF
     G -- "Best B vs m at fixed N?" --> BM
     G -- "How sensitive to pilot size?" --> BS
 
@@ -140,28 +135,38 @@ n80 uncertainty range"]
 | Color | Role |
 |-------|------|
 | 🔵 Blue | Raw inputs and pilot data |
-| 🟣 Purple | Pilot estimation functions |
-| 🟡 Yellow | Options builders |
-| 🔴 Pink | Scientific question branch |
+| 🟣 Purple | Pilot estimation |
+| 🟡 Yellow | Options |
+| 🔴 Pink | Scientific question |
 | 🟢 Green | Analysis runners |
-| 🟠 Orange | Result objects |
+| 🟠 Orange | Results — primary output is **n80**: the sample size needed to reach the target power level |
 
-### Design options legend
+### Design options
 
-| Abbreviation | Full name | Notes |
-|---|---|---|
+| Option | What it controls | Notes |
+|--------|-----------------|-------|
 | **N grid** | Sample sizes to evaluate | e.g. `c(20, 40, 60, 80, 100)` |
-| **B** | Number of distinct time points | Active designs only; `m = N/B` replicates per time point is derived |
-| **active / passive** | Study design type | Active = equispaced ZTs; passive = observed (e.g. post-mortem) TOD |
-| **nsims** | Simulations per (N, B) cell | Higher = smoother power curve; 30–200 typical |
+| **B** | Number of distinct collection time points | Active designs only; replicates per time point `m = N/B` is derived |
+| **active / passive** | Study design type | Active = equally-spaced ZTs chosen by researcher; passive = observed TOD (e.g. post-mortem) |
+| **nsims** | Simulations per (N, B) cell | Higher = smoother power estimates; 30–200 typical |
 
-### Analysis options legend
+### Analysis options
 
-| Abbreviation | Full name | Notes |
-|---|---|---|
-| **FDR level** | `fdr_thresholds` | One or more thresholds, e.g. `c(0.01, 0.05, 0.10)`; power is evaluated at each |
-| **correction** | `p.adjust.method` | Multiple-testing correction applied across genes; default `"BH"` (Benjamini-Hochberg) |
-| **SNR strata** | `r_strata` | Breakpoints on $r = A/\sigma$ for stratified power reporting; auto-set by `makeAdaptiveRStrata()` |
+| Option | What it controls | Notes |
+|--------|-----------------|-------|
+| **FDR control** | Significance threshold `alpha` and multiple-testing correction `p.adjust.method` | Threshold (default 0.05) and method (default `"BH"`, Benjamini-Hochberg) are set together; power is the fraction of true targets called significant after correction |
+
+### Supported detection methods
+
+| Method | Single-cohort | Differential | B-sensitive? |
+|--------|:---:|:---:|---|
+| **DCP** (DiffCircaPipeline cosinor) | ✓ | DR · DP · DM | No — power depends only on N |
+| **JTK\_CYCLE** | ✓ | — | Weak optimum near B = 4–6 |
+| **RAIN** | ✓ | — | Yes — more distinct ZTs help |
+| **MH** (multi-harmonic) | ✓ | — | Yes — adaptive harmonics K = ⌊(B−1)/2⌋ |
+| **CircaCompare** | — | DP · DM | — |
+| **LimoRhyde** | — | DR | — |
+| **DODR** | — | DR | — |
 
 ---
 
