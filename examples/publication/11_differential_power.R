@@ -140,16 +140,18 @@ for (comp_name in comp_names_run) {
     p.adjust.method = "BH"
   )
 
-  cat(sprintf("\n--- Running runSimsDiff ---\n"))
-  t_start <- proc.time()
-  set.seed(GLOBAL_SEED)
-  res <- runSimsDiff(bio, design, analysis, verbose = TRUE, mc.cores = n_cores)
-  elapsed <- (proc.time() - t_start)[["elapsed"]]
-  cat(sprintf("\nDone in %.1f seconds.\n", elapsed))
-
-  # --- Save intermediate results immediately ---
+  # --- Save intermediate results immediately after run ---
   rds_path <- file.path(out_dir_res,
     sprintf("diff_power_%s_%s.rds", comp$label_short, timestamp))
+
+  set.seed(GLOBAL_SEED)
+  res <- runDifferentialPower(bio, design, analysis,
+                               methods    = "DCP",
+                               test_types = c("DR", "DP", "DM"),
+                               mc.cores   = n_cores,
+                               plot       = FALSE,
+                               verbose    = TRUE)
+
   saveRDS(res, rds_path)
   cat(sprintf("Results saved -> %s\n", rds_path))
 

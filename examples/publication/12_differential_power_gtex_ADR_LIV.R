@@ -121,35 +121,23 @@ analysis <- CircadianAnalysisOptions(
   p.adjust.method = "BH"
 )
 
-cat("\n--- Running runSimsDiff ---\n")
-t_start <- proc.time()
-set.seed(GLOBAL_SEED)
-res <- runSimsDiff(bio, design, analysis, verbose = TRUE, mc.cores = n_cores)
-elapsed <- (proc.time() - t_start)[["elapsed"]]
-cat(sprintf("\nDone in %.1f seconds.\n", elapsed))
-
 rds_path <- file.path(out_dir_res,
   sprintf("diff_power_ADR_vs_LIV_%s.rds", timestamp))
-saveRDS(res, rds_path)
-cat(sprintf("Results saved -> %s\n", rds_path))
-
-# =====================================================================
-# 5. Generate figure
-# =====================================================================
 fig_path <- file.path(out_dir_fig,
   sprintf("diff_power_fig_ADR_vs_LIV_%s.pdf", timestamp))
-cat(sprintf("\nGenerating figure -> %s\n", fig_path))
 
-plotDiffPower(
-  res_list      = list(res),
-  comp_labels   = c("Adrenal Gland vs Liver (GTEx)"),
-  display_sizes = c(20, 40, 60, 80, 100, 120, 150, 200),
-  r_max         = 3,
-  panel_fdr     = c(DR = 0.05, DP = 0.05, DM = 0.05),
-  out_pdf       = fig_path,
-  width         = 15,
-  height        = 15
-)
+set.seed(GLOBAL_SEED)
+res <- runDifferentialPower(bio, design, analysis,
+                             methods     = "DCP",
+                             test_types  = c("DR", "DP", "DM"),
+                             mc.cores    = n_cores,
+                             plot        = TRUE,
+                             output_file = fig_path,
+                             verbose     = TRUE)
+
+saveRDS(res, rds_path)
+cat(sprintf("Results saved -> %s\n", rds_path))
+cat(sprintf("Figure saved  -> %s\n", fig_path))
 
 cat("\n=== Done ===\n")
 cat(sprintf("Results : %s\n", rds_path))

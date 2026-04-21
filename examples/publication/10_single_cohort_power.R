@@ -125,44 +125,20 @@ for (region_name in names(regions)) {
                     collapse = ", "), "Inf"))
 
   # --- Run simulation ---
-  cat("\n--- Running runSimsSingleCohort ---\n")
-  t_start <- proc.time()
-  res <- runSimsSingleCohort(bio, design, analysis,
-                             verbose = TRUE, mc.cores = n_cores)
-  elapsed <- (proc.time() - t_start)[["elapsed"]]
-  cat(sprintf("\nDone in %.1f seconds.  n0_CircaPower = %s\n",
-              elapsed,
-              ifelse(is.na(res$n0_circapower), "NA", as.character(res$n0_circapower))))
-
-  # --- Console summary ---
-  cat(sprintf("\n%-6s  %-8s  %-8s  %-8s\n", "n", "Power", "FDR", "Avg TD"))
-  for (j in seq_along(sample_sizes)) {
-    cat(sprintf("%-6d  %6.1f%%  %6.4f  %7.1f\n",
-                sample_sizes[j],
-                100 * mean(res$marginal_power[j, ], na.rm = TRUE),
-                mean(res$marginal_FDR[j, ], na.rm = TRUE),
-                mean(res$marginal_TD[j, ], na.rm = TRUE)))
-  }
-
-  # --- Figure ---
   fig_path <- file.path(out_dir_fig,
     sprintf("single_cohort_power_GSE160521_%s_Control.pdf", region_name))
-  cat(sprintf("\nGenerating Figure → %s\n", fig_path))
-  plotSingleCohortPower(
-    res            = res,
-    out_pdf        = fig_path,
-    title          = sprintf("Single-cohort rhythmicity power — GSE160521 %s Control (n=%d)",
-                             region_name, length(bio$cts)),
-    fdr_thresholds = c(0.01, 0.05, 0.10, 0.20),
-    reference_n    = NULL,
-    width          = 15,
-    height         = 5.5
-  )
-
-  # --- Save results ---
   rds_path <- file.path(out_dir_res,
     sprintf("single_cohort_power_GSE160521_%s_Control_%s.rds",
             region_name, timestamp))
+
+  set.seed(GLOBAL_SEED)
+  res <- runSingleCohortPower(bio, design, analysis,
+                               methods     = "DCP",
+                               mc.cores    = n_cores,
+                               plot        = TRUE,
+                               output_file = fig_path,
+                               verbose     = TRUE)
+
   saveRDS(res, rds_path)
   cat(sprintf("Results saved → %s\n", rds_path))
 }

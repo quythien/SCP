@@ -120,31 +120,19 @@ for (tname in names(tissues)) {
     r_strata        = makeAdaptiveRStrata(bio, bin_width = 0.25)
   )
 
-  cat("\n--- Running runSimsSingleCohort ---\n")
-  t_start <- proc.time()
-  set.seed(GLOBAL_SEED)
-  res <- runSimsSingleCohort(bio, design, analysis,
-                             verbose = TRUE, mc.cores = n_cores)
-  elapsed <- (proc.time() - t_start)[["elapsed"]]
-  cat(sprintf("\nDone in %.1f seconds.\n", elapsed))
-
   fig_path <- file.path(out_dir_fig,
     sprintf("single_cohort_power_GTEx_%s.pdf", tname))
-  cat(sprintf("Generating figure -> %s\n", fig_path))
-  plotSingleCohortPower(
-    res            = res,
-    out_pdf        = fig_path,
-    title          = sprintf("Single-cohort rhythmicity power — %s (n=%d)",
-                             ti$label, length(bio$cts)),
-    fdr_thresholds = c(0.01, 0.05, 0.10, 0.20),
-    r_max          = 3,
-    reference_n    = NULL,
-    width          = 15,
-    height         = 5.5
-  )
-
   rds_path <- file.path(out_dir_res,
     sprintf("single_cohort_power_GTEx_%s_%s.rds", tname, timestamp))
+
+  set.seed(GLOBAL_SEED)
+  res <- runSingleCohortPower(bio, design, analysis,
+                               methods     = "DCP",
+                               mc.cores    = n_cores,
+                               plot        = TRUE,
+                               output_file = fig_path,
+                               verbose     = TRUE)
+
   saveRDS(res, rds_path)
   cat(sprintf("Results saved -> %s\n", rds_path))
 }

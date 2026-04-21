@@ -76,8 +76,8 @@ opts_analysis <- CircadianAnalysisOptions(
   boot_result <- tryCatch(
     runBootstrapDesignGrid(pilot_data = pilot_data, pilot_times = pilot_times,
                            boot.opts = boot_opts, analysis.opts = opts_analysis,
-                           bio_diff.opts = bio_diff_opts, verbose = FALSE,
-                           mc.cores = NCORES),
+                           bio_diff.opts = bio_diff_opts, mode = "differential",
+                           verbose = FALSE, mc.cores = NCORES),
     error = function(e) { warning(sprintf("Bootstrap failed: %s", e$message)); NULL }
   )
 
