@@ -1083,56 +1083,297 @@ makeAdaptiveRStrata <- function(bio.opts, bin_width = 0.25, r_min_pct = 0) {
 # B vs m design guidance
 # =====================================================================
 
-#' Recommend B vs m design for a given analysis method
+#' Print B vs m method guidance table
 #'
-#' Different detection methods have fundamentally different statistical
-#' sensitivity to B (time points) vs m (replicates per time point).
-#' This function prints a recommendation table and returns it invisibly.
+#' Prints a table explaining how each detection method responds to B (time
+#' points) vs m (replicates per ZT). Called automatically by recommendDesign()
+#' and runSingleCohortPower() when verbose=TRUE.
 #'
-#' @param methods Character vector of intended analysis methods.
-#'   Any of "DCP", "JTK", "RAIN", "MH", "LimoRhyde", "DODR".
-#'   Default: all single-cohort methods.
-#' @param verbose Print the recommendation table (default TRUE)
-#'
-#' @return Invisible data.frame with columns: method, recommended_B, B_vs_m, reason
+#' @param methods Character vector of methods to include
+#' @param verbose Print to console (default TRUE)
+#' @return Invisible data.frame[method, recommended_B, B_vs_m, reason]
 #' @export
-recommendDesign <- function(methods = c("DCP","JTK","RAIN","MH"),
-                             verbose = TRUE) {
+printMethodGuidance <- function(methods = c("DCP","JTK","RAIN","MH"),
+                                 verbose = TRUE) {
   tbl <- data.frame(
-    method        = c("DCP",   "JTK",     "RAIN",    "MH",
-                      "LimoRhyde", "DODR"),
-    recommended_B = c("≥4, any",  "4–6",   "6–8",     "6 (or 3–4 if sinusoidal)",
+    method        = c("DCP",      "JTK",   "RAIN",  "MH",
+                      "LimoRhyde","DODR"),
+    recommended_B = c("≥4, any",  "4–6",   "6–8",   "6 (or 3–4 if sinusoidal)",
                       "≥4, any",  "≥4, any"),
-    B_vs_m        = c("N-driven", "↑m",    "↑B",      "↑B (if α₂≥0.5)",
+    B_vs_m        = c("N-driven", "↑m",    "↑B",    "↑B (if α₂≥0.5)",
                       "N-driven", "N-driven"),
     reason        = c(
-      "NCP = N·r²/2 is B-invariant for equispaced B≥3; adding time points does not help",
-      "Collapses replicates to per-ZT means before ranking; more m = cleaner means = stronger test",
-      "Umbrella test uses individual observations; more distinct ZTs improve rank resolution",
-      "Adaptive K=⌊(B-1)/2⌋: K=2 at B=6 captures 2nd-harmonic signal; K≥5 (B≥12) over-fits",
-      "limma interaction model: power scales with N, not B; same as DCP for B-invariance",
+      "NCP = N·r²/2 is B-invariant for equispaced B≥3; time points do not help",
+      "Collapses replicates to per-ZT means before ranking; more m = stronger test",
+      "Umbrella test uses individual observations; more ZTs improve rank resolution",
+      "Adaptive K=⌊(B-1)/2⌋: K=2 at B=6 captures harmonic signal; K≥5 over-fits",
+      "limma interaction model: power scales with N, not B",
       "Regression-based; power scales with N; B does not change sensitivity"
     ),
     stringsAsFactors = FALSE
   )
-
   tbl <- tbl[tbl$method %in% methods, ]
 
   if (verbose) {
-    cat("\n=== B vs m Design Recommendation ===\n")
-    cat(sprintf("%-14s  %-26s  %-12s  %s\n",
-                "Method", "Recommended B", "Preference", "Reason"))
-    cat(strrep("-", 100), "\n")
+    cat("\n=== B vs m Method Guidance ===\n")
+    cat(sprintf("%-14s  %-26s  %-16s  %s\n",
+                "Method", "Recommended B", "Preference", "Statistical reason"))
+    cat(strrep("-", 105), "\n")
     for (i in seq_len(nrow(tbl))) {
-      cat(sprintf("%-14s  %-26s  %-12s  %s\n",
+      cat(sprintf("%-14s  %-26s  %-16s  %s\n",
                   tbl$method[i], tbl$recommended_B[i],
                   tbl$B_vs_m[i], tbl$reason[i]))
     }
-    cat("\nKey: N-driven = B choice doesn't matter; ↑B = more time points helps;\n")
-    cat("     ↑m = more replicates per ZT helps.\n\n")
+    cat("\nKey: N-driven = B irrelevant, invest in N.\n")
+    cat("     ↑B = denser time coverage helps.  ↑m = more replicates help.\n\n")
+  }
+  invisible(tbl)
+}
+
+
+#' B vs m design study — analytical + simulation
+#'
+#' Full B vs m study orchestrator. Three sequential steps:
+#'
+#' 1. Print method guidance table (printMethodGuidance)
+#' 2. Analytical: CircaPower closed-form power at each N (DCP; B-invariant).
+#'    For JTK/RAIN/MH no closed form exists — simulation is required.
+#' 3. Simulation: run runSingleCohortPower() or runDifferentialPower(), or
+#'    absorb a prior_result from a previous call to skip re-running.
+#'
+#' @param bio.opts      CircadianBioOptions from estCircadianParam() or
+#'                      estCircadianParamTwoGroup()
+#' @param design.opts   CircadianDesignOptions with sample_sizes and B_values
+#' @param analysis.opts CircadianAnalysisOptions
+#' @param methods       Detection methods to compare. Single-cohort:
+#'                      c("DCP","JTK","RAIN","MH"). Differential:
+#'                      c("DCP","CircaCompare","LimoRhyde","DODR").
+#' @param target_power  Target power for recommendation (default 0.80)
+#' @param mode          "single" or "differential" (default "single")
+#' @param run_simulation TRUE = run full simulation after analytical step.
+#'                       FALSE = analytical (CircaPower) only.
+#' @param prior_result  A previous SCPSingleResult or SCPDiffResult to reuse
+#'                      instead of re-running simulation.
+#' @param alpha2        2nd-harmonic deviation (scalar or vector)
+#' @param alpha3        3rd-harmonic deviation (scalar or vector)
+#' @param mc.cores      Parallel cores for simulation step
+#' @param plot          Auto-plot final recommendation
+#' @param output_file   PDF path (NULL = screen)
+#' @param verbose       Print progress
+#'
+#' @return SCPRecommendResult with:
+#'   $guidance      — data.frame: method guidance table
+#'   $analytical_df — data.frame[method, N, power_analytical] (DCP only)
+#'   $simulation    — SCPSingleResult or SCPDiffResult (NULL if not run)
+#'   $recommendation — data.frame[method, optimal_B, n_target, note]
+#' @export
+recommendDesign <- function(bio.opts,
+                             design.opts,
+                             analysis.opts,
+                             methods       = c("DCP","JTK","RAIN","MH"),
+                             target_power  = 0.80,
+                             mode          = c("single","differential"),
+                             run_simulation = TRUE,
+                             prior_result  = NULL,
+                             alpha2        = 0,
+                             alpha3        = 0,
+                             mc.cores      = 1L,
+                             plot          = TRUE,
+                             output_file   = NULL,
+                             verbose       = TRUE) {
+
+  stopifnot(inherits(bio.opts,      "CircadianBioOptions"))
+  stopifnot(inherits(design.opts,   "CircadianDesignOptions"))
+  stopifnot(inherits(analysis.opts, "CircadianAnalysisOptions"))
+  mode <- match.arg(mode)
+
+  N_vals <- design.opts$sample_sizes
+  B_vals <- design.opts$B_values %||% length(unique(design.opts$cts %||% integer(0)))
+  if (length(B_vals) == 0) B_vals <- 1L
+  alpha  <- analysis.opts$alpha
+  period <- bio.opts$period %||% 24
+
+  # ------------------------------------------------------------------
+  # Step 1: Print method guidance
+  # ------------------------------------------------------------------
+  guidance <- printMethodGuidance(methods = methods, verbose = verbose)
+
+  # ------------------------------------------------------------------
+  # Step 2: Analytical estimates (CircaPower, DCP only, B-invariant)
+  # ------------------------------------------------------------------
+  if (verbose) cat("=== Step 2: Analytical estimates (CircaPower / DCP) ===\n")
+
+  # Median r from bio.opts
+  if (!is.null(bio.opts$sigma_rhythmic) &&
+      length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)) {
+    r_vec <- bio.opts$amplitude / bio.opts$sigma_rhythmic
+  } else {
+    r_vec <- bio.opts$amplitude / exp(median(bio.opts$lOD, na.rm = TRUE))
+  }
+  r_med <- median(r_vec[is.finite(r_vec) & r_vec > 0], na.rm = TRUE)
+
+  analytical_df <- data.frame(
+    method = "DCP",
+    N      = N_vals,
+    power  = vapply(N_vals, function(n) {
+      tryCatch(CircaPower(n = n, power = NULL, r = r_med, alpha = alpha)$power,
+               error = function(e) NA_real_)
+    }, numeric(1)),
+    note   = sprintf("B-invariant, r_med=%.2f", r_med),
+    stringsAsFactors = FALSE
+  )
+
+  n80_analytical <- tryCatch(
+    CircaPower(n = NULL, power = target_power, r = r_med, alpha = alpha)$n,
+    error = function(e) NA_real_)
+
+  if (verbose) {
+    cat(sprintf("  Median pilot r = %.2f\n", r_med))
+    cat(sprintf("  CircaPower n%d  = %s (DCP, any B)\n",
+                round(target_power * 100),
+                if (is.na(n80_analytical)) "not reached" else as.character(n80_analytical)))
+    cat("  Note: JTK, RAIN, MH have no closed-form — simulation required.\n\n")
   }
 
-  invisible(tbl)
+  # ------------------------------------------------------------------
+  # Step 3: Simulation (use prior_result or run fresh)
+  # ------------------------------------------------------------------
+  sim_result <- NULL
+
+  if (!is.null(prior_result)) {
+    valid_classes <- c("SCPSingleResult", "SCPDiffResult")
+    if (!inherits(prior_result, valid_classes))
+      stop("prior_result must be a SCPSingleResult or SCPDiffResult")
+    sim_result <- prior_result
+    if (verbose) cat("=== Step 3: Using prior simulation result ===\n\n")
+
+  } else if (run_simulation) {
+    if (verbose) cat("=== Step 3: Running simulation ===\n")
+    if (mode == "single") {
+      sim_result <- runSingleCohortPower(
+        bio.opts, design.opts, analysis.opts,
+        methods  = methods, alpha2 = alpha2, alpha3 = alpha3,
+        mc.cores = mc.cores, plot = FALSE, verbose = verbose
+      )
+    } else {
+      sim_result <- runDifferentialPower(
+        bio.opts, design.opts, analysis.opts,
+        methods  = methods, alpha2 = alpha2, alpha3 = alpha3,
+        mc.cores = mc.cores, plot = FALSE, verbose = verbose
+      )
+    }
+  } else {
+    if (verbose) cat("=== Step 3: Skipped (run_simulation=FALSE) ===\n\n")
+  }
+
+  # ------------------------------------------------------------------
+  # Step 4: Synthesise recommendation — optimal B per method
+  # ------------------------------------------------------------------
+  if (verbose) cat(sprintf("=== Step 4: Recommendation at target power=%.0f%% ===\n",
+                            target_power * 100))
+
+  # Start with analytical recommendation for DCP
+  rec_rows <- list(data.frame(
+    method    = "DCP",
+    optimal_B = "any (B-invariant)",
+    n_target  = n80_analytical %||% NA_real_,
+    source    = "analytical",
+    note      = sprintf("B does not affect power; invest in N (n%d≈%s)",
+                        round(target_power * 100),
+                        if (is.na(n80_analytical)) "not reached" else n80_analytical),
+    stringsAsFactors = FALSE
+  ))
+
+  # Simulation-based recommendations for other methods
+  if (!is.null(sim_result)) {
+    df <- sim_result$power_df
+    sim_methods <- setdiff(unique(df$method), "DCP")
+
+    for (mth in sim_methods) {
+      sub <- df[df$method == mth & df$alpha2 == min(df$alpha2), ]
+      if (nrow(sub) == 0) next
+
+      # For each B: find smallest N reaching target_power
+      best_B <- NA_integer_; best_n <- Inf
+      for (b in sort(unique(sub$B))) {
+        sb  <- sub[sub$B == b, ]
+        sb  <- sb[order(sb$N), ]
+        hit <- sb$N[sb$power >= target_power]
+        if (length(hit) > 0 && hit[1] < best_n) {
+          best_n <- hit[1]; best_B <- b
+        }
+      }
+      rec_rows[[mth]] <- data.frame(
+        method    = mth,
+        optimal_B = if (is.na(best_B)) "not reached" else as.character(best_B),
+        n_target  = if (is.infinite(best_n)) NA_real_ else best_n,
+        source    = "simulation",
+        note      = guidance$B_vs_m[guidance$method == mth][1] %||% "",
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+
+  recommendation <- do.call(rbind, rec_rows)
+
+  if (verbose) {
+    cat(sprintf("  %-14s  %-18s  %-10s  %s\n",
+                "Method", "Optimal B", sprintf("n%d", round(target_power*100)), "Source"))
+    cat(strrep("-", 70), "\n")
+    for (i in seq_len(nrow(recommendation))) {
+      cat(sprintf("  %-14s  %-18s  %-10s  %s\n",
+                  recommendation$method[i],
+                  recommendation$optimal_B[i],
+                  recommendation$n_target[i] %||% "NA",
+                  recommendation$source[i]))
+    }
+    cat("\n")
+  }
+
+  out <- structure(
+    list(
+      guidance       = guidance,
+      analytical_df  = analytical_df,
+      simulation     = sim_result,
+      recommendation = recommendation,
+      target_power   = target_power,
+      mode           = mode
+    ),
+    class = "SCPRecommendResult"
+  )
+
+  if (plot) plot(out, output_file = output_file)
+  out
+}
+
+#' @export
+print.SCPRecommendResult <- function(x, ...) {
+  cat("SCPRecommendResult\n")
+  cat(sprintf("  mode: %s  |  target power: %.0f%%\n",
+              x$mode, x$target_power * 100))
+  cat("\nRecommendation:\n")
+  print(x$recommendation[, c("method","optimal_B","n_target","note")])
+  invisible(x)
+}
+
+#' @export
+plot.SCPRecommendResult <- function(x, output_file = NULL, ...) {
+  if (!is.null(x$simulation)) {
+    plot(x$simulation, output_file = output_file, ...)
+  } else if (requireNamespace("ggplot2", quietly = TRUE)) {
+    df <- x$analytical_df
+    p  <- ggplot2::ggplot(df, ggplot2::aes(x = N, y = power)) +
+      ggplot2::geom_line(colour = "steelblue", linewidth = 1) +
+      ggplot2::geom_point(colour = "steelblue") +
+      ggplot2::geom_hline(yintercept = x$target_power,
+                          linetype = "dashed", colour = "grey40") +
+      ggplot2::labs(x = "N", y = "Power",
+                    title = "CircaPower analytical (DCP, B-invariant)") +
+      ggplot2::theme_bw()
+    if (!is.null(output_file)) ggplot2::ggsave(output_file, p, width=6, height=4)
+    else print(p)
+  }
+  invisible(x)
 }
 
 
@@ -1196,7 +1437,7 @@ runSingleCohortPower <- function(bio.opts,
   grid <- grid[grid$N %% grid$B == 0, ]
 
   if (verbose) {
-    recommendDesign(methods = methods, verbose = TRUE)
+    printMethodGuidance(methods = methods, verbose = TRUE)
     cat(sprintf("runSingleCohortPower: %d cells x %d sims = %d runs\n",
                 nrow(grid), nsims, nrow(grid) * nsims))
     cat(sprintf("  methods: %s\n", paste(methods, collapse = ", ")))

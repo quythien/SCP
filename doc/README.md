@@ -306,33 +306,58 @@ runBootstrapDesignGrid(
 | `"LimoRhyde"` | — | ✓ | — | — | — |
 | `"DODR"` | — | ✓ | — | — | — |
 
-### B vs m design guidance
+### B vs m design study
 
-Before running, call `recommendDesign()` to get method-specific B vs m advice:
+`recommendDesign()` is the full B vs m study orchestrator. It runs three steps:
+1. Prints method guidance (statistical reason per method)
+2. Runs CircaPower analytical estimate for DCP (fast, B-invariant, no simulation)
+3. Optionally runs `runSingleCohortPower()` / `runDifferentialPower()` for all methods
 
 ```r
-recommendDesign(methods = c("DCP","JTK","RAIN","MH"))
-# === B vs m Design Recommendation ===
-# Method          Recommended B              Preference    Reason
-# DCP             ≥4, any                    N-driven      NCP = N·r²/2 is B-invariant...
-# JTK             4–6                        ↑m            Collapses replicates to means...
-# RAIN            6–8                        ↑B            Umbrella test gains rank resolution...
-# MH              6 (or 3–4 if sinusoidal)   ↑B (α₂≥0.5)  Adaptive K=2 at B=6 captures harmonics...
+# Full study (analytical + simulation)
+rec <- recommendDesign(
+  bio.opts, design.opts, analysis.opts,
+  methods        = c("DCP","JTK","RAIN","MH"),
+  target_power   = 0.80,
+  mode           = "single",       # "single" | "differential"
+  run_simulation = TRUE,           # FALSE = CircaPower only (fast)
+  prior_result   = NULL,           # pass a previous SCPSingleResult to skip re-running
+  alpha2         = 0,
+  mc.cores       = 60L
+)
+# Returns SCPRecommendResult:
+#   $guidance       — method guidance table
+#   $analytical_df  — CircaPower power at each N (DCP)
+#   $simulation     — SCPSingleResult or SCPDiffResult
+#   $recommendation — optimal B and n_target per method
+
+# Reuse previous simulation (avoid re-running):
+prev <- runSingleCohortPower(bio.opts, design.opts, analysis.opts,
+                              methods = c("RAIN","MH"), plot = FALSE)
+rec  <- recommendDesign(bio.opts, design.opts, analysis.opts,
+                         methods = c("DCP","RAIN","MH"),
+                         prior_result = prev,         # simulation step skipped
+                         run_simulation = FALSE)
+
+# Analytical only (instant):
+rec_fast <- recommendDesign(bio.opts, design.opts, analysis.opts,
+                             run_simulation = FALSE)
 ```
 
-`runSingleCohortPower()` prints this table automatically when `verbose=TRUE`.
-The key insight: **if you plan to use DCP or JTK for your final analysis, B choice
-doesn't matter — invest in N. If you plan to use RAIN or multi-harmonic regression,
-B=6–8 gives meaningful gains over B=3–4 at fixed N.**
+**Key insight printed by `recommendDesign()`:**
+If you plan to use DCP/JTK/LimoRhyde/DODR for your final analysis → B doesn't matter, invest in N.
+If you plan to use RAIN or multi-harmonic regression → B=6–8 gives meaningful gains at fixed N.
+
+`runSingleCohortPower()` also prints the method guidance table automatically when `verbose=TRUE`
+via `printMethodGuidance()`, which is also available standalone.
 
 ### Post-hoc calls
 ```r
 result <- runSingleCohortPower(..., plot = FALSE)
-plot(result)                        # default B vs power figure
-plot(result, type = "violation")    # alpha2-stratified layout
-npower(result, target = 0.80)       # n80 table for any target power
-print(result)                       # summary table
-recommendDesign(methods = "RAIN")   # standalone guidance for a specific method
+plot(result)                          # B vs power figure
+npower(result, target = 0.80)         # n80 table
+print(result)                         # summary
+printMethodGuidance(methods = "RAIN") # guidance for a specific method only
 ```
 
 ### Comparison and visualization
