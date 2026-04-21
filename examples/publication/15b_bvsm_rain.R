@@ -27,7 +27,7 @@ old_wd <- setwd("code"); source("setup.R"); setwd(old_wd)
 B_VALS     <- c(3L, 4L, 6L, 8L, 12L)
 N_GRID     <- if (SMOKE_TEST) c(12L, 24L) else seq(12L, 48L, by = 12L)
 NSIMS      <- if (SMOKE_TEST) 3L   else 30L
-NGENES     <- if (SMOKE_TEST) 100L else 1000L
+NGENES     <- if (SMOKE_TEST) 200L else 5000L
 FDR_THRESH <- 0.05
 N_CORES    <- as.integer(Sys.getenv("MC_CORES", unset = "60"))
 
@@ -99,8 +99,8 @@ for (ds_name in names(datasets)) {
   cat(sprintf("Dataset: %s\n", ds$label))
   cat(sprintf("==============================\n"))
 
-  bio <- estCircadianParam(ds$mat, times = ds$tod, period = 24,
-                            ngenes = NGENES, verbose = TRUE)
+  bio <- estCircadianParam(ds$mat, times = ds$tod, period = 24, verbose = TRUE)
+  bio$ngenes <- NGENES   # use full matrix for estimation, cap simulation gene count
 
   design <- CircadianDesignOptions(
     sample_sizes = N_GRID,

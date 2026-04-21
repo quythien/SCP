@@ -1,15 +1,23 @@
 #' =======================================================================
-#' 15c_bvsm_rain_extended.R — RAIN B vs m: Extended N + Waveform Violation
+#' 15c_bvsm_rain_extended.R — RAIN B vs m: Extended N + B + Waveform Violation
 #' =======================================================================
 #'
 #' Extends 15b_bvsm_rain.R with:
-#'   - N up to 72 (RAIN permutation is tractable for m=N/B <= 12 at B=6)
+#'   - N up to 96 to cross the 80% power threshold for all datasets
+#'   - Extended B: c(3, 4, 6, 8, 12, 18, 24) — full range of active designs
 #'   - alpha2 in {0, 0.5, 1.0} to show waveform violation effect
-#'   - Mouse D1 primary (weakest SNR: most informative for B trade-off)
-#'   - Mouse LIV and Baboon LUN for context
 #'
-#' Produces results for Figure 4 (RAIN + MH, alpha2 variation) in
-#' combination with MH results from 15_bvsm_method_comparison.R.
+#' Datasets (single group):
+#'   A. Mouse LIV  (GSE54651)  r~2.88  strong
+#'   B. Baboon LUN (CAMO)      r~1.72  moderate
+#'   C. Mouse D1   (D1D2)      r~0.65  weak / brain  ← primary for Figure 4
+#'
+#' Provides results for:
+#'   - Figure 3 (alpha2=0, all datasets, full N range to 80% crossing)
+#'   - Figure 4 (RAIN + MH, alpha2 variation, D1 primary)
+#'
+#' Note: only valid (N, B) cells where N %% B == 0 are run. B=18 requires
+#' N in {18,36,54,72,90}; B=24 requires N in {24,48,72,96}.
 #'
 #' USAGE:
 #'   Rscript examples/publication/15c_bvsm_rain_extended.R
@@ -24,8 +32,8 @@ set.seed(GLOBAL_SEED)
 
 old_wd <- setwd("code"); source("setup.R"); setwd(old_wd)
 
-B_VALS      <- c(3L, 4L, 6L, 8L, 12L)
-N_GRID      <- if (SMOKE_TEST) c(12L, 24L, 36L) else seq(12L, 72L, by = 12L)
+B_VALS      <- c(3L, 4L, 6L, 8L, 12L, 18L, 24L)
+N_GRID      <- if (SMOKE_TEST) c(12L, 24L, 48L) else seq(12L, 96L, by = 12L)
 ALPHA2_VALS <- if (SMOKE_TEST) c(0, 1.0) else c(0, 0.5, 1.0)
 NSIMS       <- if (SMOKE_TEST) 3L   else 30L
 NGENES      <- if (SMOKE_TEST) 200L else 5000L
@@ -40,6 +48,11 @@ cat(sprintf("alpha2   : %s\n", paste(ALPHA2_VALS,  collapse = ", ")))
 cat(sprintf("nsims    : %d\n", NSIMS))
 cat(sprintf("ngenes   : %d\n", NGENES))
 cat(sprintf("mc.cores : %d\n\n", N_CORES))
+
+# Valid (N, B) cells
+valid_grid <- expand.grid(N = N_GRID, B = B_VALS)
+valid_grid <- valid_grid[valid_grid$N %% valid_grid$B == 0, ]
+cat(sprintf("Valid (N,B) cells: %d\n\n", nrow(valid_grid)))
 
 out_dir <- "output/bvsm_method_comparison"
 dir.create(file.path(out_dir, "results"), recursive = TRUE, showWarnings = FALSE)
@@ -67,7 +80,7 @@ mat_lun  <- prep_lun$data[rowSums(prep_lun$data > 0) >= 6, , drop = FALSE]
 tod_lun  <- prep_lun$times
 rm(baboon_withTOD, gtex, mice, prep_lun)
 
-## C: Mouse D1 (D1D2 striatum) — primary for Figure 4
+## C: Mouse D1 (D1D2 striatum)
 pheno   <- read.csv("data/mouse_clinicalinfo_03082021_rmOutliers.csv", row.names = 1)
 prep_d1 <- prepCircadianData("data/mouse_D1D2_logCPMfiltered_counts.csv",
                               times      = "time",
@@ -88,10 +101,9 @@ datasets <- list(
 rm(mat_liv, mat_lun, mat_d1, tod_liv, tod_lun, tod_d1)
 
 # =====================================================================
-# 2. Run RAIN power with alpha2 sweep
+# 2. Run RAIN power with extended N, B, and alpha2 sweep
 # =====================================================================
-cat("\n--- Running RAIN extended (N<=72, alpha2 sweep) ---\n")
-printMethodGuidance(methods = "RAIN", verbose = TRUE)
+cat("\n--- Running RAIN extended (N<=96, B<=24, alpha2 sweep) ---\n")
 
 all_results <- list()
 
@@ -101,8 +113,8 @@ for (ds_name in names(datasets)) {
   cat(sprintf("Dataset: %s\n", ds$label))
   cat(sprintf("==============================\n"))
 
-  bio <- estCircadianParam(ds$mat, times = ds$tod, period = 24,
-                            ngenes = NGENES, verbose = TRUE)
+  bio <- estCircadianParam(ds$mat, times = ds$tod, period = 24, verbose = TRUE)
+  bio$ngenes <- NGENES   # use full matrix for estimation, cap simulation gene count
 
   design <- CircadianDesignOptions(
     sample_sizes = N_GRID,
@@ -128,15 +140,32 @@ for (ds_name in names(datasets)) {
 
   all_results[[ds_name]] <- res$power_df
 
+  # Save per alpha2 slice
   for (a2 in ALPHA2_VALS) {
-    saveRDS(res$power_df[res$power_df$alpha2 == a2, ],
-            file.path(out_dir, "results",
-                      sprintf("results_RAIN_ext_%s_a2_%.1f.rds", ds_name, a2)))
+    sub <- res$power_df[res$power_df$alpha2 == a2, ]
+    fname <- sprintf("results_RAIN_ext_%s_a2_%.1f.rds", ds_name, a2)
+    saveRDS(sub, file.path(out_dir, "results", fname))
+    cat(sprintf("  Saved: %s\n", fname))
+
+    # Quick power summary for alpha2=0
+    if (a2 == 0) {
+      cat(sprintf("  Power summary (alpha2=0):\n"))
+      for (n in sort(unique(sub$N))) {
+        row <- sub[sub$N == n, ]
+        row <- row[order(row$B), ]
+        vals <- sprintf("B%d=%.1f%%", row$B, 100 * row$power)
+        cat(sprintf("    N=%3d: %s\n", n, paste(vals, collapse = "  ")))
+      }
+    }
   }
-  cat(sprintf("Saved RAIN extended results for %s\n", ds_name))
+
+  # Combined across alpha2 for this dataset
+  saveRDS(res$power_df,
+          file.path(out_dir, "results", sprintf("results_RAIN_ext_%s_all.rds", ds_name)))
 }
 
+# Full combined table
 rain_ext_df <- do.call(rbind, all_results)
 saveRDS(rain_ext_df, file.path(out_dir, "results", "results_RAIN_extended_all.rds"))
-cat("\nSaved: results_RAIN_extended_all.rds\n")
+cat(sprintf("\nSaved: results_RAIN_extended_all.rds  (%d rows)\n", nrow(rain_ext_df)))
 cat("\n=== Done ===\n")

@@ -108,8 +108,8 @@ for (ds_name in names(datasets)) {
   cat(sprintf("Dataset: %s\n", ds$label))
   cat(sprintf("==============================\n"))
 
-  bio <- estCircadianParam(ds$mat, times = ds$tod, period = 24,
-                            ngenes = NGENES, verbose = TRUE)
+  bio <- estCircadianParam(ds$mat, times = ds$tod, period = 24, verbose = TRUE)
+  bio$ngenes <- NGENES   # use full matrix for estimation, cap simulation gene count
 
   design <- CircadianDesignOptions(
     sample_sizes = N_GRID,

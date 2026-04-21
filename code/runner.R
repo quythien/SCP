@@ -1468,8 +1468,15 @@ runSingleCohortPower <- function(bio.opts,
   results <- parallel::mclapply(seq_len(nrow(grid)), run_cell, mc.cores = mc.cores)
   if (verbose) cat(sprintf("  Done in %.1f min\n", (proc.time()[["elapsed"]] - t0) / 60))
 
-  grid$power    <- vapply(results, `[[`, 0, "power")
-  grid$power_se <- vapply(results, `[[`, 0, "power_se")
+  safe_get <- function(r, field) {
+    if (is.null(r) || inherits(r, "try-error")) NA_real_ else r[[field]]
+  }
+  n_failed <- sum(vapply(results, function(r) is.null(r) || inherits(r, "try-error"), logical(1)))
+  if (n_failed > 0)
+    warning(sprintf("runSingleCohortPower: %d/%d cells failed (NULL/error) — set to NA",
+                    n_failed, length(results)))
+  grid$power    <- vapply(results, safe_get, 0, "power")
+  grid$power_se <- vapply(results, safe_get, 0, "power_se")
 
   n80_df <- do.call(rbind, lapply(
     split(grid, interaction(grid$method, grid$B, grid$alpha2, grid$alpha3)),
@@ -1655,8 +1662,15 @@ runDifferentialPower <- function(bio.opts,
   results <- parallel::mclapply(seq_len(nrow(grid)), run_cell, mc.cores = mc.cores)
   if (verbose) cat(sprintf("  Done in %.1f min\n", (proc.time()[["elapsed"]] - t0) / 60))
 
-  grid$power    <- vapply(results, `[[`, 0, "power")
-  grid$power_se <- vapply(results, `[[`, 0, "power_se")
+  safe_get <- function(r, field) {
+    if (is.null(r) || inherits(r, "try-error")) NA_real_ else r[[field]]
+  }
+  n_failed <- sum(vapply(results, function(r) is.null(r) || inherits(r, "try-error"), logical(1)))
+  if (n_failed > 0)
+    warning(sprintf("runDifferentialPower: %d/%d cells failed (NULL/error) — set to NA",
+                    n_failed, length(results)))
+  grid$power    <- vapply(results, safe_get, 0, "power")
+  grid$power_se <- vapply(results, safe_get, 0, "power_se")
 
   n80_df <- do.call(rbind, lapply(
     split(grid, interaction(grid$method, grid$test_type, grid$alpha2, grid$alpha3)),
