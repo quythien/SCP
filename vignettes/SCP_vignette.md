@@ -103,10 +103,10 @@ bootstrap uncertainty"]
     E --> F
     F --> G
 
-    G -- "Sample size (n_power) for rhythmic biomarker detection?" --> SC
-    G -- "Sample size (n_power) for differential rhythmicity, phase, or mesor?" --> DF
-    G -- "Best time point coverage (B) vs replicates (m) at fixed sample size?" --> BM
-    G -- "How sensitive to pilot size and signal strength?" --> BS
+    G -- "What sample size (n_power) achieves target power for rhythmic biomarker detection?" --> SC
+    G -- "What sample size (n_power) achieves target power for differential rhythmicity, phase, or mesor?" --> DF
+    G -- "Optimal design: time coverage (B) vs replicates (m) at fixed sample size?" --> BM
+    G -- "How sensitive is power to pilot size and signal strength?" --> BS
 
     SC --> R1
     DF --> R2
