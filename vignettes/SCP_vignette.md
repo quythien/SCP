@@ -101,9 +101,9 @@ per method"]
     E --> F
     F --> G
 
-    G -- "n_power for rhythmic biomarker detection?" --> SC
-    G -- "n_power for DR / DP / DM?" --> DF
-    G -- "Best B vs m at fixed N?" --> BM
+    G -- "Sample size for rhythmic biomarker detection?" --> SC
+    G -- "Sample size for differential rhythmicity, phase, or mesor?" --> DF
+    G -- "Best time points vs replicates at fixed sample size?" --> BM
     G -- "How sensitive to pilot size and signal strength?" --> BS
 
     SC --> R1
