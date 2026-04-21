@@ -34,7 +34,7 @@ old_wd <- setwd("code"); source("setup.R"); setwd(old_wd)
 
 B_VALS      <- c(3L, 4L, 6L, 8L, 12L, 18L, 24L)
 N_GRID      <- if (SMOKE_TEST) c(12L, 24L, 48L) else seq(12L, 96L, by = 12L)
-ALPHA2_VALS <- if (SMOKE_TEST) c(0, 1.0) else c(0, 0.5, 1.0)
+ALPHA2_VALS <- if (SMOKE_TEST) c(0, 1.0) else c(0, 0.5, 0.75, 1.0)
 NSIMS       <- if (SMOKE_TEST) 3L   else 30L
 NGENES      <- if (SMOKE_TEST) 200L else 5000L
 FDR_THRESH  <- 0.05
