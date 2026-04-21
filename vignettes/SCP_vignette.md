@@ -85,14 +85,12 @@ flowchart TD
         BS["runBootstrapDesignGrid()"]
     end
 
-    R1["n80 to reach target power
-method · B · waveform"]
-    R2["n80 to reach target power
-DR · DP · DM"]
-    R3["Recommended B per method
-analytical vs simulated n80"]
-    R4["Power curve with 95% CI
-n80 uncertainty range"]
+    R1["Power curve and n_power"]
+    R2["Power curve and n_power
+per DR · DP · DM"]
+    R3["Recommended (B, m) design
+per method"]
+    R4["Power curve with 95% CI"]
 
     A --> I
     B --> I
@@ -103,10 +101,10 @@ n80 uncertainty range"]
     E --> F
     F --> G
 
-    G -- "How many samples to reach target power for rhythmicity?" --> SC
-    G -- "How many samples to reach target power for DR / DP / DM?" --> DF
+    G -- "n_power for rhythmic biomarker detection?" --> SC
+    G -- "n_power for DR / DP / DM?" --> DF
     G -- "Best B vs m at fixed N?" --> BM
-    G -- "How sensitive to pilot size?" --> BS
+    G -- "How sensitive to pilot size and signal strength?" --> BS
 
     SC --> R1
     DF --> R2
@@ -139,31 +137,40 @@ n80 uncertainty range"]
 | 🟡 Yellow | Options |
 | 🔴 Pink | Scientific question |
 | 🟢 Green | Analysis runners |
-| 🟠 Orange | Results — primary output is **n80**: the sample size needed to reach the target power level |
+| 🟠 Orange | Results |
+
+**n_power** — the smallest sample size N at which simulated power first reaches the target level (default 80%). Returned alongside the full power-vs-N curve so researchers can read off power at any N, not just the threshold crossing.
 
 ### Design options
 
-| Option | What it controls | Notes |
-|--------|-----------------|-------|
-| **N grid** | Sample sizes to evaluate | e.g. `c(20, 40, 60, 80, 100)` |
-| **B** | Number of distinct collection time points | Active designs only; replicates per time point `m = N/B` is derived |
-| **active / passive** | Study design type | Active = equally-spaced ZTs chosen by researcher; passive = observed TOD (e.g. post-mortem) |
-| **nsims** | Simulations per (N, B) cell | Higher = smoother power estimates; 30–200 typical |
+| Parameter | What it controls | Key values / notes |
+|-----------|-----------------|-------------------|
+| **N grid** (`sample_sizes`) | Sample sizes to evaluate | e.g. `c(20, 40, 60, 80, 100)`; finer grid gives more precise n_power |
+| **B** (`B_values`) | Number of distinct collection time points | Active designs only; can be a vector to sweep e.g. `c(4, 6, 8, 12)`; replicates per time point `m = N/B` is derived |
+| **Design type** (`design`) | How collection times are assigned | `"active"` = equally-spaced ZTs set by researcher; `"passive"` = observed TOD (e.g. post-mortem, clinical) |
+| **Collection times** (`cts`) | Actual TOD values used in simulation | Passive: pass the pilot TOD vector; active: auto-generated from B |
+| **nsims** | Simulations per (N, B) cell | Higher = smoother, more stable power estimates; 30 for exploration, 200 for publication |
+| **test\_types** | Differential endpoints to evaluate | `c("DR", "DP", "DM")` — can subset to endpoints of interest |
+| **methods** | Detection methods to benchmark | Single-cohort: `"DCP"`, `"JTK"`, `"RAIN"`, `"MH"`; differential: `"DCP"`, `"CircaCompare"`, `"LimoRhyde"`, `"DODR"` |
+| **alpha2** | Second-harmonic waveform violation | `0` = pure sinusoid; `0.5`–`1.0` = non-sinusoidal signal; tests robustness of cosinor-based methods |
 
 ### Analysis options
 
-| Option | What it controls | Notes |
-|--------|-----------------|-------|
-| **FDR control** | Significance threshold `alpha` and multiple-testing correction `p.adjust.method` | Threshold (default 0.05) and method (default `"BH"`, Benjamini-Hochberg) are set together; power is the fraction of true targets called significant after correction |
+| Parameter | What it controls | Key values / notes |
+|-----------|-----------------|-------------------|
+| **FDR threshold** (`alpha`, `fdr_thresholds`) | Significance level for calling discoveries | Default `0.05`; can pass a vector to compare power at multiple thresholds simultaneously |
+| **Correction method** (`p.adjust.method`) | Multiple-testing correction across genes | Default `"BH"` (Benjamini-Hochberg); controls genome-wide FDR; `"bonferroni"` available for FWER control |
+| **Target power** (`target_power`) | Power level used to compute n_power | Default `0.80`; passed to `npower()` and `recommendDesign()` |
+| **Reference N** (`reference_n`) | Anchor N for comparison tables | Used when summarising power at a specific study size alongside the full curve |
 
 ### Supported detection methods
 
 | Method | Single-cohort | Differential | B-sensitive? |
 |--------|:---:|:---:|---|
-| **DCP** (DiffCircaPipeline cosinor) | ✓ | DR · DP · DM | No — power depends only on N |
-| **JTK\_CYCLE** | ✓ | — | Weak optimum near B = 4–6 |
-| **RAIN** | ✓ | — | Yes — more distinct ZTs help |
-| **MH** (multi-harmonic) | ✓ | — | Yes — adaptive harmonics K = ⌊(B−1)/2⌋ |
+| **DCP** (DiffCircaPipeline cosinor) | ✓ | DR · DP · DM | No — NCP = Nr²/2, power depends only on N |
+| **JTK\_CYCLE** | ✓ | — | Weak — interior optimum near B = 4–6 |
+| **RAIN** | ✓ | — | Yes — umbrella test benefits from more distinct ZTs |
+| **MH** (multi-harmonic) | ✓ | — | Yes — adaptive K = ⌊(B−1)/2⌋; gains from non-sinusoidal signal |
 | **CircaCompare** | — | DP · DM | — |
 | **LimoRhyde** | — | DR | — |
 | **DODR** | — | DR | — |
