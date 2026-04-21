@@ -163,17 +163,6 @@ per method"]
 | **Target power** (`target_power`) | Power level used to compute n_power | Default `0.80`; passed to `npower()` and `recommendDesign()` |
 | **Reference N** (`reference_n`) | Anchor N for comparison tables | Used when summarising power at a specific study size alongside the full curve |
 
-### Supported detection methods
-
-| Method | Single-cohort | Differential | B-sensitive? |
-|--------|:---:|:---:|---|
-| **DCP** (DiffCircaPipeline cosinor) | ✓ | DR · DP · DM | No — NCP = Nr²/2, power depends only on N |
-| **JTK\_CYCLE** | ✓ | — | Weak — interior optimum near B = 4–6 |
-| **RAIN** | ✓ | — | Yes — umbrella test benefits from more distinct ZTs |
-| **MH** (multi-harmonic) | ✓ | — | Yes — adaptive K = ⌊(B−1)/2⌋; gains from non-sinusoidal signal |
-| **CircaCompare** | — | DP · DM | — |
-| **LimoRhyde** | — | DR | — |
-| **DODR** | — | DR | — |
 
 ---
 
