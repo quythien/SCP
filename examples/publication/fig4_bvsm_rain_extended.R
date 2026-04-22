@@ -148,7 +148,7 @@ for (ds_name in names(datasets)) {
   # Save per alpha2 slice
   for (a2 in ALPHA2_VALS) {
     sub <- res$power_df[res$power_df$alpha2 == a2, ]
-    fname <- sprintf("results_RAIN_ext_%s_a2_%.1f.rds", ds_name, a2)
+    fname <- sprintf("results_RAIN_ext_%s_a2_%.2f.rds", ds_name, a2)
     saveRDS(sub, file.path(out_dir, "results", fname))
     cat(sprintf("  Saved: %s\n", fname))
 

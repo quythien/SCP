@@ -505,6 +505,15 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
   # --- parameter draws ---
   mesor_g <- bio.opts$lBaselineExpr
   sigma_g <- exp(bio.opts$lOD)
+
+  # Resample pilot vectors if ngenes was overridden (e.g. bio$ngenes <- 5000)
+  # but lBaselineExpr/lOD still have pilot K length.
+  if (length(mesor_g) != ngenes) {
+    idx     <- sample(length(mesor_g), ngenes, replace = TRUE)
+    mesor_g <- mesor_g[idx]
+    sigma_g <- sigma_g[idx]
+  }
+
   amp_g   <- numeric(ngenes)
   phase_g <- numeric(ngenes)
 
