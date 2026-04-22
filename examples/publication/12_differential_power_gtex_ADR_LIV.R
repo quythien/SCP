@@ -128,16 +128,24 @@ fig_path <- file.path(out_dir_fig,
 
 set.seed(GLOBAL_SEED)
 res <- runDifferentialPower(bio, design, analysis,
-                             methods     = "DCP",
-                             test_types  = c("DR", "DP", "DM"),
-                             mc.cores    = n_cores,
-                             plot        = TRUE,
-                             output_file = fig_path,
-                             verbose     = TRUE)
+                             methods    = "DCP",
+                             test_types = c("DR", "DP", "DM"),
+                             plot       = FALSE,
+                             verbose    = TRUE,
+                             mc.cores   = n_cores)
 
 saveRDS(res, rds_path)
 cat(sprintf("Results saved -> %s\n", rds_path))
-cat(sprintf("Figure saved  -> %s\n", fig_path))
+
+plotDiffPower(
+  res_list    = list(res),
+  comp_labels = "GTEx Adrenal Gland vs Liver",
+  endpoints   = c("DR", "DP", "DM"),
+  out_pdf     = fig_path,
+  width       = 15,
+  height      = 18
+)
+cat(sprintf("Figure  saved -> %s\n", fig_path))
 
 cat("\n=== Done ===\n")
 cat(sprintf("Results : %s\n", rds_path))

@@ -148,9 +148,9 @@ for (comp_name in comp_names_run) {
   res <- runDifferentialPower(bio, design, analysis,
                                methods    = "DCP",
                                test_types = c("DR", "DP", "DM"),
-                               mc.cores   = n_cores,
                                plot       = FALSE,
-                               verbose    = TRUE)
+                               verbose    = TRUE,
+                               mc.cores   = n_cores)
 
   saveRDS(res, rds_path)
   cat(sprintf("Results saved -> %s\n", rds_path))

@@ -133,14 +133,20 @@ for (region_name in names(regions)) {
 
   set.seed(GLOBAL_SEED)
   res <- runSingleCohortPower(bio, design, analysis,
-                               methods     = "DCP",
-                               mc.cores    = n_cores,
-                               plot        = TRUE,
-                               output_file = fig_path,
-                               verbose     = TRUE)
+                               methods  = "DCP",
+                               plot     = FALSE,
+                               verbose  = TRUE,
+                               mc.cores = n_cores)
 
   saveRDS(res, rds_path)
   cat(sprintf("Results saved → %s\n", rds_path))
+
+  plotSingleCohortPower(
+    res     = res,
+    out_pdf = fig_path,
+    title   = sprintf("GSE160521 %s Control — Single-Cohort Power", region_name)
+  )
+  cat(sprintf("Figure  saved → %s\n", fig_path))
 }
 
 cat("\n=== All regions done ===\n")

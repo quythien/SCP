@@ -9,12 +9,11 @@
 #' @param prop_rhythmic Proportion of rhythmic genes
 #' @param prop_DR Proportion with differential rhythmicity
 #' @param prop_DP Proportion with differential phase
-#' @param prop_DA Proportion with differential amplitude
 #' @param phase_diff Range of phase shift for DP genes (c(min, max))
-#' @param amp_diff Range of amplitude ratio for DA genes (c(min, max))
+#' @param amp_diff Unused; retained for interface compatibility
 #' @param design "active" or "passive"
 #' @param cts TOD distribution for passive design
-#' @param test_types Which tests to run ("DR", "DP", "DA", "all")
+#' @param test_types Which tests to run ("DR", "DP", "DM")
 #' @param verbose Print progress
 #'
 #' @return List with p-values, FDR, and ground truth for each simulation
@@ -32,7 +31,6 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
                         prop_rhythmic = 0.25,
                         prop_DR = 0.1,
                         prop_DP = 0.1,
-                        prop_DA = 0.1,
                         phase_diff = NULL,
                         amp_diff = NULL,
                         design = c("active", "passive"),
@@ -71,7 +69,6 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     prop_rhythmic <- bio.opts$prop_rhythmic
     prop_DR       <- bio.opts$prop_DR
     prop_DP       <- bio.opts$prop_DP
-    prop_DA       <- bio.opts$prop_DA
     prop_DM       <- bio.opts$prop_DM %||% 0
     phase_diff    <- bio.opts$phase_diff
     amp_diff      <- bio.opts$amp_diff
@@ -82,6 +79,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     design        <- design.opts$design
     cts           <- design.opts$cts
     test_types    <- design.opts$test_types
+    harmonics     <- design.opts$harmonics %||% NULL
     period        <- bio.opts$period
     alpha         <- analysis.opts$alpha
     p.adjust.method <- analysis.opts$p.adjust.method
@@ -126,11 +124,9 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
   sim_results <- parallel::mclapply(seq_len(nsims), function(i) {
     pval_DR_i <- matrix(1,   nrow = ngenes, ncol = length(sample_sizes))
     pval_DP_i <- matrix(1,   nrow = ngenes, ncol = length(sample_sizes))
-    pval_DA_i <- matrix(1,   nrow = ngenes, ncol = length(sample_sizes))
     pval_DM_i <- matrix(1,   nrow = ngenes, ncol = length(sample_sizes))
     fdr_DR_i  <- matrix(NA,  nrow = ngenes, ncol = length(sample_sizes))
     fdr_DP_i  <- matrix(NA,  nrow = ngenes, ncol = length(sample_sizes))
-    fdr_DA_i  <- matrix(NA,  nrow = ngenes, ncol = length(sample_sizes))
     fdr_DM_i  <- matrix(NA,  nrow = ngenes, ncol = length(sample_sizes))
     diff_type_i  <- NULL
     effectsize_i <- NULL
@@ -151,7 +147,6 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
         prop_rhythmic = prop_rhythmic,
         prop_DR = prop_DR,
         prop_DP = prop_DP,
-        prop_DA = prop_DA,
         prop_DM = prop_DM,
         phase_diff = phase_diff,
         dp_shift_mode = dp_shift_mode,
@@ -194,7 +189,6 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
 
       pval_DR_g = rep(1, ngenes)
       pval_DP_g = rep(1, ngenes)
-      pval_DA_g = rep(1, ngenes)
       pval_DM_g = rep(1, ngenes)
 
       if (DCmethod == "DCP") {
@@ -224,7 +218,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
             }
           }
 
-          needs_par <- any(c("DP", "DA", "DM") %in% test_types)
+          needs_par <- any(c("DP", "DM") %in% test_types)
           if (needs_par) {
             n_testable = sum(rhythm_res$rhythm.joint$TOJR == "both")
             if (n_testable > 0) {
@@ -237,8 +231,6 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
               match_idx = match(gene_names, dp_da_results$gname)
               if ("DP" %in% test_types)
                 pval_DP_g[!is.na(match_idx)] = dp_da_results$p.delta.peak[match_idx[!is.na(match_idx)]]
-              if ("DA" %in% test_types)
-                pval_DA_g[!is.na(match_idx)] = dp_da_results$p.delta.A[match_idx[!is.na(match_idx)]]
               if ("DM" %in% test_types && "p.delta.M" %in% colnames(dp_da_results))
                 pval_DM_g[!is.na(match_idx)] = dp_da_results$p.delta.M[match_idx[!is.na(match_idx)]]
             }
@@ -255,30 +247,25 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
             gene_names = gene_names, period = period
           )
           pval_DP_g = cc_result$pval_DP
-          pval_DA_g = cc_result$pval_DA
           pval_DM_g = cc_result$pval_DM
         }, error = function(e) {
           warning(sprintf("CircaCompare failed for sim %d, n=%d: %s", i, n, e$message))
         })
       }
 
-      fdr_DR_g = pval_DR_g; fdr_DP_g = pval_DP_g
-      fdr_DA_g = pval_DA_g; fdr_DM_g = pval_DM_g
+      fdr_DR_g = pval_DR_g; fdr_DP_g = pval_DP_g; fdr_DM_g = pval_DM_g
 
       ix <- pval_DR_g < 1; if (any(ix)) fdr_DR_g[ix] <- p.adjust(pval_DR_g[ix], method = p.adjust.method)
       ix <- pval_DP_g < 1; if (any(ix)) fdr_DP_g[ix] <- p.adjust(pval_DP_g[ix], method = p.adjust.method)
-      ix <- pval_DA_g < 1; if (any(ix)) fdr_DA_g[ix] <- p.adjust(pval_DA_g[ix], method = p.adjust.method)
       ix <- pval_DM_g < 1; if (any(ix)) fdr_DM_g[ix] <- p.adjust(pval_DM_g[ix], method = p.adjust.method)
 
       pval_DR_i[, j] = pval_DR_g; fdr_DR_i[, j] = fdr_DR_g
       pval_DP_i[, j] = pval_DP_g; fdr_DP_i[, j] = fdr_DP_g
-      pval_DA_i[, j] = pval_DA_g; fdr_DA_i[, j] = fdr_DA_g
       pval_DM_i[, j] = pval_DM_g; fdr_DM_i[, j] = fdr_DM_g
     }
 
     list(pval_DR = pval_DR_i, fdr_DR = fdr_DR_i,
          pval_DP = pval_DP_i, fdr_DP = fdr_DP_i,
-         pval_DA = pval_DA_i, fdr_DA = fdr_DA_i,
          pval_DM = pval_DM_i, fdr_DM = fdr_DM_i,
          diff_type = diff_type_i, effectsize = effectsize_i)
   }, mc.cores = mc.cores, mc.set.seed = TRUE)
@@ -288,7 +275,6 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
   # Combine parallel results into arrays
   pval_DR = fdr_DR = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
   pval_DP = fdr_DP = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
-  pval_DA = fdr_DA = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
   pval_DM = fdr_DM = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
   diff_type_list  <- vector("list", nsims)
   effectsize_list <- vector("list", nsims)
@@ -297,7 +283,6 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     r <- sim_results[[i]]
     pval_DR[,,i] <- r$pval_DR; fdr_DR[,,i] <- r$fdr_DR
     pval_DP[,,i] <- r$pval_DP; fdr_DP[,,i] <- r$fdr_DP
-    pval_DA[,,i] <- r$pval_DA; fdr_DA[,,i] <- r$fdr_DA
     pval_DM[,,i] <- r$pval_DM; fdr_DM[,,i] <- r$fdr_DM
     diff_type_list[[i]]  <- r$diff_type
     effectsize_list[[i]] <- r$effectsize
@@ -308,8 +293,6 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     fdr_DR = fdr_DR,
     pval_DP = pval_DP,
     fdr_DP = fdr_DP,
-    pval_DA = pval_DA,
-    fdr_DA = fdr_DA,
     pval_DM = pval_DM,
     fdr_DM = fdr_DM,
     diff_type = diff_type_list,
@@ -321,7 +304,6 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
       prop_rhythmic = prop_rhythmic,
       prop_DR = prop_DR,
       prop_DP = prop_DP,
-      prop_DA = prop_DA,
       design = design,
       DCmethod = DCmethod
     )
@@ -345,6 +327,9 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
 #' @return List compatible with plotWithSE()
 runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
                              test_type = "DR", verbose = TRUE) {
+
+  .Deprecated("runDifferentialPower",
+              msg = "runPowerAnalysis() is deprecated. Use runDifferentialPower() instead.")
 
   sample_sizes  <- design.opts$sample_sizes
   nsims         <- design.opts$nsims
@@ -422,11 +407,6 @@ runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
         effectsize_phase <- sim_out$effectsize[[i]]$phase
         is_diff <- diff_type == 4
         is_target <- is_diff & (effectsize_phase >= target_effect)
-      } else if (test_type == "DA") {
-        r_values <- pmin(effectsize_DR1, effectsize_DR2)
-        effectsize_amp <- sim_out$effectsize[[i]]$amp
-        is_diff <- diff_type == 6   # DA is now type 6 (legacy)
-        is_target <- is_diff & (effectsize_amp >= target_effect)
       } else if (test_type == "DM") {
         r_values <- pmin(effectsize_DR1, effectsize_DR2)
         effectsize_m <- sim_out$effectsize[[i]]$mesor
@@ -562,7 +542,6 @@ runPhaseShiftAnalysis <- function(bio.opts, design.opts, analysis.opts,
     opts_bio_ps <- updateBioOptions(bio.opts,
       prop_DR    = 0.00,
       prop_DP    = prop_DP,
-      prop_DA    = 0.00,
       phase_diff = c(-phase_shift, phase_shift),
       amp_diff   = amp_diff
     )
@@ -824,11 +803,16 @@ summaryRunPower <- function(powerOutput, verbose = TRUE) {
 #'
 #' @export
 runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
+                                method = "DCP",
+                                harmonics = c(0, 0),
                                 verbose = TRUE, mc.cores = 1L) {
 
   stopifnot(inherits(bio.opts, "CircadianBioOptions"))
   stopifnot(inherits(design.opts, "CircadianDesignOptions"))
   if (missing(analysis.opts)) analysis.opts <- CircadianAnalysisOptions()
+
+  method    <- match.arg(method, c("DCP", "JTK", "RAIN", "MH"))
+  harmonics <- rep_len(as.numeric(harmonics), 2L)
 
   sample_sizes    <- design.opts$sample_sizes
   nsims           <- design.opts$nsims
@@ -846,6 +830,13 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
 
   has_joint <- !is.null(bio.opts$sigma_rhythmic) &&
                length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)
+
+  detect_fn <- switch(method,
+    DCP  = function(e, t) detect_DCP(e, t, period = period),
+    JTK  = function(e, t) detect_JTK(e, t, period = period),
+    RAIN = function(e, t) detect_RAIN(e, t, period = period),
+    MH   = function(e, t) detect_MH(e, t, period = period)
+  )
 
   # CircaPower n80 estimate from median r
   n0_circapower <- circaPowerApproxN80(bio.opts, alpha = alpha)
@@ -921,13 +912,16 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
       omega <- 2 * pi / period
       expr  <- matrix(NA_real_, nrow = ngenes, ncol = n)
       for (g in seq_len(ngenes)) {
-        mu <- mesor_g[g] + amp_g[g] * cos(omega * times_i - omega * phase_g[g])
+        mu <- mesor_g[g] + amp_g[g] * (
+          cos(omega * times_i - omega * phase_g[g]) +
+          harmonics[1] * cos(2 * omega * times_i - 2 * omega * phase_g[g]) +
+          harmonics[2] * cos(3 * omega * times_i - 3 * omega * phase_g[g])
+        )
         expr[g, ] <- rnorm(n, mu, sigma_g[g])
       }
 
-      # Cosinor F-test
       pvals <- tryCatch(
-        fitCosinorAll(expr, times_i, period = period)$pvalue,
+        detect_fn(expr, times_i),
         error = function(e) rep(NA_real_, ngenes)
       )
       pvals[is.na(pvals)] <- 1
@@ -1241,24 +1235,23 @@ recommendDesign <- function(bio.opts,
   sim_result <- NULL
 
   if (!is.null(prior_result)) {
-    valid_classes <- c("SCPSingleResult", "SCPDiffResult")
-    if (!inherits(prior_result, valid_classes))
-      stop("prior_result must be a SCPSingleResult or SCPDiffResult")
+    if (!is.list(prior_result))
+      stop("prior_result must be a list returned by runSingleCohortPower() or runDifferentialPower()")
     sim_result <- prior_result
     if (verbose) cat("=== Step 3: Using prior simulation result ===\n\n")
 
   } else if (run_simulation) {
     if (verbose) cat("=== Step 3: Running simulation ===\n")
     if (mode == "single") {
-      sim_result <- runSingleCohortPower(
+      sim_result <- runSingleCohortGrid(
         bio.opts, design.opts, analysis.opts,
         methods  = methods, alpha2 = alpha2, alpha3 = alpha3,
-        mc.cores = mc.cores, plot = FALSE, verbose = verbose
+        mc.cores = mc.cores, verbose = verbose
       )
     } else {
       sim_result <- runDifferentialPower(
         bio.opts, design.opts, analysis.opts,
-        methods  = methods, alpha2 = alpha2, alpha3 = alpha3,
+        methods  = methods,
         mc.cores = mc.cores, plot = FALSE, verbose = verbose
       )
     }
@@ -1285,7 +1278,7 @@ recommendDesign <- function(bio.opts,
   ))
 
   # Simulation-based recommendations for other methods
-  if (!is.null(sim_result)) {
+  if (!is.null(sim_result) && !is.null(sim_result$power_df)) {
     df <- sim_result$power_df
     sim_methods <- setdiff(unique(df$method), "DCP")
 
@@ -1378,6 +1371,104 @@ plot.SCPRecommendResult <- function(x, output_file = NULL, ...) {
 
 
 # =====================================================================
+# Internal grid engine for B vs m recommendation
+# =====================================================================
+
+# Not exported. Called by recommendDesign() to sweep N x B x method x alpha2.
+# Returns SCPSingleResult with $power_df (N, B, method, alpha2, power, power_se)
+# and $n80_df — the compact format needed for the recommendation table.
+runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
+                                methods  = "DCP",
+                                alpha2   = 0,
+                                alpha3   = 0,
+                                mc.cores = 1L,
+                                verbose  = TRUE) {
+
+  stopifnot(inherits(bio.opts,      "CircadianBioOptions"))
+  stopifnot(inherits(design.opts,   "CircadianDesignOptions"))
+  stopifnot(inherits(analysis.opts, "CircadianAnalysisOptions"))
+
+  methods <- match.arg(methods, c("DCP", "JTK", "RAIN", "MH"), several.ok = TRUE)
+
+  N_vals      <- design.opts$sample_sizes
+  B_vals      <- design.opts$B_values %||% length(unique(design.opts$cts))
+  period      <- bio.opts$period %||% 24
+  fdr         <- min(analysis.opts$fdr_thresholds)
+  nsims       <- design.opts$nsims
+  GLOBAL_SEED <- bio.opts$sim.seed %||% 2025L
+
+  detect_fn <- list(
+    DCP  = function(expr, cts) detect_DCP(expr,  cts, period = period),
+    JTK  = function(expr, cts) detect_JTK(expr,  cts, period = period),
+    RAIN = function(expr, cts) detect_RAIN(expr, cts, period = period),
+    MH   = function(expr, cts) detect_MH(expr,   cts, period = period)
+  )
+
+  grid <- expand.grid(N = N_vals, B = B_vals, alpha2 = alpha2, alpha3 = alpha3,
+                      method = methods, stringsAsFactors = FALSE)
+  grid <- grid[grid$N %% grid$B == 0, ]
+
+  if (verbose) {
+    printMethodGuidance(methods = methods, verbose = TRUE)
+    cat(sprintf("runSingleCohortGrid: %d cells x %d sims = %d runs\n",
+                nrow(grid), nsims, nrow(grid) * nsims))
+    cat(sprintf("  methods: %s\n", paste(methods, collapse = ", ")))
+    cat(sprintf("  N: %s\n", paste(N_vals, collapse = ", ")))
+    cat(sprintf("  B: %s\n", paste(B_vals, collapse = ", ")))
+    cat(sprintf("  alpha2: %s\n", paste(alpha2, collapse = ", ")))
+  }
+
+  run_cell <- function(i) {
+    N   <- grid$N[i];  B  <- grid$B[i]
+    a2  <- grid$alpha2[i]; a3 <- grid$alpha3[i]
+    mth <- grid$method[i]
+    cts <- rep(seq(0, period * (1 - 1/B), length.out = B), each = N / B)
+    fn  <- detect_fn[[mth]]
+
+    sims <- vapply(seq_len(nsims), function(s) {
+      dat <- simCircadianSingleCohort(bio.opts, cts, alpha2 = a2, alpha3 = a3,
+                                      seed = GLOBAL_SEED + i * 1000L + s)
+      pv  <- fn(dat$expr, cts)
+      adj <- p.adjust(pv, method = analysis.opts$p.adjust.method)
+      sum(adj[dat$is_rhythmic] <= fdr, na.rm = TRUE) / sum(dat$is_rhythmic)
+    }, numeric(1))
+
+    c(power = mean(sims, na.rm = TRUE), power_se = sd(sims, na.rm = TRUE) / sqrt(nsims))
+  }
+
+  t0 <- proc.time()[["elapsed"]]
+  results <- parallel::mclapply(seq_len(nrow(grid)), run_cell, mc.cores = mc.cores)
+  if (verbose) cat(sprintf("  Done in %.1f min\n", (proc.time()[["elapsed"]] - t0) / 60))
+
+  safe_get <- function(r, field) {
+    if (is.null(r) || inherits(r, "try-error")) NA_real_ else r[[field]]
+  }
+  n_failed <- sum(vapply(results, function(r) is.null(r) || inherits(r, "try-error"), logical(1)))
+  if (n_failed > 0)
+    warning(sprintf("runSingleCohortGrid: %d/%d cells failed — set to NA",
+                    n_failed, length(results)))
+  grid$power    <- vapply(results, safe_get, 0, "power")
+  grid$power_se <- vapply(results, safe_get, 0, "power_se")
+
+  n80_df <- do.call(rbind, lapply(
+    split(grid, interaction(grid$method, grid$B, grid$alpha2, grid$alpha3)),
+    function(sub) {
+      n80 <- tryCatch(npower(sub$N, sub$power, target = 0.80), error = function(e) NA_real_)
+      data.frame(method = sub$method[1], B = sub$B[1],
+                 alpha2 = sub$alpha2[1], alpha3 = sub$alpha3[1],
+                 n80 = n80, stringsAsFactors = FALSE)
+    }
+  ))
+
+  structure(
+    list(power_df = grid, n80_df = n80_df,
+         bio.opts = bio.opts, design.opts = design.opts, analysis.opts = analysis.opts),
+    class = "SCPSingleResult"
+  )
+}
+
+
+# =====================================================================
 # Unified single-cohort power runner
 # =====================================================================
 
@@ -1415,87 +1506,23 @@ runSingleCohortPower <- function(bio.opts,
   stopifnot(inherits(design.opts,   "CircadianDesignOptions"))
   stopifnot(inherits(analysis.opts, "CircadianAnalysisOptions"))
 
-  valid_methods <- c("DCP", "JTK", "RAIN", "MH")
-  methods <- match.arg(methods, valid_methods, several.ok = TRUE)
-
-  N_vals  <- design.opts$sample_sizes
-  B_vals  <- design.opts$B_values %||% length(unique(design.opts$cts))
-  period  <- bio.opts$period %||% 24
-  fdr     <- min(analysis.opts$fdr_thresholds)
-  nsims   <- design.opts$nsims
-  GLOBAL_SEED <- bio.opts$sim.seed %||% 2025L
-
-  detect_fn <- list(
-    DCP  = function(expr, cts) detect_DCP(expr,  cts, period = period),
-    JTK  = function(expr, cts) detect_JTK(expr,  cts, period = period),
-    RAIN = function(expr, cts) detect_RAIN(expr, cts, period = period),
-    MH   = function(expr, cts) detect_MH(expr,   cts, period = period)
-  )
-
-  grid <- expand.grid(N = N_vals, B = B_vals, alpha2 = alpha2, alpha3 = alpha3,
-                      method = methods, stringsAsFactors = FALSE)
-  grid <- grid[grid$N %% grid$B == 0, ]
-
-  if (verbose) {
-    printMethodGuidance(methods = methods, verbose = TRUE)
-    cat(sprintf("runSingleCohortPower: %d cells x %d sims = %d runs\n",
-                nrow(grid), nsims, nrow(grid) * nsims))
-    cat(sprintf("  methods: %s\n", paste(methods, collapse = ", ")))
-    cat(sprintf("  N: %s\n", paste(N_vals,  collapse = ", ")))
-    cat(sprintf("  B: %s\n", paste(B_vals,  collapse = ", ")))
-    cat(sprintf("  alpha2: %s\n", paste(alpha2, collapse = ", ")))
+  methods <- match.arg(methods, c("DCP", "JTK", "RAIN", "MH"), several.ok = TRUE)
+  if (length(methods) > 1L) {
+    warning("runSingleCohortPower: multiple methods specified; using only '", methods[1L],
+            "'. For multi-method B vs m comparison use recommendDesign().")
+    methods <- methods[1L]
   }
 
-  run_cell <- function(i) {
-    N   <- grid$N[i];  B  <- grid$B[i]
-    a2  <- grid$alpha2[i]; a3 <- grid$alpha3[i]
-    mth <- grid$method[i]
-    cts <- rep(seq(0, period * (1 - 1/B), length.out = B), each = N / B)
-    fn  <- detect_fn[[mth]]
+  res <- runSimsSingleCohort(bio.opts, design.opts, analysis.opts,
+                              method    = methods,
+                              harmonics = c(alpha2[1], alpha3[1]),
+                              verbose   = verbose,
+                              mc.cores  = mc.cores)
 
-    sims <- vapply(seq_len(nsims), function(s) {
-      dat  <- simCircadianSingleCohort(bio.opts, cts, alpha2 = a2, alpha3 = a3,
-                                        seed = GLOBAL_SEED + i * 1000L + s)
-      pv   <- fn(dat$expr, cts)
-      adj  <- p.adjust(pv, method = analysis.opts$p.adjust.method)
-      sum(adj[dat$is_rhythmic] <= fdr, na.rm = TRUE) / sum(dat$is_rhythmic)
-    }, numeric(1))
+  if (isTRUE(plot))
+    plotSingleCohortPower(res, out_pdf = output_file)
 
-    c(power = mean(sims, na.rm = TRUE), power_se = sd(sims, na.rm = TRUE) / sqrt(nsims))
-  }
-
-  t0 <- proc.time()[["elapsed"]]
-  results <- parallel::mclapply(seq_len(nrow(grid)), run_cell, mc.cores = mc.cores)
-  if (verbose) cat(sprintf("  Done in %.1f min\n", (proc.time()[["elapsed"]] - t0) / 60))
-
-  safe_get <- function(r, field) {
-    if (is.null(r) || inherits(r, "try-error")) NA_real_ else r[[field]]
-  }
-  n_failed <- sum(vapply(results, function(r) is.null(r) || inherits(r, "try-error"), logical(1)))
-  if (n_failed > 0)
-    warning(sprintf("runSingleCohortPower: %d/%d cells failed (NULL/error) — set to NA",
-                    n_failed, length(results)))
-  grid$power    <- vapply(results, safe_get, 0, "power")
-  grid$power_se <- vapply(results, safe_get, 0, "power_se")
-
-  n80_df <- do.call(rbind, lapply(
-    split(grid, interaction(grid$method, grid$B, grid$alpha2, grid$alpha3)),
-    function(sub) {
-      n80 <- tryCatch(npower(sub$N, sub$power, target = 0.80), error = function(e) NA_real_)
-      data.frame(method = sub$method[1], B = sub$B[1],
-                 alpha2 = sub$alpha2[1], alpha3 = sub$alpha3[1],
-                 n80 = n80, stringsAsFactors = FALSE)
-    }
-  ))
-
-  out <- structure(
-    list(power_df = grid, n80_df = n80_df,
-         bio.opts = bio.opts, design.opts = design.opts, analysis.opts = analysis.opts),
-    class = "SCPSingleResult"
-  )
-
-  if (plot) plot(out, output_file = output_file)
-  out
+  res
 }
 
 #' @export
@@ -1545,7 +1572,7 @@ plot.SCPSingleResult <- function(x, output_file = NULL, ...) {
 #' @param design.opts   CircadianDesignOptions (sample_sizes, design, cts)
 #' @param analysis.opts CircadianAnalysisOptions
 #' @param methods       Any of "DCP","CircaCompare","LimoRhyde","DODR"
-#' @param test_types    Any of "DR","DP","DM","DA" (silently NA if method lacks support)
+#' @param test_types    Any of "DR","DP","DM" (silently NA if method lacks support)
 #' @param alpha2        Scalar or vector swept for both groups
 #' @param alpha3        Scalar or vector swept for both groups
 #' @param mc.cores      Parallel cores
@@ -1571,125 +1598,29 @@ runDifferentialPower <- function(bio.opts,
   stopifnot(inherits(design.opts,   "CircadianDesignOptions"))
   stopifnot(inherits(analysis.opts, "CircadianAnalysisOptions"))
 
-  valid_methods <- c("DCP", "CircaCompare", "LimoRhyde", "DODR")
-  methods    <- match.arg(methods,    valid_methods, several.ok = TRUE)
-  test_types <- match.arg(test_types, c("DR","DP","DM","DA"), several.ok = TRUE)
+  methods    <- match.arg(methods,    c("DCP","CircaCompare","LimoRhyde","DODR"), several.ok = TRUE)
+  test_types <- match.arg(test_types, c("DR","DP","DM"), several.ok = TRUE)
 
-  N_vals  <- design.opts$sample_sizes
-  period  <- bio.opts$period %||% 24
-  fdr     <- min(analysis.opts$fdr_thresholds)
-  nsims   <- design.opts$nsims
-  GLOBAL_SEED <- bio.opts$sim.seed %||% 2025L
-
-  detect_fn <- list(
-    DCP          = detect_DCP_diff,
-    CircaCompare = detect_CircaCompare,
-    LimoRhyde    = detect_LimoRhyde,
-    DODR         = detect_DODR
-  )
-
-  type_to_pval <- c(DR = "pval_DR", DP = "pval_DP", DM = "pval_DM", DA = "pval_DA")
-  type_to_gene <- c(DR = "is_DR",   DP = "is_DP",   DM = "is_DM",   DA = "is_DA")
-
-  grid <- expand.grid(N = N_vals, alpha2 = alpha2, alpha3 = alpha3,
-                      method = methods, test_type = test_types,
-                      stringsAsFactors = FALSE)
-
-  if (verbose) {
-    cat(sprintf("runDifferentialPower: %d cells x %d sims\n", nrow(grid), nsims))
-    cat(sprintf("  methods: %s\n",    paste(methods,    collapse = ", ")))
-    cat(sprintf("  test_types: %s\n", paste(test_types, collapse = ", ")))
-    cat(sprintf("  N: %s\n",          paste(N_vals,     collapse = ", ")))
-    cat(sprintf("  alpha2: %s\n",     paste(alpha2,     collapse = ", ")))
+  if (length(methods) > 1L) {
+    warning("runDifferentialPower: multiple methods specified; using only '", methods[1L], "'.")
+    methods <- methods[1L]
   }
 
-  run_cell <- function(i) {
-    N   <- grid$N[i]; a2 <- grid$alpha2[i]; a3 <- grid$alpha3[i]
-    mth <- grid$method[i]; tt <- grid$test_type[i]
-    fn  <- detect_fn[[mth]]
-    pv_key <- type_to_pval[tt]
+  analysis.opts$DCmethod  <- methods
+  design.opts$test_types  <- test_types
+  design.opts$harmonics   <- c(alpha2[1], alpha3[1])
 
-    cts <- if (!is.null(design.opts$cts)) {
-      sort(rep_len(design.opts$cts, N))
-    } else {
-      seq(0, period * (1 - 1/12), length.out = 12)
-    }
+  res <- runSimsDiff(bio.opts, design.opts, analysis.opts,
+                     mc.cores = mc.cores,
+                     verbose  = verbose)
 
-    sims <- vapply(seq_len(nsims), function(s) {
-      dat <- simCircadianDiff(
-        ngenes       = bio.opts$ngenes,
-        n1 = N, n2  = N,
-        lBaselineExpr  = bio.opts$lBaselineExpr,
-        lBaselineExpr2 = bio.opts$lBaselineExpr2,
-        lOD            = bio.opts$lOD,
-        lOD2           = bio.opts$lOD2,
-        amplitude      = bio.opts$amplitude,
-        amplitude2     = bio.opts$amplitude2,
-        sigma_rhythmic = bio.opts$sigma_rhythmic,
-        prop_rhythmic  = bio.opts$prop_rhythmic,
-        prop_DR        = bio.opts$prop_DR  %||% 0,
-        prop_DP        = bio.opts$prop_DP  %||% 0,
-        prop_DM        = bio.opts$prop_DM  %||% 0,
-        prop_DA        = bio.opts$prop_DA  %||% 0,
-        phase_diff     = bio.opts$phase_diff %||% c(-6, 6),
-        amp_diff       = bio.opts$amp_diff   %||% c(0.5, 2),
-        mesor_diff     = bio.opts$mesor_diff %||% c(0.5, 2),
-        period         = period,
-        design         = design.opts$design,
-        cts            = cts, cts2 = cts,
-        harmonics      = c(a2, a3),
-        sim.seed       = GLOBAL_SEED + i * 1000L + s
-      )
-      res  <- fn(dat$expr1, dat$times1, dat$expr2, dat$times2, period = period)
-      pvec <- res[[pv_key]]
-      if (all(is.na(pvec))) return(NA_real_)
-      adj  <- p.adjust(pvec, method = analysis.opts$p.adjust.method)
-      is_target <- switch(tt,
-        DR = dat$ground_truth$diff_type %in% c(2L, 3L),
-        DP = dat$ground_truth$diff_type == 4L,
-        DM = dat$ground_truth$diff_type == 5L,
-        DA = dat$ground_truth$diff_type == 6L
-      )
-      n_target <- sum(is_target)
-      if (n_target == 0L) return(NA_real_)
-      sum(adj[is_target] <= fdr, na.rm = TRUE) / n_target
-    }, numeric(1))
+  if (isTRUE(plot))
+    plotDiffPower(list(res),
+                  comp_labels = NULL,
+                  endpoints   = intersect(test_types, c("DR", "DP", "DM")),
+                  out_pdf     = output_file)
 
-    c(power = mean(sims, na.rm = TRUE), power_se = sd(sims, na.rm = TRUE) / sqrt(nsims))
-  }
-
-  t0 <- proc.time()[["elapsed"]]
-  results <- parallel::mclapply(seq_len(nrow(grid)), run_cell, mc.cores = mc.cores)
-  if (verbose) cat(sprintf("  Done in %.1f min\n", (proc.time()[["elapsed"]] - t0) / 60))
-
-  safe_get <- function(r, field) {
-    if (is.null(r) || inherits(r, "try-error")) NA_real_ else r[[field]]
-  }
-  n_failed <- sum(vapply(results, function(r) is.null(r) || inherits(r, "try-error"), logical(1)))
-  if (n_failed > 0)
-    warning(sprintf("runDifferentialPower: %d/%d cells failed (NULL/error) — set to NA",
-                    n_failed, length(results)))
-  grid$power    <- vapply(results, safe_get, 0, "power")
-  grid$power_se <- vapply(results, safe_get, 0, "power_se")
-
-  n80_df <- do.call(rbind, lapply(
-    split(grid, interaction(grid$method, grid$test_type, grid$alpha2, grid$alpha3)),
-    function(sub) {
-      n80 <- tryCatch(npower(sub$N, sub$power, target = 0.80), error = function(e) NA_real_)
-      data.frame(method = sub$method[1], test_type = sub$test_type[1],
-                 alpha2 = sub$alpha2[1],  alpha3    = sub$alpha3[1],
-                 n80 = n80, stringsAsFactors = FALSE)
-    }
-  ))
-
-  out <- structure(
-    list(power_df = grid, n80_df = n80_df,
-         bio.opts = bio.opts, design.opts = design.opts, analysis.opts = analysis.opts),
-    class = "SCPDiffResult"
-  )
-
-  if (plot) plot(out, output_file = output_file)
-  out
+  res
 }
 
 #' @export
@@ -1725,21 +1656,4 @@ plot.SCPDiffResult <- function(x, output_file = NULL, ...) {
     }
   }
   invisible(x)
-}
-
-# Soft-deprecation shims
-#' @export
-runPowerAnalysis <- function(...) {
-  .Deprecated("runDifferentialPower",
-              msg = "runPowerAnalysis() is deprecated. Use runDifferentialPower().")
-  runDifferentialPower(...)
-}
-
-#' @export
-runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
-                                verbose = TRUE, mc.cores = 1L) {
-  .Deprecated("runSingleCohortPower",
-              msg = "runSimsSingleCohort() is deprecated. Use runSingleCohortPower().")
-  runSingleCohortPower(bio.opts, design.opts, analysis.opts,
-                       mc.cores = mc.cores, verbose = verbose)
 }

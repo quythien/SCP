@@ -86,8 +86,8 @@ analysis <- CircadianAnalysisOptions(
 # Single-Cohort Power
 
 Use `runSingleCohortPower()` to evaluate detection power for one group.
-It sweeps all combinations of N × B × α₂ × method and returns an
-`SCPSingleResult` object.
+It sweeps N values under the pilot effect-size distribution and returns
+a rich list fed directly into `plotSingleCohortPower()`.
 
 ## Minimal example (DCP only)
 
@@ -272,7 +272,7 @@ rec2 <- recommendDesign(
   design.opts   = design_bvsm,
   analysis.opts = analysis,
   methods       = c("DCP", "MH"),
-  prior_result  = res_multi,   # SCPSingleResult from earlier
+  prior_result  = rec$simulation,   # result from earlier recommendDesign() call
   target_power  = 0.80,
   mode          = "single"
 )
@@ -336,31 +336,43 @@ collecting additional pilot data before designing the full study.
 
 # Working with Result Objects
 
-All three runners return S3 objects with consistent `print`, `plot`, and
-`npower` methods.
+`runSingleCohortPower()` and `runDifferentialPower()` return rich lists
+containing raw per-gene FDR arrays. Pass them directly to the plotting
+functions, or save with `saveRDS()` for later replotting at any FDR threshold.
 
-```{r s3-methods}
-# SCPSingleResult
-res        # prints n80 summary
-plot(res)  # power curves
-npower(res, target = 0.80)  # interpolated N for 80% power
+```{r result-objects}
+# Single-cohort result — pass to plotSingleCohortPower()
+res <- runSingleCohortPower(bio, design, analysis,
+                             methods = "DCP", plot = FALSE, mc.cores = 4L)
+saveRDS(res, "output/single_cohort_power.rds")
+plotSingleCohortPower(res, out_pdf = "output/fig1.pdf",
+                      title = "My Cohort — Single-Cohort Power")
 
-# SCPDiffResult
-res_diff
-plot(res_diff)
-npower(res_diff, target = 0.80)
+# Key fields in the result:
+res$sample_sizes          # N values swept
+res$marginal_power        # [N × nsims] matrix of per-sim marginal power
+res$strat_power           # [N × r_strata × nsims] stratified by SNR
+res$pvalues               # [N × genes × nsims] raw p-values (replot at any FDR)
 
-# SCPRecommendResult
+# Differential result — pass to plotDiffPower()
+res_diff <- runDifferentialPower(bio_diff, design, analysis,
+                                  methods = "DCP", plot = FALSE, mc.cores = 4L)
+saveRDS(res_diff, "output/diff_power.rds")
+plotDiffPower(list(res_diff),
+              comp_labels = "Group A vs Group B",
+              endpoints   = c("DR", "DP", "DM"),
+              out_pdf     = "output/fig2.pdf")
+
+# Key fields in the differential result:
+res_diff$fdr_DR            # [genes × N × nsims] FDR for DR test
+res_diff$fdr_DP            # [genes × N × nsims] FDR for DP test
+res_diff$fdr_DM            # [genes × N × nsims] FDR for DM test
+res_diff$diff_type         # list[nsims]: per-gene ground-truth type (0–5)
+res_diff$effectsize        # list[nsims]: per-gene effect sizes
+
+# recommendDesign() result still has print/plot S3 methods:
 rec
 plot(rec)
-```
-
-The raw power table is always at `$power_df`:
-
-```{r power-df}
-# Tidy data frame: N, B, alpha2, alpha3, method, test_type, power, power_se
-df <- res$power_df
-df[df$method == "MH" & df$B == 6, c("N", "power")]
 ```
 
 ---
@@ -413,15 +425,15 @@ saveRDS(res, sprintf("output/single_cohort/results/fig1_nac_%s.rds",
 | `CircadianDesignOptions()` | Build design option object |
 | `CircadianAnalysisOptions()` | Build analysis option object |
 | `makeAdaptiveRStrata()` | Build adaptive r-strata breaks from pilot |
-| `runSingleCohortPower()` | Single-cohort power sweep (methods × B × N × α₂) |
-| `runDifferentialPower()` | Differential power sweep (methods × test_type × N × α₂) |
-| `recommendDesign()` | Full B vs m orchestrator (guidance → analytical → simulation) |
+| `runSingleCohortPower()` | Single-cohort power (methods=, alpha2=, plot=) |
+| `runDifferentialPower()` | Differential power (methods=, test_types=, alpha2=, plot=) |
+| `recommendDesign()` | B vs m orchestrator (guidance → analytical → simulation) |
 | `printMethodGuidance()` | Print method × B sensitivity table |
 | `runBootstrapDesignGrid()` | Bootstrap pilot uncertainty quantification |
-| `npower()` | Interpolate N for target power from result object |
-| `plot.SCPSingleResult()` | Plot single-cohort power curves |
-| `plot.SCPDiffResult()` | Plot differential power curves |
+| `plotSingleCohortPower()` | 3-panel single-cohort power figure |
+| `plotDiffPower()` | Multi-panel differential power figure |
 | `print.SCPRecommendResult()` | Print recommendation summary |
+| `plot.SCPRecommendResult()` | Plot B vs m recommendation |
 
 ---
 
