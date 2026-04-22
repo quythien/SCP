@@ -177,12 +177,15 @@ LRTest_diff_amp <- function(tt1, yy1, tt2, yy2, period = 24, FN = TRUE){
   la <- - eval_f_list(x_Ha, asin1, acos1, asin2, acos2)$objective
 
   LR_stat <- -2*(l0-la)
+  if (l0 > la + 1e-6)
+    warning("LR_stat < 0 (constrained optimizer may have reached a saddle); clamped to 0")
+  LR_stat <- max(0, LR_stat)
 
   if(!FN){
     pvalue <- pchisq(LR_stat, 1, lower.tail = FALSE)
   } else {
     r <- 1
-    k <- 6
+    k <- 8
     n <- n1+n2
     Fstat <- (exp(LR_stat/n) - 1) * (n-k) / r
     pvalue <- pf(Fstat, df1 = r, df2 = n-k, lower.tail = FALSE)

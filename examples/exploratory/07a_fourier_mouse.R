@@ -144,7 +144,7 @@ prop_DR_m <- mean(xor(rhy_liv, rhy_cer))
 
 bio_mouse <- estCircadianParam(
   data = mat_liv_s, times = ct_liv, period = 24,
-  prop_DR = prop_DR_m, prop_DP = 0, prop_DA = 0,
+  prop_DR = prop_DR_m, prop_DP = 0,
   min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE
 )
 cat(sprintf("Mouse pilot: n=%d, prop_DR=%.1f%%, r_med=%.2f\n",

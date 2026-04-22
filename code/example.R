@@ -69,7 +69,6 @@ opts_bio <- CircadianBioOptions(
   prop_rhythmic = 0.25,
   prop_DR       = 0.15,
   prop_DP       = 0.00,
-  prop_DA       = 0.00,
   phase_diff    = c(0, 0),
   amp_diff      = c(1, 1)
 )
@@ -99,7 +98,6 @@ cat("\n=== SCENARIO 2: Differential Phase (DP) ===\n\n")
 opts_bio_DP <- updateBioOptions(opts_bio,
   prop_DR    = 0.00,
   prop_DP    = 0.15,
-  prop_DA    = 0.00,
   phase_diff = c(-6, 6),
   amp_diff   = c(0.5, 2)
 )
@@ -121,7 +119,6 @@ legacy_results <- runSimsDiff(
   prop_rhythmic = 0.25,
   prop_DR       = 0.10,
   prop_DP       = 0.10,
-  prop_DA       = 0.00,
   phase_diff    = c(-4, 4),
   design        = "active",
   verbose       = FALSE
@@ -142,7 +139,6 @@ opts_from_pilot <- estCircadianParam(
   period  = 24,
   prop_DR = 0.10,
   prop_DP = 0.10,
-  prop_DA = 0.00,
   verbose = TRUE
 )
 cat("\nEstimated bio options from pilot:\n")

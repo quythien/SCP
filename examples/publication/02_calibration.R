@@ -111,7 +111,6 @@ opts_bio <- CircadianBioOptions(
   prop_rhythmic = 0.25,
   prop_DR       = 0.15,
   prop_DP       = 0.00,
-  prop_DA       = 0.00,
   phase_diff    = c(0, 0),
   amp_diff      = c(1, 1)
 )

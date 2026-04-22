@@ -275,7 +275,7 @@ prop_DR_b <- mean(xor(rhy_lun, rhy_cerb))
 
 bio_bab <- estCircadianParam(
   data = mat_lun_s, times = tod_lun, period = 24,
-  prop_DR = prop_DR_b, prop_DP = 0, prop_DA = 0,
+  prop_DR = prop_DR_b, prop_DP = 0,
   min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE
 )
 cat(sprintf("Baboon: prop_DR=%.1f%%  r_med=%.2f\n",
@@ -339,7 +339,7 @@ prop_DR_d <- mean(xor(rhy_d1, rhy_d2))
 
 bio_d1d2 <- estCircadianParam(
   data = mat_d1_s, times = tod_d1, period = 24,
-  prop_DR = prop_DR_d, prop_DP = 0, prop_DA = 0,
+  prop_DR = prop_DR_d, prop_DP = 0,
   min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE
 )
 cat(sprintf("D1D2: prop_DR=%.1f%%  r_med=%.2f\n",

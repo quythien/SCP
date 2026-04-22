@@ -79,7 +79,7 @@ rhy_d2  <- !is.na(fit_d2$pvalue) & fit_d2$pvalue < RHYTHM_PVAL
 
 bio_opts <- estCircadianParam(
   data = mat_d1_s, times = tod_d1, period = 24,
-  prop_DR = mean(xor(rhy_d1, rhy_d2)), prop_DP = 0, prop_DA = 0,
+  prop_DR = mean(xor(rhy_d1, rhy_d2)), prop_DP = 0,
   min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE
 )
 cat(sprintf("D1D2: r_med=%.2f, prop_DR=%.1f%%\n",

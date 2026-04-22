@@ -42,12 +42,11 @@ updateSimOptions <- function(sim.opts) {
   
   # Regenerate phase from original specification
   if (is.null(sim.opts$phase_spec)) {
-    # Fallback to uniform
-    phase_new = runif(n_rhythmic, 0, sim.opts$period)
-  } else if (sim.opts$phase_spec == "uniform") {
     phase_new = runif(n_rhythmic, 0, sim.opts$period)
   } else if (is.function(sim.opts$phase_spec)) {
     phase_new = sim.opts$phase_spec(n_rhythmic)
+  } else if (sim.opts$phase_spec == "uniform") {
+    phase_new = runif(n_rhythmic, 0, sim.opts$period)
   } else if (is.numeric(sim.opts$phase_spec)) {
     phase_new = sample(sim.opts$phase_spec, n_rhythmic, replace = TRUE)
   } else {
@@ -216,10 +215,9 @@ setPhase <- function(input, n_rhythmic, period) {
 #' @param phase Phase for rhythmic genes ("uniform", scalar/vector/function)
 #' @param prop_DR Proportion with differential rhythmicity
 #' @param prop_DP Proportion with differential phase
-#' @param prop_DA Proportion with differential amplitude (legacy; kept for back-compat)
 #' @param prop_DM Proportion with differential mesor (mean shift, both groups rhythmic)
 #' @param phase_diff Range of phase shift for DP genes c(min, max)
-#' @param amp_diff Range of amplitude ratio for DA genes c(min, max)
+#' @param amp_diff Range of amplitude ratio (unused; retained for interface compatibility)
 #' @param mesor_diff Range of mesor shift for DM genes c(min, max) (additive, log-scale units)
 #' @param dp_shift_mode "fixed" (use phase_diff[2]) or "uniform" (sample within phase_diff range)
 #' @param dr_amp_scale Scale factor for amplitude (A) to adjust DR strength
@@ -242,7 +240,6 @@ CircadianBioOptions <- function(ngenes = 5000,
                                 phase = "uniform",
                                 prop_DR = 0.15,
                                 prop_DP = 0.10,
-                                prop_DA = 0.00,
                                 prop_DM = 0.00,
                                 phase_diff = c(-6, 6),
                                 amp_diff = c(0.5, 2),
@@ -276,21 +273,18 @@ CircadianBioOptions <- function(ngenes = 5000,
   stopifnot(prop_rhythmic >= 0, prop_rhythmic <= 1)
   stopifnot(prop_DR >= 0, prop_DR <= 1)
   stopifnot(prop_DP >= 0, prop_DP <= 1)
-  stopifnot(prop_DA >= 0, prop_DA <= 1)
   stopifnot(prop_DM >= 0, prop_DM <= 1)
-  total_diff <- prop_DR + prop_DP + prop_DA + prop_DM
-  if (total_diff > 1) stop("prop_DR + prop_DP + prop_DA + prop_DM must be <= 1")
+  total_diff <- prop_DR + prop_DP + prop_DM
+  if (total_diff > 1) stop("prop_DR + prop_DP + prop_DM must be <= 1")
 
   # All differential genes are rhythmic in at least one group, so prop_rhythmic
   # cannot be smaller than their combined fraction without contradicting the truth.
-  # DM genes are rhythmic in both (same A/phi, different mesor), so they count
-  # toward the rhythmic budget along with DR, DP, DA genes.
-  rhythmic_required <- prop_DR + prop_DP + prop_DA + prop_DM
+  rhythmic_required <- prop_DR + prop_DP + prop_DM
   if (prop_rhythmic < rhythmic_required - 1e-9) {
     stop(sprintf(
-      "prop_rhythmic (%.3f) must be >= prop_DR + prop_DP + prop_DA + prop_DM (%.3f).\n%s",
+      "prop_rhythmic (%.3f) must be >= prop_DR + prop_DP + prop_DM (%.3f).\n%s",
       prop_rhythmic, rhythmic_required,
-      "All DR/DP/DA/DM genes are rhythmic in at least one group and count toward the rhythmic budget."
+      "All DR/DP/DM genes are rhythmic in at least one group and count toward the rhythmic budget."
     ))
   }
 
@@ -298,7 +292,14 @@ CircadianBioOptions <- function(ngenes = 5000,
   stopifnot(length(phase_diff) == 2, length(amp_diff) == 2)
   stopifnot(dr_amp_scale > 0, dr_sigma_scale > 0)
 
+  rng_state <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
+    .GlobalEnv$.Random.seed else NULL
   set.seed(sim.seed)
+  on.exit(
+    if (!is.null(rng_state))
+      assign(".Random.seed", rng_state, envir = .GlobalEnv),
+    add = TRUE
+  )
   n_rhythmic <- round(ngenes * prop_rhythmic)
 
   # Resolve distributions using existing set*() helpers, store specs for re-seeding
@@ -330,7 +331,6 @@ CircadianBioOptions <- function(ngenes = 5000,
     phase_spec = phase,
     prop_DR = prop_DR,
     prop_DP = prop_DP,
-    prop_DA = prop_DA,
     prop_DM = prop_DM,
     phase_diff = phase_diff,
     amp_diff = amp_diff,
@@ -351,7 +351,7 @@ CircadianBioOptions <- function(ngenes = 5000,
 #' @param nsims Number of simulation replicates
 #' @param design "active" or "passive"
 #' @param cts Time-of-day distribution for passive design (numeric vector)
-#' @param test_types Character vector of tests to run ("DR", "DP", "DA", "DM")
+#' @param test_types Character vector of tests to run ("DR", "DP", "DM")
 #'
 #' @return Object of class "CircadianDesignOptions"
 CircadianDesignOptions <- function(sample_sizes = c(10, 20, 40, 60, 80, 100),
@@ -544,7 +544,7 @@ updateBioOptions <- function(opts, ...) {
   updates <- list(...)
   # Re-call constructor with merged args
   current_args <- opts[c("ngenes", "prop_rhythmic", "period",
-                         "prop_DR", "prop_DP", "prop_DA", "prop_DM",
+                         "prop_DR", "prop_DP", "prop_DM",
                          "phase_diff", "amp_diff", "dp_shift_mode",
                          "dr_amp_scale", "dr_sigma_scale",
                          "mesor_diff", "sim.seed")]
@@ -552,10 +552,13 @@ updateBioOptions <- function(opts, ...) {
   current_args$lBaselineExpr  <- opts$lBaselineExpr_spec
   current_args$lBaselineExpr2 <- opts$lBaselineExpr2
   current_args$lOD            <- opts$lOD_spec
+  current_args$lOD2           <- opts$lOD2
   current_args$amplitude      <- opts$amplitude_spec
   current_args$sigma_rhythmic <- opts$sigma_rhythmic
   current_args$amplitude2     <- opts$amplitude2
   current_args$phase          <- opts$phase_spec
+  current_args$cts            <- opts$cts
+  current_args$cts2           <- opts$cts2
   merged <- modifyList(current_args, updates)
   do.call(CircadianBioOptions, merged)
 }
@@ -572,7 +575,6 @@ print.CircadianBioOptions <- function(x, ...) {
   cat(sprintf("  period:         %g h\n", x$period))
   cat(sprintf("  prop_DR:        %.0f%%\n", 100 * x$prop_DR))
   cat(sprintf("  prop_DP:        %.0f%%\n", 100 * x$prop_DP))
-  cat(sprintf("  prop_DA:        %.0f%%\n", 100 * x$prop_DA))
   cat(sprintf("  prop_DM:        %.0f%%\n", 100 * (x$prop_DM %||% 0)))
   cat(sprintf("  phase_diff:     [%g, %g] h\n", x$phase_diff[1], x$phase_diff[2]))
   cat(sprintf("  amp_diff:       [%g, %g]\n", x$amp_diff[1], x$amp_diff[2]))

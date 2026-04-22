@@ -83,7 +83,7 @@ boot_opts  <- CircadianBootstrapOptions(
   seed          = 42L
 )
 bio_bm <- updateBioOptions(opts_bio,
-  prop_DR = prop_DR, prop_DP = 0, prop_DA = 0,
+  prop_DR = prop_DR, prop_DP = 0,
   phase_diff = c(0, 0), amp_diff = c(1, 1)
 )
 

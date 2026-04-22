@@ -192,7 +192,7 @@ summaryPower <- function(powerOutput) {
 #' Calculate power to detect differences in circadian rhythms between two groups
 #'
 #' @param simOutput Output from runSimsDiff()
-#' @param test_type Which test to evaluate ("DR", "DP", "DA", or "all")
+#' @param test_type Which test to evaluate ("DR", "DP", or "DM")
 #' @param alpha.type "pval" or "fdr"
 #' @param alpha.nominal Significance threshold (default 0.05)
 #' @param target_effect Minimum effect size to consider as "interesting"
@@ -200,7 +200,7 @@ summaryPower <- function(powerOutput) {
 #' @return List with power statistics
 
 comparePowerDiff <- function(simOutput,
-                         test_type = c("DR", "DP", "DA"),
+                         test_type = c("DR", "DP", "DM"),
                          alpha.type = c("pval", "fdr"),
                          alpha.nominal = 0.05,
                          target_effect = 0.3) {
@@ -219,9 +219,9 @@ comparePowerDiff <- function(simOutput,
   } else if (test_type == "DP") {
     pvalues = simOutput$pval_DP
     fdr_values = simOutput$fdr_DP
-  } else if (test_type == "DA") {
-    pvalues = simOutput$pval_DA
-    fdr_values = simOutput$fdr_DA
+  } else if (test_type == "DM") {
+    pvalues = simOutput$pval_DM
+    fdr_values = simOutput$fdr_DM
   }
 
   # Get ground truth
@@ -229,76 +229,58 @@ comparePowerDiff <- function(simOutput,
 
   # Initialize power arrays
   power.marginal = matrix(NA, length(sample_sizes), nsims)
-  FDR.marginal = matrix(NA, length(sample_sizes), nsims)
-  TD_avg = TD = numeric(length(sample_sizes))
-  FD_avg = FD = numeric(length(sample_sizes))
+  FDR.marginal   = matrix(NA, length(sample_sizes), nsims)
+  TD = numeric(length(sample_sizes))
+  FD = numeric(length(sample_sizes))
 
   # Loop over simulations and sample sizes
   for (i in 1:nsims) {
-    # Get ground truth for this simulation
     diff_type = simOutput$diff_type[[i]]
 
-    # Define target genes based on test type
     if (test_type == "DR") {
-      # DR genes: types 2 (G1 only) or 3 (G2 only)
       is_target = diff_type %in% c(2, 3)
-
     } else if (test_type == "DP") {
-      # DP genes: type 4
-      # Only include if phase effect is large enough
       effectsize_phase = simOutput$effectsize[[i]]$phase
       is_target = diff_type == 4 & effectsize_phase >= target_effect
-
     } else if (test_type == "DM") {
-      # DM genes: type 5 (differential mesor, both rhythmic)
       is_target = diff_type == 5
-
-    } else if (test_type == "DA") {
-      # DA genes: type 6
-      # Only include if amplitude effect is large enough
-      effectsize_amp = simOutput$effectsize[[i]]$amp
-      is_target = diff_type == 6 & effectsize_amp >= target_effect
     }
 
-    # Non-target (null) genes
     is_null = !is_target
 
     for (j in seq_along(sample_sizes)) {
       pvals = alpha_values[, j, i]
 
-      # True Discoveries: target genes with p < alpha
-      TD[j] = sum(pvals[is_target] < alpha.nominal, na.rm = TRUE)
+      td_j = sum(pvals[is_target] < alpha.nominal, na.rm = TRUE)
+      fd_j = sum(pvals[is_null]   < alpha.nominal, na.rm = TRUE)
 
-      # False Discoveries: null genes with p < alpha
-      FD[j] = sum(pvals[is_null] < alpha.nominal, na.rm = TRUE)
+      # Accumulate across sims
+      TD[j] = TD[j] + td_j
+      FD[j] = FD[j] + fd_j
 
-      # Power: proportion of target genes detected
       n_target = sum(is_target)
-      power.marginal[j, i] = if (n_target > 0) {
-        TD[j] / n_target
-      } else {
-        NA
-      }
+      power.marginal[j, i] = if (n_target > 0) td_j / n_target else NA
 
-      # FDR: proportion of discoveries that are false
-      N = TD[j] + FD[j]
-      FDR.marginal[j, i] = if (N > 0) FD[j] / N else 0
+      N = td_j + fd_j
+      FDR.marginal[j, i] = if (N > 0) fd_j / N else 0
     }
   }
 
-  # Calculate average power and summary statistics
-  power_avg = rowMeans(power.marginal, na.rm = TRUE)
-  fdr_avg = rowMeans(FDR.marginal, na.rm = TRUE)
+  # Average per-sim TD/FD across simulations
+  TD_avg = TD / nsims
+  FD_avg = FD / nsims
 
-  # Summary table - use TD and FD directly (not TD_avg/FD_avg which were never updated)
+  power_avg = rowMeans(power.marginal, na.rm = TRUE)
+  fdr_avg   = rowMeans(FDR.marginal,   na.rm = TRUE)
+
   res = cbind(
     sample_sizes,
     alpha.nominal,
     power_avg,
     fdr_avg,
-    TD,
-    FD,
-    ifelse(TD > 0, FD / TD, NA)
+    TD_avg,
+    FD_avg,
+    ifelse(TD_avg > 0, FD_avg / TD_avg, NA)
   )
 
   colnames(res) = c("n", "alpha", "Power", "FDR",
@@ -408,16 +390,13 @@ compareAllDifferentialTests <- function(simOutput,
   power_DP = comparePowerDiff(simOutput, test_type = "DP",
                             target_effect = target_effect,
                             alpha.nominal = alpha)
-  power_DA = comparePowerDiff(simOutput, test_type = "DA",
-                            target_effect = target_effect,
-                            alpha.nominal = alpha)
 
   sample_sizes = simOutput$sample_sizes
 
   df = data.frame(
-    n = rep(sample_sizes, 3),
-    power = c(power_DR$power_avg, power_DP$power_avg, power_DA$power_avg),
-    test = rep(c("DR", "DP", "DA"), each = length(sample_sizes))
+    n = rep(sample_sizes, 2),
+    power = c(power_DR$power_avg, power_DP$power_avg),
+    test = rep(c("DR", "DP"), each = length(sample_sizes))
   )
 
   p = ggplot(df, aes(x = n, y = power, color = test, group = test)) +
@@ -425,8 +404,7 @@ compareAllDifferentialTests <- function(simOutput,
     geom_point(size = 3) +
     geom_hline(yintercept = 0.8, linetype = "dashed", color = "gray50") +
     scale_color_manual(values = c("DR" = "steelblue",
-                              "DP" = "darkgreen",
-                              "DA" = "purple")) +
+                              "DP" = "darkgreen")) +
     labs(
       title = "Power Comparison: Differential Tests",
       subtitle = sprintf("Target effect: %.2f, Alpha: %.2f", target_effect, alpha),
@@ -442,315 +420,48 @@ compareAllDifferentialTests <- function(simOutput,
   return(list(
     plot = p,
     power_DR = power_DR,
-    power_DP = power_DP,
-    power_DA = power_DA
-  ))
-}
-#' Power Analysis for Single Condition Circadian Detection
-#'
-#' @description Simulation-based power analysis for detecting rhythmic genes.
-#' Compares multiple methods and returns power curves.
-#'
-#' @param params Parameter list (from estimate_circadian_params or manual)
-#' @param times Time points (hours)
-#' @param n_range Vector of sample sizes per time point to evaluate
-#' @param methods Detection methods to compare
-#' @param n_sim Number of simulations per sample size
-#' @param G Total genes per simulation
-#' @param prop_rhythmic Proportion of rhythmic genes
-#' @param alpha Significance threshold
-#' @param noise_type Noise model ("gaussian", "t", "negbinom")
-#' @param waveform Waveform shape ("sinusoid", "damped", "asymmetric")
-#' @param parallel Run in parallel
-#' @param ncores Number of cores for parallel
-#' @param verbose Print progress
-#'
-#' @return List with power results, method comparison, and recommendations
-power_single_condition = function(params = NULL,
-                                  times = seq(0, 48, by = 4),
-                                  n_range = 1:6,
-                                  methods = c("cosinor"),
-                                  n_sim = 100,
-                                  G = 500,
-                                  prop_rhythmic = 0.1,
-                                  alpha = 0.05,
-                                  noise_type = "gaussian",
-                                  waveform = "sinusoid",
-                                  parallel = FALSE,
-                                  ncores = 1,
-                                  verbose = TRUE) {
-
-  # Store start time
-  start_time = Sys.time()
-
-  if (verbose) {
-    cat("=== Power Analysis for Single Condition ===\n")
-    cat("Methods:", paste(methods, collapse = ", "), "\n")
-    cat("Sample sizes:", paste(n_range, collapse = ", "), "\n")
-    cat("Simulations per n:", n_sim, "\n")
-    cat("Genes per simulation:", G, "\n")
-    cat("Proportion rhythmic:", prop_rhythmic, "\n\n")
-  }
-
-  # Initialize results storage
-  n_methods = length(methods)
-  n_n = length(n_range)
-
-  results = list()
-
-  for (method in methods) {
-    results[[method]] = list(
-      power = numeric(n_n),
-      fdr = numeric(n_n),
-      sensitivity = numeric(n_n),
-      specificity = numeric(n_n),
-      ppv = numeric(n_n)
-    )
-  }
-
-  # Main simulation loop
-  for (i in seq_along(n_range)) {
-    n = n_range[i]
-
-    if (verbose && i %% 5 == 0) {
-      cat("Evaluating n =", n, sprintf("(%.0f%% complete)\n", 100 * i / n_n))
-    }
-
-    # Storage for this sample size
-    power_mat = matrix(NA, nrow = n_sim, ncol = n_methods)
-    colnames(power_mat) = methods
-
-    fdr_mat = matrix(NA, nrow = n_sim, ncol = n_methods)
-    colnames(fdr_mat) = methods
-
-    sens_mat = matrix(NA, nrow = n_sim, ncol = n_methods)
-    colnames(sens_mat) = methods
-
-    spec_mat = matrix(NA, nrow = n_sim, ncol = n_methods)
-    colnames(spec_mat) = methods
-
-    for (sim in 1:n_sim) {
-      # Generate data
-      sim_data = simulate_circadian_data(
-        G = G,
-        prop_rhythmic = prop_rhythmic,
-        n = n,
-        times = times,
-        params = params,
-        noise_type = noise_type,
-        waveform = waveform,
-        seed = NULL
-      )
-
-      ground_truth = sim_data$ground_truth$is_rhythmic
-
-      # Apply each method
-      for (method in methods) {
-        # Fit method and get p-values
-        pvals = sapply(1:nrow(sim_data$data), function(g) {
-          result = tryCatch({
-            fit_single_gene(sim_data$data[g, ], sim_data$times, method, period = 24)$pvalue
-          }, error = function(e) NA)
-          return(result)
-        })
-
-        # Multiple testing correction
-        qvals = p.adjust(pvals, method = "BH")
-
-        # Classifications
-        discovered = qvals < alpha
-        true_positive = discovered & ground_truth
-        false_positive = discovered & !ground_truth
-        false_negative = !discovered & ground_truth
-        true_negative = !discovered & !ground_truth
-
-        # Metrics
-        TP = sum(true_positive)
-        FP = sum(false_positive)
-        FN = sum(false_negative)
-        TN = sum(true_negative)
-
-        power_mat[sim, method] = TP / max(TP + FN, 1)
-        fdr_mat[sim, method] = FP / max(TP + FP, 1)
-        sens_mat[sim, method] = TP / max(TP + FN, 1)
-        spec_mat[sim, method] = TN / max(TN + FP, 1)
-      }
-    }
-
-    # Average over simulations
-    for (method in methods) {
-      results[[method]]$power[i] = mean(power_mat[, method], na.rm = TRUE)
-      results[[method]]$fdr[i] = mean(fdr_mat[, method], na.rm = TRUE)
-      results[[method]]$sensitivity[i] = mean(sens_mat[, method], na.rm = TRUE)
-      results[[method]]$specificity[i] = mean(spec_mat[, method], na.rm = TRUE)
-    }
-  }
-
-  # Compile results
-  power_df = data.frame(
-    n = n_range
-  )
-
-  for (method in methods) {
-    power_df[[paste0("power_", method)]] = results[[method]]$power
-    power_df[[paste0("fdr_", method)]] = results[[method]]$fdr
-  }
-
-  # Find optimal sample size for 80% power
-  optimal_n = list()
-  for (method in methods) {
-    power_vec = results[[method]]$power
-    idx = which(power_vec >= 0.8)[1]
-    if (!is.na(idx)) {
-      optimal_n[[method]] = n_range[idx]
-    } else {
-      optimal_n[[method]] = NA
-    }
-  }
-
-  # End time
-  end_time = Sys.time()
-  elapsed = difftime(end_time, start_time, units = "mins")
-
-  if (verbose) {
-    cat("\n=== Results ===\n")
-    cat(sprintf("Computation time: %.1f minutes\n", as.numeric(elapsed)))
-    cat("\nOptimal sample size for 80% power:\n")
-    for (method in methods) {
-      cat(sprintf("  %s: n = %s\n", method,
-                  ifelse(is.na(optimal_n[[method]]), "Not achieved", optimal_n[[method]])))
-    }
-  }
-
-  return(list(
-    power_curves = power_df,
-    results_by_method = results,
-    optimal_n = optimal_n,
-    parameters = list(
-      times = times,
-      n_range = n_range,
-      n_sim = n_sim,
-      G = G,
-      prop_rhythmic = prop_rhythmic,
-      alpha = alpha,
-      noise_type = noise_type,
-      waveform = waveform,
-      methods = methods
-    ),
-    elapsed_time = elapsed
+    power_DP = power_DP
   ))
 }
 
-
-#' Fit a single gene with specified method
-#'
-#' @param y Expression values
-#' @param times Time points
-#' @param method "cosinor", "JTK", "RAIN", etc.
-#' @param period Period (default 24)
-#'
-#' @return p-value for rhythmicity test
-fit_single_gene = function(y, times, method = "cosinor", period = 24) {
-
-  if (method == "cosinor") {
-    # Use the Cosinor_fit.R approach
-    fit = tryCatch({
-      one_cosinor_OLS(times, y, period, compute.phase.CI = FALSE)
-    }, error = function(e) {
-      return(list(pvalue = NA))
-    })
-    return(fit$pvalue)
-
-  } else if (method == "JTK") {
-    # JTK_CYCLE (simplified implementation)
-    # In practice, would call JTK package
-    return(NA)  # Placeholder
-
-  } else if (method == "RAIN") {
-    # RAIN method
-    # In practice, would call RAIN package
-    return(NA)  # Placeholder
-
-  } else {
-    warning(paste("Method", method, "not implemented"))
-    return(NA)
-  }
-}
-
-
-#' One-gene cosinor fit (from Cosinor_fit.R)
-#'
-#' @param tod Time of day
-#' @param y Expression values
-#' @param period Period (default 24)
-#' @param compute.phase.CI Whether to compute phase CI
-#' @param CI.level Confidence level
-#'
-#' @return List with fit results
 one_cosinor_OLS = function(tod, y, period = 24, compute.phase.CI = FALSE, CI.level = 0.95) {
-
-  n = length(tod)
+  n     = length(tod)
   omega = 2 * pi / period
-  x1 = cos(omega * tod)
-  x2 = sin(omega * tod)
+  x1    = cos(omega * tod)
+  x2    = sin(omega * tod)
 
   mat.S = matrix(c(n, sum(x1), sum(x2),
-                   sum(x1), sum(x1^2), sum(x1*x2),
-                   sum(x2), sum(x1*x2), sum(x2^2)),
+                   sum(x1), sum(x1^2), sum(x1 * x2),
+                   sum(x2), sum(x1 * x2), sum(x2^2)),
                  nrow = 3, byrow = TRUE)
-  vec.d = c(sum(y), sum(y*x1), sum(y*x2))
+  vec.d = c(sum(y), sum(y * x1), sum(y * x2))
 
-  mat.S.inv = tryCatch({
-    solve(mat.S)
-  }, error = function(e) {
-    return(NULL)
-  })
+  mat.S.inv = tryCatch(solve(mat.S), error = function(e) NULL)
+  if (is.null(mat.S.inv)) return(list(pvalue = NA, M = NA, A = NA, phi = NA))
 
-  if (is.null(mat.S.inv)) {
-    return(list(pvalue = NA, M = NA, A = NA, phi = NA))
-  }
+  est        = mat.S.inv %*% vec.d
+  m.hat      = est[1]
+  beta1.hat  = est[2]
+  beta2.hat  = est[3]
+  A.hat      = sqrt(beta1.hat^2 + beta2.hat^2)
+  phase.hat  = adjust.to.2pi(atan2(beta2.hat, beta1.hat)) / omega
 
-  est = mat.S.inv %*% vec.d
-  m.hat = est[1]
-  beta1.hat = est[2]
-  beta2.hat = est[3]
-  A.hat = sqrt(beta1.hat^2 + beta2.hat^2)
-  phase.hat = adjust.to.2pi(atan2(beta2.hat, beta1.hat)) / omega
-
-  # Inference
-  TSS = sum((y - mean(y))^2)
+  TSS  = sum((y - mean(y))^2)
   yhat = m.hat + beta1.hat * x1 + beta2.hat * x2
-  RSS = sum((y - yhat)^2)
-  MSS = TSS - RSS
+  RSS  = sum((y - yhat)^2)
+  MSS  = TSS - RSS
 
-  if (n <= 3 || RSS < 0) {
-    return(list(pvalue = NA, M = m.hat, A = A.hat, phi = phase.hat))
-  }
+  if (n <= 3 || RSS < 0) return(list(pvalue = NA, M = m.hat, A = A.hat, phi = phase.hat))
 
   Fstat = (MSS / 2) / (RSS / (n - 3))
-  pval = stats::pf(Fstat, 2, n - 3, lower.tail = FALSE)
+  pval  = stats::pf(Fstat, 2, n - 3, lower.tail = FALSE)
 
-  return(list(
-    M = m.hat,
-    A = A.hat,
-    phi = phase.hat,
-    pvalue = pval,
-    R2 = MSS / TSS
-  ))
+  list(M = m.hat, A = A.hat, phi = phase.hat, pvalue = pval, R2 = MSS / TSS)
 }
-
 
 #' Adjust angle to [0, 2*pi)
 adjust.to.2pi = function(x) {
-  d = x / (2 * pi)
-  d.abs = floor(abs(d))
-  if (d >= 0 & d < 1) {
-    return(x)
-  } else if (d < 0) {
-    return(x + (d.abs + 1) * 2 * pi)
-  } else if (d > 1) {
-    return(x - d.abs * 2 * pi)
-  }
+  x %% (2 * pi)
 }
 #' Power Analysis for Two-Group Circadian Comparison
 #'
@@ -1237,16 +948,9 @@ plotStratifiedFDC <- function(power_results, strata_labels,
          col = c("green", "orange", "red"), lty = 2, cex = 0.7)
 }
 
-#' Create All Stratified Power Plots (4-panel)
-#'
-#' @param strat_power Array [sample_size, r_stratum, sim] of power values
-#' @param strat_TD Array [sample_size, r_stratum, sim] of true discoveries
-#' @param strat_FD Array [sample_size, r_stratum, sim] of false discoveries
-#' @param strat_n_targets Array [sample_size, r_stratum, sim] of target counts
-#' @param strata_labels Labels for r strata
-#' @param sample_sizes Vector of sample sizes
-#' @param test_name "DR" or "DP"
-#' @param output_file Path to save PDF
+# plotAllStratifiedPower removed — use plotSingleCohortPower() (plot_single_cohort.R)
+# or plotDiffPower() (plot_diff.R), both of which compute FDR curves from raw p-values.
+if (FALSE) {  # kept for reference only — never called
 plotAllStratifiedPower <- function(strat_power, strat_TD, strat_FD, strat_n_targets,
                                    strata_labels, sample_sizes,
                                    test_name = "DR",
@@ -1371,6 +1075,7 @@ plotAllStratifiedPower <- function(strat_power, strat_TD, strat_FD, strat_n_targ
   dev.off()
   cat("Figure saved:", output_file, "\n")
 }
+}  # end if(FALSE) — plotAllStratifiedPower reference block
 
 #'=============================================================================
 #' SAMPLING DENSITY VS SAMPLE SIZE ANALYSIS
@@ -1382,13 +1087,12 @@ plotAllStratifiedPower <- function(strat_power, strat_TD, strat_FD, strat_n_targ
 #' @param n_subjects Sample sizes for subjects per group to test
 #' @param n_time_points Number of time points per subject to test
 #' @param total_samples Fixed total number of measurements (optional)
-#' @param test_type "DR", "DA", or "DP"
+#' @param test_type "DR" or "DP"
 #' @param nsims Number of simulations per scenario
 #' @param prop_DR Proportion of DR genes (for DR test)
-#' @param prop_DA Proportion of DA genes (for DA test)
 #' @param prop_DP Proportion of DP genes (for DP test)
 #' @param phase_diff Phase shift range (for DP test)
-#' @param amp_diff Amplitude ratio range (for DA test)
+#' @param amp_diff Unused; retained for interface compatibility
 #' @param times_base Base time distribution (will be subsampled)
 #'
 #' @return List with simulation results
@@ -1398,7 +1102,6 @@ runSimsDensity <- function(n_subjects = c(10, 20, 30, 60),
                            test_type = "DR",
                            nsims = 50,
                            prop_DR = 0.15,
-                           prop_DA = 0.15,
                            prop_DP = 0.15,
                            phase_diff = c(0, 0),
                            amp_diff = c(0.5, 2),
@@ -1413,23 +1116,9 @@ runSimsDensity <- function(n_subjects = c(10, 20, 30, 60),
   cat(sprintf("Time points: %s\n", paste(n_time_points, collapse = ", ")))
   cat(sprintf("Simulations: %d\n\n", nsims))
 
-  # Load default times if not provided
   if (is.null(times_base)) {
-    COMBINED <- readRDS("/Users/thienpham/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Projects/Collaborative/Paper/Congruence/PNAS_aging/data/combined_data.rds")
-    expr_sample_names <- colnames(COMBINED$expr)
-    pheno_order <- match(expr_sample_names, COMBINED$pheno$sample_name)
-    valid_samples <- !is.na(pheno_order)
-    expr_sample_names <- expr_sample_names[valid_samples]
-    COMBINED$expr <- COMBINED$expr[, valid_samples]
-    pheno_order <- pheno_order[valid_samples]
-    pheno_data <- COMBINED$pheno[pheno_order, ]
-    pheno_data$tod <- if("TOD.x" %in% colnames(pheno_data)) pheno_data$TOD.x else pheno_data$TOD.y
-    pheno_data$age_group_final <- if("AgeGroup" %in% colnames(pheno_data)) pheno_data$AgeGroup else pheno_data$age_group
-    complete_samples <- !is.na(pheno_data$age_group_final) & !is.na(pheno_data$tod) &
-      pheno_data$age_group_final %in% c("younger", "older")
-    pheno_clean <- pheno_data[complete_samples, ]
-    younger_idx <- pheno_clean$age_group_final == "younger"
-    times_base <- pheno_clean$tod[younger_idx]
+    stop("'times_base' must be provided: a numeric vector of sample collection times (hours) ",
+         "from your pilot dataset. Example: times_base = c(2.1, 6.4, 14.0, ...)")
   }
 
   n_n <- length(n_subjects)
@@ -1460,7 +1149,6 @@ runSimsDensity <- function(n_subjects = c(10, 20, 30, 60),
         prop_rhythmic = 0.30,
         prop_DR = if(test_type == "DR") prop_DR else 0.00,
         prop_DP = if(test_type == "DP") prop_DP else 0.00,
-        prop_DA = if(test_type == "DA") prop_DA else 0.00,
         phase_diff = phase_diff,
         amp_diff = amp_diff,
         cts = times_sub,
@@ -1474,8 +1162,8 @@ runSimsDensity <- function(n_subjects = c(10, 20, 30, 60),
         fdr <- sim_out$fdr_DR[, 1, ]
       } else if (test_type == "DP") {
         fdr <- sim_out$fdr_DP[, 1, ]
-      } else if (test_type == "DA") {
-        fdr <- sim_out$fdr_DA[, 1, ]
+      } else {
+        fdr <- sim_out$fdr_DM[, 1, ]
       }
 
       for (s in 1:nsims) {
@@ -1494,10 +1182,6 @@ runSimsDensity <- function(n_subjects = c(10, 20, 30, 60),
           is_target <- is_target & effectsize_phase >= 6  # 6 hour phase shift
         } else if (test_type == "DM") {
           is_target <- diff_type == 5
-        } else if (test_type == "DA") {
-          is_target <- diff_type == 6
-          effectsize_amp <- sim_out$effectsize[[s]]$amp
-          is_target <- is_target & abs(effectsize_amp) >= 0.1
         }
 
         discoveries <- fdr[, s] <= 0.05
@@ -1770,6 +1454,7 @@ calculatePowerByThreshold <- function(qvalues, is_target, is_null,
       }
     } else {
       # Single vector for all simulations
+      power <- TD <- FD <- numeric(n_thresholds)
       for (t in 1:n_thresholds) {
         discoveries <- qvalues <= thresholds[t]
         TD[t] <- sum(discoveries & is_target, na.rm = TRUE)

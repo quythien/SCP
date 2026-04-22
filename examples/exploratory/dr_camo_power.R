@@ -195,7 +195,6 @@ opts_bio_cross_species <- estCircadianParam(
   times        = gtex_lun_tod,
   prop_DR      = prop_DR_cross_species,
   prop_DP      = 0.00,
-  prop_DA      = 0.00,
   phase_diff   = c(0, 0),
   amp_diff     = c(1, 1),
   verbose      = TRUE
@@ -208,7 +207,6 @@ opts_bio_cross_tissue <- estCircadianParam(
   times        = bab_lun_tod,
   prop_DR      = prop_DR_cross_tissue,
   prop_DP      = 0.00,
-  prop_DA      = 0.00,
   phase_diff   = c(0, 0),
   amp_diff     = c(1, 1),
   verbose      = TRUE

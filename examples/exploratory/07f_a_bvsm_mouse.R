@@ -78,7 +78,7 @@ rhy_cer   <- !is.na(fit_cer$pvalue) & fit_cer$pvalue < RHYTHM_PVAL
 
 bio_opts <- estCircadianParam(
   data = mat_liv_s, times = ct_liv, period = 24,
-  prop_DR = mean(xor(rhy_liv, rhy_cer)), prop_DP = 0, prop_DA = 0,
+  prop_DR = mean(xor(rhy_liv, rhy_cer)), prop_DP = 0,
   min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE
 )
 cat(sprintf("Mouse: r_med=%.2f, prop_DR=%.1f%%\n",

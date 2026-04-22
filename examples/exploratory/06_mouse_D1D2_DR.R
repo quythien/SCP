@@ -220,7 +220,6 @@ bio_d1d2 <- estCircadianParam(
   period          = 24,
   prop_DR         = prop_DR_d1d2,
   prop_DP         = 0,
-  prop_DA         = 0,
   min_rhythm_pval = RHYTHM_PVAL,
   verbose         = FALSE
 )

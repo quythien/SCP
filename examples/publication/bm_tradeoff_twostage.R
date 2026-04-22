@@ -145,7 +145,6 @@ estimate_or_cache <- function(tag, data1, times1, data2, times2) {
   bio <- updateBioOptions(bio,
     prop_DR    = bio$prop_DR,
     prop_DP    = 0.00,
-    prop_DA    = 0.00,
     phase_diff = c(0, 0),
     amp_diff   = c(1, 1)
   )

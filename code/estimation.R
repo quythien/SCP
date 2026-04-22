@@ -61,7 +61,7 @@ estimate_circadian_params = function(data, times, period = 24,
 
     omega = 2 * pi / period
     yhat = fit$M + fit$A * cos(omega * times - omega * fit$phi)
-    sqrt(mean((y - yhat)^2, na.rm = TRUE))
+    sqrt(sum((y - yhat)^2, na.rm = TRUE) / (length(y) - 3))
   })
 
   # Effect size
@@ -264,7 +264,7 @@ estimate_two_group_params = function(data_A, data_B, times_A, times_B, ...) {
   diff_params = list(
     delta_A_mean = mean(abs(delta_A), na.rm = TRUE),
     delta_A_sd = sd(delta_A, na.rm = TRUE),
-    delta_phi_mean = circular_mean(abs(delta_phi), 24),
+    delta_phi_mean = mean(abs(delta_phi), na.rm = TRUE),
     delta_phi_sd = circular_sd(delta_phi, 24),
     prop_gain = mean(delta_A > 0.1, na.rm = TRUE),  # Amplitude increase
     prop_loss = mean(delta_A < -0.1, na.rm = TRUE), # Amplitude decrease
@@ -360,9 +360,8 @@ sample_params = function(params, n = 1000) {
 #' @param min_rhythm_pval P-value threshold for rhythmic gene inclusion
 #' @param prop_DR Differential rhythmicity proportion (user-specified)
 #' @param prop_DP Differential phase proportion (user-specified)
-#' @param prop_DA Differential amplitude proportion (user-specified)
 #' @param phase_diff Phase shift range for DP genes
-#' @param amp_diff Amplitude ratio range for DA genes
+#' @param amp_diff Unused; retained for interface compatibility
 #' @param dp_shift_mode "fixed" (use phase_diff[2]) or "uniform" (sample within phase_diff range)
 #' @param dr_amp_scale Scale factor for amplitude (A) to adjust DR strength
 #' @param dr_sigma_scale Scale factor for sigma to adjust DR strength
@@ -372,7 +371,7 @@ sample_params = function(params, n = 1000) {
 #' @return CircadianBioOptions with empirical parameter distributions
 estCircadianParam <- function(data, times, period = 24,
                               min_rhythm_pval = 0.01,
-                              prop_DR = 0.15, prop_DP = 0.10, prop_DA = 0.10,
+                              prop_DR = 0.15, prop_DP = 0.10,
                               prop_DM = 0.00, mesor_diff = c(0.5, 2.0),
                               phase_diff = c(-6, 6), amp_diff = c(0.5, 2),
                               dp_shift_mode = c("fixed", "uniform"),
@@ -408,20 +407,19 @@ estCircadianParam <- function(data, times, period = 24,
   phase_emp <- params$raw$phi[estim_idx & !is.na(params$raw$phi)]
 
   # Cap differential proportions at the estimated rhythmic budget.
-  # CircadianBioOptions requires prop_DR + prop_DP + prop_DA + prop_DM <= prop_rhythmic
+  # CircadianBioOptions requires prop_DR + prop_DP + prop_DM <= prop_rhythmic
   # because every differential gene must be rhythmic in at least one group.
-  total_diff <- prop_DR + prop_DP + prop_DA + prop_DM
+  total_diff <- prop_DR + prop_DP + prop_DM
   if (total_diff > params$prop_rhythmic && total_diff > 0) {
     scale_factor <- params$prop_rhythmic / total_diff
     if (verbose) {
       message(sprintf(
-        paste0("estCircadianParam: prop_DR+prop_DP+prop_DA+prop_DM (%.3f) exceeds estimated ",
+        paste0("estCircadianParam: prop_DR+prop_DP+prop_DM (%.3f) exceeds estimated ",
                "prop_rhythmic (%.3f). Scaling differential props by %.3f to fit budget."),
         total_diff, params$prop_rhythmic, scale_factor))
     }
     prop_DR <- prop_DR * scale_factor
     prop_DP <- prop_DP * scale_factor
-    prop_DA <- prop_DA * scale_factor
     prop_DM <- prop_DM * scale_factor
   }
 
@@ -437,7 +435,6 @@ estCircadianParam <- function(data, times, period = 24,
     phase = phase_emp,
     prop_DR = prop_DR,
     prop_DP = prop_DP,
-    prop_DA = prop_DA,
     prop_DM = prop_DM,
     mesor_diff = mesor_diff,
     phase_diff = phase_diff,
@@ -644,7 +641,6 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
       n_dm_pilot, min_pilot, min_rhythm_pval))
   }
 
-  # amp_diff: kept for CircadianBioOptions signature (prop_DA = 0, so unused) -
   amp_diff_emp <- c(0.5, 2.0)
 
   # Baseline distributions from group 1 (consistent with estCircadianParam) ---
@@ -733,7 +729,6 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
     phase           = phase_emp,
     prop_DR         = prop_DR_emp,
     prop_DP         = prop_DP_emp,
-    prop_DA         = 0,
     prop_DM         = prop_DM_emp,
     mesor_diff      = mesor_diff_emp,
     phase_diff      = phase_diff_emp,

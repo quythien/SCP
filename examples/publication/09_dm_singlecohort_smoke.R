@@ -51,7 +51,6 @@ bio_dm <- CircadianBioOptions(
   phase         = "uniform",
   prop_DR       = 0.10,
   prop_DP       = 0.05,
-  prop_DA       = 0.00,
   prop_DM       = 0.15,
   mesor_diff    = c(1.0, 2.5),
   period        = 24L,
@@ -113,7 +112,6 @@ bio_single <- CircadianBioOptions(
   phase         = "uniform",
   prop_DR       = 0,   # no differential (single cohort)
   prop_DP       = 0,
-  prop_DA       = 0,
   prop_DM       = 0,
   period        = 24L,
   sim.seed      = 7L
@@ -165,7 +163,6 @@ bio_twopilot <- CircadianBioOptions(
   phase          = "uniform",
   prop_DR        = 0.10,
   prop_DP        = 0.05,
-  prop_DA        = 0.00,
   prop_DM        = 0.10,
   mesor_diff     = c(0.8, 2.0),
   period         = 24L,
@@ -206,7 +203,6 @@ if (is.null(gt)) {
     prop_rhythmic  = bio_twopilot$prop_rhythmic,
     prop_DR        = bio_twopilot$prop_DR,
     prop_DP        = bio_twopilot$prop_DP,
-    prop_DA        = bio_twopilot$prop_DA,
     prop_DM        = bio_twopilot$prop_DM,
     mesor_diff     = bio_twopilot$mesor_diff,
     design         = "active",

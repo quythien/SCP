@@ -118,7 +118,6 @@ opts_bio <- estCircadianParam(
   period        = 24,
   prop_DR       = 0.15,
   prop_DP       = 0.10,
-  prop_DA       = 0.00,
   phase_diff    = c(-6, 6),
   amp_diff      = c(0.5, 2)
 )
@@ -160,7 +159,6 @@ cat("  Setting up: 15% DP genes, phase_diff = [-6, 6]\n\n")
 opts_bio_DP_cmp <- updateBioOptions(opts_bio,
   prop_DR    = 0.00,
   prop_DP    = 0.15,
-  prop_DA    = 0.00,
   phase_diff = c(-6, 6),
   amp_diff   = c(0.5, 2)
 )

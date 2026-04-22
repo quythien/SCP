@@ -35,7 +35,7 @@ t_start <- proc.time()
 # =====================================================================
 cat("VALIDATION 1: Type I Error Control Under Null\n")
 cat("----------------------------------------------\n")
-cat("Simulating with NO true differential genes (prop_DR=0, prop_DP=0, prop_DA=0)\n")
+cat("Simulating with NO true differential genes (prop_DR=0, prop_DP=0)\n")
 cat("If framework is correct, empirical FP rate should be ~0.05 at alpha=0.05\n\n")
 
 set.seed(42)
@@ -46,7 +46,6 @@ null_sims <- runSimsDiff(
   prop_rhythmic = 0.20,   # Genes are rhythmic but NO differences
   prop_DR      = 0,
   prop_DP      = 0,
-  prop_DA      = 0,
   test_types   = c("DR", "DP", "DA"),
   verbose      = TRUE
 )
@@ -205,7 +204,7 @@ cat("Running DR and DP power analyses (self-contained)...\n")
 
 val_bio <- CircadianBioOptions(
   ngenes = null_sims$ngenes, prop_rhythmic = 0.20,
-  prop_DR = 0.15, prop_DP = 0.00, prop_DA = 0.00,
+  prop_DR = 0.15, prop_DP = 0.00,
   phase_diff = c(0, 0), amp_diff = c(1, 1)
 )
 val_bio_DP <- updateBioOptions(val_bio,

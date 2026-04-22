@@ -64,7 +64,6 @@ opts_bio <- estCircadianParam(
   period        = 24,
   prop_DR       = 0.15,
   prop_DP       = 0.10,
-  prop_DA       = 0.10,
   phase_diff    = c(-6, 6),
   amp_diff      = c(2, 4)
 )
@@ -324,7 +323,6 @@ cat("====================================================================\n\n")
 opts_bio_DA <- updateBioOptions(opts_bio,
   prop_DR    = 0.00,
   prop_DP    = 0.00,
-  prop_DA    = 0.15,
   phase_diff = c(0, 0),
   amp_diff   = c(2, 4)
 )
@@ -359,7 +357,6 @@ for (i in seq_along(amp_fcs)) {
   opts_bio_fc <- updateBioOptions(opts_bio,
     prop_DR    = 0.00,
     prop_DP    = 0.00,
-    prop_DA    = 0.15,
     phase_diff = c(0, 0),
     amp_diff   = c(fc, fc)
   )

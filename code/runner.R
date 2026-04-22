@@ -104,12 +104,12 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
 
   # For passive design, use TOD distribution
   if (design == "passive" && is.null(cts)) {
-    # Create default TOD distribution
-    set.seed(123)
+    warning("passive design requested but no 'cts' provided; using a synthetic TOD distribution. ",
+            "Supply cts from your pilot data via estCircadianParam()$cts for accurate power estimates.")
     cts = c(
-      rnorm(30, 6, 2),    # Morning peak
-      rnorm(30, 14, 3),   # Afternoon
-      runif(20, 0, 24)    # Uniform background
+      rnorm(30, 6, 2),
+      rnorm(30, 14, 3),
+      runif(20, 0, 24)
     )
     cts = cts %% 24
   }
@@ -334,6 +334,7 @@ runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
   sample_sizes  <- design.opts$sample_sizes
   nsims         <- design.opts$nsims
   ngenes        <- bio.opts$ngenes
+  alpha         <- analysis.opts$alpha
   target_effect <- analysis.opts$target_effect
   r_strata      <- analysis.opts$r_strata
   strata_labels <- analysis.opts$strata_labels
@@ -427,7 +428,7 @@ runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
       xgr <- cut(r_for_strat, breaks = r_strata, include.lowest = TRUE, labels = FALSE)
       xgr[!is_diff] <- NA
 
-      discoveries <- fdr[, i] <= 0.05
+      discoveries <- fdr[, i] <= alpha
 
       # Stratified quantities (per r-stratum)
       for (k in 1:n_r_strata) {
@@ -519,6 +520,7 @@ runPhaseShiftAnalysis <- function(bio.opts, design.opts, analysis.opts,
 
   sample_sizes  <- design.opts$sample_sizes
   nsims         <- design.opts$nsims
+  alpha         <- analysis.opts$alpha
   phase_shifts  <- analysis.opts$phase_shifts
   target_effect <- analysis.opts$target_effect
   r_strata      <- analysis.opts$r_strata
@@ -590,7 +592,7 @@ runPhaseShiftAnalysis <- function(bio.opts, design.opts, analysis.opts,
       r_for_strat[!is_DP] <- 0
       xgr         <- cut(r_for_strat, breaks = r_strata, include.lowest = TRUE, labels = FALSE)
       xgr[!is_DP] <- NA
-      discoveries <- fdr_DP[, i] <= 0.05
+      discoveries <- fdr_DP[, i] <= alpha
 
       for (k in seq_len(n_r_strata)) {
         in_stratum <- xgr == k

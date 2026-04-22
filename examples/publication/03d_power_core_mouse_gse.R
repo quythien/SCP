@@ -178,7 +178,6 @@ cat("====================================================================\n\n")
 opts_bio_DR <- updateBioOptions(opts_bio,
   prop_DR    = prop_DR_liv,
   prop_DP    = 0.00,
-  prop_DA    = 0.00,
   phase_diff = c(0, 0),
   amp_diff   = c(1, 1)
 )
@@ -213,7 +212,6 @@ cat("====================================================================\n\n")
 opts_bio_DP <- updateBioOptions(opts_bio,
   prop_DR    = 0.00,
   prop_DP    = 0.10,
-  prop_DA    = 0.00,
   phase_diff = c(-6, 6),
   amp_diff   = c(1, 1)
 )
@@ -261,7 +259,6 @@ boot_opts <- CircadianBootstrapOptions(
 bio_bm <- updateBioOptions(opts_bio,
   prop_DR    = prop_DR_liv,
   prop_DP    = 0.00,
-  prop_DA    = 0.00,
   phase_diff = c(0, 0),
   amp_diff   = c(1, 1)
 )

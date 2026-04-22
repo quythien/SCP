@@ -51,7 +51,6 @@ opts_bio_base <- estCircadianParam(
   period        = 24,
   prop_DR       = 0.15,
   prop_DP       = 0.10,
-  prop_DA       = 0.10,
   phase_diff    = c(-6, 6),
   amp_diff      = c(2, 4)
 )

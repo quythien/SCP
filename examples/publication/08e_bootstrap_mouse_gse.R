@@ -157,7 +157,7 @@ r_liv_med <- median(as.numeric(fit_liv$A[rhy_liv]) /
 
 bio_mouse <- estCircadianParam(
   data = mat_liv, times = tod_liv, period = 24,
-  prop_DR = prop_DR_m, prop_DP = 0, prop_DA = 0,
+  prop_DR = prop_DR_m, prop_DP = 0,
   min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE
 )
 cat(sprintf("Mouse LIV: prop_DR=%.1f%%  r_med=%.2f\n",

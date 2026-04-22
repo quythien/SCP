@@ -137,12 +137,20 @@ CP_OneGroup = function(x1, period = 24, alpha = 0.05, CI = FALSE, p.adjust.metho
   R2 = 1-RSS*(length(time)-3)/TSS
 
   if(CI){
+    XX_inv <- tryCatch(solve(t(design) %*% design),
+                       error = function(e) NULL)
+    if (is.null(XX_inv)) {
+      warning("Design matrix is singular; CIs cannot be computed.")
+      CI <- FALSE
+    }
+  }
+  if(CI){
     CI.m.hat.radius = sapply(seq_along(fit$sigma), function(i){
-      calculate_CI.M(fit@.Data[[7]], A.t = matrix(c(1, 0, 0), nrow = 1),
+      calculate_CI.M(XX_inv, A.t = matrix(c(1, 0, 0), nrow = 1),
                      r.full = 3, ncol(data), alpha, fit$sigma[i])
     })
     se.hat.A.phase = t(sapply(seq_along(fit$sigma), function(i){
-      calculate_CI_A.phase.Taylor(fit@.Data[[7]],
+      calculate_CI_A.phase.Taylor(XX_inv,
                                   A.t = rbind(c(0, 1, 0),
                                               c(0, 0, 1)),
                                   phase.hat[i], A.hat[i], fit$sigma[i])
@@ -427,6 +435,8 @@ SeqModelSel = function(action = c(1, 2), pv = c(0.01, 0.02), alpha = 0.05, metho
       stop = stop.vda(2, action)
     }else if(aw.wight[1, 1]==1){
       stop = stop.vda(1, action)
+    }else{
+      stop = stop.vda(1, action)
     }
   }
   return(stop)
@@ -484,7 +494,7 @@ forwardStop = function (pv, alpha = 0.1)
     out = 0
   else out = oo[length(oo)]
   return(list(stop = out,
-              p = -(1/out) * sum(log(1 - pv))))
+              p = if (out == 0) NA_real_ else -(1/out) * sum(log(1 - pv[seq_len(out)]))))
 }
 
 #' Fisher's Combined P-value
@@ -1122,7 +1132,7 @@ DCP_DiffPar = function(x, Par = c("A"), TOJR=NULL, alpha = 0.05,
 
 #' Complete Differential Circadian Analysis
 #'
-#' Performs all three differential tests (DR, DP, DA) with classification
+#' Performs differential tests (DR, DP) with classification
 #'
 #' @param expr1 Expression matrix for group 1 (genes × samples)
 #' @param expr2 Expression matrix for group 2 (genes × samples)
@@ -1135,8 +1145,7 @@ DCP_DiffPar = function(x, Par = c("A"), TOJR=NULL, alpha = 0.05,
 #' @return List with:
 #'   \item{DR}{Differential rhythmicity results}
 #'   \item{DP}{Differential phase results}
-#'   \item{DA}{Differential amplitude results}
-#'   \item{classification}{Gene classifications (DR/DP/DA/NS)}
+#'   \item{classification}{Gene classifications (DR/DP/NS)}
 #'
 #' @examples
 #' x = DCP_sim_data(ngene=1000, nsample=30, A1=c(1, 3), A2=c(1, 3),
@@ -1183,32 +1192,25 @@ DCP_Analyze <- function(expr1, expr2, times1, times2, alpha = 0.05,
                             parallel.ncores = parallel.ncores)
 
   # Classification
-  # Priority: DR > DP > DA
+  # Priority: DR > DP
   classification <- rep("NS", ngenes)
 
   # Match gene names
   match_idx <- match(gene_names, dr_results$gname)
 
-  # DR: differential rhythmicity
-  dr_idx <- which(dr_results$p.R2 < alpha)
+  # DR: differential rhythmicity (use BH-adjusted q.R2, not raw p.R2)
+  dr_idx <- which(dr_results$q.R2 < alpha)
   if(length(dr_idx) > 0){
     classification[dr_idx] <- "DR"
   }
 
-  # For genes not DR, test DP and DA
+  # For genes not DR, test DP
   non_dr <- setdiff(seq_len(ngenes), dr_idx)
 
-  # DP: differential phase (post-hoc)
-  dp_idx <- non_dr[dp_results$post.hoc.phase.By.q[match(non_dr, gene_names)]]
+  # DP: differential phase (post-hoc); dp_results rows are 1:ngenes in order
+  dp_idx <- non_dr[dp_results$post.hoc.phase.By.q[non_dr]]
   if(length(dp_idx) > 0){
     classification[dp_idx] <- "DP"
-  }
-
-  # DA: differential amplitude (post-hoc)
-  remaining <- setdiff(non_dr, dp_idx)
-  da_idx <- remaining[dp_results$post.hoc.A.By.q[match(remaining, gene_names)]]
-  if(length(da_idx) > 0){
-    classification[da_idx] <- "DA"
   }
 
   # Compile results
@@ -1216,7 +1218,6 @@ DCP_Analyze <- function(expr1, expr2, times1, times2, alpha = 0.05,
     rhythm = rhythm.res,
     DR = dr_results,
     DP = dp_results,
-    DA = dp_results,
     classification = data.frame(
       gname = gene_names,
       classification = classification,
@@ -1246,7 +1247,8 @@ get_phase = function(b1.x, b2.x){
       ph.x = ph.x+pi
     }
   }else{
-    ph.x = 88
+    # b2.x == 0: sine coefficient is zero; peak at 0 or pi depending on cosine sign
+    ph.x = if (b1.x >= 0) 0 else pi
   }
   return(list(phase = ph.x, tan = -b2.x/b1.x))
 }
@@ -1434,7 +1436,6 @@ format_for_DCP <- function(expr_matrix, times, gene_names = NULL) {
 #' @param alpha Significance threshold
 #' @param test_DR Test differential rhythmicity?
 #' @param test_DP Test differential phase?
-#' @param test_DA Test differential amplitude?
 #'
 #' @return List with p-values for requested tests
 #' @export
@@ -1443,8 +1444,7 @@ run_DCP_pipeline <- function(expr1, expr2, times1, times2,
                              period = 24,
                              alpha = 0.05,
                              test_DR = TRUE,
-                             test_DP = TRUE,
-                             test_DA = TRUE) {
+                             test_DP = TRUE) {
   
   # Format data
   x1 = format_for_DCP(expr1, times1, gene_names)
@@ -1463,7 +1463,6 @@ run_DCP_pipeline <- function(expr1, expr2, times1, times2,
   results = list(
     p_DR = rep(1, ngenes),
     p_DP = rep(1, ngenes),
-    p_DA = rep(1, ngenes),
     TOJR = rhythm_res$rhythm.joint$TOJR
   )
   
@@ -1481,28 +1480,21 @@ run_DCP_pipeline <- function(expr1, expr2, times1, times2,
     }
   }
   
-  # Step 3: Test DP & DA (only for "both" genes with proper hierarchy)
-  if (test_DP || test_DA) {
+  # Step 3: Test DP (only for "both" genes)
+  if (test_DP) {
     # Check if there are "both" genes
     n_both = sum(rhythm_res$rhythm.joint$TOJR == "both")
-    
+
     if (n_both > 0) {
       par_results = tryCatch({
         DCP_DiffPar(rhythm_res, Par = "A&phase", alpha = alpha)
       }, error = function(e) {
         NULL
       })
-      
+
       if (!is.null(par_results)) {
         match_idx = match(gene_names, par_results$gname)
-        
-        if (test_DP) {
-          results$p_DP[!is.na(match_idx)] = par_results$p.delta.peak[match_idx[!is.na(match_idx)]]
-        }
-        
-        if (test_DA) {
-          results$p_DA[!is.na(match_idx)] = par_results$p.delta.A[match_idx[!is.na(match_idx)]]
-        }
+        results$p_DP[!is.na(match_idx)] = par_results$p.delta.peak[match_idx[!is.na(match_idx)]]
       }
     }
   }
@@ -1517,30 +1509,28 @@ run_DCP_pipeline <- function(expr1, expr2, times1, times2,
 #'
 #' @inheritParams run_DCP_pipeline
 #'
-#' @return List with p_DR, p_DP, p_DA
+#' @return List with p_DR, p_DP
 #' @export
 testAnyDifferential <- function(y1, y2, times1, times2,
                                 period = 24,
-                                test_types = c("DR", "DP", "DA")) {
-  
+                                test_types = c("DR", "DP")) {
+
   # Create single-gene matrices
   expr1 = matrix(y1, nrow = 1)
   expr2 = matrix(y2, nrow = 1)
-  
+
   # Run pipeline
   results = run_DCP_pipeline(
     expr1, expr2, times1, times2,
     gene_names = "Gene1",
     period = period,
     test_DR = "DR" %in% test_types,
-    test_DP = "DP" %in% test_types,
-    test_DA = "DA" %in% test_types
+    test_DP = "DP" %in% test_types
   )
-  
+
   return(list(
     p_DR = results$p_DR[1],
-    p_DP = results$p_DP[1],
-    p_DA = results$p_DA[1]
+    p_DP = results$p_DP[1]
   ))
 }
 
@@ -1564,7 +1554,7 @@ testAnyDifferential <- function(y1, y2, times1, times2,
 #' @param period Circadian period (default 24)
 #' @param alpha_threshold Significance level for per-group rhythmicity (default 0.05)
 #'
-#' @return List with pval_DR (NA — no equivalent), pval_DP, pval_DA, pval_DM
+#' @return List with pval_DR (NA — no equivalent), pval_DP, pval_DM
 #'         Each is a numeric vector of length ngenes; default 1 for failed/untested.
 #'
 #' @details CircaCompare calls stop() when either group is arrhythmic, so every
@@ -1586,7 +1576,6 @@ detect_CircaCompare <- function(expr1, times1, expr2, times2,
   n1 <- ncol(expr1)
   n2 <- ncol(expr2)
 
-  pval_DA <- rep(1, ngenes)
   pval_DP <- rep(1, ngenes)
   pval_DM <- rep(1, ngenes)
 
@@ -1612,11 +1601,9 @@ detect_CircaCompare <- function(expr1, times1, expr2, times2,
       summ <- res$summary
       # Match by parameter name for robustness (row indices may shift)
       p_mesor_row <- grep("P-value for mesor", summ$parameter, ignore.case = TRUE)
-      p_amp_row   <- grep("P-value for amplitude", summ$parameter, ignore.case = TRUE)
       p_phase_row <- grep("P-value for.*phase", summ$parameter, ignore.case = TRUE)
 
       if (length(p_mesor_row) > 0) pval_DM[g] <- as.numeric(summ$value[p_mesor_row[1]])
-      if (length(p_amp_row)   > 0) pval_DA[g] <- as.numeric(summ$value[p_amp_row[1]])
       if (length(p_phase_row) > 0) pval_DP[g] <- as.numeric(summ$value[p_phase_row[1]])
 
     }, error = function(e) {
@@ -1627,7 +1614,6 @@ detect_CircaCompare <- function(expr1, times1, expr2, times2,
   list(
     pval_DR = rep(NA, ngenes),   # CircaCompare has no DR test
     pval_DP = pval_DP,
-    pval_DA = pval_DA,
     pval_DM = pval_DM
   )
 }
@@ -1820,14 +1806,14 @@ detect_MH <- function(expr, times, period = 24) {
 
 # ==============================================================================
 # SECTION 14: UNIFIED TWO-GROUP DIFFERENTIAL DETECTION WRAPPERS
-# All return list(pval_DR, pval_DP, pval_DM, pval_DA).
+# All return list(pval_DR, pval_DP, pval_DM).
 # NA for test types the method does not support.
 #
 # Method × test_type support:
-#   DCP          DR  DP  --  DA
-#   CircaCompare --  DP  DM  DA
-#   LimoRhyde    DR  --  --  --
-#   DODR         DR  --  --  --
+#   DCP          DR  DP  --
+#   CircaCompare --  DP  DM
+#   LimoRhyde    DR  --  --
+#   DODR         DR  --  --
 # ==============================================================================
 
 #' DCP two-group differential detection
@@ -1838,7 +1824,7 @@ detect_MH <- function(expr, times, period = 24) {
 #' @param expr1,expr2   Gene x sample matrices for groups 1 and 2
 #' @param times1,times2 Numeric time vectors
 #' @param period        Period (default 24)
-#' @return list(pval_DR, pval_DP, pval_DM=NA, pval_DA) each numeric[G]
+#' @return list(pval_DR, pval_DP, pval_DM=NA) each numeric[G]
 #' @export
 detect_DCP_diff <- function(expr1, times1, expr2, times2, period = 24) {
   ngenes     <- nrow(expr1)
@@ -1847,19 +1833,18 @@ detect_DCP_diff <- function(expr1, times1, expr2, times2, period = 24) {
   res <- tryCatch(
     run_DCP_pipeline(expr1, expr2, times1, times2,
                      gene_names = gene_names, period = period,
-                     test_DR = TRUE, test_DP = TRUE, test_DA = TRUE),
+                     test_DR = TRUE, test_DP = TRUE),
     error = function(e) NULL
   )
 
   if (is.null(res)) {
     return(list(pval_DR = rep(1, ngenes), pval_DP = rep(1, ngenes),
-                pval_DM = rep(NA_real_, ngenes), pval_DA = rep(NA_real_, ngenes)))
+                pval_DM = rep(NA_real_, ngenes)))
   }
   list(
     pval_DR = replace(res$p_DR, is.na(res$p_DR), 1),
     pval_DP = replace(res$p_DP, is.na(res$p_DP), 1),
-    pval_DM = rep(NA_real_, ngenes),
-    pval_DA = replace(res$p_DA, is.na(res$p_DA), 1)
+    pval_DM = rep(NA_real_, ngenes)
   )
 }
 
@@ -1872,7 +1857,7 @@ detect_DCP_diff <- function(expr1, times1, expr2, times2, period = 24) {
 #' @param expr1,expr2   Gene x sample matrices
 #' @param times1,times2 Numeric time vectors
 #' @param period        Period (default 24)
-#' @return list(pval_DR, pval_DP=NA, pval_DM=NA, pval_DA=NA)
+#' @return list(pval_DR, pval_DP=NA, pval_DM=NA)
 #' @export
 detect_LimoRhyde <- function(expr1, times1, expr2, times2, period = 24) {
   if (!requireNamespace("limma", quietly = TRUE))
@@ -1901,8 +1886,7 @@ detect_LimoRhyde <- function(expr1, times1, expr2, times2, period = 24) {
 
   list(pval_DR = pval_DR,
        pval_DP = rep(NA_real_, ngenes),
-       pval_DM = rep(NA_real_, ngenes),
-       pval_DA = rep(NA_real_, ngenes))
+       pval_DM = rep(NA_real_, ngenes))
 }
 
 
@@ -1913,7 +1897,7 @@ detect_LimoRhyde <- function(expr1, times1, expr2, times2, period = 24) {
 #' @param expr1,expr2   Gene x sample matrices
 #' @param times1,times2 Numeric time vectors
 #' @param period        Period (default 24)
-#' @return list(pval_DR, pval_DP=NA, pval_DM=NA, pval_DA=NA)
+#' @return list(pval_DR, pval_DP=NA, pval_DM=NA)
 #' @export
 detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
   if (!requireNamespace("DODR", quietly = TRUE))
@@ -1931,6 +1915,5 @@ detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
 
   list(pval_DR = pval_DR,
        pval_DP = rep(NA_real_, ngenes),
-       pval_DM = rep(NA_real_, ngenes),
-       pval_DA = rep(NA_real_, ngenes))
+       pval_DM = rep(NA_real_, ngenes))
 }

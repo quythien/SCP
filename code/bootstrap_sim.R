@@ -78,7 +78,14 @@ fitCosinorAll <- function(data, times, period = 24, min_rhythm_pval = 0.01) {
 #'
 #' @return List of length nboot; each element is a data frame like param_df
 bootstrapParams <- function(param_df, nboot, seed = 42) {
+  rng_state <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
+    .GlobalEnv$.Random.seed else NULL
   set.seed(seed)
+  on.exit(
+    if (!is.null(rng_state))
+      assign(".Random.seed", rng_state, envir = .GlobalEnv),
+    add = TRUE
+  )
   G <- nrow(param_df)
   lapply(seq_len(nboot), function(b) {
     idx <- sample(G, G, replace = TRUE)
@@ -138,7 +145,6 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
     phase_spec    = phase_vec,
     prop_DR        = bio_diff.opts$prop_DR,
     prop_DP        = bio_diff.opts$prop_DP,
-    prop_DA        = bio_diff.opts$prop_DA,
     prop_DM        = bio_diff.opts$prop_DM   %||% 0,
     mesor_diff     = bio_diff.opts$mesor_diff %||% c(0.5, 2.0),
     lBaselineExpr2 = bio_diff.opts$lBaselineExpr2,
@@ -181,7 +187,7 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 #' @param boot.opts CircadianBootstrapOptions
 #' @param analysis.opts CircadianAnalysisOptions
 #' @param bio_diff.opts CircadianBioOptions (used for differential params only:
-#'   prop_DR, prop_DP, prop_DA, phase_diff, amp_diff, dp_shift_mode)
+#'   prop_DR, prop_DP, prop_DM, phase_diff, amp_diff, dp_shift_mode)
 #' @param verbose Print progress
 #'
 #' @return List with power arrays, summaries, and optimal B recommendations
@@ -223,8 +229,7 @@ runBootstrapDesignGrid <- function(pilot_data,
   n_B    <- length(B_values)
   period <- bio_diff.opts$period %||% 24
 
-  test_types  <- analysis.opts$fdr_thresholds  # just used for labeling below
-  # Single-cohort mode uses one test type ("rhythmic"); differential uses DR/DP/DM/DA
+  # Single-cohort mode uses one test type ("rhythmic"); differential uses DR/DP/DM
   if (mode == "single") {
     all_tests <- "rhythmic"
   } else {
@@ -232,7 +237,6 @@ runBootstrapDesignGrid <- function(pilot_data,
     if (bio_diff.opts$prop_DR > 0) all_tests <- c(all_tests, "DR")
     if (bio_diff.opts$prop_DP > 0) all_tests <- c(all_tests, "DP")
     if (!is.null(bio_diff.opts$prop_DM) && bio_diff.opts$prop_DM > 0) all_tests <- c(all_tests, "DM")
-    if (!is.null(bio_diff.opts$prop_DA) && bio_diff.opts$prop_DA > 0) all_tests <- c(all_tests, "DA")
     if (length(all_tests) == 0) all_tests <- "DR"
   }
   n_tests <- length(all_tests)
@@ -337,8 +341,6 @@ runBootstrapDesignGrid <- function(pilot_data,
                   diff_type_vec == 4
                 } else if (tt == "DM") {
                   diff_type_vec == 5
-                } else if (tt == "DA") {
-                  diff_type_vec == 6
                 } else {
                   rep(FALSE, length(fdr_vec))
                 }
@@ -431,7 +433,7 @@ runBootstrapDesignGrid <- function(pilot_data,
 #' Summarize bootstrap design grid results
 #'
 #' @param result Output from runBootstrapDesignGrid()
-#' @param test_type Test type to summarize ("DR", "DP", "DA")
+#' @param test_type Test type to summarize ("DR", "DP", "DM")
 #' @param fdr_threshold FDR threshold (used for display label only)
 #' @param verbose Print table
 #'

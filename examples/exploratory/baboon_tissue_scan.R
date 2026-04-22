@@ -384,7 +384,6 @@ for (p_idx in seq_len(nrow(top_pairs))) {
     period      = 24,
     prop_DR     = prop_DR,
     prop_DP     = 0,
-    prop_DA     = 0,
     min_rhythm_pval = RHYTHM_PVAL
   )
 

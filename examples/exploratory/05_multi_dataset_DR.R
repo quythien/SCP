@@ -243,7 +243,7 @@ boot_opts_mouse <- CircadianBootstrapOptions(
 
 bio_mouse <- estCircadianParam(
   data = mat_liv_s, times = ct_liv, period = 24,
-  prop_DR = prop_DR_mouse, prop_DP = 0, prop_DA = 0,
+  prop_DR = prop_DR_mouse, prop_DP = 0,
   min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE
 )
 
@@ -322,7 +322,7 @@ boot_opts_bab <- CircadianBootstrapOptions(
 
 bio_bab <- estCircadianParam(
   data = mat_lun_s, times = tod_lun, period = 24,
-  prop_DR = prop_DR_bab, prop_DP = 0, prop_DA = 0,
+  prop_DR = prop_DR_bab, prop_DP = 0,
   min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE
 )
 
@@ -606,7 +606,6 @@ bio_d1d2 <- estCircadianParam(
   period          = 24,
   prop_DR         = prop_DR_d1d2,
   prop_DP         = 0,
-  prop_DA         = 0,
   min_rhythm_pval = RHYTHM_PVAL,
   verbose         = FALSE
 )

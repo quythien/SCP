@@ -36,11 +36,13 @@ LRTest_diff_phase <- function(tt1, yy1, tt2, yy2, period = 24, FN = TRUE){
   phase1 <- fit1$phase
   phase2 <- fit2$phase
 
-  # Adjust phase for proper comparison
-  if(phase2 - phase1 > period/2){
-    phase2 <- phase2 - period
-  } else if(phase1 - phase2 > period/2){
-    phase1 <- phase1 - period
+  # Adjust phase for optimizer only — use local copies so originals are returned
+  phase1_opt <- phase1
+  phase2_opt <- phase2
+  if(phase2_opt - phase1_opt > period/2){
+    phase2_opt <- phase2_opt - period
+  } else if(phase1_opt - phase2_opt > period/2){
+    phase1_opt <- phase1_opt - period
   }
 
   basal1 <- fit1$offset
@@ -52,8 +54,8 @@ LRTest_diff_phase <- function(tt1, yy1, tt2, yy2, period = 24, FN = TRUE){
   theta1 <- 1/sigma2_1
   theta2 <- 1/sigma2_2
 
-  p1 <- c(A1, phase1, basal1, theta1)
-  p2 <- c(A2, phase2, basal2, theta2)
+  p1 <- c(A1, phase1_opt, basal1, theta1)
+  p2 <- c(A2, phase2_opt, basal2, theta2)
   x_Ha <- c(p1, p2)
 
   # Negative log-likelihood function
@@ -146,12 +148,15 @@ LRTest_diff_phase <- function(tt1, yy1, tt2, yy2, period = 24, FN = TRUE){
   la <- - eval_f_list(x_Ha)$objective
 
   LR_stat <- -2*(l0-la)
+  if (l0 > la + 1e-6)
+    warning("LR_stat < 0 (constrained optimizer may have reached a saddle); clamped to 0")
+  LR_stat <- max(0, LR_stat)
 
   if(!FN){
     pvalue <- pchisq(LR_stat,1,lower.tail = FALSE)
   } else if(FN){
     r <- 1
-    k <- 6
+    k <- 8
     n <- n1+n2
     Fstat <- (exp(LR_stat/n) - 1) * (n-k) / r
     pvalue <- pf(Fstat,df1 = r, df2 = n-k, lower.tail = FALSE)

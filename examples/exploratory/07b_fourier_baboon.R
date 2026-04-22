@@ -126,7 +126,7 @@ prop_DR_b <- mean(xor(rhy_lun, rhy_cerb))
 
 bio_bab <- estCircadianParam(
   data = mat_lun_s, times = tod_lun, period = 24,
-  prop_DR = prop_DR_b, prop_DP = 0, prop_DA = 0,
+  prop_DR = prop_DR_b, prop_DP = 0,
   min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE
 )
 cat(sprintf("Baboon pilot: n=%d, prop_DR=%.1f%%, r_med=%.2f\n",

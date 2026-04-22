@@ -26,7 +26,7 @@
 #' @param design.opts   CircadianDesignOptions
 #' @param analysis.opts CircadianAnalysisOptions
 #' @param harmonic_grid data.frame with columns alpha2, alpha3 (default: 4x3 grid)
-#' @param test_type     "DR", "DP", or "DA"
+#' @param test_type     "DR", "DP", or "DM"
 #' @param verbose       Print progress
 #'
 #' @return List with power arrays and summaries across harmonic levels
@@ -112,7 +112,6 @@ runFourierDeviationPower <- function(bio.opts,
           DR = diff_type %in% c(2, 3),
           DP = diff_type == 4,
           DM = diff_type == 5,
-          DA = diff_type == 6,
           rep(FALSE, length(fdr_vec))
         )
         n_target <- sum(target_idx)

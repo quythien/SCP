@@ -33,7 +33,7 @@
 #' @param analysis.opts   CircadianAnalysisOptions
 #' @param bio_diff.opts   CircadianBioOptions (for differential params only)
 #' @param min_rhythm_pval Threshold for calling rhythmic genes in pilot
-#' @param test_type       "DR", "DP", or "DA"
+#' @param test_type       "DR", "DP", or "DM"
 #' @param verbose         Print progress
 #'
 #' @return List with marginal_power matrix [n_sizes x nsims] and sample_sizes
@@ -61,7 +61,6 @@ runTwoStagePower <- function(pilot_data,
     period           = bio_diff.opts$period %||% 24,
     prop_DR          = bio_diff.opts$prop_DR,
     prop_DP          = bio_diff.opts$prop_DP,
-    prop_DA          = bio_diff.opts$prop_DA,
     prop_DM          = bio_diff.opts$prop_DM   %||% 0,
     mesor_diff       = bio_diff.opts$mesor_diff %||% c(0.5, 2.0),
     min_rhythm_pval  = min_rhythm_pval,
@@ -130,7 +129,10 @@ runTwoStagePower <- function(pilot_data,
     sample_sizes   = sample_sizes,
     marginal_power = marginal_power,
     power_mean     = rowMeans(marginal_power, na.rm = TRUE),
-    power_se       = apply(marginal_power, 1, sd, na.rm = TRUE),
+    power_se       = apply(marginal_power, 1, function(x) {
+                      x <- x[!is.na(x)]
+                      if (length(x) < 2) NA_real_ else sd(x) / sqrt(length(x))
+                    }),
     test_type      = test_type,
     fdr_threshold  = fdr_threshold
   )
@@ -419,7 +421,7 @@ plotDesignComparison <- function(comparison,
 #' Internal helper: compute marginal power from runSimsDiff() output
 #'
 #' @param sim_out Output from runSimsDiff() with sample_sizes of length 1
-#' @param test_type "DR", "DP", or "DA"
+#' @param test_type "DR", "DP", or "DM"
 #' @param fdr_threshold Numeric threshold
 #' @param nsims Number of simulations (3rd dim of fdr array)
 #' @return Numeric vector of length nsims (power per simulation)
@@ -436,7 +438,6 @@ plotDesignComparison <- function(comparison,
       DR = diff_type %in% c(2, 3),
       DP = diff_type == 4,
       DM = diff_type == 5,
-      DA = diff_type == 6,
       rep(FALSE, length(fdr_vec))
     )
 
@@ -473,7 +474,6 @@ generatePilotData <- function(true_bio.opts, n_pilot, pilot_times, seed = 42) {
     prop_rhythmic = true_bio.opts$prop_rhythmic,
     prop_DR       = 0,
     prop_DP       = 0,
-    prop_DA       = 0,
     period        = true_bio.opts$period %||% 24,
     design        = "passive",
     cts           = pilot_times,
@@ -498,7 +498,7 @@ generatePilotData <- function(true_bio.opts, n_pilot, pilot_times, seed = 42) {
 #' @param pilot_times    TOD distribution for pilot time sampling
 #' @param nboot          Bootstrap draws for uncertainty quantification
 #' @param nsims_inner    Simulations per bootstrap draw
-#' @param test_type      "DR", "DP", or "DA"
+#' @param test_type      "DR", "DP", or "DM"
 #' @param seed           Random seed
 #' @param verbose        Print progress
 #'
@@ -537,8 +537,8 @@ runGroundTruthComparison <- function(true_bio.opts,
   # ------------------------------------------------------------------
   if (verbose) cat("Computing oracle power (known truth)...\n")
 
-  true_power_mean <- numeric(n_sizes)
-  true_power_se   <- numeric(n_sizes)
+  true_power_mean <- rep(NA_real_, n_sizes)
+  true_power_se   <- rep(NA_real_, n_sizes)
 
   for (j in seq_len(n_sizes)) {
     n <- sample_sizes[j]

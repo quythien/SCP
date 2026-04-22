@@ -193,7 +193,7 @@ rhy_cer  <- !is.na(fit_cer$pvalue) & fit_cer$pvalue < RHYTHM_PVAL
 
 bio_mouse <- estCircadianParam(
   data = mat_liv_s, times = ct_liv, period = 24,
-  prop_DR = mean(xor(rhy_liv, rhy_cer)), prop_DP = 0, prop_DA = 0,
+  prop_DR = mean(xor(rhy_liv, rhy_cer)), prop_DP = 0,
   min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE
 )
 cat(sprintf("Mouse: r_med=%.2f, prop_DR=%.1f%%\n",
@@ -249,7 +249,7 @@ rhy_cerb  <- !is.na(fit_cerb$pvalue) & fit_cerb$pvalue < RHYTHM_PVAL
 
 bio_bab <- estCircadianParam(
   data = mat_lun_s, times = tod_lun, period = 24,
-  prop_DR = mean(xor(rhy_lun, rhy_cerb)), prop_DP = 0, prop_DA = 0,
+  prop_DR = mean(xor(rhy_lun, rhy_cerb)), prop_DP = 0,
   min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE
 )
 cat(sprintf("Baboon: r_med=%.2f, prop_DR=%.1f%%\n",
@@ -305,7 +305,7 @@ rhy_d2   <- !is.na(fit_d2$pvalue) & fit_d2$pvalue < RHYTHM_PVAL
 
 bio_d1d2 <- estCircadianParam(
   data = mat_d1_s, times = tod_d1, period = 24,
-  prop_DR = mean(xor(rhy_d1, rhy_d2)), prop_DP = 0, prop_DA = 0,
+  prop_DR = mean(xor(rhy_d1, rhy_d2)), prop_DP = 0,
   min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE
 )
 cat(sprintf("D1D2: r_med=%.2f, prop_DR=%.1f%%\n",

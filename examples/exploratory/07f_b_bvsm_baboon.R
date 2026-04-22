@@ -66,7 +66,7 @@ rhy_cerb <- !is.na(fit_cerb$pvalue) & fit_cerb$pvalue < RHYTHM_PVAL
 
 bio_opts <- estCircadianParam(
   data = prep_lun$data, times = prep_lun$times, period = 24,
-  prop_DR = mean(xor(rhy_lun, rhy_cerb)), prop_DP = 0, prop_DA = 0,
+  prop_DR = mean(xor(rhy_lun, rhy_cerb)), prop_DP = 0,
   min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE
 )
 cat(sprintf("Baboon: r_med=%.2f, prop_DR=%.1f%%\n",

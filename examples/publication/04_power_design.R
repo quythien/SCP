@@ -180,7 +180,6 @@ if (!is.null(PIPELINE1_RDS) && file.exists(PIPELINE1_RDS)) {
     period     = 24,
     prop_DR    = 0.15,
     prop_DP    = 0.10,
-    prop_DA    = 0.00,
     phase_diff = c(-6, 6),
     amp_diff   = c(0.5, 2),
     verbose    = TRUE
@@ -193,7 +192,7 @@ print(opts_bio_real)
 
 # DR-only bio for the design grid (clean single-test comparison)
 opts_bio_DR <- updateBioOptions(opts_bio_real,
-  prop_DR = 0.15, prop_DP = 0.00, prop_DA = 0.00,
+  prop_DR = 0.15, prop_DP = 0.00,
   phase_diff = c(0, 0), amp_diff = c(1, 1)
 )
 
