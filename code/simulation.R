@@ -1,17 +1,16 @@
-#' Simulate Circadian Time-Series Data
+#' Sample Time Points from an Empirical TOD Distribution
 #'
-#' Generate simulated circadian expression data for power analysis
+#' @description
+#' Draws \code{n} time-of-day (TOD) values from a circular kernel density
+#' estimate of a pilot TOD distribution. Handles wrap-around at 0h/24h
+#' using a tripled-data trick so boundary contributions are preserved.
 #'
-#' @param simOptions Simulation options from createSimOptions()
-#' @param times Time points (vector or "even" for evenly-spaced)
-#' @param n Total number of samples
-#' @param design "active" or "passive"
-#' @param cts For passive design: TOD distribution to sample from
-#' @param phi For passive design: phase shift (or "vary" to test all)
-#' @param noise_type "gaussian", "t", "lognormal"
+#' @param n Integer. Number of time points to sample.
+#' @param cts Numeric vector. Pilot TOD values (hours, any range — wrapped to
+#'   \code{[0, 24)} internally).
 #'
-#' @return List with simulated data and ground truth
-
+#' @return Numeric vector of length \code{n} with sampled TOD values in
+#'   \code{[0, 24)}.
 sampleTimesFromDist <- function(n, cts) {
   # Map all times to [0, 24) first.  Pilot TOD values can be negative (e.g.,
   # -5.6h = 18.4h in circular time); the original density(from=0,to=24) call
@@ -96,7 +95,26 @@ sampleTimesFromDist <- function(n, cts) {
 #' @param cts TOD distribution for passive design
 #' @param sim.seed Random seed
 #'
-#' @return List with simulated data for both groups and ground truth
+#' @return Named list with the following elements:
+#'   \describe{
+#'     \item{\code{expr1}}{Gene expression matrix for group 1 (ngenes x n1).}
+#'     \item{\code{expr2}}{Gene expression matrix for group 2 (ngenes x n2).}
+#'     \item{\code{times1}}{Numeric vector of sample times for group 1 (hours).}
+#'     \item{\code{times2}}{Numeric vector of sample times for group 2 (hours).}
+#'     \item{\code{ground_truth}}{data.frame (ngenes rows) with columns:
+#'       \code{gene}, \code{diff_type} (0–5), \code{diff_type_label},
+#'       \code{mesor1}, \code{mesor2}, \code{amplitude1}, \code{amplitude2},
+#'       \code{phase1}, \code{phase2}, \code{sigma}, \code{sigma2},
+#'       \code{phase_diff}, \code{amp_ratio}, \code{is_rhythmic_g1},
+#'       \code{is_rhythmic_g2}.}
+#'     \item{\code{effectsize_DR1}}{Per-gene SNR in group 1: \eqn{A_{g,1}/\sigma_{g,1}}.}
+#'     \item{\code{effectsize_DR2}}{Per-gene SNR in group 2: \eqn{A_{g,2}/\sigma_{g,2}}.}
+#'     \item{\code{effectsize_phase}}{Per-gene phase-displacement effect size.}
+#'     \item{\code{effectsize_amp}}{Per-gene amplitude-difference effect size.}
+#'     \item{\code{effectsize_mesor}}{Per-gene mesor-difference effect size.}
+#'     \item{\code{simOptions}}{List of simulation parameters used (ngenes, n1, n2,
+#'       prop_rhythmic, prop_DR, prop_DP, prop_DM, period, design).}
+#'   }
 
 simCircadianDiff <- function(ngenes = 5000,
                            n1 = 24,
@@ -354,29 +372,25 @@ simCircadianDiff <- function(ngenes = 5000,
   }
 
   # Generate expression data
-  expr1 = matrix(NA, nrow = ngenes, ncol = n1)
-  expr2 = matrix(NA, nrow = ngenes, ncol = n2)
-
-  for (g in 1:ngenes) {
-    # Group 1
-    mu1 = mesor[g] + amplitude1[g] * cos(omega * times1 - omega * phase1[g])
-    if (!is.null(harmonics) && length(harmonics) >= 1 && harmonics[1] != 0) {
-      mu1 = mu1 + amplitude1[g] * harmonics[1] * cos(2 * omega * times1 - 2 * omega * phase1[g])
+  a2 <- if (!is.null(harmonics) && length(harmonics) >= 1) harmonics[1] else 0
+  a3 <- if (!is.null(harmonics) && length(harmonics) >= 2) harmonics[2] else 0
+  if (exists(".CPP_LOADED", inherits = TRUE) && isTRUE(get(".CPP_LOADED", inherits = TRUE)) &&
+      exists("sim_cosinor_expr_fast", mode = "function")) {
+    expr1 <- sim_cosinor_expr_fast(mesor,  amplitude1, phase1, sigma,      times1, period, a2, a3)
+    expr2 <- sim_cosinor_expr_fast(mesor2, amplitude2, phase2, sigma2_vec, times2, period, a2, a3)
+  } else {
+    expr1 = matrix(NA, nrow = ngenes, ncol = n1)
+    expr2 = matrix(NA, nrow = ngenes, ncol = n2)
+    for (g in 1:ngenes) {
+      mu1 = mesor[g] + amplitude1[g] * cos(omega * times1 - omega * phase1[g])
+      if (a2 != 0) mu1 = mu1 + amplitude1[g] * a2 * cos(2 * omega * times1 - 2 * omega * phase1[g])
+      if (a3 != 0) mu1 = mu1 + amplitude1[g] * a3 * cos(3 * omega * times1 - 3 * omega * phase1[g])
+      expr1[g, ] = rnorm(n1, mu1, sigma[g])
+      mu2 = mesor2[g] + amplitude2[g] * cos(omega * times2 - omega * phase2[g])
+      if (a2 != 0) mu2 = mu2 + amplitude2[g] * a2 * cos(2 * omega * times2 - 2 * omega * phase2[g])
+      if (a3 != 0) mu2 = mu2 + amplitude2[g] * a3 * cos(3 * omega * times2 - 3 * omega * phase2[g])
+      expr2[g, ] = rnorm(n2, mu2, sigma2_vec[g])
     }
-    if (!is.null(harmonics) && length(harmonics) >= 2 && harmonics[2] != 0) {
-      mu1 = mu1 + amplitude1[g] * harmonics[2] * cos(3 * omega * times1 - 3 * omega * phase1[g])
-    }
-    expr1[g, ] = rnorm(n1, mu1, sigma[g])
-
-    # Group 2 (uses mesor2 which equals mesor unless two-pilot or DM perturbation)
-    mu2 = mesor2[g] + amplitude2[g] * cos(omega * times2 - omega * phase2[g])
-    if (!is.null(harmonics) && length(harmonics) >= 1 && harmonics[1] != 0) {
-      mu2 = mu2 + amplitude2[g] * harmonics[1] * cos(2 * omega * times2 - 2 * omega * phase2[g])
-    }
-    if (!is.null(harmonics) && length(harmonics) >= 2 && harmonics[2] != 0) {
-      mu2 = mu2 + amplitude2[g] * harmonics[2] * cos(3 * omega * times2 - 3 * omega * phase2[g])
-    }
-    expr2[g, ] = rnorm(n2, mu2, sigma2_vec[g])
   }
 
   rownames(expr1) = rownames(expr2) = paste0("Gene", 1:ngenes)
@@ -443,23 +457,30 @@ simCircadianDiff <- function(ngenes = 5000,
     )
   ))
 }
-#' Simulate Circadian Time-Series Data
+#' Simulate Single-Cohort Circadian Gene Expression Data
 #'
-#' @description Generate simulated circadian expression data with flexible
-#' noise models and waveform shapes.
+#' @description Generates a synthetic gene expression matrix for one cohort
+#' by drawing per-gene parameters (mesor, amplitude, phase, noise) from the
+#' empirical distributions stored in a \code{CircadianBioOptions} object.
+#' Rhythmic genes receive nonzero amplitude and a randomly drawn peak phase;
+#' non-rhythmic genes have amplitude fixed at zero.
 #'
-#' @param G Number of genes
-#' @param G_rhythmic Number of rhythmic genes (default: floor(G * prop_rhythmic))
-#' @param prop_rhythmic Proportion of rhythmic genes (default 0.1)
-#' @param n Number of samples per time point (replicates)
-#' @param times Vector of time points (in hours)
-#' @param period Period (default 24)
-#' @param params List of parameters (M, A, phi, sigma). If NULL, use defaults.
-#' @param noise_type "gaussian", "t", "negbinom", "lognormal"
-#' @param waveform "sinusoid", "damped", "asymmetric"
-#' @param seed Random seed
+#' @param bio.opts A \code{CircadianBioOptions} object from \code{estCircadianParam}.
+#' @param cts Numeric vector of sample collection times (hours). Length determines
+#'   the number of simulated samples (\code{N}).
+#' @param alpha2 Second-harmonic coefficient (default 0). Adds a
+#'   \eqn{A \cdot \alpha_2 \cos(4\pi t/T - 4\pi\phi/T)} term.
+#' @param alpha3 Third-harmonic coefficient (default 0).
+#' @param seed Optional integer random seed for reproducibility.
 #'
-#' @return List with data matrix, ground truth, and parameters
+#' @return Named list with:
+#'   \describe{
+#'     \item{\code{expr}}{Gene expression matrix (ngenes x N).}
+#'     \item{\code{is_rhythmic}}{Logical vector of length ngenes; TRUE for rhythmic genes.}
+#'     \item{\code{r_values}}{Per-gene signal-to-noise ratio \eqn{A_g / \sigma_g}.}
+#'   }
+#'
+#' @seealso \code{\link{estCircadianParam}}, \code{\link{simCircadianDiff}}
 simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
                                      seed = NULL) {
   stopifnot(inherits(bio.opts, "CircadianBioOptions"))
@@ -502,13 +523,18 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
   r_values <- amp_g / sigma_g
 
   # --- expression matrix ---
-  expr <- matrix(NA_real_, nrow = ngenes, ncol = N)
-  for (g in seq_len(ngenes)) {
-    mu <- mesor_g[g] +
-          amp_g[g] * (cos(omega * cts - omega * phase_g[g]) +
-                      alpha2 * cos(2 * omega * cts - 2 * omega * phase_g[g]) +
-                      alpha3 * cos(3 * omega * cts - 3 * omega * phase_g[g]))
-    expr[g, ] <- rnorm(N, mu, sigma_g[g])
+  if (exists(".CPP_LOADED", inherits = TRUE) && isTRUE(get(".CPP_LOADED", inherits = TRUE)) &&
+      exists("sim_cosinor_expr_fast", mode = "function")) {
+    expr <- sim_cosinor_expr_fast(mesor_g, amp_g, phase_g, sigma_g, cts, period, alpha2, alpha3)
+  } else {
+    expr <- matrix(NA_real_, nrow = ngenes, ncol = N)
+    for (g in seq_len(ngenes)) {
+      mu <- mesor_g[g] +
+            amp_g[g] * (cos(omega * cts - omega * phase_g[g]) +
+                        alpha2 * cos(2 * omega * cts - 2 * omega * phase_g[g]) +
+                        alpha3 * cos(3 * omega * cts - 3 * omega * phase_g[g]))
+      expr[g, ] <- rnorm(N, mu, sigma_g[g])
+    }
   }
 
   list(expr = expr, is_rhythmic = is_rhythmic, r_values = r_values)

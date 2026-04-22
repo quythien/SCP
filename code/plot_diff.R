@@ -19,6 +19,22 @@ if (!exists("add_se_bars")) {
 # ----------------------------------------------------------------------
 # Internal: convert raw runSimsDiff() output to stratified arrays
 # ----------------------------------------------------------------------
+#' Prepare Differential Power Data for Stratified Plotting
+#'
+#' @description
+#' Converts a raw \code{runSimsDiff()} result into stratified power and
+#' true-discovery arrays indexed by sample size, r-stratum, FDR threshold,
+#' and simulation replicate.
+#'
+#' @param res List. Output of \code{runSimsDiff()} (contains \code{fdr_DR},
+#'   \code{fdr_DP}, \code{fdr_DM}, \code{diff_type}, \code{effectsize}).
+#' @param ep Character. Endpoint: one of \code{"DR"}, \code{"DP"}, \code{"DM"}.
+#' @param fdr_thresholds Numeric vector. FDR thresholds to evaluate power at.
+#' @param r_breaks Numeric vector. Breakpoints defining r-strata (e.g.
+#'   \code{c(0, 0.5, 1, 2, Inf)}).
+#'
+#' @return Named list with arrays \code{power_arr}, \code{TD_arr},
+#'   \code{marginal_sim}, and matrix \code{count_mat}.
 .prepDiffStratified <- function(res, ep, fdr_thresholds, r_breaks) {
   ngenes   <- res$ngenes
   n_sizes  <- length(res$sample_sizes)
@@ -92,6 +108,25 @@ if (!exists("add_se_bars")) {
 # ----------------------------------------------------------------------
 # Internal: collapse strata with left boundary >= threshold into one bin
 # ----------------------------------------------------------------------
+#' Collapse High-r Tail Strata into a Single Bin
+#'
+#' @description
+#' Merges all r-strata whose left boundary is at or above \code{threshold}
+#' into a single "r ≥ threshold" bin. This prevents sparse high-r strata
+#' from cluttering stratified differential power plots.
+#'
+#' @param r_breaks Numeric vector. Stratum breakpoints (length = n_strata + 1).
+#' @param strata_labels Character vector. Labels for each stratum.
+#' @param gene_counts Integer vector. Gene counts per stratum per simulation.
+#' @param mean_TD Numeric vector. Mean true discoveries per stratum.
+#' @param se_TD Numeric vector. SE of true discoveries per stratum.
+#' @param mean_pow Numeric vector. Mean power per stratum.
+#' @param se_pow Numeric vector. SE of power per stratum.
+#' @param threshold Numeric. r value above which strata are collapsed (default 5).
+#'
+#' @return Named list with collapsed vectors: \code{strata_labels},
+#'   \code{gene_counts}, \code{mean_TD}, \code{se_TD}, \code{mean_pow},
+#'   \code{se_pow}, and scalar \code{n_strata}.
 .collapseTail <- function(r_breaks, strata_labels, gene_counts,
                           mean_TD, se_TD, mean_pow, se_pow,
                           threshold = 5) {

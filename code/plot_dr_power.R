@@ -120,7 +120,17 @@ plotDensityResults <- function(results_file, output_file = NULL) {
 
 #' Print Density Analysis Summary Table
 #'
-#' @param density_results Output from runSimsDensity()
+#' @description
+#' Prints a formatted text table of power, true discoveries, false discoveries,
+#' and false discovery cost from a density analysis result, stratified by sample
+#' size and number of time points.
+#'
+#' @param density_results List. Output of \code{runSimsDensity()} containing
+#'   \code{n_subjects}, \code{n_time_points}, \code{power_avg}, \code{TD_avg},
+#'   \code{FD_avg}, \code{FDC_avg}, and \code{test_type}.
+#'
+#' @return Invisibly returns \code{NULL}. Called for its side-effect of printing
+#'   to the console.
 printDensitySummary <- function(density_results) {
 
   n_subjects <- density_results$n_subjects
@@ -152,6 +162,23 @@ printDensitySummary <- function(density_results) {
     cat("\n")
   }
 }
+#' Plot DR Power Stratified by r-Stratum
+#'
+#' @description
+#' Loads a saved power analysis result and produces a multi-panel plot showing
+#' detection power stratified by signal-to-noise ratio (r = A/σ) for each
+#' sample size and time-point design.
+#'
+#' @param results_file Character. Path to a saved \code{.RData} results file
+#'   from a power analysis run (must contain \code{dr_power_raw} or
+#'   \code{dp_power_raw}).
+#' @param output_file Character or NULL. Path for the output PDF. If NULL,
+#'   the plot is drawn to the current device.
+#' @param test_name Character. Label for the endpoint being plotted (default
+#'   \code{"DR"}; can also be \code{"DP"}).
+#'
+#' @return Invisibly returns \code{NULL}. Called for its side-effect of
+#'   producing a plot.
 plotDRPowerStratified <- function(results_file, output_file = NULL, test_name = "DR") {
 
   # Load saved results

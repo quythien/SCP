@@ -33,6 +33,10 @@
 #'
 #' @return Data frame: gene, M, A, phi, sigma, pvalue, is_rhythmic
 fitCosinorAll <- function(data, times, period = 24, min_rhythm_pval = 0.01) {
+  if (exists(".CPP_LOADED", inherits = TRUE) && isTRUE(get(".CPP_LOADED", inherits = TRUE)) &&
+      exists("fitCosinorAll_fast", mode = "function"))
+    return(fitCosinorAll_fast(data, times, period = period, min_rhythm_pval = min_rhythm_pval))
+
   G <- nrow(data)
   omega <- 2 * pi / period
 
@@ -40,18 +44,10 @@ fitCosinorAll <- function(data, times, period = 24, min_rhythm_pval = 0.01) {
     y <- data[g, ]
     tryCatch({
       fit <- one_cosinor_OLS(times, y, period, compute.phase.CI = FALSE)
-      # Compute residual sigma
       yhat <- fit$M + fit$A * cos(omega * times - omega * fit$phi)
       sigma_hat <- sqrt(mean((y - yhat)^2, na.rm = TRUE))
-      list(
-        gene      = g,
-        M         = fit$M,
-        A         = fit$A,
-        phi       = fit$phi,
-        sigma     = sigma_hat,
-        pvalue    = fit$pvalue,
-        r         = fit$A / max(sigma_hat, 1e-6)
-      )
+      list(gene = g, M = fit$M, A = fit$A, phi = fit$phi, sigma = sigma_hat,
+           pvalue = fit$pvalue, r = fit$A / max(sigma_hat, 1e-6))
     }, error = function(e) {
       list(gene = g, M = NA, A = NA, phi = NA, sigma = NA, pvalue = NA, r = NA)
     })
@@ -98,6 +94,21 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 # Internal helper: build CircadianBioOptions from bootstrap draw
 # =====================================================================
 
+#' Build CircadianBioOptions from a Bootstrap Parameter Draw
+#'
+#' @description
+#' Constructs a \code{CircadianBioOptions} object from a single bootstrap
+#' resample of pilot-gene cosinor fits. Differential parameters
+#' (prop_DR, prop_DP, phase_diff, etc.) are inherited from \code{bio_diff.opts}.
+#' Amplitude and sigma are kept jointly sampled to preserve the empirical
+#' A–sigma correlation.
+#'
+#' @param boot_df Data frame. One bootstrap resample of \code{fitCosinorAll()}
+#'   output (columns: M, A, phi, sigma, is_rhythmic).
+#' @param bio_diff.opts List or \code{CircadianBioOptions}. Source for
+#'   differential-design parameters (prop_DR, prop_DP, phase_diff, etc.).
+#'
+#' @return A \code{CircadianBioOptions} object ready for \code{simCircadianSingleCohort()}.
 .buildBioFromBoot <- function(boot_df, bio_diff.opts) {
   # Use the bootstrap draw for base distributions; differential params from bio_diff.opts
   lBaselineExpr_vec <- boot_df$M
@@ -164,6 +175,13 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 # Internal helper: select B evenly-spaced time points from design_vector
 # =====================================================================
 
+#' Select B Evenly-Spaced Time Points from a Design Vector
+#'
+#' @param design_vector Numeric vector. Full set of candidate ZT time points.
+#' @param B Integer. Number of distinct time bins to select.
+#'
+#' @return Numeric vector of length \code{min(B, length(design_vector))} with
+#'   evenly-spaced time points drawn from \code{design_vector}.
 .selectTimePoints <- function(design_vector, B) {
   n_full <- length(design_vector)
   if (B >= n_full) return(design_vector)
@@ -182,15 +200,42 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 #' Estimates uncertainty in power across (N, B) design configurations by
 #' bootstrapping parameter sets from pilot data.
 #'
-#' @param pilot_data Genes x samples matrix (pilot experiment)
-#' @param pilot_times Sample time points (length = ncol(pilot_data))
-#' @param boot.opts CircadianBootstrapOptions
-#' @param analysis.opts CircadianAnalysisOptions
-#' @param bio_diff.opts CircadianBioOptions (used for differential params only:
-#'   prop_DR, prop_DP, prop_DM, phase_diff, amp_diff, dp_shift_mode)
-#' @param verbose Print progress
+#' @param pilot_data Genes x samples matrix (pilot experiment).
+#' @param pilot_times Numeric vector of sample time points, length = ncol(pilot_data).
+#' @param boot.opts \code{CircadianBootstrapOptions} from \code{CircadianBootstrapOptions()}.
+#'   Must set \code{B_values} to a single value for passive designs.
+#' @param analysis.opts \code{CircadianAnalysisOptions}.
+#' @param bio_diff.opts \code{CircadianBioOptions} from \code{estCircadianParam()}. Required
+#'   even in \code{mode = "single"} — differential proportion fields are read from here.
+#' @param pilot_data_2 Optional group-2 pilot matrix for \code{mode = "differential"}.
+#' @param pilot_times_2 Optional group-2 pilot times.
+#' @param mode \code{"single"} or \code{"differential"}.
+#' @param methods Detection method(s): \code{"DCP"} (default), \code{"JTK"}, \code{"RAIN"}.
+#' @param test_types Endpoints for differential mode: any of \code{"DR"}, \code{"DP"}, \code{"DM"}.
+#' @param alpha2 Second-harmonic coefficient (default 0).
+#' @param alpha3 Third-harmonic coefficient (default 0).
+#' @param min_rhythm_pval P-value threshold for pilot rhythmicity (default 0.01).
+#' @param verbose Print progress (default TRUE).
+#' @param mc.cores Parallel cores for inner simulation loop (default 1).
 #'
-#' @return List with power arrays, summaries, and optimal B recommendations
+#' @return Named list with 15 elements:
+#'   \describe{
+#'     \item{\code{N_values}}{Candidate sample sizes tested.}
+#'     \item{\code{B_values}}{Candidate time-point counts tested.}
+#'     \item{\code{m_matrix}}{Matrix of total samples (N x B).}
+#'     \item{\code{nboot}}{Number of bootstrap replicates.}
+#'     \item{\code{design}}{Design type (\code{"active"} or \code{"passive"}).}
+#'     \item{\code{test_types}}{Endpoints evaluated.}
+#'     \item{\code{fdr_threshold}}{FDR threshold used.}
+#'     \item{\code{boot_power}}{4-D array \code{[nboot x n_N x n_B x n_tests]}.}
+#'     \item{\code{power_mean}}{Mean power array \code{[n_N x n_B x n_tests]}.}
+#'     \item{\code{power_se}}{Bootstrap SE array, same shape as \code{power_mean}.}
+#'     \item{\code{power_ci_lo}}{2.5th percentile CI array.}
+#'     \item{\code{power_ci_hi}}{97.5th percentile CI array.}
+#'     \item{\code{optimal_B}}{Integer vector (length n_N): B with highest mean power at each N.}
+#'     \item{\code{optimal_B_ci_lo}}{Bootstrap 2.5th percentile of optimal B.}
+#'     \item{\code{optimal_B_ci_hi}}{Bootstrap 97.5th percentile of optimal B.}
+#'   }
 runBootstrapDesignGrid <- function(pilot_data,
                                    pilot_times,
                                    boot.opts,

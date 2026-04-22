@@ -1,26 +1,33 @@
-#' Run Multiple Simulations for Differential Power Analysis
+#' Low-level differential power simulation engine
 #'
-#' Test power to detect differential rhythmicity, phase, or amplitude
-#' between two groups using rigorous DCP pipeline.
+#' Preferred interface: \code{runDifferentialPower(bio.opts, design.opts, analysis.opts)}.
+#' This function supports both the config-object API (primary) and a legacy
+#' flat-argument API (retained for back-compatibility).
 #'
-#' @param sample_sizes Vector of sample sizes (per group)
-#' @param nsims Number of simulations per sample size
-#' @param ngenes Number of genes
-#' @param prop_rhythmic Proportion of rhythmic genes
-#' @param prop_DR Proportion with differential rhythmicity
-#' @param prop_DP Proportion with differential phase
-#' @param phase_diff Range of phase shift for DP genes (c(min, max))
-#' @param amp_diff Unused; retained for interface compatibility
-#' @param design "active" or "passive"
-#' @param cts TOD distribution for passive design
-#' @param test_types Which tests to run ("DR", "DP", "DM")
-#' @param verbose Print progress
+#' @param sample_sizes \code{CircadianBioOptions} (primary) or numeric vector of
+#'   per-group sample sizes (legacy flat API).
+#' @param nsims \code{CircadianDesignOptions} (primary) or number of simulations (legacy).
+#' @param ngenes \code{CircadianAnalysisOptions} (primary) or number of genes (legacy).
+#' @param prop_rhythmic Overall proportion of rhythmic genes (legacy only).
+#' @param prop_DR Proportion with differential rhythmicity (legacy only).
+#' @param prop_DP Proportion with differential phase (legacy only).
+#' @param phase_diff Phase-shift range in hours for DP genes (legacy only).
+#' @param amp_diff Unused; retained for interface compatibility.
+#' @param design \code{"active"} or \code{"passive"} (legacy only).
+#' @param cts TOD distribution for passive design (legacy only).
+#' @param test_types Which endpoints to evaluate: any of \code{"DR"}, \code{"DP"}, \code{"DM"}.
+#' @param verbose Print progress.
+#' @param mc.cores Parallel cores.
+#' @param design.opts \code{CircadianDesignOptions} (used with legacy positional first arg).
+#' @param analysis.opts \code{CircadianAnalysisOptions}.
 #'
-#' @return List with p-values, FDR, and ground truth for each simulation
+#' @return List (class \code{SCPDiffResult}) with fields:
+#'   \code{pval_DR}, \code{fdr_DR}, \code{pval_DP}, \code{fdr_DP},
+#'   \code{pval_DM}, \code{fdr_DM} — arrays \code{[ngenes x n_sizes x nsims]};
+#'   \code{diff_type}, \code{effectsize}, \code{sample_sizes}, \code{nsims}.
+#'   Pass directly to \code{plotDiffPower()} or \code{npower()}.
 #'
-#' @details This function uses the full DiffCircadian pipeline (DCP_Rhythmicity,
-#' DCP_DiffR2, DCP_DiffPar) to ensure rigorous likelihood ratio tests with
-#' proper hierarchical testing and Sidak adjustments.
+#' @seealso \code{\link{runDifferentialPower}} (user-facing wrapper)
 
 # Detection functions (DCP pipeline) should be sourced before this file
 # e.g., source("code/detection.R") in calling script
@@ -761,18 +768,17 @@ summaryRunPower <- function(powerOutput, verbose = TRUE) {
 #' empirical pilot parameter distributions, applies the cosinor F-test per
 #' gene, applies BH correction, and aggregates empirical power and FDR.
 #'
-#' This is the simulation counterpart to \code{runPowerAnalysis()} for the
-#' single-cohort (one-group) scenario.  It does not require a closed-form
-#' solution and therefore works for any design (active or passive) and any
-#' pilot parameter distribution.
+#' Simulation-based alternative to the closed-form \code{CircaPower} formula:
+#' works for any design (active or passive) and any pilot parameter distribution.
 #'
 #' @param bio.opts      \code{CircadianBioOptions} — pilot parameter distributions.
-#'   Use \code{estCircadianParam()} to build from real data.
+#'   Build with \code{estCircadianParam()}.
 #' @param design.opts   \code{CircadianDesignOptions} — sample sizes, nsims, design.
 #' @param analysis.opts \code{CircadianAnalysisOptions} — alpha, p.adjust.method.
+#' @param method        Detection method: \code{"DCP"} (default), \code{"JTK"}, \code{"RAIN"}, \code{"MH"}.
+#' @param harmonics     Numeric length-2: \code{c(alpha2, alpha3)} harmonic coefficients (default \code{c(0,0)}).
 #' @param verbose       Print progress (default TRUE).
-#'
-#' @param mc.cores  Number of cores for parallel simulation replicates (default 1).
+#' @param mc.cores      Parallel cores (default 1).
 #'
 #' @return List with:
 #'   \item{marginal_power}{Matrix [sample_sizes x nsims]}
@@ -913,14 +919,20 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
 
       # Simulate expression [ngenes x n]
       omega <- 2 * pi / period
-      expr  <- matrix(NA_real_, nrow = ngenes, ncol = n)
-      for (g in seq_len(ngenes)) {
-        mu <- mesor_g[g] + amp_g[g] * (
-          cos(omega * times_i - omega * phase_g[g]) +
-          harmonics[1] * cos(2 * omega * times_i - 2 * omega * phase_g[g]) +
-          harmonics[2] * cos(3 * omega * times_i - 3 * omega * phase_g[g])
-        )
-        expr[g, ] <- rnorm(n, mu, sigma_g[g])
+      if (exists(".CPP_LOADED", inherits = TRUE) && isTRUE(get(".CPP_LOADED", inherits = TRUE)) &&
+          exists("sim_cosinor_expr_fast", mode = "function")) {
+        expr <- sim_cosinor_expr_fast(mesor_g, amp_g, phase_g, sigma_g, times_i,
+                                      period, harmonics[1], harmonics[2])
+      } else {
+        expr <- matrix(NA_real_, nrow = ngenes, ncol = n)
+        for (g in seq_len(ngenes)) {
+          mu <- mesor_g[g] + amp_g[g] * (
+            cos(omega * times_i - omega * phase_g[g]) +
+            harmonics[1] * cos(2 * omega * times_i - 2 * omega * phase_g[g]) +
+            harmonics[2] * cos(3 * omega * times_i - 3 * omega * phase_g[g])
+          )
+          expr[g, ] <- rnorm(n, mu, sigma_g[g])
+        }
       }
 
       pvals <- tryCatch(
@@ -1456,7 +1468,11 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
   n80_df <- do.call(rbind, lapply(
     split(grid, interaction(grid$method, grid$B, grid$alpha2, grid$alpha3)),
     function(sub) {
-      n80 <- tryCatch(npower(sub$N, sub$power, target = 0.80), error = function(e) NA_real_)
+      n80 <- tryCatch({
+        # Interpolate N for 80% power directly from the tidy sub-grid
+        idx <- which(sub$power >= 0.80)
+        if (length(idx) == 0L) NA_real_ else sub$N[min(idx)]
+      }, error = function(e) NA_real_)
       data.frame(method = sub$method[1], B = sub$B[1],
                  alpha2 = sub$alpha2[1], alpha3 = sub$alpha3[1],
                  n80 = n80, stringsAsFactors = FALSE)
@@ -1585,9 +1601,11 @@ plot.SCPSingleResult <- function(x, output_file = NULL, ...) {
 #' @param output_file   PDF path (NULL = screen)
 #' @param verbose       Print progress
 #'
-#' @return Rich list (from runSimsDiff): $fdr_DR [genes x N x nsims],
-#'   $fdr_DP, $fdr_DM, $diff_type [list], $effectsize [list],
-#'   $sample_sizes, $nsims. Pass directly to plotDiffPower().
+#' @return List (class \code{SCPDiffResult}) from \code{runSimsDiff()}:
+#'   \code{pval_DR}, \code{fdr_DR}, \code{pval_DP}, \code{fdr_DP},
+#'   \code{pval_DM}, \code{fdr_DM} — 3-D arrays \code{[ngenes x n_sizes x nsims]};
+#'   plus \code{diff_type}, \code{effectsize}, \code{sample_sizes}, \code{nsims}.
+#'   Pass to \code{plotDiffPower()} or \code{npower(..., endpoint="DR")}.
 #' @export
 runDifferentialPower <- function(bio.opts,
                                   design.opts,

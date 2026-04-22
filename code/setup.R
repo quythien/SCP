@@ -72,3 +72,20 @@ for (file in source_files) {
     warning(sprintf("  ✗ %s NOT FOUND\n", file))
   }
 }
+
+# C++ acceleration (Rcpp/RcppArmadillo) — optional, graceful fallback to R
+.CPP_LOADED <- FALSE
+if (file.exists("src/cosinor_fast.cpp") &&
+    requireNamespace("Rcpp", quietly = TRUE) &&
+    requireNamespace("RcppArmadillo", quietly = TRUE)) {
+  tryCatch({
+    suppressMessages(Rcpp::sourceCpp("src/cosinor_fast.cpp"))
+    source("src/cosinor_fast.R")
+    .CPP_LOADED <- TRUE
+    cat("  ✓ C++ acceleration loaded (cosinor_fast)\n")
+  }, error = function(e) {
+    cat(sprintf("  ✗ C++ acceleration unavailable: %s\n", conditionMessage(e)))
+  })
+} else {
+  cat("  ✗ C++ acceleration skipped (src/cosinor_fast.cpp not found or Rcpp unavailable)\n")
+}

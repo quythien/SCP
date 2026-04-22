@@ -1,33 +1,53 @@
 #' Estimate Circadian Parameters from Pilot Data
 #'
-#' @description Estimate distributions of amplitude, phase, noise level, and
-#' effect size from real circadian time-series data.
+#' @description
+#' Fits a cosinor model to each gene in the pilot dataset, selects the
+#' top-K rhythmic genes (ranked by p-value, K = min(300, n_rhythmic)),
+#' and returns empirical distributions of mesor, amplitude, phase, and
+#' noise as a \code{CircadianBioOptions} object for use in downstream
+#' simulation and power analysis.
 #'
-#' @param data Gene expression matrix (genes x samples)
-#' @param times Time points for each sample
-#' @param period Period (default 24)
-#' @param min_rhythm_pval P-value threshold for including rhythmic genes (default 0.01)
-#' @param verbose Print progress
+#' @param data Gene expression matrix (genes x samples).
+#' @param times Numeric vector of sample time points (hours), length = \code{ncol(data)}.
+#' @param period Circadian period in hours (default 24).
+#' @param min_rhythm_pval P-value threshold for classifying a gene as rhythmic (default 0.01).
+#' @param verbose Print estimation summary (default TRUE).
 #'
-#' @return List with parameter distributions
-#' 
-#' 
-#' 
-#' #' @description SEMIPARAMETRIC power analysis framework:
-#' - Parametric cosinor model for mean function
-#' - Empirical parameter distributions from pilot data
-#' - Empirical Bayes variance estimation
-#' - No assumptions on amplitude, phase, or noise distributions
+#' @return A \code{CircadianBioOptions} S3 object (27 fields) including:
+#'   \code{prop_rhythmic}, \code{lBaselineExpr}, \code{lOD}, \code{amplitude},
+#'   \code{sigma_rhythmic}, \code{cts}, \code{phase}, \code{prop_DR},
+#'   \code{prop_DP}, \code{prop_DM}, \code{phase_diff}, \code{amp_diff},
+#'   \code{mesor_diff}, \code{ngenes}, \code{period}, \code{sim.seed}.
+#'   Pass directly to \code{runSimsSingleCohort()} or \code{runDifferentialPower()}.
 #'
-#' @details The framework is semiparametric because while the circadian
-#' model structure (cosinor) is parametric, the parameter distributions
-#' can be learned nonparametrically from pilot data via 
-#' estimate_circadian_params().
+#' @seealso \code{\link{estCircadianParamTwoGroup}} for two-group differential setup,
+#'   \code{\link{CircadianBioOptions}} for the options constructor.
 
 
-# Cosinor OLS fit for a single gene — used by estimate_circadian_params and bootstrap_sim
+#' Wrap Angle to [0, 2π)
+#'
+#' @param x Numeric. Angle(s) in radians.
+#' @return Numeric. Angle(s) mapped to \code{[0, 2π)}.
 adjust.to.2pi = function(x) x %% (2 * pi)
 
+#' Fit a Cosinor Model to a Single Gene by OLS
+#'
+#' @description
+#' Fits the cosinor model \eqn{y = M + A\cos(\omega t - \phi) + \epsilon}
+#' via ordinary least squares by reparameterising as
+#' \eqn{y = M + \beta_1\cos(\omega t) + \beta_2\sin(\omega t) + \epsilon}.
+#' Returns mesor, amplitude, acrophase, p-value, and R².
+#'
+#' @param tod Numeric vector. Sample time points (hours).
+#' @param y Numeric vector. Gene expression values (same length as \code{tod}).
+#' @param period Numeric. Rhythm period in hours (default 24).
+#' @param compute.phase.CI Logical. Reserved; not yet implemented (default FALSE).
+#' @param CI.level Numeric. Confidence level for phase CI (default 0.95).
+#'
+#' @return Named list with fields: \code{M} (mesor), \code{A} (amplitude),
+#'   \code{phi} (acrophase in hours), \code{pvalue} (F-test p-value),
+#'   \code{R2} (coefficient of determination). Returns \code{NA} for all
+#'   fields if the design matrix is singular or \eqn{n \le 3}.
 one_cosinor_OLS = function(tod, y, period = 24, compute.phase.CI = FALSE, CI.level = 0.95) {
   n     = length(tod)
   omega = 2 * pi / period
