@@ -183,11 +183,14 @@ res_diff <- runDifferentialPower(
   methods       = "DCP",
   test_types    = c("DR", "DP", "DM"),
   mc.cores      = 4L,
-  plot          = TRUE,
-  output_file   = "figures/diff_power.pdf"
+  plot          = FALSE
 )
 
-print(res_diff)
+plotDiffPower(list(res_diff),
+              comp_labels = "Group A vs Group B",
+              endpoints   = c("DR", "DP", "DM"),
+              out_pdf     = "figures/diff_power.pdf")
+saveRDS(res_diff, "output/diff_power.rds")
 ```
 
 ## Biological interpretation of endpoints

@@ -1148,7 +1148,7 @@ printMethodGuidance <- function(methods = c("DCP","JTK","RAIN","MH"),
 #' @param mode          "single" or "differential" (default "single")
 #' @param run_simulation TRUE = run full simulation after analytical step.
 #'                       FALSE = analytical (CircaPower) only.
-#' @param prior_result  A previous SCPSingleResult or SCPDiffResult to reuse
+#' @param prior_result  A previous runSingleCohortGrid()/runDifferentialPower() result to reuse
 #'                      instead of re-running simulation.
 #' @param alpha2        2nd-harmonic deviation (scalar or vector)
 #' @param alpha3        3rd-harmonic deviation (scalar or vector)
@@ -1160,7 +1160,7 @@ printMethodGuidance <- function(methods = c("DCP","JTK","RAIN","MH"),
 #' @return SCPRecommendResult with:
 #'   $guidance      — data.frame: method guidance table
 #'   $analytical_df — data.frame[method, N, power_analytical] (DCP only)
-#'   $simulation    — SCPSingleResult or SCPDiffResult (NULL if not run)
+#'   $simulation    — runSingleCohortGrid() or runDifferentialPower() result (NULL if not run)
 #'   $recommendation — data.frame[method, optimal_B, n_target, note]
 #' @export
 recommendDesign <- function(bio.opts,
@@ -1491,7 +1491,9 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
 #' @param output_file   PDF path for auto-plot (NULL = screen)
 #' @param verbose       Print progress
 #'
-#' @return Object of class "SCPSingleResult" with $power_df, $n80_df, $opts
+#' @return Rich list (from runSimsSingleCohort): $marginal_power [N x nsims],
+#'   $strat_power [N x r_strata x nsims], $pvalues [N x genes x nsims],
+#'   $sample_sizes, $r_values_list. Pass directly to plotSingleCohortPower().
 #' @export
 runSingleCohortPower <- function(bio.opts,
                                   design.opts,
@@ -1582,7 +1584,9 @@ plot.SCPSingleResult <- function(x, output_file = NULL, ...) {
 #' @param output_file   PDF path (NULL = screen)
 #' @param verbose       Print progress
 #'
-#' @return Object of class "SCPDiffResult" with $power_df, $n80_df, $opts
+#' @return Rich list (from runSimsDiff): $fdr_DR [genes x N x nsims],
+#'   $fdr_DP, $fdr_DM, $diff_type [list], $effectsize [list],
+#'   $sample_sizes, $nsims. Pass directly to plotDiffPower().
 #' @export
 runDifferentialPower <- function(bio.opts,
                                   design.opts,

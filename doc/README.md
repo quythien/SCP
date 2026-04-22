@@ -252,32 +252,35 @@ CircadianAnalysisOptions(alpha, p.adjust.method, fdr_thresholds, reference_n)
 
 ```r
 # Single-cohort rhythmicity power (Figs 1, 3, 4)
-# Sweeps N × B × alpha2 × alpha3 × method in one call.
-# Auto-plots and computes n80 on completion (plot=FALSE to suppress).
+# One method per call. For multi-method B vs m sweeps use recommendDesign().
 runSingleCohortPower(
   bio.opts, design.opts, analysis.opts,
-  methods  = "DCP",          # c("DCP", "JTK", "RAIN", "MH") — any combination
-  alpha2   = 0,              # scalar or vector: sweeps 2nd-harmonic deviation
+  methods  = "DCP",          # one of "DCP" | "JTK" | "RAIN" | "MH"
+  alpha2   = 0,              # 2nd-harmonic waveform deviation
   alpha3   = 0,
   mc.cores = 1L,
-  plot     = TRUE,           # auto-plot; set FALSE to call plot(result) post hoc
-  output_file = NULL         # PDF path; NULL = screen
+  plot     = FALSE,          # set TRUE to auto-plot, or call plotSingleCohortPower(res) post hoc
+  output_file = NULL         # PDF path for auto-plot
 )
-# Returns SCPSingleResult with $power_df, $n80_df. Methods: print(), plot(), npower().
+# Returns a rich list: $marginal_power [N x nsims], $strat_power [N x r_strata x nsims],
+# $pvalues [N x genes x nsims], $sample_sizes, $r_values_list.
+# Plot with: plotSingleCohortPower(res, out_pdf = "fig.pdf")
 
 # Two-group differential power (Fig 2)
-# Sweeps N × alpha2 × alpha3 × method × test_type.
+# One method per call; test_types controls which of DR/DP/DM are evaluated.
 runDifferentialPower(
   bio.opts, design.opts, analysis.opts,
-  methods    = "DCP",        # c("DCP", "CircaCompare", "LimoRhyde", "DODR")
+  methods    = "DCP",        # one of "DCP" | "CircaCompare" | "LimoRhyde" | "DODR"
   test_types = c("DR","DP","DM"),  # NA returned silently for unsupported combinations
   alpha2     = 0,
   alpha3     = 0,
   mc.cores   = 1L,
-  plot       = TRUE,
+  plot       = FALSE,
   output_file = NULL
 )
-# Returns SCPDiffResult with $power_df, $n80_df. Methods: print(), plot(), npower().
+# Returns a rich list: $fdr_DR [genes x N x nsims], $fdr_DP, $fdr_DM,
+# $diff_type [list[nsims]], $effectsize [list[nsims]], $sample_sizes.
+# Plot with: plotDiffPower(list(res), comp_labels = "A vs B", endpoints = c("DR","DP","DM"))
 
 # Bootstrap uncertainty wrapper — works for BOTH single-cohort and differential (Fig 5/6)
 # mode auto-detected: "single" if pilot_data_2 is NULL, "differential" otherwise.
@@ -321,22 +324,22 @@ rec <- recommendDesign(
   target_power   = 0.80,
   mode           = "single",       # "single" | "differential"
   run_simulation = TRUE,           # FALSE = CircaPower only (fast)
-  prior_result   = NULL,           # pass a previous SCPSingleResult to skip re-running
+  prior_result   = NULL,           # pass rec$simulation from a previous recommendDesign() to skip re-running
   alpha2         = 0,
   mc.cores       = 60L
 )
 # Returns SCPRecommendResult:
 #   $guidance       — method guidance table
 #   $analytical_df  — CircaPower power at each N (DCP)
-#   $simulation     — SCPSingleResult or SCPDiffResult
+#   $simulation     — runSingleCohortGrid() result (SCPSingleResult with $power_df) or runDifferentialPower() rich list
 #   $recommendation — optimal B and n_target per method
 
 # Reuse previous simulation (avoid re-running):
-prev <- runSingleCohortPower(bio.opts, design.opts, analysis.opts,
-                              methods = c("RAIN","MH"), plot = FALSE)
+prev <- recommendDesign(bio.opts, design.opts, analysis.opts,
+                        methods = c("DCP","RAIN","MH"), run_simulation = TRUE)
 rec  <- recommendDesign(bio.opts, design.opts, analysis.opts,
                          methods = c("DCP","RAIN","MH"),
-                         prior_result = prev,         # simulation step skipped
+                         prior_result = prev$simulation,  # simulation step skipped
                          run_simulation = FALSE)
 
 # Analytical only (instant):
@@ -353,10 +356,17 @@ via `printMethodGuidance()`, which is also available standalone.
 
 ### Post-hoc calls
 ```r
-result <- runSingleCohortPower(..., plot = FALSE)
-plot(result)                          # B vs power figure
-npower(result, target = 0.80)         # n80 table
-print(result)                         # summary
+res <- runSingleCohortPower(..., plot = FALSE)
+plotSingleCohortPower(res, out_pdf = "fig.pdf", title = "My Cohort")
+saveRDS(res, "output/single_cohort_power.rds")   # save for replotting at any FDR
+
+res_diff <- runDifferentialPower(..., plot = FALSE)
+plotDiffPower(list(res_diff), comp_labels = "A vs B", endpoints = c("DR","DP","DM"))
+saveRDS(res_diff, "output/diff_power.rds")
+
+rec <- recommendDesign(...)
+print(rec)                            # B vs m guidance + n80 summary
+plot(rec)                             # power vs N figure
 printMethodGuidance(methods = "RAIN") # guidance for a specific method only
 ```
 
@@ -393,7 +403,7 @@ SCP/
 ├── code/
 │   ├── setup.R             # Entry point — sources all code below
 │   ├── options.R           # Options constructors (CircadianBioOptions, etc.)
-│   ├── runner.R            # runPowerAnalysis, runBootstrapDesignGrid, runTwoStagePower, runSimsSingleCohort
+│   ├── runner.R            # runSingleCohortPower, runDifferentialPower, recommendDesign, runBootstrapDesignGrid
 │   ├── bootstrap_sim.R     # Bootstrap logic, compareDesignApproaches, fitCosinorAll
 │   ├── estimation.R        # estCircadianParam, estCircadianParamTwoGroup
 │   ├── simulation.R        # simCircadianDiff — joint A-sigma sampling
