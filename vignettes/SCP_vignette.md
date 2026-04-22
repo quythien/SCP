@@ -348,8 +348,10 @@ behavior, passive-design TOD variability, or waveform violations.
 
 ### 4b. Simulation-based path — `runSingleCohortPower()`
 
-`runSingleCohortPower()` sweeps N × B × α₂ × method and returns an
-`SCPSingleResult` object with empirically estimated power at every cell.
+`runSingleCohortPower()` runs the simulation sweep and returns a rich list
+with per-gene FDR arrays, power curves, and stratified estimates that can be
+passed directly to `plotSingleCohortPower()` or saved for later replotting at
+any FDR threshold.
 
 ```r
 bio <- readRDS("data/gse160521_nac_ctrl_pilot.rds")
@@ -373,13 +375,13 @@ res <- runSingleCohortPower(
   analysis.opts = analysis,
   methods       = "DCP",
   mc.cores      = 4L,
-  plot          = TRUE,
-  output_file   = "figures/single_cohort_power.pdf"
+  plot          = FALSE   # generate the figure separately (see below)
 )
 
-print(res)        # n80 summary table
-plot(res)         # power vs N, faceted by B × method
-npower(res)       # interpolated N for 80% power
+# Plot separately:
+plotSingleCohortPower(res, out_pdf = "figures/single_cohort_power.pdf",
+                      title = "My Cohort — Single-Cohort Power")
+saveRDS(res, "output/single_cohort_power.rds")   # save for replotting
 ```
 
 **When to use the simulation path:**
@@ -390,32 +392,12 @@ npower(res)       # interpolated N for 80% power
 
 ### Multi-method B vs m sweep
 
-```r
-design_bvsm <- CircadianDesignOptions(
-  sample_sizes = seq(12, 96, by = 12),
-  nsims        = 100L,
-  design       = "active",
-  cts          = seq(0, 20, by = 4),     # placeholder — overridden by B_values
-  B_values     = c(3L, 4L, 6L, 8L, 12L)
-)
+For multi-method and B vs m comparisons, use `recommendDesign()` — it is the
+high-level orchestrator that runs all methods over the B × N grid and prints
+the B-sensitivity guidance automatically. See [§6](#6-b-vs-m-trade-off-and-method-recommendation).
 
-# Print method guidance before running
-printMethodGuidance(methods = c("DCP", "JTK", "RAIN", "MH"), verbose = TRUE)
-
-res_multi <- runSingleCohortPower(
-  bio.opts      = bio,
-  design.opts   = design_bvsm,
-  analysis.opts = analysis,
-  methods       = c("DCP", "JTK", "MH"),
-  alpha2        = c(0, 0.5, 1.0),        # cosinor violation sweep
-  mc.cores      = 8L,
-  plot          = FALSE
-)
-
-head(res_multi$power_df)
-#   N  B alpha2 alpha3 method    power power_se
-#  12  3      0      0    DCP   0.143     ...
-```
+`runSingleCohortPower()` accepts a single method only; passing multiple methods
+raises a warning and uses only the first.
 
 ### Cosinor violation parameter (α₂)
 
@@ -490,26 +472,34 @@ res_diff <- runDifferentialPower(
   methods       = "DCP",
   test_types    = c("DR", "DP", "DM"),
   mc.cores      = 4L,
-  plot          = TRUE,
-  output_file   = "figures/diff_power.pdf"
-)
-
-print(res_diff)
-```
-
-### Multi-method differential
-
-```r
-res_diff_multi <- runDifferentialPower(
-  bio.opts      = bio_diff,
-  design.opts   = design,
-  analysis.opts = analysis,
-  methods       = c("DCP", "LimoRhyde"),
-  test_types    = "DR",
-  mc.cores      = 8L,
   plot          = FALSE
 )
+
+plotDiffPower(list(res_diff),
+              comp_labels = "Group A vs Group B",
+              endpoints   = c("DR", "DP", "DM"),
+              out_pdf     = "figures/diff_power.pdf")
+saveRDS(res_diff, "output/diff_power.rds")
 ```
+
+### Multi-comparison side-by-side
+
+Run `runDifferentialPower()` once per comparison and pass both results to `plotDiffPower()`:
+
+```r
+res_a <- runDifferentialPower(bio_a, design, analysis, plot = FALSE, mc.cores = 4L)
+res_b <- runDifferentialPower(bio_b, design, analysis, plot = FALSE, mc.cores = 4L)
+
+plotDiffPower(
+  res_list    = list(res_a, res_b),
+  comp_labels = c("Comparison A", "Comparison B"),
+  endpoints   = c("DR", "DP", "DM"),
+  out_pdf     = "output/fig2.pdf",
+  width = 15, height = 30
+)
+```
+
+`runDifferentialPower()` accepts a single method. To compare methods, run once per method and combine with `plotDiffPower()`.
 
 ---
 
@@ -551,7 +541,7 @@ plot(rec)
 
 ### Reuse a previous result
 
-Pass a previous `SCPSingleResult` or `SCPDiffResult` as `prior_result` to skip re-running:
+Pass the `$simulation` field of a previous `recommendDesign()` result as `prior_result` to skip re-running:
 
 ```r
 rec2 <- recommendDesign(
@@ -559,7 +549,7 @@ rec2 <- recommendDesign(
   design.opts   = design_bvsm,
   analysis.opts = analysis,
   methods       = c("DCP", "MH"),
-  prior_result  = res_multi,    # SCPSingleResult from a previous call
+  prior_result  = rec$simulation,   # result from earlier recommendDesign() call
   target_power  = 0.80,
   mode          = "single"
 )
@@ -626,37 +616,43 @@ In those cases, treat the median power estimate conservatively and consider addi
 
 ## 8. Working with Result Objects
 
-All runners return S3 objects with consistent `print`, `plot`, and `npower` methods.
+`runSingleCohortPower()` and `runDifferentialPower()` return rich lists containing
+raw per-gene FDR arrays. Pass them directly to the plotting functions, or save
+with `saveRDS()` for later replotting at any FDR threshold.
 
 ```r
-# SCPSingleResult
-res                          # prints n80 summary table
-plot(res)                    # power curves faceted by B × method × alpha2
-npower(res, target = 0.80)  # interpolated N for 80% power
+# Single-cohort result — pass to plotSingleCohortPower()
+res <- runSingleCohortPower(bio, design, analysis,
+                             methods = "DCP", plot = FALSE, mc.cores = 4L)
+saveRDS(res, "output/single_cohort_power.rds")
+plotSingleCohortPower(res, out_pdf = "output/fig1.pdf",
+                      title = "My Cohort — Single-Cohort Power")
 
-# SCPDiffResult
-res_diff
-plot(res_diff)
-npower(res_diff, target = 0.80)
+# Key fields in the result:
+res$sample_sizes          # N values swept
+res$marginal_power        # [N × nsims] matrix of per-sim marginal power
+res$strat_power           # [N × r_strata × nsims] stratified by SNR
+res$pvalues               # [N × genes × nsims] raw p-values (replot at any FDR)
 
-# SCPRecommendResult
+# Differential result — pass to plotDiffPower()
+res_diff <- runDifferentialPower(bio_diff, design, analysis,
+                                  methods = "DCP", plot = FALSE, mc.cores = 4L)
+saveRDS(res_diff, "output/diff_power.rds")
+plotDiffPower(list(res_diff),
+              comp_labels = "Group A vs Group B",
+              endpoints   = c("DR", "DP", "DM"),
+              out_pdf     = "output/fig2.pdf")
+
+# Key fields in the differential result:
+res_diff$fdr_DR            # [genes × N × nsims] FDR for DR test
+res_diff$fdr_DP            # [genes × N × nsims] FDR for DP test
+res_diff$fdr_DM            # [genes × N × nsims] FDR for DM test
+res_diff$diff_type         # list[nsims]: per-gene ground-truth type (0–5)
+res_diff$effectsize        # list[nsims]: per-gene effect sizes
+
+# recommendDesign() result has print/plot S3 methods:
 rec
 plot(rec)
-```
-
-### Access the raw power table
-
-All result objects store a tidy data frame at `$power_df`:
-
-```r
-df <- res$power_df
-# Columns: N, B, alpha2, alpha3, method, power, power_se
-
-# Filter to MH at B=6
-df[df$method == "MH" & df$B == 6, c("N", "power")]
-
-# n80 for each method × B combination
-res$n80_df
 ```
 
 ---
@@ -715,9 +711,9 @@ saveRDS(res, sprintf("output/single_cohort/results/fig1_nac_%s.rds",
 
 | Function | Returns | Purpose |
 |----------|---------|---------|
-| `runSingleCohortPower()` | `SCPSingleResult` | Single-group power: N × B × α₂ × method |
-| `runDifferentialPower()` | `SCPDiffResult` | Two-group power: N × α₂ × method × test_type |
-| `recommendDesign()` | `SCPRecommendResult` | Full B vs m orchestrator |
+| `runSingleCohortPower()` | rich list | Single-group power sweep (N, one method, α₂/α₃) |
+| `runDifferentialPower()` | rich list | Two-group power sweep (N, one method, test_types) |
+| `recommendDesign()` | `SCPRecommendResult` | Full B vs m orchestrator (multi-method, multi-B) |
 | `runBootstrapDesignGrid()` | list with CIs | Pilot uncertainty quantification |
 
 ### Pilot estimation
@@ -745,14 +741,12 @@ saveRDS(res, sprintf("output/single_cohort/results/fig1_nac_%s.rds",
 | `prepCircadianData()` | Preprocess expression matrix (filter, log-transform) |
 | `fitCosinorAll()` | Fit cosinor model gene-by-gene (returns A, σ, phase, p-value) |
 
-### S3 methods
+### Plot functions
 
-| Method | Purpose |
-|--------|---------|
-| `print.SCPSingleResult` | n80 summary per method × B |
-| `plot.SCPSingleResult` | Power curves faceted by B × method × α₂ |
-| `print.SCPDiffResult` | n80 per method × test_type |
-| `plot.SCPDiffResult` | Power curves faceted by test_type × method |
+| Function | Purpose |
+|----------|---------|
+| `plotSingleCohortPower(res)` | 3-panel single-cohort power figure |
+| `plotDiffPower(list(res), ...)` | Multi-panel differential power figure |
 | `print.SCPRecommendResult` | CircaPower + simulation n80 comparison |
 | `plot.SCPRecommendResult` | B vs m heatmap + power curves |
 

@@ -113,44 +113,22 @@ res <- runSingleCohortPower(
   analysis.opts = analysis,
   methods     = "DCP",         # DCP | JTK | RAIN | MH
   mc.cores    = 4L,
-  plot        = TRUE,
-  output_file = "figures/single_cohort_power.pdf"
+  plot        = FALSE
 )
 
-print(res)       # n80 summary table
-plot(res)        # power vs N, faceted by B × method
-npower(res)      # sample size for 80% power
+plotSingleCohortPower(res, out_pdf = "figures/single_cohort_power.pdf",
+                      title = "My Cohort — Single-Cohort Power")
+saveRDS(res, "output/single_cohort_power.rds")
 ```
 
-## Multi-method comparison (B vs m study)
+## Multi-method B vs m comparison
 
-```{r single-multi-method}
-design_bvsm <- CircadianDesignOptions(
-  sample_sizes = seq(12, 96, by = 12),
-  nsims        = 100L,
-  design       = "active",
-  cts          = seq(0, 20, by = 4),   # placeholder — overridden by B_values
-  B_values     = c(3L, 4L, 6L, 8L, 12L)
-)
+For multi-method and B vs m sweeps, use `recommendDesign()` — it runs guidance,
+closed-form, and simulation steps automatically. See the
+[B vs m Trade-off](#b-vs-m-trade-off-and-method-recommendation) section.
 
-# Print method guidance before running
-printMethodGuidance(methods = c("DCP", "JTK", "RAIN", "MH"), verbose = TRUE)
-
-res_multi <- runSingleCohortPower(
-  bio.opts      = bio,
-  design.opts   = design_bvsm,
-  analysis.opts = analysis,
-  methods       = c("DCP", "JTK", "MH"),
-  alpha2        = c(0, 0.5, 1.0),   # cosinor violation sweep
-  mc.cores      = 8L,
-  plot          = FALSE
-)
-
-# Access the tidy power table
-head(res_multi$power_df)
-#   N  B alpha2 alpha3 method    power power_se
-#  12  3      0      0    DCP 0.143...    ...
-```
+`runSingleCohortPower()` accepts a single method only. Passing multiple methods
+raises a warning and uses only the first.
 
 ## Cosinor violation parameter (α₂)
 
