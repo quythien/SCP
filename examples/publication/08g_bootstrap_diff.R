@@ -17,12 +17,12 @@
 
 SMOKE_TEST <- identical(Sys.getenv("SMOKE_TEST"), "true")
 
-NGENES      <- if (SMOKE_TEST) 300L  else 3000L
+NGENES      <- if (SMOKE_TEST) 300L  else 5000L
 NBOOT       <- if (SMOKE_TEST) 5L    else 50L
 NSIMS       <- if (SMOKE_TEST) 5L    else 30L
-NSIMS_INNER <- if (SMOKE_TEST) 5L    else 20L
+NSIMS_INNER <- if (SMOKE_TEST) 5L    else 25L
 N_CORES     <- as.integer(Sys.getenv("MC_CORES", unset = "6"))
-RHYTHM_PVAL <- 0.05
+RHYTHM_PVAL <- 0.01  # alpha_pilot per paper (SCP.tex §2.1); must match bootstrap's fitCosinorAll threshold
 B_VAL       <- 4L
 GLOBAL_SEED <- 2025L
 
@@ -97,16 +97,17 @@ analysis <- CircadianAnalysisOptions(
   set.seed(GLOBAL_SEED)
   bt_result <- tryCatch(
     runBootstrapDesignGrid(
-      pilot_data    = mat_1,
-      pilot_times   = tod_1,
-      pilot_data_2  = mat_2,
-      pilot_times_2 = tod_2,
-      bio_diff.opts = bio_diff,
-      boot.opts     = boot_opts,
-      analysis.opts = analysis,
-      mode          = "differential",
-      mc.cores      = N_CORES,
-      verbose       = FALSE
+      pilot_data      = mat_1,
+      pilot_times     = tod_1,
+      pilot_data_2    = mat_2,
+      pilot_times_2   = tod_2,
+      bio_diff.opts   = bio_diff,
+      boot.opts       = boot_opts,
+      analysis.opts   = analysis,
+      mode            = "differential",
+      min_rhythm_pval = RHYTHM_PVAL,
+      mc.cores        = N_CORES,
+      verbose         = FALSE
     ),
     error = function(e) { warning(sprintf("Bootstrap failed: %s", e$message)); NULL }
   )
@@ -186,7 +187,7 @@ cat("\n================================================================\n")
 cat("PANEL B: Mouse D1 vs D2 (n=45, active)\n")
 cat("================================================================\n")
 
-N_GRID_D1 <- if (SMOKE_TEST) c(40L, 80L, 120L) else c(40L, 60L, 80L, 120L, 160L, 200L)
+N_GRID_D1 <- if (SMOKE_TEST) c(40L, 80L, 120L) else c(40L, 60L, 80L, 120L, 160L, 200L, 250L, 300L)
 
 pheno   <- read.csv("data/mouse_clinicalinfo_03082021_rmOutliers.csv", row.names = 1)
 prep_d1d2 <- prepCircadianData("data/mouse_D1D2_logCPMfiltered_counts.csv",
@@ -230,7 +231,7 @@ cat("\n================================================================\n")
 cat("PANEL C: Seney CTL vs MDD ACC (n=60, passive)\n")
 cat("================================================================\n")
 
-N_GRID_SEN <- if (SMOKE_TEST) c(40L, 80L, 120L) else c(40L, 80L, 120L, 160L, 200L)
+N_GRID_SEN <- if (SMOKE_TEST) c(40L, 80L, 120L) else c(40L, 80L, 120L, 160L, 200L, 250L, 300L)
 
 meta_s   <- read_excel("data/MD5_MetaData_1-15-25.xlsx")
 tod_s    <- read_excel("data/TOD.xlsx")

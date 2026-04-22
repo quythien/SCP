@@ -3,8 +3,8 @@
 #' =======================================================================
 #'
 #' Extends 15b_bvsm_rain.R with:
-#'   - N up to 96 to cross the 80% power threshold for all datasets
-#'   - Extended B: c(3, 4, 6, 8, 12, 18, 24) — full range of active designs
+#'   - N up to 96 (active design; D1 r~0.65 crosses 80% by N~80 at B=3)
+#'   - B: c(3, 4, 6, 8, 12) — matches Fig 3 range; B=18/24 dropped (too few valid N cells)
 #'   - alpha2 in {0, 0.5, 1.0} to show waveform violation effect
 #'
 #' Datasets (single group):
@@ -32,10 +32,10 @@ set.seed(GLOBAL_SEED)
 
 old_wd <- setwd("code"); source("setup.R"); setwd(old_wd)
 
-B_VALS      <- c(3L, 4L, 6L, 8L, 12L, 18L, 24L)
+B_VALS      <- c(3L, 4L, 6L, 8L, 12L)
 N_GRID      <- if (SMOKE_TEST) c(12L, 24L, 48L) else seq(12L, 96L, by = 12L)
-ALPHA2_VALS <- if (SMOKE_TEST) c(0, 1.0) else c(0, 0.5, 0.75, 1.0)
-NSIMS       <- if (SMOKE_TEST) 3L   else 30L
+ALPHA2_VALS <- if (SMOKE_TEST) c(0, 0.5, 1.0) else c(0, 0.25, 0.5, 0.75, 1.0)
+NSIMS       <- if (SMOKE_TEST) 5L   else 30L
 NGENES      <- if (SMOKE_TEST) 200L else 5000L
 FDR_THRESH  <- 0.05
 N_CORES     <- as.integer(Sys.getenv("MC_CORES", unset = "60"))
@@ -95,10 +95,15 @@ rm(pheno, prep_d1)
 
 datasets <- list(
   LIV = list(mat = mat_liv, tod = tod_liv, label = "Mouse LIV (r~2.88)"),
-  LUN = list(mat = mat_lun, tod = tod_lun, label = "Baboon LUN (r~1.72)"),
   D1  = list(mat = mat_d1,  tod = tod_d1,  label = "Mouse D1 (r~0.65)")
 )
 rm(mat_liv, mat_lun, mat_d1, tod_liv, tod_lun, tod_d1)
+
+DATASET_FILTER <- Sys.getenv("DATASET", unset = "ALL")
+if (DATASET_FILTER != "ALL") {
+  datasets <- datasets[names(datasets) == DATASET_FILTER]
+  cat(sprintf("Dataset filter : %s\n\n", DATASET_FILTER))
+}
 
 # =====================================================================
 # 2. Run RAIN power with extended N, B, and alpha2 sweep
@@ -131,12 +136,12 @@ for (ds_name in names(datasets)) {
   )
 
   set.seed(GLOBAL_SEED)
-  res <- runSingleCohortPower(bio, design, analysis,
-                               methods     = "RAIN",
-                               alpha2      = ALPHA2_VALS,
-                               mc.cores    = N_CORES,
-                               plot        = FALSE,
-                               verbose     = TRUE)
+  res <- runSingleCohortGrid(bio, design, analysis,
+                              methods  = "RAIN",
+                              alpha2   = ALPHA2_VALS,
+                              mc.cores = N_CORES,
+                              verbose  = TRUE)
+  res$power_df$dataset <- ds_name
 
   all_results[[ds_name]] <- res$power_df
 

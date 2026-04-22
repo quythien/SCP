@@ -196,15 +196,16 @@ runBootstrapDesignGrid <- function(pilot_data,
                                    boot.opts,
                                    analysis.opts,
                                    bio_diff.opts,
-                                   pilot_data_2  = NULL,
-                                   pilot_times_2 = NULL,
-                                   mode          = NULL,
-                                   methods       = "DCP",
-                                   test_types    = c("DR", "DP", "DM"),
-                                   alpha2        = 0,
-                                   alpha3        = 0,
-                                   verbose       = TRUE,
-                                   mc.cores      = 1L) {
+                                   pilot_data_2    = NULL,
+                                   pilot_times_2   = NULL,
+                                   mode            = NULL,
+                                   methods         = "DCP",
+                                   test_types      = c("DR", "DP", "DM"),
+                                   alpha2          = 0,
+                                   alpha3          = 0,
+                                   min_rhythm_pval = 0.01,
+                                   verbose         = TRUE,
+                                   mc.cores        = 1L) {
 
   stopifnot(inherits(boot.opts, "CircadianBootstrapOptions"))
   stopifnot(inherits(analysis.opts, "CircadianAnalysisOptions"))
@@ -270,7 +271,8 @@ runBootstrapDesignGrid <- function(pilot_data,
 
   # Step 1: Fit cosinor to pilot data
   if (verbose) cat("\nFitting cosinor to pilot data...\n")
-  param_df <- fitCosinorAll(pilot_data, pilot_times, period = period)
+  param_df <- fitCosinorAll(pilot_data, pilot_times, period = period,
+                            min_rhythm_pval = min_rhythm_pval)
 
   # Step 2: Bootstrap parameter draws
   if (verbose) cat("Bootstrapping parameters...\n")
@@ -319,9 +321,9 @@ runBootstrapDesignGrid <- function(pilot_data,
 
         tryCatch({
           if (mode == "single") {
-            sim_out <- runSingleCohortPower(bio_b_n, iter_design, analysis.opts,
+            sim_out <- runSingleCohortGrid(bio_b_n, iter_design, analysis.opts,
                          methods = "DCP", alpha2 = 0,
-                         mc.cores = 1L, plot = FALSE, verbose = FALSE)
+                         mc.cores = 1L, verbose = FALSE)
             result_b[n_idx, B_idx, 1L] <- sim_out$power_df$power[1L]
           } else {
             sim_out <- runSimsDiff(bio_b_n, iter_design, analysis.opts)

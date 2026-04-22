@@ -46,11 +46,10 @@ cat("✓ All required packages loaded\n\n")
 # Order matters - later files depend on earlier ones
 source_files = c(
   "options.R",                   # Options and parameter setup
-  "simulation.R",                # Core simulation (simCircadian, simCircadianDiff)
+  "simulation.R",                # Core simulation (simCircadianDiff, simCircadianSingleCohort)
   "detection.R",                 # Detection methods and bridge functions (DCP pipeline)
-  "estimation.R",                # Empirical parameter estimation from pilot data
+  "estimation.R",                # Empirical parameter estimation + one_cosinor_OLS
   "runner.R",                    # Main simulation loops
-  "power.R",                     # Power computation and comparison
   "utils.R",                     # Plotting and reporting
   "plot_dr_power.R",             # Stratified power plotting functions
   "plot_with_se.R",              # SE-bar helpers + DR/DP 6-panel figures

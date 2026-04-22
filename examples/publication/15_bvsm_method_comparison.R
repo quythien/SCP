@@ -6,7 +6,10 @@
 #' detection methods:
 #'   1. DCP  — cosinor K=1 F-test (B-invariant under sinusoidal truth)
 #'   2. JTK  — JTK_CYCLE via MetaCycle (favors replication depth)
-#'   3. MH   — adaptive multi-harmonic, K=floor((B-1)/2) (favors B when alpha2>0)
+#'   3. RAIN — umbrella test (B-sensitive; alpha2=0 slice from 15c results)
+#'
+#' MH excluded: df collapse at high B / small N (df2 = N-1-2K → 1 at B=12,N=12)
+#' renders it uninterpretable in a fair B vs m comparison.
 #'
 #' Three pilot datasets (single group):
 #'   A. Mouse LIV   (GSE54651)  r~2.88  strong
@@ -32,9 +35,9 @@ set.seed(GLOBAL_SEED)
 old_wd <- setwd("code"); source("setup.R"); setwd(old_wd)
 
 B_VALS      <- c(3L, 4L, 6L, 8L, 12L)
-N_GRID      <- if (SMOKE_TEST) c(12L, 24L, 48L) else seq(12L, 144L, by = 12L)
-ALPHA2_VALS <- if (SMOKE_TEST) c(0, 1.0) else c(0, 0.5, 0.75, 1.0)
-NSIMS       <- if (SMOKE_TEST) 5L  else 100L
+N_GRID      <- if (SMOKE_TEST) c(12L, 24L, 48L) else seq(12L, 96L, by = 12L)
+ALPHA2_VALS <- if (SMOKE_TEST) c(0, 0.5, 1.0) else c(0, 0.25, 0.5, 0.75, 1.0)
+NSIMS       <- if (SMOKE_TEST) 5L  else 30L
 NGENES      <- if (SMOKE_TEST) 200L else 5000L
 FDR_THRESH  <- 0.05
 N_CORES     <- as.integer(Sys.getenv("MC_CORES", unset = "60"))
@@ -89,16 +92,23 @@ rm(pheno, prep_d1)
 
 datasets <- list(
   LIV = list(mat = mat_liv, tod = tod_liv, label = "Mouse LIV (r~2.88)"),
-  LUN = list(mat = mat_lun, tod = tod_lun, label = "Baboon LUN (r~1.72)"),
   D1  = list(mat = mat_d1,  tod = tod_d1,  label = "Mouse D1 (r~0.65)")
 )
 rm(mat_liv, mat_lun, mat_d1, tod_liv, tod_lun, tod_d1)
+
+DATASET_FILTER <- Sys.getenv("DATASET", unset = "ALL")
+METHOD_FILTER  <- Sys.getenv("METHOD",  unset = "ALL")
+if (DATASET_FILTER != "ALL") {
+  datasets <- datasets[names(datasets) == DATASET_FILTER]
+  cat(sprintf("Dataset filter : %s\n", DATASET_FILTER))
+}
+if (METHOD_FILTER != "ALL") cat(sprintf("Method filter  : %s\n\n", METHOD_FILTER))
 
 # =====================================================================
 # 2. Estimate pilot parameters and run power via unified API
 # =====================================================================
 cat("\n--- Estimating pilot parameters and running power ---\n")
-printMethodGuidance(methods = c("DCP", "JTK", "MH"), verbose = TRUE)
+printMethodGuidance(methods = c("DCP", "JTK"), verbose = TRUE)
 
 all_results <- list()
 
@@ -111,33 +121,31 @@ for (ds_name in names(datasets)) {
   bio <- estCircadianParam(ds$mat, times = ds$tod, period = 24, verbose = TRUE)
   bio$ngenes <- NGENES   # use full matrix for estimation, cap simulation gene count
 
-  design <- CircadianDesignOptions(
-    sample_sizes = N_GRID,
-    nsims        = NSIMS,
-    design       = "active",
-    cts          = seq(0, 24 * (1 - 1/B_VALS[1]), length.out = B_VALS[1]),
-    B_values     = B_VALS
-  )
-
   analysis <- CircadianAnalysisOptions(
     alpha           = FDR_THRESH,
     p.adjust.method = "BH",
     fdr_thresholds  = FDR_THRESH
   )
 
-  # JTK: alpha2=0 only (direction is alpha2-invariant under mean-collapse)
-  # DCP and MH: sweep full ALPHA2_VALS
-  for (meth_name in c("DCP", "JTK", "MH")) {
-    a2_vals <- if (meth_name == "JTK") 0 else ALPHA2_VALS
+  # DCP and JTK: sweep full ALPHA2_VALS
+  design <- CircadianDesignOptions(
+    sample_sizes = N_GRID, nsims = NSIMS, design = "active",
+    cts = seq(0, 24 * (1 - 1/B_VALS[1]), length.out = B_VALS[1]),
+    B_values = B_VALS
+  )
+
+  for (meth_name in c("DCP", "JTK")) {
+    if (METHOD_FILTER != "ALL" && meth_name != METHOD_FILTER) next
+    a2_vals <- ALPHA2_VALS
     cat(sprintf("\n  Method: %s  alpha2: %s\n", meth_name, paste(a2_vals, collapse = ", ")))
 
     set.seed(GLOBAL_SEED)
-    res <- runSingleCohortPower(bio, design, analysis,
-                                 methods     = meth_name,
-                                 alpha2      = a2_vals,
-                                 mc.cores    = N_CORES,
-                                 plot        = FALSE,
-                                 verbose     = FALSE)
+    res <- runSingleCohortGrid(bio, design, analysis,
+                                methods  = meth_name,
+                                alpha2   = a2_vals,
+                                mc.cores = N_CORES,
+                                verbose  = FALSE)
+    res$power_df$dataset <- ds_name
 
     key <- sprintf("%s_%s", ds_name, meth_name)
     all_results[[key]] <- res$power_df
@@ -148,6 +156,31 @@ for (ds_name in names(datasets)) {
                         sprintf("results_%s_%s_a2_%.2f.rds", ds_name, meth_name, a2)))
     }
   }
+}
+
+# =====================================================================
+# 2b. Append RAIN alpha2=0 from 15c results — only when running full grid
+# =====================================================================
+if (DATASET_FILTER != "ALL" || METHOD_FILTER != "ALL") {
+  cat("\nPartial run — skipping RAIN append and figure generation.\n")
+  cat("\n=== Done ===\n")
+  quit(save = "no")
+}
+# Full run: append RAIN and generate figure
+cat("\n--- Appending RAIN alpha2=0 from 15c results ---\n")
+rain_dir <- file.path(out_dir, "results")
+for (ds_name in names(datasets)) {
+  fname <- file.path(rain_dir, sprintf("results_RAIN_ext_%s_a2_0.0.rds", ds_name))
+  if (!file.exists(fname)) {
+    cat(sprintf("  WARNING: %s not found — run 15c first\n", basename(fname)))
+    next
+  }
+  df <- readRDS(fname)
+  df$dataset <- ds_name
+  # keep only B values that match B_VALS (15c may have extended B up to 24)
+  df <- df[df$B %in% B_VALS, ]
+  all_results[[sprintf("%s_RAIN", ds_name)]] <- df
+  cat(sprintf("  Loaded RAIN alpha2=0 for %s (%d rows)\n", ds_name, nrow(df)))
 }
 
 # Combined tidy frame
@@ -167,14 +200,11 @@ cat("\nGenerating Figure 3...\n")
 
 fig3_dat <- res_df[res_df$alpha2 == 0, ]
 fig3_dat$method_label <- factor(fig3_dat$method,
-  levels = c("DCP", "JTK", "MH"),
-  labels = c("DCP (K=1 cosinor)", "JTK_CYCLE", "Multi-harmonic (adaptive K)"))
-fig3_dat$dataset_label <- factor(fig3_dat$dataset %||% {
-  # recover dataset from key if not stored
-  gsub("_(DCP|JTK|MH)$", "", names(all_results)[match(fig3_dat$method, fig3_dat$method)])
-}, levels = c("LIV", "LUN", "D1"),
+  levels = c("DCP", "JTK", "RAIN"),
+  labels = c("DCP (K=1 cosinor)", "JTK_CYCLE", "RAIN (umbrella)"))
+fig3_dat$dataset_label <- factor(fig3_dat$dataset,
+  levels = c("LIV", "D1"),
   labels = c("Mouse LIV\n(r~2.88, strong)",
-             "Baboon LUN\n(r~1.72, moderate)",
              "Mouse D1\n(r~0.65, weak)"))
 fig3_dat$B_fac <- factor(fig3_dat$B, levels = B_VALS)
 
@@ -184,12 +214,12 @@ p3 <- ggplot(fig3_dat, aes(x = N, y = 100 * power, colour = B_fac, group = B_fac
   geom_hline(yintercept = 80, linetype = "dashed", colour = "grey50", linewidth = 0.4) +
   facet_grid(method_label ~ dataset_label) +
   scale_colour_manual(values = b_colors, labels = b_labels, name = NULL) +
-  scale_x_continuous(breaks = seq(12, 144, by = 24)) +
+  scale_x_continuous(breaks = seq(12, 96, by = 12)) +
   scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
   labs(
     x     = "Total sample size N",
     y     = "Detection power (%)",
-    title = "B vs m tradeoff: method comparison under cosinor truth"
+    title = "B vs m tradeoff: DCP, JTK_CYCLE, RAIN under cosinor truth (alpha2=0)"
   ) +
   theme_bw(base_size = 11) +
   theme(

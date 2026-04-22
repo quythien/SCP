@@ -253,11 +253,12 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
         })
       }
 
-      fdr_DR_g = pval_DR_g; fdr_DP_g = pval_DP_g; fdr_DM_g = pval_DM_g
-
-      ix <- pval_DR_g < 1; if (any(ix)) fdr_DR_g[ix] <- p.adjust(pval_DR_g[ix], method = p.adjust.method)
-      ix <- pval_DP_g < 1; if (any(ix)) fdr_DP_g[ix] <- p.adjust(pval_DP_g[ix], method = p.adjust.method)
-      ix <- pval_DM_g < 1; if (any(ix)) fdr_DM_g[ix] <- p.adjust(pval_DM_g[ix], method = p.adjust.method)
+      # BH adjustment over all ngenes (including untested genes with pval=1 sentinel).
+      # Subsetting to pval<1 before adjusting uses a smaller denominator than the true
+      # hypothesis pool, inflating significance for testable genes.
+      fdr_DR_g <- p.adjust(pval_DR_g, method = p.adjust.method)
+      fdr_DP_g <- p.adjust(pval_DP_g, method = p.adjust.method)
+      fdr_DM_g <- p.adjust(pval_DM_g, method = p.adjust.method)
 
       pval_DR_i[, j] = pval_DR_g; fdr_DR_i[, j] = fdr_DR_g
       pval_DP_i[, j] = pval_DP_g; fdr_DP_i[, j] = fdr_DP_g
