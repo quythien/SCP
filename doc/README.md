@@ -395,11 +395,9 @@ runFourierDeviationPower(
 ```
 SCP/
 ├── doc/
-│   ├── README.md                  # This file
-│   ├── ANALYSIS_PLAN.md           # Publication datasets, research questions, script map
-│   ├── CHANGES.md                 # Session log
-│   ├── BUGFIX_LOG.md              # Confirmed bugs and fixes
-│   └── BVM_TRADEOFF_FINDINGS.md   # B vs m method-dependence findings (2026-04-20)
+│   ├── README.md                  # This file — API reference and usage guide
+│   ├── TUTORIAL.md                # Worked examples for all four use cases
+│   └── DATASET_SURVEY.md          # Pilot dataset inventory
 ├── code/
 │   ├── setup.R             # Entry point — sources all code below
 │   ├── options.R           # Options constructors (CircadianBioOptions, etc.)
