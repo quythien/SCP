@@ -1,7 +1,7 @@
 # Ignore everything
 *
 
-# Except code/, examples/, doc/, paper/, vignettes/, and .claude/
+# Except code/, examples/, doc/, paper/, vignettes/
 !code/
 !code/**
 !examples/
@@ -12,8 +12,6 @@
 !paper/**
 !vignettes/
 !vignettes/**
-!.claude/
-!.claude/**
 
 # And this .gitignore itself
 !.gitignore
