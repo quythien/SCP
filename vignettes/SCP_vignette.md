@@ -47,7 +47,7 @@ The framework is **semiparametric**: amplitude, noise, and proportion-rhythmic d
 | Method | Single-cohort | Differential | B-sensitive? |
 |--------|:---:|:---:|--------------|
 | **DCP** | ✓ | DR / DP / DM | No — NCP = N·r²/2 is B-invariant |
-| **JTK** | ✓ | — | Favors low B (mean-collapse artifact) |
+| **JTK** | ✓ | — | B-invariant
 | **RAIN** | ✓ | — | Yes — umbrella test benefits from distinct ZTs |
 | **MH** | ✓ | — | Yes — adaptive K = ⌊(B−1)/2⌋ captures harmonics |
 | **CircaCompare** | — | DP / DM | — |
