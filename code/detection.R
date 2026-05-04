@@ -1988,12 +1988,35 @@ build_FMM_LRT_null_table <- function(n_values, n_sim = 2000L,
 #' @param null_table Output of \code{build_FMM_LRT_null_table()}, or NULL.
 #' @return Numeric p-value vector, length nrow(expr).
 #' @export
+# Path to the bundled pre-computed null table (relative to code/)
+.FMM_LRT_NULL_TABLE_PATH <- file.path(
+  dirname(tryCatch(normalizePath(sys.frame(1)$ofile), error = function(e) "code")),
+  "..", "data", "fmm_lrt_null_table.rds"
+)
+
+#' @keywords internal
+.load_fmm_null_table <- function() {
+  path <- .FMM_LRT_NULL_TABLE_PATH
+  if (file.exists(path)) return(readRDS(path))
+  # fallback: look relative to working directory
+  alt <- file.path("data", "fmm_lrt_null_table.rds")
+  if (file.exists(alt)) return(readRDS(alt))
+  NULL
+}
+
 detect_FMM_LRT <- function(expr, times, period = 24, null_table = NULL,
                             mc.cores = 1L,
                             length_alpha_grid = 12L,
                             length_omega_grid = 6L) {
   if (!requireNamespace("FMM", quietly = TRUE))
     stop("Package 'FMM' required.")
+
+  # Auto-load bundled null table if none supplied
+  if (is.null(null_table)) {
+    null_table <- .load_fmm_null_table()
+    if (is.null(null_table))
+      warning("FMM-LRT null table not found — using chi-squared(4) (anti-conservative).")
+  }
 
   ngenes <- nrow(expr)
   n      <- ncol(expr)
@@ -2006,7 +2029,6 @@ detect_FMM_LRT <- function(expr, times, period = 24, null_table = NULL,
     gap    <- max(crit99 - crit95, 0.5)
     use_table <- TRUE
   } else {
-    warning("No null_table: using chi-squared(4) — anti-conservative at small n.")
     use_table <- FALSE
   }
 
