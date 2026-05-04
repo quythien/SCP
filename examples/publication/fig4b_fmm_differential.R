@@ -286,7 +286,7 @@ for (beta_val in BETA_VALS) {
       SE_DR=se_DR, SE_DP=se_DP, SE_DM=se_DM, stringsAsFactors=FALSE
     )))
   }
-  saveRDS(do.call(rbind, all_rows),
+  saveRDS(do.call(rbind, beta_rows),
           file.path(out_dir, "results", sprintf("results_FMM_diff_beta_%s.rds", beta_tag)))
 }
 

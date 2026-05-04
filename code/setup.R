@@ -30,14 +30,18 @@ optional_packages = c(
   "limorhyde",     # For LimoRhyde differential rhythmicity (detect_LimoRhyde)
   "FMM",           # For FMM waveform simulation (simCircadianFMM)
   "tidyr",         # For plotFMMDifferential() (pivot_longer)
-  "dplyr"          # For plotFMMDifferential() (data manipulation)
+  "patchwork",     # For plotFMMViolation() multi-panel layout
+  "cowplot",       # For plotFMMViolation() draw wrapper
+  "gtable"         # For plotFMMViolation() grob manipulation
 )
 
 cat("Checking required packages...\n")
 for (pkg in required_packages) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
-    cat(sprintf("  Installing %s...\n", pkg))
-    install.packages(pkg, quiet = TRUE)
+    stop(sprintf(
+      "Required package '%s' is not installed.\nPlease install it with: install.packages('%s')",
+      pkg, pkg
+    ))
   }
   suppressPackageStartupMessages(library(pkg, character.only = TRUE))
 }

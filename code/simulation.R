@@ -560,17 +560,29 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
 #' empirical distributions in \code{bio.opts} exactly as in
 #' \code{\link{simCircadianSingleCohort}}.
 #'
+#' \strong{Beta-invariance:} The orientation parameter \code{beta} shifts the
+#' peak location on the 24-hour cycle but does not alter the amplitude of the
+#' fitted cosinor signal.  DCP amplitude-based detection power is therefore
+#' invariant to \code{beta}; only phase estimation is affected.
+#'
+#' @references Rueda C, Rodríguez-Collado A, Peddada SD (2019).
+#'   "A single notable oscillation in humans and mammals with strong
+#'   implications in chronobiology." Sci Rep 9, 17982.
+#'   \doi{10.1038/s41598-019-54569-1}
+#'
 #' @param bio.opts A \code{CircadianBioOptions} object from
 #'   \code{\link{estCircadianParam}}.
 #' @param cts Numeric vector of sample collection times in hours \eqn{[0, 24)}.
 #'   The length of this vector determines the number of simulated samples
 #'   (\eqn{N}).
 #' @param omega Numeric scalar in \eqn{[0, 1]}.  FMM waveform shape parameter.
-#'   \code{omega = 1} gives a pure sinusoid; \code{omega = 0} gives a flat
-#'   (arrhythmic) signal; values in \eqn{(0, 1)} give increasingly peaked
-#'   waveforms.  Defaults to \code{1.0}.
-#' @param beta Numeric scalar.  FMM skewness parameter (default \eqn{\pi}
-#'   gives a symmetric peak).
+#'   \code{omega = 1} gives a pure sinusoid (cosinor truth);
+#'   \code{omega = 0} gives a flat (arrhythmic) signal;
+#'   values in \eqn{(0, 1)} give increasingly non-sinusoidal peaked waveforms.
+#'   Defaults to \code{1.0}.
+#' @param beta Numeric scalar.  FMM orientation (skewness) parameter. Default
+#'   \eqn{\pi} gives a symmetric peak.  Does not affect amplitude-based power
+#'   (beta-invariance); affects only peak-time (phase) estimation.
 #' @param seed Optional integer random seed for reproducibility.
 #'
 #' @return Named list with:
@@ -583,7 +595,8 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
 #'     \item{\code{omega}}{The \code{omega} value used.}
 #'   }
 #'
-#' @seealso \code{\link{simCircadianSingleCohort}}, \code{\link{estCircadianParam}}
+#' @seealso \code{\link{simCircadianSingleCohort}}, \code{\link{estCircadianParam}},
+#'   \code{\link{plotFMMViolation}}
 simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
                             seed = NULL) {
   stopifnot(inherits(bio.opts, "CircadianBioOptions"))
@@ -688,13 +701,32 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
 #' per-gene interpolation, avoiding the per-gene \code{FMM::generateFMM()}
 #' call and giving a ~1000x speed-up over naive implementation.
 #'
-#' @param omega Numeric in [0, 1]. FMM shape: 1 = pure cosinor, 0 = flat.
-#' @param beta  Numeric. FMM orientation parameter (default pi = peak at alpha).
-#' @param ...   All other arguments passed directly to \code{simCircadianDiff}.
+#' \strong{Beta-invariance:} The orientation parameter \code{beta} shifts the
+#' peak location but does not alter amplitude.  DCP differential-amplitude
+#' power (DR, DP) is therefore invariant to \code{beta}.  Only phase
+#' estimation (DP peak-time accuracy) is affected by \code{beta}.
 #'
-#' @return Same structure as \code{\link{simCircadianDiff}}.
+#' \strong{omega = 1 identity:} When \code{omega = 1} the FMM waveform reduces
+#' exactly to the cosinor model; this function returns the \code{simCircadianDiff}
+#' result unmodified for efficiency.
 #'
-#' @seealso \code{\link{simCircadianDiff}}, \code{\link{simCircadianFMM}}
+#' @references Rueda C, Rodríguez-Collado A, Peddada SD (2019).
+#'   "A single notable oscillation in humans and mammals with strong
+#'   implications in chronobiology." Sci Rep 9, 17982.
+#'   \doi{10.1038/s41598-019-54569-1}
+#'
+#' @param omega Numeric in [0, 1]. FMM waveform shape: \code{1} = pure
+#'   cosinor (default); \code{0} = flat (arrhythmic); values in \eqn{(0,1)}
+#'   give increasingly peaked non-sinusoidal waveforms.
+#' @param beta  Numeric. FMM orientation parameter (default \eqn{\pi} gives
+#'   a symmetric peak at \code{alpha}).  Does not affect amplitude-based power
+#'   (beta-invariance).
+#' @param ...   All other arguments passed directly to \code{\link{simCircadianDiff}}.
+#'
+#' @return Same list structure as \code{\link{simCircadianDiff}}.
+#'
+#' @seealso \code{\link{simCircadianDiff}}, \code{\link{simCircadianFMM}},
+#'   \code{\link{plotFMMDifferential}}
 simCircadianDiffFMM <- function(..., omega = 1.0, beta = pi) {
 
   if (omega < 0 || omega > 1)

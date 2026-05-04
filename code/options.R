@@ -206,33 +206,53 @@ setPhase <- function(input, n_rhythmic, period) {
 
 #' Create Biology + Differential Options
 #'
-#' @param ngenes Number of genes
-#' @param prop_rhythmic Proportion of rhythmic genes
-#' @param period Circadian period in hours
-#' @param lBaselineExpr Log baseline expression (scalar/vector/function)
-#' @param lOD Log over-dispersion (scalar/vector/function)
-#' @param amplitude Amplitude for rhythmic genes (scalar/vector/function)
-#' @param phase Phase for rhythmic genes ("uniform", scalar/vector/function)
-#' @param prop_DR Proportion with differential rhythmicity
-#' @param prop_DP Proportion with differential phase
-#' @param prop_DM Proportion with differential mesor (mean shift, both groups rhythmic)
-#' @param phase_diff Range of phase shift for DP genes c(min, max)
-#' @param amp_diff Range of amplitude ratio (unused; retained for interface compatibility)
-#' @param mesor_diff Range of mesor shift for DM genes c(min, max) (additive, log-scale units)
-#' @param dp_shift_mode "fixed" (use phase_diff[2]) or "uniform" (sample within phase_diff range)
-#' @param dr_amp_scale Scale factor for amplitude (A) to adjust DR strength
-#' @param dr_sigma_scale Scale factor for sigma to adjust DR strength
-#' @param sim.seed Random seed
+#' @param ngenes Number of genes.
+#' @param prop_rhythmic Proportion of rhythmic genes. If \code{NULL} and a pilot
+#'   dataset name is supplied to \code{lBaselineExpr}, the pilot's estimated
+#'   proportion is used.
+#' @param period Circadian period in hours.
+#' @param lBaselineExpr Log baseline expression. Can be a numeric scalar (constant
+#'   for all genes), a numeric vector (resampled to \code{ngenes}), a function
+#'   \code{f(n)} returning \code{n} values, or a character string naming a built-in
+#'   pilot dataset stored in \code{data/}. No default — must be supplied.
+#' @param lBaselineExpr2 As \code{lBaselineExpr} but for group 2 (differential
+#'   analyses only). \code{NULL} uses the same distribution as group 1.
+#' @param lOD Log over-dispersion (noise). Same forms accepted as
+#'   \code{lBaselineExpr}. No default — must be supplied.
+#' @param lOD2 As \code{lOD} but for group 2. \code{NULL} shares group 1 values.
+#' @param amplitude Amplitude distribution for rhythmic genes. Same forms
+#'   accepted as \code{lBaselineExpr}. No default — must be supplied.
+#' @param amplitude2 As \code{amplitude} but for group 2.
+#' @param sigma_rhythmic Optional numeric vector of per-gene noise values for
+#'   rhythmic genes (same length as \code{amplitude}). When provided, amplitude
+#'   and sigma are drawn jointly to preserve pilot A-sigma correlation.
+#' @param cts Numeric vector of sample collection times for passive design.
+#' @param cts2 As \code{cts} for group 2.
+#' @param phase Phase distribution for rhythmic genes. \code{"uniform"} (default)
+#'   or the same forms as \code{lBaselineExpr}.
+#' @param prop_DR Proportion with differential rhythmicity.
+#' @param prop_DP Proportion with differential phase.
+#' @param prop_DM Proportion with differential mesor (mean shift, both groups rhythmic).
+#' @param phase_diff Range of phase shift for DP genes \code{c(min, max)}.
+#' @param amp_diff Range of amplitude ratio (unused; retained for interface compatibility).
+#' @param mesor_diff Range of mesor shift for DM genes \code{c(min, max)}
+#'   (additive, log-scale units).
+#' @param dp_shift_mode \code{"fixed"} (use \code{phase_diff[2]}) or
+#'   \code{"uniform"} (sample uniformly within \code{phase_diff} range).
+#' @param dr_amp_scale Scale factor for amplitude (A) to adjust DR strength.
+#' @param dr_sigma_scale Scale factor for sigma to adjust DR strength.
+#' @param sim.seed Random seed.
 #'
-#' @return Object of class "CircadianBioOptions"
+#' @return Object of class \code{"CircadianBioOptions"}.
+#' @export
 CircadianBioOptions <- function(ngenes = 5000,
                                 prop_rhythmic = NULL,
                                 period = 24,
-                                lBaselineExpr = "ba11_ba47_younger",
+                                lBaselineExpr = NULL,
                                 lBaselineExpr2 = NULL,
-                                lOD = "ba11_ba47_younger",
+                                lOD = NULL,
                                 lOD2 = NULL,
-                                amplitude = "ba11_ba47_younger",
+                                amplitude = NULL,
                                 amplitude2 = NULL,
                                 sigma_rhythmic = NULL,
                                 cts = NULL,
@@ -250,6 +270,19 @@ CircadianBioOptions <- function(ngenes = 5000,
                                 sim.seed = 12345) {
 
   dp_shift_mode <- match.arg(dp_shift_mode)
+
+  # Require the three core distribution parameters — no hard-coded defaults.
+  # Users must supply their own pilot data name (character string) or numeric
+  # vector/scalar/function.  estCircadianParam() is the recommended entry point.
+  if (is.null(lBaselineExpr))
+    stop("lBaselineExpr is required. Supply a numeric vector, scalar, function, ",
+         "or a character string naming a built-in pilot dataset.")
+  if (is.null(lOD))
+    stop("lOD is required. Supply a numeric vector, scalar, function, ",
+         "or a character string naming a built-in pilot dataset.")
+  if (is.null(amplitude))
+    stop("amplitude is required. Supply a numeric vector, scalar, function, ",
+         "or a character string naming a built-in pilot dataset.")
 
   # If prop_rhythmic is NULL, use pilot estimate
   if (is.null(prop_rhythmic)) {

@@ -1,8 +1,8 @@
-# SCP: Semiparametric Circadian Power — User Guide
+# SCP: Simulation-Based Power Calculation for Circadian Rhythmic Analysis — User Guide
 
 **Author:** Thien Pham  
-**Package:** SCP (Semiparametric Circadian Power)  
-**Repository:** [DiffCircaPower](https://github.com/quythien/DiffCircaPower)
+**Package:** SCP (Simulation-based Circadian Power)  
+**Repository:** [SCP](https://github.com/quythien/SCP)
 
 ---
 
@@ -607,10 +607,14 @@ boot_res <- runBootstrapDesignGrid(
 ```
 
 Bootstrap CIs are informatively wide when:
-- Pilot n < 20
-- Pilot signal-to-noise r̃ < 0.5
+- Pilot signal-to-noise r̃ < 1 (weak circadian signal — typical of human post-mortem brain)
+- Pilot n < 30
 
-In those cases, treat the median power estimate conservatively and consider additional pilot data before designing the full study.
+In those cases, treat the median power estimate as a sensitivity analysis rather
+than a precise recommendation. The CI width tells you how much the power estimate
+would shift if you had collected a slightly different pilot cohort. Consider
+collecting additional pilot data if the CI spans more than 15 percentage points
+at the design-critical N.
 
 ---
 

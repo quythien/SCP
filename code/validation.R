@@ -26,6 +26,9 @@
   cat("\n--- Validation 1: Type I Error Control ---\n")
 
   bio   <- CircadianBioOptions(ngenes = ngenes, prop_rhythmic = 0.25,
+                               lBaselineExpr = rnorm(ngenes, 5, 2),
+                               lOD = rnorm(ngenes, -1, 0.3),
+                               amplitude = pmax(rlnorm(round(ngenes * 0.25), log(0.4), 0.5), 0.05),
                                prop_DR = 0, prop_DP = 0)
   des   <- CircadianDesignOptions(sample_sizes = n, nsims = nsims,
                                   design = "active")
@@ -105,6 +108,9 @@
   for (i in seq_along(phase_shifts)) {
     shift <- phase_shifts[i]
     bio   <- CircadianBioOptions(ngenes = 300, prop_rhythmic = 0.5,
+                                 lBaselineExpr = rnorm(300, 5, 2),
+                                 lOD = rnorm(300, -1, 0.3),
+                                 amplitude = pmax(rlnorm(round(300 * 0.5), log(0.4), 0.5), 0.05),
                                  prop_DR = 0, prop_DP = 1,
                                  phase_diff = c(shift, shift))
     des   <- CircadianDesignOptions(sample_sizes = n_test, nsims = nsims,
@@ -129,7 +135,10 @@
 .val4_monotonicity <- function(sample_sizes, nsims, alpha) {
   cat("\n--- Validation 4: Power Curve Monotonicity ---\n")
 
-  bio  <- CircadianBioOptions(ngenes = 300, prop_rhythmic = 0.3)
+  bio  <- CircadianBioOptions(ngenes = 300, prop_rhythmic = 0.3,
+                              lBaselineExpr = rnorm(300, 5, 2),
+                              lOD = rnorm(300, -1, 0.3),
+                              amplitude = pmax(rlnorm(round(300 * 0.3), log(0.4), 0.5), 0.05))
   des  <- CircadianDesignOptions(sample_sizes = sample_sizes, nsims = nsims,
                                  design = "active")
   aopt <- CircadianAnalysisOptions(alpha = alpha)
@@ -158,6 +167,9 @@
 
   run_dp <- function(phase_shift) {
     bio  <- CircadianBioOptions(ngenes = 300, prop_rhythmic = 0.5,
+                                lBaselineExpr = rnorm(300, 5, 2),
+                                lOD = rnorm(300, -1, 0.3),
+                                amplitude = pmax(rlnorm(round(300 * 0.5), log(0.4), 0.5), 0.05),
                                 prop_DR = 0, prop_DP = 0.5,
                                 phase_diff = c(phase_shift, phase_shift))
     des  <- CircadianDesignOptions(sample_sizes = n_test, nsims = nsims,
@@ -169,6 +181,9 @@
 
   run_dr <- function() {
     bio  <- CircadianBioOptions(ngenes = 300, prop_rhythmic = 0.5,
+                                lBaselineExpr = rnorm(300, 5, 2),
+                                lOD = rnorm(300, -1, 0.3),
+                                amplitude = pmax(rlnorm(round(300 * 0.5), log(0.4), 0.5), 0.05),
                                 prop_DR = 0.5, prop_DP = 0)
     des  <- CircadianDesignOptions(sample_sizes = n_test, nsims = nsims,
                                    design = "active")

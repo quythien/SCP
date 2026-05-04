@@ -20,7 +20,7 @@ SCP helps answer:
 | What N achieves 80% power? | Bootstrap median from `runBootstrapDesignGrid()` |
 | How uncertain is that estimate given my pilot size? | Bootstrap 95% CI on n80 |
 | Is denser time sampling (↑B) or more replicates per ZT (↑m) better? | Sweep `B_values` in one call |
-| Is the cosinor model robust if real waveforms are non-sinusoidal? | `runFourierDeviationPower()` |
+| Is the cosinor model robust if real waveforms are non-sinusoidal? | `simCircadianFMM()` + `plotFMMViolation()` |
 
 ### Detectable difference types
 
@@ -84,7 +84,7 @@ pilot <- simulate_two_group(
 bio_diff <- estCircadianParamTwoGroup(
   data_1 = pilot$data_A,  data_2 = pilot$data_B,
   times_1 = pilot$times,  times_2 = pilot$times,
-  period = 24, min_rhythm_pval = 0.1, verbose = TRUE
+  period = 24, min_rhythm_pval = 0.01, verbose = TRUE
 )
 # Output (example):
 #   prop_DR:   0.19    (19% genes estimated as rhythmically different)
@@ -237,7 +237,8 @@ estCircadianParamTwoGroup(data_1, data_2, times_1, times_2,
                            period = 24, min_rhythm_pval = 0.1, ...)
 
 # Single group — use this for rhythmicity detection power only
-estCircadianParam(data, times, period = 24, prop_DR = 0.1, min_rhythm_pval = 0.1, ...)
+estCircadianParam(data, times, period = 24, min_rhythm_pval = 0.01,
+                  prop_DR = 0.15, prop_DP = 0.10, prop_DM = 0.00, ...)
 ```
 Both return a `CircadianBioOptions` object with per-gene empirical distributions of amplitude (A), noise (σ), effect size (r = A/σ), phase (φ), and the proportion of DR/DP/DM genes estimated from the pilot. A and σ are stored as paired gene-level tuples (`sigma_rhythmic`) so that downstream simulation preserves the empirical r = A/σ distribution via joint sampling.
 
@@ -379,7 +380,7 @@ plotDesignComparison(comparison, target_power, panels, output_file)
 ### Fourier robustness (waveform sensitivity analysis)
 ```r
 # Tests how power changes if the true waveform is not a pure sinusoid
-runFourierDeviationPower(
+simCircadianFMM(
   bio_opts, design_opts, analysis_opts,
   harmonic_grid = expand.grid(alpha2 = c(0, 0.25, 0.5), alpha3 = 0),
   test_type = "DR"
@@ -406,7 +407,7 @@ SCP/
 │   ├── estimation.R        # estCircadianParam, estCircadianParamTwoGroup
 │   ├── simulation.R        # simCircadianDiff — joint A-sigma sampling
 │   ├── detection.R         # DCP pipeline + detect_JTK, detect_RAIN
-│   ├── fourier_sim.R       # runFourierDeviationPower
+│   ├── fourier_sim.R       # simCircadianFMM
 │   ├── design_comparison.R # plotDesignComparison
 │   ├── plot_single_cohort.R # plotSingleCohortPower (3-panel)
 │   ├── plot_diff.R         # plotDiffPower (18-panel differential figure)

@@ -1471,9 +1471,18 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
     split(grid, interaction(grid$method, grid$B, grid$alpha2, grid$alpha3)),
     function(sub) {
       n80 <- tryCatch({
-        # Interpolate N for 80% power directly from the tidy sub-grid
-        idx <- which(sub$power >= 0.80)
-        if (length(idx) == 0L) NA_real_ else sub$N[min(idx)]
+        sub  <- sub[order(sub$N), ]
+        idx  <- which(sub$power >= 0.80)
+        if (length(idx) == 0L) {
+          NA_real_
+        } else if (min(idx) == 1L) {
+          sub$N[1L]
+        } else {
+          j2 <- min(idx); j1 <- j2 - 1L
+          p1 <- sub$power[j1]; p2 <- sub$power[j2]
+          n1 <- sub$N[j1];     n2 <- sub$N[j2]
+          ceiling(n1 + (0.80 - p1) / (p2 - p1) * (n2 - n1))
+        }
       }, error = function(e) NA_real_)
       data.frame(method = sub$method[1], B = sub$B[1],
                  alpha2 = sub$alpha2[1], alpha3 = sub$alpha3[1],
@@ -1647,6 +1656,9 @@ runDifferentialPower <- function(bio.opts,
                      mc.cores = mc.cores,
                      verbose  = verbose)
 
+  # Attach SCPDiffResult class so S3 methods dispatch correctly.
+  class(res) <- c("SCPDiffResult", "list")
+
   if (isTRUE(plot))
     plotDiffPower(list(res),
                   comp_labels = NULL,
@@ -1659,34 +1671,29 @@ runDifferentialPower <- function(bio.opts,
 #' @export
 print.SCPDiffResult <- function(x, ...) {
   cat("SCPDiffResult\n")
-  cat(sprintf("  methods:    %s\n", paste(unique(x$power_df$method),    collapse = ", ")))
-  cat(sprintf("  test_types: %s\n", paste(unique(x$power_df$test_type), collapse = ", ")))
-  cat(sprintf("  N range:    %d – %d\n", min(x$power_df$N), max(x$power_df$N)))
-  cat(sprintf("  alpha2:     %s\n", paste(sort(unique(x$power_df$alpha2)), collapse = ", ")))
-  cat("\nn80 summary:\n")
-  print(x$n80_df)
+  # x is a plain list from runSimsDiff(); use its actual fields.
+  cat(sprintf("  DCmethod:   %s\n", x$sim_params$DCmethod %||% "DCP"))
+  cat(sprintf("  test_types: %s\n",
+              paste(intersect(c("DR","DP","DM"),
+                              names(x)[startsWith(names(x), "fdr_")],
+                              deparse.level = 0),
+                    collapse = ", ")))
+  cat(sprintf("  N range:    %d – %d\n",
+              min(x$sample_sizes), max(x$sample_sizes)))
+  cat(sprintf("  nsims:      %d\n", x$nsims))
+  cat(sprintf("  ngenes:     %d\n", x$ngenes))
   invisible(x)
 }
 
 #' @export
 plot.SCPDiffResult <- function(x, output_file = NULL, ...) {
-  if (requireNamespace("ggplot2", quietly = TRUE)) {
-    df <- x$power_df[!is.na(x$power_df$power), ]
-    p  <- ggplot2::ggplot(df, ggplot2::aes(x = N, y = power, colour = method,
-                                            group = method)) +
-      ggplot2::geom_line() + ggplot2::geom_point() +
-      ggplot2::facet_grid(test_type ~ alpha2, labeller = ggplot2::label_both) +
-      ggplot2::geom_hline(yintercept = 0.8, linetype = "dashed", colour = "grey40") +
-      ggplot2::labs(x = "N per group", y = "Power", colour = "Method",
-                    title = "Differential rhythmicity power") +
-      ggplot2::theme_bw()
-    if (!is.null(output_file)) {
-      ggplot2::ggsave(output_file, p,
-                      width  = 3 * length(unique(df$alpha2)),
-                      height = 3 * length(unique(df$test_type)))
-    } else {
-      print(p)
-    }
-  }
+  # x is a plain runSimsDiff() list — delegate to plotDiffPower() which
+  # already knows how to consume this structure.
+  endpoints <- intersect(c("DR", "DP", "DM"),
+                         sub("^fdr_", "", grep("^fdr_", names(x), value = TRUE)))
+  plotDiffPower(list(x),
+                comp_labels = NULL,
+                endpoints   = if (length(endpoints) > 0) endpoints else c("DR", "DP", "DM"),
+                out_pdf     = output_file)
   invisible(x)
 }
