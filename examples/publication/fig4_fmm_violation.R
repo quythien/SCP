@@ -37,7 +37,8 @@ B_ACTIVE   <- 12L    # every 2h — Hughes 2017 >=2h recommendation
 NSIMS      <- if (SMOKE_TEST) 5L   else 30L
 NGENES     <- if (SMOKE_TEST) 200L else 5000L
 FDR_THRESH <- 0.05
-N_CORES    <- as.integer(Sys.getenv("MC_CORES", unset = "40"))
+N_CORES      <- as.integer(Sys.getenv("MC_CORES",      unset = "8"))
+GENE_CORES   <- as.integer(Sys.getenv("GENE_CORES",   unset = "4"))  # for FMM-LRT gene-level
 
 cat(sprintf("Mode     : %s\n", if (SMOKE_TEST) "SMOKE" else "PRODUCTION"))
 cat(sprintf("omega    : %s\n", paste(OMEGA_VALS, collapse = ", ")))
@@ -149,7 +150,7 @@ run_fmm_power <- function(bio, N_vals, sweep_vals, sweep_param = "omega",
                            fixed_omega = 1.0, fixed_beta = pi, fixed_alpha = NULL,
                            B_val, design_type, pilot_tod = NULL,
                            method = "DCP", null_table = NULL,
-                           nsims, ngenes, fdr_thresh, n_cores,
+                           nsims, ngenes, fdr_thresh, n_cores, gene_cores = 1L,
                            ds_name, seed = GLOBAL_SEED) {
   bio$ngenes <- ngenes
   cts_template <- if (design_type == "active")
@@ -176,7 +177,8 @@ run_fmm_power <- function(bio, N_vals, sweep_vals, sweep_param = "omega",
                                alpha_fixed = alpha_val,
                                seed        = seed + N_val * 1000L + s)
         pv <- if (method == "FMM_LRT") {
-          detect_FMM_LRT(dat$expr, cts, null_table = null_table)
+          detect_FMM_LRT(dat$expr, cts, null_table = null_table,
+                         mc.cores = gene_cores)
         } else {
           detect_DCP(dat$expr, cts)
         }
@@ -213,7 +215,8 @@ ALPHA_VALS  <- if (SMOKE_TEST) c(0, 8, 16) else
 OMEGA_FIXED <- 0.5   # fixed omega for beta/alpha sweeps
 
 # Detection methods to run
-METHODS <- c("DCP", "FMM_LRT")
+# DCP sweeps (omega, beta, alpha) are already done — only run FMM_LRT now
+METHODS <- c("FMM_LRT")
 
 # Load FMM-LRT null calibration table (built by build_FMM_LRT_null_table)
 fmm_null_table <- NULL
@@ -245,6 +248,7 @@ run_dataset <- function(ds_name, ds, bio, design_type, sweep_param,
                        null_table   = null_table,
                        nsims = NSIMS, ngenes = NGENES,
                        fdr_thresh = FDR_THRESH, n_cores = N_CORES,
+                       gene_cores = if (method == "FMM_LRT") GENE_CORES else 1L,
                        ds_name = ds_name)
   design_label <- if (design_type=="active") "Active (B=12, every 2h)" else "Passive"
   sweep_label  <- switch(sweep_param,
