@@ -2,8 +2,9 @@
 #'
 #' Works on output from either \code{runSimsSingleCohort()} or \code{runSimsDiff()}.
 #' Recomputes marginal power at the requested FDR from raw simulation output,
-#' then returns the smallest grid n that meets the target and a linearly
-#' interpolated estimate between grid points.
+#' then returns the smallest grid N that meets the target (\code{n_grid}) and,
+#' when \code{interpolate = TRUE} (the default), a linearly interpolated estimate
+#' between the two bracketing grid points (\code{n}).
 #'
 #' @param res          Output from \code{runSimsSingleCohort()} or \code{runSimsDiff()}.
 #' @param target_power Numeric in (0, 1). Target marginal power (default 0.80).
@@ -11,12 +12,20 @@
 #' @param endpoint     For \code{runSimsDiff()} output: one of \code{"DR"}, \code{"DP"},
 #'                     \code{"DM"}. Ignored for single-cohort output.
 #' @param p.adjust.method Multiple-testing correction (default \code{"BH"}).
-#'                     Only applied for single-cohort (differential uses pre-computed FDR).
-#' @param interpolate  Logical. Linearly interpolate between grid points (default TRUE).
-#' @return A list:
-#'   \item{n_grid}{Smallest sample size in the simulation grid achieving target power, or NA.}
-#'   \item{n_interp}{Linearly interpolated n (ceiling), or NA if power never reached.}
-#'   \item{power}{Named numeric vector: mean power at each sample size.}
+#'                     Only applied for single-cohort output (differential uses
+#'                     pre-computed FDR arrays).
+#' @param interpolate  Logical. If \code{TRUE} (default), linearly interpolates
+#'                     between the two adjacent grid points to return a more
+#'                     precise \code{n} estimate. Set to \code{FALSE} to revert to
+#'                     the grid-snapped \code{n_grid} value (backward-compatible).
+#' @return An object of class \code{"npower"} (a list) with:
+#'   \item{n}{Recommended sample size: \code{n_interp} when \code{interpolate = TRUE},
+#'     otherwise \code{n_grid}. \code{NA} if target power is never reached.}
+#'   \item{n_grid}{Smallest sample size in the simulation grid achieving target power, or \code{NA}.}
+#'   \item{n_interp}{Linearly interpolated sample size between the two bracketing grid
+#'     points (a fractional N rounded up). \code{NA} when \code{interpolate = FALSE} or
+#'     when target power is never reached.}
+#'   \item{power}{Named numeric vector: mean power at each grid sample size.}
 #'   \item{target_power, fdr, endpoint}{Echo of inputs.}
 #' @export
 npower <- function(res,
@@ -97,8 +106,9 @@ npower <- function(res,
 
   structure(
     list(
-      n            = n_interp,
+      n            = if (interpolate) n_interp else n_grid,
       n_grid       = n_grid,
+      n_interp     = n_interp,
       power        = mean_power,
       target_power = target_power,
       fdr          = fdr,

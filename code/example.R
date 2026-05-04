@@ -67,6 +67,9 @@ cat("\n=== SCENARIO 1: Quick DR Power Analysis ===\n\n")
 opts_bio <- CircadianBioOptions(
   ngenes        = NGENES,
   prop_rhythmic = 0.25,
+  lBaselineExpr = rnorm(NGENES, 5, 2),
+  lOD           = rnorm(NGENES, -1, 0.3),
+  amplitude     = pmax(rlnorm(round(NGENES * 0.25), log(0.4), 0.5), 0.05),
   prop_DR       = 0.15,
   prop_DP       = 0.00,
   phase_diff    = c(0, 0),

@@ -14,27 +14,42 @@
 #' Plot FMM Waveform Robustness: Single-Cohort
 #'
 #' @description
-#' Produces a 4-row × 3-column figure showing DCP power under FMM cosinor
-#' violation: rows 1–2 sweep ω at fixed β (active + passive designs); rows
-#' 3–4 sweep β at fixed ω (active + passive). SD bars shown at each N.
+#' Produces a 2-row figure (one panel per sweep type) showing DCP power under
+#' FMM cosinor violation: row 1 sweeps omega at fixed beta; row 2 sweeps beta
+#' at fixed omega. SD bars are drawn at each N. Each panel is faceted by
+#' design type (active / passive) and SNR column (strong / moderate / weak).
+#'
+#' The FMM model (Rueda, Rodríguez-Collado & Peddada, 2019, Sci Rep,
+#' doi:10.1038/s41598-019-54569-1) parameterises waveform shape via
+#' \code{omega} and orientation via \code{beta}. \code{omega = 1} recovers
+#' pure cosinor, \code{omega = 0} gives a flat (arrhythmic) signal.
 #'
 #' @param x          Data frame with columns \code{N, sweep_val, sweep_param,
 #'                   omega, beta, power, power_se, dataset, design_row, snr_col}.
 #'                   Produced by \code{runFMMViolationAnalysis()} or the
 #'                   \code{fig4_fmm_violation.R} script.
 #' @param nsims      Number of simulation replicates (for SE → SD conversion).
-#' @param omega_fixed Omega value used in the β sweep rows (for subtitle).
+#' @param omega_fixed Omega value used in the beta sweep rows (for subtitle).
+#' @param tissue_annotations Optional \code{data.frame} with columns
+#'   \code{design_type}, \code{snr_col}, \code{label}, \code{N}, \code{y}
+#'   providing per-panel text annotations (e.g. dataset name and median
+#'   r-tilde). If \code{NULL} (default), no annotations are drawn.  The
+#'   caller is responsible for populating this from their pilot data — hard-coded
+#'   tissue names must not appear inside this package function.
 #' @param output_file PDF path. NULL = current device.
-#' @param width / height PDF dimensions in inches.
+#' @param width PDF width in inches (default 16).
+#' @param height PDF height in inches (default 14).
 #'
 #' @return Invisibly returns the combined patchwork object.
+#' @seealso \code{\link{simCircadianFMM}}, \code{\link{plotFMMDifferential}}
 #' @export
 plotFMMViolation <- function(x,
-                              nsims       = 30L,
-                              omega_fixed = 0.5,
-                              output_file = NULL,
-                              width       = 16,
-                              height      = 14) {
+                              nsims             = 30L,
+                              omega_fixed       = 0.5,
+                              tissue_annotations = NULL,
+                              output_file       = NULL,
+                              width             = 16,
+                              height            = 14) {
 
   for (pkg in c("ggplot2","patchwork"))
     if (!requireNamespace(pkg, quietly = TRUE))
@@ -81,25 +96,15 @@ plotFMMViolation <- function(x,
       plot.caption      = ggplot2::element_text(hjust = 0, size = 8, colour = "grey40")
     )
 
-  # Tissue name + r-tilde annotation per panel (design_type x snr_col)
-  # Note: no "Strong" passive — no strong-signal passive dataset available
-  tissue_ann <- data.frame(
-    design_type = c("Active (B=12, 2h)","Active (B=12, 2h)","Active (B=12, 2h)",
-                    "Passive","Passive"),
-    snr_col     = c("Strong","Moderate","Weak","Moderate","Weak"),
-    label       = c("Mouse Liver\nr~4.8",
-                    "Baboon Lung\nr~2.1",
-                    "Mouse D1 Striatum\nr~0.9",
-                    "Human Adrenal Gland\nr~1.0",
-                    "Human Putamen\nr~1.1"),
-    N           = min(N_all),
-    y           = 97,
-    stringsAsFactors = FALSE
-  )
-  tissue_ann$design_type <- factor(tissue_ann$design_type,
-    levels = c("Active (B=12, 2h)", "Passive"))
-  tissue_ann$snr_col <- factor(tissue_ann$snr_col,
-    levels = c("Strong", "Moderate", "Weak"))
+  # Per-panel text annotation (dataset name, median r-tilde, etc.)
+  # Supplied by the caller via tissue_annotations; NULL disables annotations.
+  tissue_ann <- tissue_annotations
+  if (!is.null(tissue_ann)) {
+    tissue_ann$design_type <- factor(tissue_ann$design_type,
+      levels = c("Active (B=12, 2h)", "Passive"))
+    tissue_ann$snr_col <- factor(tissue_ann$snr_col,
+      levels = c("Strong", "Moderate", "Weak"))
+  }
 
   make_panel <- function(sub_df, fac_levels, colors, labels, legend_name,
                           x_lab, title_str, legend_ncol = 1) {
@@ -122,10 +127,6 @@ plotFMMViolation <- function(x,
       ggplot2::geom_point(size = 1.5) +
       ggplot2::geom_hline(yintercept = 80, linetype = "dashed",
                           colour = "grey50", linewidth = 0.4) +
-      ggplot2::geom_text(data = tissue_ann,
-                         ggplot2::aes(x = N, y = y, label = label),
-                         inherit.aes = FALSE, hjust = 0, vjust = 1,
-                         size = 2.4, colour = "grey20", lineheight = 0.9) +
       ggplot2::facet_grid(design_type ~ snr_col) +
       ggplot2::scale_colour_manual(
         values = colors,
@@ -150,6 +151,15 @@ plotFMMViolation <- function(x,
         legend.title             = ggplot2::element_text(size = 11, face = "bold"),
         legend.margin            = ggplot2::margin(5, 8, 5, 8)
       )
+
+    # Add optional per-panel dataset label annotations supplied by the caller
+    if (!is.null(tissue_ann)) {
+      p <- p + ggplot2::geom_text(
+        data = tissue_ann,
+        ggplot2::aes(x = N, y = y, label = label),
+        inherit.aes = FALSE, hjust = 0, vjust = 1,
+        size = 2.4, colour = "grey20", lineheight = 0.9)
+    }
 
     # Post-process gtable: blank all elements of the empty (Passive/Strong) cell
     g <- ggplot2::ggplot_gtable(ggplot2::ggplot_build(p))
@@ -227,17 +237,30 @@ plotFMMViolation <- function(x,
 #' Plot FMM Waveform Robustness: Differential Endpoints
 #'
 #' @description
-#' Produces a 1-row × 3-column figure showing DCP differential power (DR, DP, DM)
+#' Produces a 1-row x 3-column figure showing DCP differential power (DR, DP, DM)
 #' as a function of N for multiple omega values under FMM cosinor violation.
 #'
+#' The FMM model (Rueda, Rodríguez-Collado & Peddada, 2019, Sci Rep,
+#' doi:10.1038/s41598-019-54569-1) parameterises waveform shape via
+#' \code{omega}: \code{omega = 1} recovers pure cosinor; \code{omega = 0}
+#' gives a flat (arrhythmic) signal; intermediate values produce increasingly
+#' peaked waveforms.  \code{beta} controls orientation (peak location) and
+#' does not affect power (beta-invariance of DCP amplitude testing).
+#'
 #' @param x          Data frame with columns \code{N, omega, DR, DP, DM,
-#'                   SE_DR, SE_DP, SE_DM}. Produced by \code{fig4b_fmm_differential.R}.
-#' @param nsims      Number of simulation replicates (for SE → SD).
-#' @param dataset_label Label for the subtitle (e.g. "GTEx ADR vs LIV").
-#' @param output_file PDF path. NULL = current device.
-#' @param width / height PDF dimensions.
+#'                   SE_DR, SE_DP, SE_DM}. Produced by \code{fig4b_fmm_differential.R}
+#'                   or any equivalent script calling \code{simCircadianDiffFMM()}.
+#' @param nsims      Number of simulation replicates (for SE to SD conversion).
+#' @param dataset_label Character label for the plot subtitle describing the
+#'                   pilot dataset used (e.g. supplied by the caller from their
+#'                   pilot data metadata). If \code{NULL}, an auto-generated
+#'                   label based on the N and omega ranges is used.
+#' @param output_file PDF path. \code{NULL} = current device.
+#' @param width PDF width in inches (default 14).
+#' @param height PDF height in inches (default 5).
 #'
 #' @return Invisibly returns the ggplot object.
+#' @seealso \code{\link{simCircadianDiffFMM}}, \code{\link{plotFMMViolation}}
 #' @export
 plotFMMDifferential <- function(x,
                                  nsims         = 20L,
@@ -246,7 +269,7 @@ plotFMMDifferential <- function(x,
                                  width         = 14,
                                  height        = 5) {
 
-  for (pkg in c("ggplot2","tidyr","dplyr"))
+  for (pkg in c("ggplot2","tidyr"))
     if (!requireNamespace(pkg, quietly = TRUE))
       stop(sprintf("Package '%s' is required for plotFMMDifferential().", pkg))
 
@@ -267,9 +290,14 @@ plotFMMDifferential <- function(x,
   # Reshape to long
   long_df <- tidyr::pivot_longer(df, cols = c(DR, DP, DM),
                                   names_to = "endpoint", values_to = "power")
-  long_df$power_sd <- ifelse(long_df$endpoint=="DR", df$SD_DR[match(long_df$N, df$N)],
-                      ifelse(long_df$endpoint=="DP", df$SD_DP[match(long_df$N, df$N)],
-                                                     df$SD_DM[match(long_df$N, df$N)]))
+  # Match on both N and omega so each row gets the SD from its own (N, omega) cell,
+  # not just the first matching N (which was wrong when multiple omega levels share a N).
+  row_key     <- paste(long_df$N, long_df$omega, sep = "_")
+  df_key      <- paste(df$N,      df$omega,      sep = "_")
+  match_idx   <- match(row_key, df_key)
+  long_df$power_sd <- ifelse(long_df$endpoint=="DR", df$SD_DR[match_idx],
+                      ifelse(long_df$endpoint=="DP", df$SD_DP[match_idx],
+                                                     df$SD_DM[match_idx]))
   long_df$endpoint <- factor(long_df$endpoint,
     levels = c("DR","DP","DM"),
     labels = c("Differential Rhythmicity (DR)",

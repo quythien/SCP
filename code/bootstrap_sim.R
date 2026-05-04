@@ -45,7 +45,8 @@ fitCosinorAll <- function(data, times, period = 24, min_rhythm_pval = 0.01) {
     tryCatch({
       fit <- one_cosinor_OLS(times, y, period, compute.phase.CI = FALSE)
       yhat <- fit$M + fit$A * cos(omega * times - omega * fit$phi)
-      sigma_hat <- sqrt(mean((y - yhat)^2, na.rm = TRUE))
+      n_obs     <- sum(!is.na(y))
+      sigma_hat <- sqrt(sum((y - yhat)^2, na.rm = TRUE) / max(n_obs - 3L, 1L))
       list(gene = g, M = fit$M, A = fit$A, phi = fit$phi, sigma = sigma_hat,
            pvalue = fit$pvalue, r = fit$A / max(sigma_hat, 1e-6))
     }, error = function(e) {
