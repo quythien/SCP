@@ -16,6 +16,10 @@
 # And this .gitignore itself
 !.gitignore
 
+# Root-level documentation
+!README.md
+!CLAUDE.md
+
 # Common junk
 .DS_Store
 .Rhistory

@@ -234,7 +234,7 @@ prepCircadianData(data, times, input_type = c("log2", "counts", "cpm"), ...)
 ```r
 # Two groups — use this for differential expression power
 estCircadianParamTwoGroup(data_1, data_2, times_1, times_2,
-                           period = 24, min_rhythm_pval = 0.1, ...)
+                           period = 24, min_rhythm_pval = 0.01, ...)
 
 # Single group — use this for rhythmicity detection power only
 estCircadianParam(data, times, period = 24, min_rhythm_pval = 0.01,

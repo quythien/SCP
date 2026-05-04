@@ -762,14 +762,85 @@ The `examples/publication/` directory contains ready-to-run scripts for each pap
 
 | Script | Figure | Description |
 |--------|--------|-------------|
-| `10_single_cohort_power.R` | Fig 1 (Seney) | Single-cohort, NAc/Caudate/Putamen |
-| `14_single_cohort_gtex_ADR_LIV.R` | Fig 1 (GTEx) | Single-cohort, Adrenal Gland + Liver |
-| `11_differential_power.R` | Fig 2 | Differential DR/DP/DM, NAc vs Putamen |
-| `12_differential_power_gtex_ADR_LIV.R` | Fig 2 (GTEx) | Differential, Adrenal vs Liver |
-| `15_bvsm_method_comparison.R` | Fig 3 | DCP/JTK/MH × 3 datasets × α₂=0 |
-| `15b_bvsm_rain.R` | Fig 3 (RAIN) | RAIN B vs m, N≤48 |
-| `15c_bvsm_rain_extended.R` | Fig 4 | RAIN + α₂ sweep, N≤72 |
-| `08a_bootstrap_baboon.R` | Fig 6 | Bootstrap CI, Baboon LUN (n=12) |
-| `08c_bootstrap_seney.R` | Fig 6 | Bootstrap CI, Seney CTL (n=60) |
+| `replot_figs.R` | Fig 1, 2 | Replot from saved RDS (no simulation needed) |
+| `fig3_bvsm_method_comparison.R` | Fig 3 | DCP B-invariance, Mouse LIV / Baboon LUN / Mouse D1 |
+| `fig4_fmm_violation.R` | Fig 4 | FMM waveform robustness: ω and β sweep, active + passive |
+| `fig4b_fmm_differential.R` | Supp | FMM robustness for differential DR/DP/DM |
+| `fig5_bootstrap_sc.R` | Fig 5 | Bootstrap uncertainty, single-cohort (Mouse D1 + post-mortem ACC) |
+| `suppS2_single_cohort_gtex.R` | Supp | Additional GTEx tissues |
 
-All scripts respect the `SMOKE_TEST=true` environment variable for fast debug runs and `MC_CORES` for parallelism.
+All scripts respect `SMOKE_TEST=true` (fast debug run) and `MC_CORES` (parallelism).
+
+---
+
+## Biologist's Quick Guide
+
+### What does r̃ mean for my study?
+
+r̃ (r-tilde) = A/σ is the ratio of the circadian amplitude to the noise level.
+It is the single most important parameter for power planning.
+
+| Tissue / setting | Typical r̃ | N for 80% power (DCP, active) |
+|---|---|---|
+| Mouse liver (active) | ~4.8 | ~20 |
+| Baboon lung (active) | ~1.7 | ~24 |
+| Human adrenal gland (passive) | ~1.0 | ~60–80 |
+| Human post-mortem brain (passive) | ~0.6–0.9 | ~100–180 |
+| Disease vs control DR (passive) | ~0.6–0.8 | ~200+ |
+
+**Practical rule:** if your tissue hasn't been studied before, use adrenal gland
+(r̃ ≈ 1.0) as a conservative baseline for a passive design.
+
+### Active vs passive design: why it matters
+
+- **Active** (animal studies): you control when samples are collected. Use
+  equally-spaced time points (B=6, every 4h, or B=12, every 2h). Design
+  efficiency is maximal: d(φ) = 0.5 for all genes.
+- **Passive** (human post-mortem, clinical): collection times are determined
+  by institutional operations — not by the researcher. SCP fits a circular
+  kernel density estimate to your pilot's time-of-death distribution and
+  samples new subjects from it. Design efficiency d(φ) < 0.5, so passive
+  studies need more N than active studies at the same r̃.
+
+**Key finding:** For human brain at r̃ ≈ 0.65, active design achieves 80%
+power at N ≈ 180, but for passive design at the same r̃, you typically need
+N ≈ 200+. Always specify `design = "passive"` and pass your pilot TOD vector.
+
+### How many timepoints B should I use?
+
+For **DCP** (the recommended method): **B does not matter**. DCP power depends
+only on total N = B × m. Choose B based on biological and logistical
+considerations (typically B=6 every 4h), and invest your budget in N.
+
+For **JTK, RAIN, MH**: B does matter. See `printMethodGuidance()` for details.
+
+### When to use bootstrap
+
+Use `runBootstrapDesignGrid()` as a sensitivity analysis when:
+- Your tissue has weak circadian signal (r̃ < 1) — typical of human brain
+- Your pilot has fewer than 30 subjects
+
+The bootstrap shows you how much the power estimate would shift if you had
+collected a slightly different pilot. Wide CIs (>15pp) at your target N suggest
+the pilot is insufficiently informative — consider collecting more pilot data.
+
+### FMM waveform robustness
+
+Real gene expression peaks are not always symmetric sinusoids. SCP tests
+whether DCP power degrades when the truth is an asymmetric (FMM) waveform.
+
+**Finding:** DCP is robust for ω* ≥ 0.6 (power loss < 5pp). For strongly
+asymmetric waveforms (ω* < 0.4, e.g., cortisol-like sharp peaks), power loss
+increases but remains manageable for moderate-to-strong signal. The orientation
+parameter β has **no effect** on detection power (proven analytically).
+
+```r
+# Visualize FMM waveforms
+# omega* = 1: pure sinusoid; omega* -> 0: increasingly sharp peak
+cts <- seq(0, 22, by = 2)
+for (om in c(1.0, 0.5, 0.2)) {
+  sim <- simCircadianFMM(bio, cts, omega = om)
+  cat(sprintf("omega* = %.1f: r_eff = r * c(omega) = r * %.3f\n",
+              om, 2*om/(1+om^2)))
+}
+```
