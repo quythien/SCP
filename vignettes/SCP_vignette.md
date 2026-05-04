@@ -268,14 +268,17 @@ design <- CircadianDesignOptions(
   sample_sizes = c(20, 30, 40, 50, 60, 80, 100),
   nsims        = 200L,
   design       = "passive",   # "passive" = pilot TOD; "active" = equispaced
-  cts          = bio$cts
+  cts          = bio$cts      # required for passive; ignored for active
+  # B_values   = NULL         # set to c(3,4,6,8,12) for B vs m sweep
 )
 
-# Multiple-testing settings
+# Multiple-testing and stratification settings
 analysis <- CircadianAnalysisOptions(
-  alpha           = 0.05,
-  p.adjust.method = "BH",
-  r_strata        = makeAdaptiveRStrata(bio, bin_width = 0.25)
+  alpha           = 0.05,                                  # FDR inference threshold
+  p.adjust.method = "BH",                                  # Benjamini-Hochberg
+  fdr_thresholds  = c(0.01, 0.05, 0.10, 0.20),            # thresholds for Panel A
+  r_strata        = makeAdaptiveRStrata(bio, bin_width = 0.25),  # r̃ bins for Panels B/C
+  reference_n     = 60                                     # vertical reference line in plots
 )
 ```
 
@@ -366,6 +369,7 @@ design <- CircadianDesignOptions(
 analysis <- CircadianAnalysisOptions(
   alpha           = 0.05,
   p.adjust.method = "BH",
+  fdr_thresholds  = c(0.01, 0.05, 0.10, 0.20),
   r_strata        = makeAdaptiveRStrata(bio, bin_width = 0.25)
 )
 
@@ -459,8 +463,8 @@ design <- CircadianDesignOptions(
   sample_sizes = c(20, 40, 60, 80, 100, 120),
   nsims        = 200L,
   design       = "passive",
-  cts          = bio_diff$cts,
-  test_types   = c("DR", "DP", "DM")
+  cts          = bio_diff$cts
+  # test_types is passed to runDifferentialPower(), not here
 )
 
 analysis <- CircadianAnalysisOptions(alpha = 0.05, p.adjust.method = "BH")
@@ -594,11 +598,11 @@ boot_opts <- CircadianBootstrapOptions(
 )
 
 boot_res <- runBootstrapDesignGrid(
-  pilot_data    = pilot_expr,
+  pilot_data    = pilot_expr,   # group 1 pilot matrix
   pilot_times   = pilot_times,
-  boot.opts     = boot_opts,
-  analysis.opts = analysis,
-  bio_diff.opts = bio_diff,
+  boot.opts     = boot_opts,    # CircadianBootstrapOptions
+  analysis.opts = analysis,     # CircadianAnalysisOptions
+  bio_diff.opts = bio_diff,     # required even in "single" mode (prop_DR/DP read here)
   mode          = "differential",    # "single" or "differential"
   methods       = "DCP",
   test_types    = "DR",
@@ -729,12 +733,24 @@ saveRDS(res, sprintf("output/single_cohort/results/fig1_nac_%s.rds",
 
 ### Options builders
 
-| Function | Purpose |
-|----------|---------|
-| `CircadianDesignOptions()` | Sample sizes, nsims, design type, B_values |
-| `CircadianAnalysisOptions()` | FDR threshold, adjustment method, r-strata |
-| `CircadianBootstrapOptions()` | Bootstrap-specific: nboot, nsims_inner, seed |
-| `makeAdaptiveRStrata()` | Adaptive r-strata breaks from pilot distribution |
+| Function | Key parameters | Notes |
+|----------|---------------|-------|
+| `CircadianDesignOptions()` | `sample_sizes`, `nsims`, `design`, `cts`, `B_values` | `cts` required for `design="passive"`; `B_values` for B vs m sweep |
+| `CircadianAnalysisOptions()` | `alpha`, `p.adjust.method`, `fdr_thresholds`, `r_strata`, `reference_n`, `DCmethod` | `fdr_thresholds` drives Panel A; `r_strata` drives Panels B/C |
+| `CircadianBootstrapOptions()` | `design_vector`, `B_values`, `N_values`, `nboot`, `nsims_inner`, `design`, `seed` | `design_vector` is positional (required) |
+| `makeAdaptiveRStrata()` | `bio`, `bin_width` | Auto-sets r-strata breakpoints from pilot distribution |
+
+**`CircadianAnalysisOptions` defaults:**
+```r
+CircadianAnalysisOptions(
+  alpha           = 0.05,
+  p.adjust.method = "BH",
+  fdr_thresholds  = c(0.01, 0.05, 0.10, 0.20),  # Panel A lines
+  r_strata        = c(0, 0.25, 0.5, ..., 5, Inf), # or makeAdaptiveRStrata()
+  reference_n     = 60,                            # vertical reference in plot
+  DCmethod        = "DCP"                          # "DCP" or "CircaCompare"
+)
+```
 
 ### Utilities
 
