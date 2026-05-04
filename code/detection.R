@@ -1937,7 +1937,9 @@ detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
 #' @return Named list: \code{$n}, \code{$q95}, \code{$q99}.
 #' @export
 build_FMM_LRT_null_table <- function(n_values, n_sim = 2000L,
-                                      seed = 42L, period = 24) {
+                                      seed = 42L, period = 24,
+                                      length_alpha_grid = 12L,
+                                      length_omega_grid = 6L) {
   if (!requireNamespace("FMM", quietly = TRUE))
     stop("Package 'FMM' required.")
   set.seed(seed)
@@ -1953,7 +1955,9 @@ build_FMM_LRT_null_table <- function(n_values, n_sim = 2000L,
       if (sse0 < 1e-10) { stats[s] <- 0; next }
       fit <- tryCatch(
         FMM::fitFMM(y, timePoints = t_norm, nback = 1,
-                    showProgress = FALSE, omegaMin = 1e-4, omegaMax = 0.9999),
+                    showProgress = FALSE, omegaMin = 1e-4, omegaMax = 0.9999,
+                    lengthAlphaGrid = length_alpha_grid,
+                    lengthOmegaGrid = length_omega_grid),
         error = function(e) NULL)
       if (is.null(fit)) { stats[s] <- 0; next }
       r2       <- max(0, min(FMM::getR2(fit), 1 - 1e-10))
@@ -1963,7 +1967,9 @@ build_FMM_LRT_null_table <- function(n_values, n_sim = 2000L,
     q99[i] <- quantile(stats, 0.99)
     cat(sprintf("  n=%3d  q95=%.3f  q99=%.3f\n", n, q95[i], q99[i]))
   }
-  list(n = n_values, q95 = q95, q99 = q99)
+  list(n = n_values, q95 = q95, q99 = q99,
+       length_alpha_grid = length_alpha_grid,
+       length_omega_grid = length_omega_grid)
 }
 
 
@@ -1982,7 +1988,10 @@ build_FMM_LRT_null_table <- function(n_values, n_sim = 2000L,
 #' @param null_table Output of \code{build_FMM_LRT_null_table()}, or NULL.
 #' @return Numeric p-value vector, length nrow(expr).
 #' @export
-detect_FMM_LRT <- function(expr, times, period = 24, null_table = NULL) {
+detect_FMM_LRT <- function(expr, times, period = 24, null_table = NULL,
+                            mc.cores = 1L,
+                            length_alpha_grid = 12L,
+                            length_omega_grid = 6L) {
   if (!requireNamespace("FMM", quietly = TRUE))
     stop("Package 'FMM' required.")
 
@@ -2001,21 +2010,32 @@ detect_FMM_LRT <- function(expr, times, period = 24, null_table = NULL) {
     use_table <- FALSE
   }
 
-  pvals <- numeric(ngenes)
-
-  for (g in seq_len(ngenes)) {
+  # Per-gene FMM fit — parallelised over genes
+  fit_one <- function(g) {
     y    <- expr[g, ]
     sse0 <- sum((y - mean(y))^2)
-    if (sse0 < 1e-10) { pvals[g] <- 1; next }
-
+    if (sse0 < 1e-10) return(0)
     fit <- tryCatch(
       FMM::fitFMM(y, timePoints = t_norm, nback = 1,
-                  showProgress = FALSE, omegaMin = 1e-4, omegaMax = 0.9999),
+                  showProgress = FALSE,
+                  omegaMin = 1e-4, omegaMax = 0.9999,
+                  lengthAlphaGrid = length_alpha_grid,
+                  lengthOmegaGrid = length_omega_grid),
       error = function(e) NULL)
-    if (is.null(fit)) { pvals[g] <- 1; next }
+    if (is.null(fit)) return(0)
+    r2 <- max(0, min(FMM::getR2(fit), 1 - 1e-10))
+    n * log(1 / (1 - r2))
+  }
 
-    r2     <- max(0, min(FMM::getR2(fit), 1 - 1e-10))
-    lambda <- n * log(1 / (1 - r2))
+  lambdas <- if (mc.cores > 1L) {
+    unlist(parallel::mclapply(seq_len(ngenes), fit_one, mc.cores = mc.cores))
+  } else {
+    vapply(seq_len(ngenes), fit_one, numeric(1))
+  }
+
+  pvals <- numeric(ngenes)
+  for (g in seq_len(ngenes)) {
+    lambda <- lambdas[g]
 
     if (use_table) {
       if (lambda >= crit99) {
