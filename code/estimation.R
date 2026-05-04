@@ -419,6 +419,11 @@ estCircadianParam <- function(data, times, period = 24,
 #' }
 #' Baseline distributions (lBaselineExpr, lOD, amplitude, phase) are taken
 #' from group 1, consistent with estCircadianParam() for a single group.
+circular_difference <- function(phi1, phi2, period = 24) {
+  diff <- phi1 - phi2
+  ((diff + period/2) %% period) - period/2
+}
+
 estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
                                       period = 24,
                                       min_rhythm_pval = 0.01,

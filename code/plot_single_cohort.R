@@ -204,9 +204,10 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   if (!is.null(reference_n)) {
     abline(v = reference_n, lty = 3, col = "darkgreen", lwd = 1.5)
   }
+  abline(h = 80, lty = 2, col = "grey50", lwd = 1.2)
   if (!is.na(vline_n)) {
     abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.5)
-    text(vline_n, 5, sprintf("n=%d", vline_n), col = "steelblue", cex = 0.72, adj = -0.1)
+    text(vline_n, 15, sprintf("n=%d", vline_n), col = "steelblue", cex = 0.72, adj = -0.1)
   }
   grid()
   legend("bottomright", thresh_labels,

@@ -65,12 +65,11 @@ analysis <- CircadianAnalysisOptions(
     sample_sizes = N_grid, nsims = NSIMS, design = "active",
     cts = design_vec, B_values = B_val
   )
-  cat("  Running plug-in (runSingleCohortPower)...\n")
+  cat("  Running plug-in (runSingleCohortGrid)...\n")
   set.seed(GLOBAL_SEED)
   ts_result <- tryCatch(
-    runSingleCohortPower(bio_sc, design_ts, analysis, methods = "DCP",
-                         alpha2 = 0, mc.cores = N_CORES,
-                         plot = FALSE, verbose = FALSE),
+    runSingleCohortGrid(bio_sc, design_ts, analysis, methods = "DCP",
+                        alpha2 = 0, mc.cores = N_CORES, verbose = FALSE),
     error = function(e) { warning(sprintf("Plug-in failed: %s", e$message)); NULL }
   )
 
@@ -103,7 +102,7 @@ analysis <- CircadianAnalysisOptions(
   # Summary table
   cat(sprintf("  %-5s  plug-in  bootstrap  gap(pp)  CI-width\n", "N"))
   for (i in seq_along(N_grid)) {
-    tp <- ts_result$power_df$power[i]
+    tp <- ts_result$power_df$power[ts_result$power_df$N == N_grid[i]][1L]
     bp <- bt_result$power_mean[i, 1, 1]
     lo <- bt_result$power_ci_lo[i, 1, 1]
     hi <- bt_result$power_ci_hi[i, 1, 1]
@@ -235,7 +234,8 @@ if (length(panels) > 0) {
   for (pi in seq_along(panels)) {
     p      <- panels[[pi]]
     N_grid <- p$N_grid
-    ts_pwr <- p$ts_result$power_df$power
+    pwr_df <- p$ts_result$power_df
+    ts_pwr <- pwr_df$power[match(N_grid, pwr_df$N)]
     bt_mn  <- p$bt_result$power_mean[, 1, 1]
     bt_lo  <- p$bt_result$power_ci_lo[, 1, 1]
     bt_hi  <- p$bt_result$power_ci_hi[, 1, 1]

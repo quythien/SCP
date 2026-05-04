@@ -28,7 +28,7 @@ optional_packages = c(
   "rain",          # For RAIN rhythmicity detection (detect_RAIN)
   "circacompare",  # For CircaCompare differential analysis (detect_CircaCompare)
   "limorhyde",     # For LimoRhyde differential rhythmicity (detect_LimoRhyde)
-  "DODR"           # For DODR differential oscillation (detect_DODR)
+  "FMM"            # For FMM waveform simulation (simCircadianFMM)
 )
 
 cat("Checking required packages...\n")
@@ -55,6 +55,8 @@ source_files = c(
   "plot_with_se.R",              # SE-bar helpers + DR/DP 6-panel figures
   "plot_single_cohort.R",        # Single-cohort Figure 1 (3-panel)
   "plot_diff.R",                 # Differential power plot (18-panel)
+  "plot_bvsm.R",                 # B vs m trade-off plot (Figure 3)
+  "plot_fmm.R",                  # FMM waveform robustness plots (Figures 4, 4b)
   "npower.R",                    # npower(): find n for target power at given FDR
   "LRTest_diff_phase.R",         # LR test for differential phase
   "LRTest_diff_amp.R",           # LR test for differential amplitude

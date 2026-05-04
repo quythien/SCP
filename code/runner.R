@@ -1393,11 +1393,13 @@ plot.SCPRecommendResult <- function(x, output_file = NULL, ...) {
 # Returns SCPSingleResult with $power_df (N, B, method, alpha2, power, power_se)
 # and $n80_df — the compact format needed for the recommendation table.
 runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
-                                methods  = "DCP",
-                                alpha2   = 0,
-                                alpha3   = 0,
-                                mc.cores = 1L,
-                                verbose  = TRUE) {
+                                methods     = "DCP",
+                                alpha2      = 0,
+                                alpha3      = 0,
+                                mc.cores    = 1L,
+                                plot        = FALSE,
+                                output_file = NULL,
+                                verbose     = TRUE) {
 
   stopifnot(inherits(bio.opts,      "CircadianBioOptions"))
   stopifnot(inherits(design.opts,   "CircadianDesignOptions"))
@@ -1479,11 +1481,17 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
     }
   ))
 
-  structure(
+  result <- structure(
     list(power_df = grid, n80_df = n80_df,
          bio.opts = bio.opts, design.opts = design.opts, analysis.opts = analysis.opts),
     class = "SCPSingleResult"
   )
+
+  if (isTRUE(plot))
+    plotBvsMPower(result, nsims = design.opts$nsims %||% 30L,
+                  output_file = output_file)
+
+  result
 }
 
 
