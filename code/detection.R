@@ -1917,3 +1917,120 @@ detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
        pval_DP = rep(NA_real_, ngenes),
        pval_DM = rep(NA_real_, ngenes))
 }
+
+
+# ==============================================================================
+# FMM-LRT: H0 (flat) vs H2 (FMM) — single-cohort rhythmicity detection
+# ==============================================================================
+
+#' Build FMM-LRT null calibration table
+#'
+#' Simulates flat Gaussian data and tabulates empirical quantiles of
+#' n*log(SSE0/SSE2) for each n.  The chi-squared(4) approximation is severely
+#' anti-conservative at small n due to the boundary problem (A=0 makes
+#' omega/beta/alpha unidentified), so calibration is mandatory.
+#'
+#' @param n_values  Integer vector of sample sizes to calibrate.
+#' @param n_sim     Null simulations per n (default 2000).
+#' @param seed      Random seed.
+#' @param period    Period in hours (default 24).
+#' @return Named list: \code{$n}, \code{$q95}, \code{$q99}.
+#' @export
+build_FMM_LRT_null_table <- function(n_values, n_sim = 2000L,
+                                      seed = 42L, period = 24) {
+  if (!requireNamespace("FMM", quietly = TRUE))
+    stop("Package 'FMM' required.")
+  set.seed(seed)
+  q95 <- numeric(length(n_values))
+  q99 <- numeric(length(n_values))
+  for (i in seq_along(n_values)) {
+    n      <- n_values[i]
+    t_norm <- seq(0, 1 - 1/n, length.out = n)
+    stats  <- numeric(n_sim)
+    for (s in seq_len(n_sim)) {
+      y    <- rnorm(n, 0, 1)
+      sse0 <- sum((y - mean(y))^2)
+      if (sse0 < 1e-10) { stats[s] <- 0; next }
+      fit <- tryCatch(
+        FMM::fitFMM(y, timePoints = t_norm, nback = 1,
+                    showProgress = FALSE, omegaMin = 1e-4, omegaMax = 0.9999),
+        error = function(e) NULL)
+      if (is.null(fit)) { stats[s] <- 0; next }
+      r2       <- max(0, min(FMM::getR2(fit), 1 - 1e-10))
+      stats[s] <- n * log(1 / (1 - r2))
+    }
+    q95[i] <- quantile(stats, 0.95)
+    q99[i] <- quantile(stats, 0.99)
+    cat(sprintf("  n=%3d  q95=%.3f  q99=%.3f\n", n, q95[i], q99[i]))
+  }
+  list(n = n_values, q95 = q95, q99 = q99)
+}
+
+
+#' FMM-LRT: H0 (flat) vs H2 (FMM) single-cohort rhythmicity test
+#'
+#' Fits \code{FMM::fitFMM()} per gene.  LRT statistic is
+#' \eqn{\Lambda_g = n \log(SSE_{0,g}/SSE_{2,g})}.
+#' P-values are calibrated using the empirical null table from
+#' \code{build_FMM_LRT_null_table()} via linear interpolation between the
+#' 95th and 99th percentiles, with an exponential tail beyond q99.
+#' If no table is provided falls back to chi-squared(4) with a warning.
+#'
+#' @param expr       Gene x sample matrix.
+#' @param times      Time vector in hours (length = ncol(expr)).
+#' @param period     Period in hours (default 24).
+#' @param null_table Output of \code{build_FMM_LRT_null_table()}, or NULL.
+#' @return Numeric p-value vector, length nrow(expr).
+#' @export
+detect_FMM_LRT <- function(expr, times, period = 24, null_table = NULL) {
+  if (!requireNamespace("FMM", quietly = TRUE))
+    stop("Package 'FMM' required.")
+
+  ngenes <- nrow(expr)
+  n      <- ncol(expr)
+  t_norm <- (times %% period) / period
+
+  # Interpolate empirical critical values at this n
+  if (!is.null(null_table)) {
+    crit95 <- approx(null_table$n, null_table$q95, xout = n, rule = 2)$y
+    crit99 <- approx(null_table$n, null_table$q99, xout = n, rule = 2)$y
+    gap    <- max(crit99 - crit95, 0.5)
+    use_table <- TRUE
+  } else {
+    warning("No null_table: using chi-squared(4) — anti-conservative at small n.")
+    use_table <- FALSE
+  }
+
+  pvals <- numeric(ngenes)
+
+  for (g in seq_len(ngenes)) {
+    y    <- expr[g, ]
+    sse0 <- sum((y - mean(y))^2)
+    if (sse0 < 1e-10) { pvals[g] <- 1; next }
+
+    fit <- tryCatch(
+      FMM::fitFMM(y, timePoints = t_norm, nback = 1,
+                  showProgress = FALSE, omegaMin = 1e-4, omegaMax = 0.9999),
+      error = function(e) NULL)
+    if (is.null(fit)) { pvals[g] <- 1; next }
+
+    r2     <- max(0, min(FMM::getR2(fit), 1 - 1e-10))
+    lambda <- n * log(1 / (1 - r2))
+
+    if (use_table) {
+      if (lambda >= crit99) {
+        pvals[g] <- 0.01 * exp(-(lambda - crit99) / gap)
+      } else if (lambda >= crit95) {
+        frac <- (lambda - crit95) / gap
+        pvals[g] <- 0.05 - frac * 0.04   # linear 0.05 -> 0.01
+      } else {
+        # below q95: p > 0.05; exponential upper tail
+        pvals[g] <- min(1, 0.05 * exp((crit95 - lambda) / max(crit95 * 0.3, 1)))
+      }
+      pvals[g] <- max(1e-6, min(1, pvals[g]))
+    } else {
+      pvals[g] <- pchisq(lambda, df = 4, lower.tail = FALSE)
+    }
+  }
+  pvals
+}
