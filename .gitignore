@@ -1,9 +1,11 @@
 # Ignore everything
 *
 
-# Except code/, examples/, doc/, paper/, vignettes/, tests/
+# Except code/, data/, examples/, doc/, paper/, vignettes/, tests/
 !code/
 !code/**
+!data/
+!data/**
 !examples/
 !examples/**
 !doc/
