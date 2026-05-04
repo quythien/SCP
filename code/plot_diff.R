@@ -234,9 +234,10 @@ plotDiffPower <- function(res_list,
   # ------------------------------------------------------------------
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
   par(mfrow = c(n_ep * n_comps, 3),
-      mai   = c(0.9, 0.9, 0.45, 0.2),
-      mgp   = c(3.0, 0.5, 0),
-      oma   = c(0, 0, 2, 0))
+      mai   = c(0.75, 0.85, 0.40, 0.15),
+      mgp   = c(2.6, 0.5, 0),
+      oma   = c(0, 0, 1.8, 0),
+      cex.axis = 1.05, cex.lab = 1.1)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
   panel_data       <- list()
