@@ -186,6 +186,7 @@ plotDiffPower <- function(res_list,
                          display_sizes  = NULL,
                          r_break_width  = 0.25,
                          r_max          = 5,
+                         r_display_max  = NULL,
                          out_pdf        = NULL,
                          width          = 15,
                          height         = 30) {
@@ -287,6 +288,24 @@ plotDiffPower <- function(res_list,
       mean_TD_plt   <- coll$mean_TD;  se_TD_plt  <- coll$se_TD
       mean_pow_plt  <- coll$mean_pow; se_pow_plt <- coll$se_pow
 
+      # Cap display at r_display_max: drop strata with upper bound > threshold
+      if (!is.null(r_display_max)) {
+        upper_b <- sapply(strata_lbl, function(lbl) {
+          if (grepl("^>", lbl)) Inf
+          else as.numeric(sub(".*,([^]]+)].*", "\\1", lbl))
+        })
+        keep <- which(upper_b <= r_display_max)
+        if (length(keep) > 0) {
+          strata_lbl   <- strata_lbl[keep]
+          gene_counts  <- gene_counts[keep]
+          mean_TD_plt  <- mean_TD_plt[, keep, drop=FALSE]
+          se_TD_plt    <- se_TD_plt[,  keep, drop=FALSE]
+          mean_pow_plt <- mean_pow_plt[, keep, drop=FALSE]
+          se_pow_plt   <- se_pow_plt[,  keep, drop=FALSE]
+          n_strata_plt <- length(keep)
+        }
+      }
+
       row_label <- sprintf("%s — %s", ep, comp_label)
 
       # ---- Panel A: marginal power vs n, multiple FDR thresholds ----
@@ -302,9 +321,10 @@ plotDiffPower <- function(res_list,
                     100 * marginal_se[disp_idx, t], col = thresh_cols[t])
       }
       vline_n <- n80_by_comp[[ci]]
+      abline(h = 80, lty = 2, col = "grey50", lwd = 1.2)
       if (!is.na(vline_n) && is.finite(vline_n)) {
         abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.5)
-        text(vline_n, 5, sprintf("n=%d", vline_n), col = "steelblue", cex = 0.65, adj = -0.1)
+        text(vline_n, 15, sprintf("n=%d", vline_n), col = "steelblue", cex = 0.65, adj = -0.1)
       }
       grid()
       legend("bottomright", thresh_labels,

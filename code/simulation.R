@@ -548,3 +548,197 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
 
   list(expr = expr, is_rhythmic = is_rhythmic, r_values = r_values)
 }
+
+#' Simulate Single-Cohort Circadian Data Under FMM Waveform
+#'
+#' @description Generates a synthetic gene expression matrix for one cohort
+#' using the Frequency Modulated Möbius (FMM) model.  The waveform shape is
+#' controlled by \code{omega}: \code{omega = 1} reproduces a pure sinusoid
+#' (identical to DCP cosinor truth), \code{omega = 0} produces a flat signal
+#' (no rhythmicity), and intermediate values produce a peaked waveform.
+#' Gene-level parameters (mesor, amplitude, phase, noise) are drawn from the
+#' empirical distributions in \code{bio.opts} exactly as in
+#' \code{\link{simCircadianSingleCohort}}.
+#'
+#' @param bio.opts A \code{CircadianBioOptions} object from
+#'   \code{\link{estCircadianParam}}.
+#' @param cts Numeric vector of sample collection times in hours \eqn{[0, 24)}.
+#'   The length of this vector determines the number of simulated samples
+#'   (\eqn{N}).
+#' @param omega Numeric scalar in \eqn{[0, 1]}.  FMM waveform shape parameter.
+#'   \code{omega = 1} gives a pure sinusoid; \code{omega = 0} gives a flat
+#'   (arrhythmic) signal; values in \eqn{(0, 1)} give increasingly peaked
+#'   waveforms.  Defaults to \code{1.0}.
+#' @param beta Numeric scalar.  FMM skewness parameter (default \eqn{\pi}
+#'   gives a symmetric peak).
+#' @param seed Optional integer random seed for reproducibility.
+#'
+#' @return Named list with:
+#'   \describe{
+#'     \item{\code{expr}}{Gene expression matrix (\code{ngenes} x \eqn{N}).}
+#'     \item{\code{is_rhythmic}}{Logical vector of length \code{ngenes}; TRUE
+#'       for rhythmic genes.}
+#'     \item{\code{r_values}}{Per-gene signal-to-noise ratio
+#'       \eqn{A_g / \sigma_g}.}
+#'     \item{\code{omega}}{The \code{omega} value used.}
+#'   }
+#'
+#' @seealso \code{\link{simCircadianSingleCohort}}, \code{\link{estCircadianParam}}
+simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
+                            seed = NULL) {
+  stopifnot(inherits(bio.opts, "CircadianBioOptions"))
+  if (omega < 0 || omega > 1)
+    stop("omega must be in [0, 1]; got ", omega)
+
+  if (!is.null(seed)) set.seed(seed)
+
+  ngenes        <- bio.opts$ngenes
+  prop_rhythmic <- bio.opts$prop_rhythmic
+  N             <- length(cts)
+
+  has_joint <- !is.null(bio.opts$sigma_rhythmic) &&
+               length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)
+
+  # --- gene assignment ---
+  n_rhythmic  <- round(ngenes * prop_rhythmic)
+  rhythmic_id <- sample(ngenes, n_rhythmic)
+  is_rhythmic <- logical(ngenes)
+  is_rhythmic[rhythmic_id] <- TRUE
+
+  # --- parameter draws ---
+  mesor_g <- bio.opts$lBaselineExpr
+  sigma_g <- exp(bio.opts$lOD)
+
+  # Resample pilot vectors if ngenes was overridden
+  if (length(mesor_g) != ngenes) {
+    idx     <- sample(length(mesor_g), ngenes, replace = TRUE)
+    mesor_g <- mesor_g[idx]
+    sigma_g <- sigma_g[idx]
+  }
+
+  amp_g   <- numeric(ngenes)
+  phase_g <- numeric(ngenes)
+
+  if (n_rhythmic > 0) {
+    if (has_joint) {
+      ji <- sample(length(bio.opts$amplitude), n_rhythmic, replace = TRUE)
+      amp_g[rhythmic_id]   <- pmax(bio.opts$amplitude[ji], 0.05)
+      sigma_g[rhythmic_id] <- pmax(bio.opts$sigma_rhythmic[ji], 1e-6)
+    } else {
+      amp_g[rhythmic_id] <- pmax(
+        sample(bio.opts$amplitude, n_rhythmic, replace = TRUE), 0.05)
+    }
+    phase_g[rhythmic_id] <- sample(bio.opts$phase, n_rhythmic, replace = TRUE)
+  }
+
+  r_values <- amp_g / sigma_g
+
+  # --- FMM time grid (radians): FMM package uses [0, 2*pi] ---
+  # Convert collection times from hours to radians
+  cts_rad <- cts * (2 * pi / 24)
+
+  # --- expression matrix ---
+  expr <- matrix(NA_real_, nrow = ngenes, ncol = N)
+
+  for (g in seq_len(ngenes)) {
+    if (is_rhythmic[g] && omega > 0) {
+      # omega=0 → flat signal; skip FMM call and fall through to arrhythmic branch
+      # Phase in radians (FMM alpha parameter)
+      alpha_rad <- phase_g[g] * (2 * pi / 24)
+
+      fmm_out <- FMM::generateFMM(
+        M          = mesor_g[g],
+        A          = amp_g[g],
+        alpha      = alpha_rad,
+        beta       = beta,
+        omega      = omega,
+        from       = 0,
+        to         = 2 * pi + 1e-4,  # ensure cts at t=24h (2pi rad) are covered
+        length.out = 1000L,
+        plot       = FALSE,
+        outvalues  = TRUE,
+        sigmaNoise = 0
+      )
+
+      # Interpolate the noiseless FMM signal at the actual (radian) sample times
+      fmm_signal <- approx(fmm_out$t, fmm_out$y, xout = cts_rad,
+                           method = "linear", rule = 2)$y
+
+      expr[g, ] <- rnorm(N, fmm_signal, sigma_g[g])
+    } else {
+      # Arrhythmic genes OR omega=0 (FMM flat limit): flat at mesor with noise
+      expr[g, ] <- rnorm(N, mesor_g[g], sigma_g[g])
+    }
+  }
+
+  list(expr = expr, is_rhythmic = is_rhythmic, r_values = r_values,
+       omega = omega)
+}
+
+
+#' Simulate Two-Group Differential Circadian Data under FMM Waveform
+#'
+#' @description
+#' Extends \code{\link{simCircadianDiff}} by replacing the cosinor generative
+#' model with the FMM (Frequency Modulated Möbius) waveform.  Gene-type
+#' assignment (DR/DP/DM/null) and parameter draws are identical to
+#' \code{simCircadianDiff}; only expression generation uses FMM.
+#'
+#' Uses a precomputed unit-amplitude FMM template (one per omega value) and
+#' per-gene interpolation, avoiding the per-gene \code{FMM::generateFMM()}
+#' call and giving a ~1000x speed-up over naive implementation.
+#'
+#' @param omega Numeric in [0, 1]. FMM shape: 1 = pure cosinor, 0 = flat.
+#' @param beta  Numeric. FMM orientation parameter (default pi = peak at alpha).
+#' @param ...   All other arguments passed directly to \code{simCircadianDiff}.
+#'
+#' @return Same structure as \code{\link{simCircadianDiff}}.
+#'
+#' @seealso \code{\link{simCircadianDiff}}, \code{\link{simCircadianFMM}}
+simCircadianDiffFMM <- function(..., omega = 1.0, beta = pi) {
+
+  if (omega < 0 || omega > 1)
+    stop("omega must be in [0, 1]; got ", omega)
+
+  # Step 1: run the cosinor simulation to get parameter assignments and times
+  sim <- simCircadianDiff(...)
+  if (omega == 1.0) return(sim)   # omega=1 IS the cosinor — return as-is
+
+  gt    <- sim$ground_truth
+  ngenes <- nrow(gt)
+  n1     <- ncol(sim$expr1)
+  n2     <- ncol(sim$expr2)
+
+  # Step 2: precompute unit-amplitude FMM template on [0, 2pi)
+  # Y_template(x) = cos(beta + 2*atan(omega * tan(x/2))), x in [0, 2pi)
+  # Singularity at x=pi is handled by R's atan(Inf) = pi/2 numerically.
+  n_pts  <- 2000L
+  x_grid <- seq(0, 2 * pi, length.out = n_pts + 1L)[seq_len(n_pts)]
+  y_tmpl <- cos(beta + 2 * atan(omega * tan(x_grid / 2)))
+
+  # Step 3: re-generate expression using FMM template via interpolation
+  cts_rad1 <- (sim$times1 %% 24) * (2 * pi / 24)
+  cts_rad2 <- (sim$times2 %% 24) * (2 * pi / 24)
+
+  fmm_signal <- function(cts_rad, A, alpha_h, M, sigma) {
+    if (A == 0 || omega == 0) return(rnorm(length(cts_rad), M, sigma))
+    alpha_rad <- (alpha_h %% 24) * (2 * pi / 24)
+    x_shifted <- (cts_rad - alpha_rad) %% (2 * pi)
+    sig <- approx(x_grid, y_tmpl, xout = x_shifted, method = "linear", rule = 2)$y
+    rnorm(length(cts_rad), M + A * sig, sigma)
+  }
+
+  expr1 <- matrix(NA_real_, nrow = ngenes, ncol = n1)
+  expr2 <- matrix(NA_real_, nrow = ngenes, ncol = n2)
+
+  for (g in seq_len(ngenes)) {
+    expr1[g, ] <- fmm_signal(cts_rad1, gt$amplitude1[g], gt$phase1[g],
+                              gt$mesor1[g], gt$sigma[g])
+    expr2[g, ] <- fmm_signal(cts_rad2, gt$amplitude2[g], gt$phase2[g],
+                              gt$mesor2[g], gt$sigma2[g])
+  }
+
+  sim$expr1 <- expr1
+  sim$expr2 <- expr2
+  sim
+}

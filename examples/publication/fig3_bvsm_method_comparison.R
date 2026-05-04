@@ -1,29 +1,25 @@
 #' =======================================================================
-#' 15_bvsm_method_comparison.R — B vs m Tradeoff: Method Comparison
+#' fig3_bvsm_method_comparison.R — B vs m Tradeoff: DCP B-invariance
 #' =======================================================================
 #'
-#' Single-cohort rhythmicity detection power across B and N for three
-#' detection methods:
-#'   1. DCP  — cosinor K=1 F-test (B-invariant under sinusoidal truth)
-#'   2. JTK  — JTK_CYCLE via MetaCycle (favors replication depth)
-#'   3. RAIN — umbrella test (B-sensitive; alpha2=0 slice from 15c results)
-#'
-#' MH excluded: df collapse at high B / small N (df2 = N-1-2K → 1 at B=12,N=12)
-#' renders it uninterpretable in a fair B vs m comparison.
+#' Single-cohort rhythmicity detection power across B and N for DCP only,
+#' verifying B-invariance under sinusoidal truth (alpha2=0).
+#'   DCP — cosinor K=1 F-test (B-invariant under sinusoidal truth)
 #'
 #' Three pilot datasets (single group):
 #'   A. Mouse LIV   (GSE54651)  r~2.88  strong
 #'   B. Baboon LUN  (CAMO)      r~1.72  moderate
 #'   C. Mouse D1    (D1D2)      r~0.65  weak / brain
 #'
-#' Outputs (Figure 3: method comparison under cosinor truth):
-#'   output/bvsm_method_comparison/results/results_<dataset>_<method>_a2_0.rds
+#' Outputs (Figure 3: DCP B-invariance across three datasets):
+#'   output/bvsm_method_comparison/results/results_<dataset>_DCP_a2_<val>.rds
 #'   output/bvsm_method_comparison/results/results_all.rds
 #'   output/bvsm_method_comparison/figures/fig3_method_comparison.pdf
 #'
 #' USAGE:
-#'   Rscript examples/publication/15_bvsm_method_comparison.R
-#'   SMOKE_TEST=true Rscript examples/publication/15_bvsm_method_comparison.R
+#'   Rscript examples/publication/fig3_bvsm_method_comparison.R
+#'   SMOKE_TEST=true Rscript examples/publication/fig3_bvsm_method_comparison.R
+#'   DATASET=LUN METHOD=DCP MC_CORES=40 Rscript examples/publication/fig3_bvsm_method_comparison.R
 
 # =====================================================================
 # 0. Setup
@@ -92,6 +88,7 @@ rm(pheno, prep_d1)
 
 datasets <- list(
   LIV = list(mat = mat_liv, tod = tod_liv, label = "Mouse LIV (r~2.88)"),
+  LUN = list(mat = mat_lun, tod = tod_lun, label = "Baboon LUN (r~1.72)"),
   D1  = list(mat = mat_d1,  tod = tod_d1,  label = "Mouse D1 (r~0.65)")
 )
 rm(mat_liv, mat_lun, mat_d1, tod_liv, tod_lun, tod_d1)
@@ -108,7 +105,7 @@ if (METHOD_FILTER != "ALL") cat(sprintf("Method filter  : %s\n\n", METHOD_FILTER
 # 2. Estimate pilot parameters and run power via unified API
 # =====================================================================
 cat("\n--- Estimating pilot parameters and running power ---\n")
-printMethodGuidance(methods = c("DCP", "JTK"), verbose = TRUE)
+printMethodGuidance(methods = "DCP", verbose = TRUE)
 
 all_results <- list()
 
@@ -127,14 +124,14 @@ for (ds_name in names(datasets)) {
     fdr_thresholds  = FDR_THRESH
   )
 
-  # DCP and JTK: sweep full ALPHA2_VALS
+  # DCP: sweep full ALPHA2_VALS
   design <- CircadianDesignOptions(
     sample_sizes = N_GRID, nsims = NSIMS, design = "active",
     cts = seq(0, 24 * (1 - 1/B_VALS[1]), length.out = B_VALS[1]),
     B_values = B_VALS
   )
 
-  for (meth_name in c("DCP", "JTK")) {
+  for (meth_name in "DCP") {
     if (METHOD_FILTER != "ALL" && meth_name != METHOD_FILTER) next
     a2_vals <- ALPHA2_VALS
     cat(sprintf("\n  Method: %s  alpha2: %s\n", meth_name, paste(a2_vals, collapse = ", ")))
@@ -159,28 +156,12 @@ for (ds_name in names(datasets)) {
 }
 
 # =====================================================================
-# 2b. Append RAIN alpha2=0 from 15c results — only when running full grid
+# 2b. Skip figure generation for partial runs
 # =====================================================================
 if (DATASET_FILTER != "ALL" || METHOD_FILTER != "ALL") {
-  cat("\nPartial run — skipping RAIN append and figure generation.\n")
+  cat("\nPartial run — skipping figure generation.\n")
   cat("\n=== Done ===\n")
   quit(save = "no")
-}
-# Full run: append RAIN and generate figure
-cat("\n--- Appending RAIN alpha2=0 from 15c results ---\n")
-rain_dir <- file.path(out_dir, "results")
-for (ds_name in names(datasets)) {
-  fname <- file.path(rain_dir, sprintf("results_RAIN_ext_%s_a2_0.0.rds", ds_name))
-  if (!file.exists(fname)) {
-    cat(sprintf("  WARNING: %s not found — run 15c first\n", basename(fname)))
-    next
-  }
-  df <- readRDS(fname)
-  df$dataset <- ds_name
-  # keep only B values that match B_VALS (15c may have extended B up to 24)
-  df <- df[df$B %in% B_VALS, ]
-  all_results[[sprintf("%s_RAIN", ds_name)]] <- df
-  cat(sprintf("  Loaded RAIN alpha2=0 for %s (%d rows)\n", ds_name, nrow(df)))
 }
 
 # Combined tidy frame
@@ -189,7 +170,7 @@ saveRDS(res_df, file.path(out_dir, "results", "results_all.rds"))
 cat("\nSaved: results_all.rds\n")
 
 # =====================================================================
-# 3. Figure 3: Method comparison under cosinor truth (alpha2=0)
+# 3. Figure 3: DCP B-invariance across three datasets (alpha2=0)
 # =====================================================================
 library(ggplot2)
 
@@ -199,37 +180,40 @@ b_labels <- setNames(paste0("B=", B_VALS), as.character(B_VALS))
 cat("\nGenerating Figure 3...\n")
 
 fig3_dat <- res_df[res_df$alpha2 == 0, ]
-fig3_dat$method_label <- factor(fig3_dat$method,
-  levels = c("DCP", "JTK", "RAIN"),
-  labels = c("DCP (K=1 cosinor)", "JTK_CYCLE", "RAIN (umbrella)"))
 fig3_dat$dataset_label <- factor(fig3_dat$dataset,
-  levels = c("LIV", "D1"),
+  levels = c("LIV", "LUN", "D1"),
   labels = c("Mouse LIV\n(r~2.88, strong)",
+             "Baboon LUN\n(r~1.72, moderate)",
              "Mouse D1\n(r~0.65, weak)"))
 fig3_dat$B_fac <- factor(fig3_dat$B, levels = B_VALS)
 
 p3 <- ggplot(fig3_dat, aes(x = N, y = 100 * power, colour = B_fac, group = B_fac)) +
+  geom_errorbar(aes(ymin = 100*(power - power_se), ymax = 100*(power + power_se)),
+                width = 1.5, linewidth = 0.4) +
   geom_line(linewidth = 0.8) +
   geom_point(size = 1.5) +
   geom_hline(yintercept = 80, linetype = "dashed", colour = "grey50", linewidth = 0.4) +
-  facet_grid(method_label ~ dataset_label) +
-  scale_colour_manual(values = b_colors, labels = b_labels, name = NULL) +
+  facet_wrap(~ dataset_label, nrow = 1) +
+  scale_colour_manual(values = b_colors, labels = b_labels, name = "Time bins (B)") +
+  scale_fill_manual(values   = b_colors, labels = b_labels, name = "Time bins (B)") +
   scale_x_continuous(breaks = seq(12, 96, by = 12)) +
   scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
   labs(
     x     = "Total sample size N",
-    y     = "Detection power (%)",
-    title = "B vs m tradeoff: DCP, JTK_CYCLE, RAIN under cosinor truth (alpha2=0)"
+    y     = "Power (%)",
+    title = "B vs m trade-off: DCP power under cosinor truth"
   ) +
   theme_bw(base_size = 11) +
   theme(
     strip.background = element_rect(fill = "grey92"),
+    strip.text       = element_text(size = 10),
     legend.position  = "bottom",
-    panel.grid.minor = element_blank()
+    panel.grid.minor = element_blank(),
+    plot.title       = element_text(hjust = 0.5, face = "bold")
   )
 
 fig3_path <- file.path(out_dir, "figures", "fig3_method_comparison.pdf")
-ggsave(fig3_path, p3, width = 11, height = 9)
+ggsave(fig3_path, p3, width = 13, height = 5)
 cat(sprintf("Saved: %s\n", fig3_path))
 
 cat("\n=== Done ===\n")
