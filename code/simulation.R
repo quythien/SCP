@@ -25,7 +25,8 @@ sampleTimesFromDist <- function(n, cts) {
   tod_density <- density(cts_ext, from = 0, to = 24)
 
   # Sample n time points from the wrapped density
-  sampled <- sample(tod_density$x, size = n, replace = TRUE, prob = tod_density$y)
+  probs   <- pmax(tod_density$y, 1e-10)   # floor prevents zero-sum crash on tight clusters
+  sampled <- sample(tod_density$x, size = n, replace = TRUE, prob = probs)
 
   # Add small noise to avoid exact ties, then wrap back to [0, 24)
   sampled <- (sampled + rnorm(n, 0, 0.1)) %% 24

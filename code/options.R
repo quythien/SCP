@@ -16,9 +16,11 @@
 #' Update simulation options (regenerate rhythmic genes)
 #' 
 #' @param sim.opts Simulation options from createSimOptions()
-#' 
 #' @return Updated simulation options with new seed and regenerated parameters
+#' @note Deprecated. Not called by any current runner function. Retained for
+#'   backward compatibility only.
 updateSimOptions <- function(sim.opts) {
+  .Deprecated("CircadianBioOptions")
   
   # Increment seed
   new_seed = sim.opts$sim.seed + 1
