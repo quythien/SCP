@@ -827,6 +827,8 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
   nsims           <- design.opts$nsims
   design          <- design.opts$design
   cts             <- design.opts$cts
+  fmm_omega       <- design.opts$omega %||% 1.0   # 1 = cosinor; <1 = FMM
+  fmm_beta        <- design.opts$beta  %||% pi
   alpha           <- analysis.opts$alpha
   p.adjust.method <- analysis.opts$p.adjust.method
   r_strata        <- analysis.opts$r_strata
@@ -924,20 +926,30 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
       }
 
       # Simulate expression [ngenes x n]
-      omega <- 2 * pi / period
-      if (exists(".CPP_LOADED", inherits = TRUE) && isTRUE(get(".CPP_LOADED", inherits = TRUE)) &&
-          exists("sim_cosinor_expr_fast", mode = "function")) {
-        expr <- sim_cosinor_expr_fast(mesor_g, amp_g, phase_g, sigma_g, times_i,
-                                      period, harmonics[1], harmonics[2])
+      # FMM path: non-sinusoidal waveform when fmm_omega < 1
+      if (fmm_omega < 1.0) {
+        fmm_out     <- simCircadianFMM(bio.opts, times_i, omega = fmm_omega,
+                                       beta = fmm_beta)
+        expr        <- fmm_out$expr
+        is_rhythmic <- fmm_out$is_rhythmic
+        r_values    <- fmm_out$r_values
       } else {
-        expr <- matrix(NA_real_, nrow = ngenes, ncol = n)
-        for (g in seq_len(ngenes)) {
-          mu <- mesor_g[g] + amp_g[g] * (
-            cos(omega * times_i - omega * phase_g[g]) +
-            harmonics[1] * cos(2 * omega * times_i - 2 * omega * phase_g[g]) +
-            harmonics[2] * cos(3 * omega * times_i - 3 * omega * phase_g[g])
-          )
-          expr[g, ] <- rnorm(n, mu, sigma_g[g])
+        # Traditional cosinor path (alpha2/alpha3 Fourier harmonics)
+        omega_circ <- 2 * pi / period
+        if (exists(".CPP_LOADED", inherits = TRUE) && isTRUE(get(".CPP_LOADED", inherits = TRUE)) &&
+            exists("sim_cosinor_expr_fast", mode = "function")) {
+          expr <- sim_cosinor_expr_fast(mesor_g, amp_g, phase_g, sigma_g, times_i,
+                                        period, harmonics[1], harmonics[2])
+        } else {
+          expr <- matrix(NA_real_, nrow = ngenes, ncol = n)
+          for (g in seq_len(ngenes)) {
+            mu <- mesor_g[g] + amp_g[g] * (
+              cos(omega_circ * times_i - omega_circ * phase_g[g]) +
+              harmonics[1] * cos(2 * omega_circ * times_i - 2 * omega_circ * phase_g[g]) +
+              harmonics[2] * cos(3 * omega_circ * times_i - 3 * omega_circ * phase_g[g])
+            )
+            expr[g, ] <- rnorm(n, mu, sigma_g[g])
+          }
         }
       }
 
@@ -1448,8 +1460,11 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
     cts <- rep(seq(0, period * (1 - 1/B), length.out = B), each = N / B)
     fn  <- detect_fn[[mth]]
 
+    fmm_omega_i <- design.opts$omega %||% 1.0
+    fmm_beta_i  <- design.opts$beta  %||% pi
     sims <- vapply(seq_len(nsims), function(s) {
       dat <- simCircadianSingleCohort(bio.opts, cts, alpha2 = a2, alpha3 = a3,
+                                      omega = fmm_omega_i, beta = fmm_beta_i,
                                       seed = GLOBAL_SEED + i * 1000L + s)
       pv  <- fn(dat$expr, cts)
       adj <- p.adjust(pv, method = analysis.opts$p.adjust.method)
