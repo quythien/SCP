@@ -2,19 +2,21 @@
 #' fig4_fmm_violation.R — FMM Waveform Robustness: Active vs Passive
 #' =======================================================================
 #'
-#' 2-row x 3-column layout:
+#' 6-row x 3-column layout (rows 1-2: omega sweep, 3-4: beta sweep, 5-6: alpha sweep)
+#' x 2 detection methods (DCP and FMM-LRT).
 #'
-#' Row 1 (Active, B=12, every 2h — Hughes 2017 recommendation):
+#' Row 1/3/5 (Active, B=12, every 2h):
 #'   A. Mouse LIV (GSE54651)  r~2.88  strong
 #'   B. Baboon LUN (CAMO)     r~1.72  moderate
 #'   C. Mouse D1 (D1D2)       r~0.65  weak
 #'
-#' Row 2 (Passive — KDE-sampled TOD from pilot):
-#'   D. GTEx Adrenal Gland       r~1.03  strong passive   (Fig 1, Fig 2)
-#'   E. Putamen (Kyle/GSE160521) r~0.66  moderate passive (Fig 1, Fig 2)
-#'   F. NAc (Kyle/GSE160521)     r~0.69  weak passive     (Fig 1)
+#' Row 2/4/6 (Passive — KDE-sampled TOD from pilot):
+#'   D. GTEx Adrenal Gland       r~1.03  strong passive
+#'   E. Putamen (Kyle/GSE160521) r~0.66  moderate passive
+#'   F. NAc (Kyle/GSE160521)     r~0.69  weak passive
 #'
-#' Detection: DCP throughout. omega sweeps from 0 (arrhythmic) to 1 (cosinor).
+#' Detection: DCP (correct for cosinor truth) and FMM-LRT (correct for FMM truth).
+#' FMM-LRT uses a pre-computed empirical null table for calibrated p-values.
 #'
 #' USAGE:
 #'   Rscript examples/publication/fig4_fmm_violation.R
@@ -144,8 +146,9 @@ rm(mat_liv, mat_lun, mat_d1, tod_liv, tod_lun, tod_d1,
 # 3. Power simulation helper
 # =====================================================================
 run_fmm_power <- function(bio, N_vals, sweep_vals, sweep_param = "omega",
-                           fixed_omega = 1.0, fixed_beta = pi,
+                           fixed_omega = 1.0, fixed_beta = pi, fixed_alpha = NULL,
                            B_val, design_type, pilot_tod = NULL,
+                           method = "DCP", null_table = NULL,
                            nsims, ngenes, fdr_thresh, n_cores,
                            ds_name, seed = GLOBAL_SEED) {
   bio$ngenes <- ngenes
@@ -156,7 +159,8 @@ run_fmm_power <- function(bio, N_vals, sweep_vals, sweep_param = "omega",
   for (sv in sweep_vals) {
     omega_val <- if (sweep_param == "omega") sv else fixed_omega
     beta_val  <- if (sweep_param == "beta")  sv else fixed_beta
-    cat(sprintf("    %s=%.3f\n", sweep_param, sv))
+    alpha_val <- if (sweep_param == "alpha") sv else fixed_alpha  # NULL = draw from pilot
+    cat(sprintf("    %s=%.3f  [%s]\n", sweep_param, sv, method))
     N_valid <- if (design_type == "active") N_vals[N_vals %% B_val == 0L] else N_vals
 
     run_one_N <- function(N_val) {
@@ -166,9 +170,16 @@ run_fmm_power <- function(bio, N_vals, sweep_vals, sweep_param = "omega",
         } else {
           sampleTimesFromDist(N_val, pilot_tod)
         }
-        dat <- simCircadianFMM(bio, cts, omega = omega_val, beta = beta_val,
-                               seed = seed + N_val * 1000L + s)
-        pv  <- detect_DCP(dat$expr, cts)
+        dat <- simCircadianFMM(bio, cts,
+                               omega       = omega_val,
+                               beta        = beta_val,
+                               alpha_fixed = alpha_val,
+                               seed        = seed + N_val * 1000L + s)
+        pv <- if (method == "FMM_LRT") {
+          detect_FMM_LRT(dat$expr, cts, null_table = null_table)
+        } else {
+          detect_DCP(dat$expr, cts)
+        }
         adj <- p.adjust(pv, method = "BH")
         if (!any(dat$is_rhythmic)) return(NA_real_)
         sum(adj[dat$is_rhythmic] <= fdr_thresh, na.rm = TRUE) /
@@ -176,6 +187,8 @@ run_fmm_power <- function(bio, N_vals, sweep_vals, sweep_param = "omega",
       }, numeric(1))
       data.frame(N = N_val, sweep_val = sv, sweep_param = sweep_param,
                  omega = omega_val, beta = beta_val,
+                 alpha = if (!is.null(alpha_val)) alpha_val else NA_real_,
+                 method = method,
                  power    = mean(sims, na.rm = TRUE),
                  power_se = sd(sims,   na.rm = TRUE) / sqrt(sum(!is.na(sims))),
                  stringsAsFactors = FALSE)
@@ -185,7 +198,7 @@ run_fmm_power <- function(bio, N_vals, sweep_vals, sweep_param = "omega",
     res_list <- parallel::mclapply(N_valid, run_one_N, mc.cores = n_cores)
     rows <- c(rows, res_list)
   }
-  df        <- do.call(rbind, rows)
+  df         <- do.call(rbind, rows)
   df$dataset <- ds_name
   df
 }
@@ -193,80 +206,115 @@ run_fmm_power <- function(bio, N_vals, sweep_vals, sweep_param = "omega",
 # =====================================================================
 # 4. Run simulations
 # =====================================================================
-BETA_VALS  <- if (SMOKE_TEST) c(0, pi/2, pi) else
-              c(0, pi/4, pi/2, 3*pi/4, pi, 3*pi/2)
-OMEGA_FIXED <- 0.5   # fixed omega for beta sweep — midpoint of (0,1)
+BETA_VALS   <- if (SMOKE_TEST) c(0, pi/2, pi) else
+               c(0, pi/4, pi/2, 3*pi/4, pi, 3*pi/2)
+ALPHA_VALS  <- if (SMOKE_TEST) c(0, 8, 16) else
+               c(0, 4, 8, 12, 16, 20)        # acrophase sweep (hours)
+OMEGA_FIXED <- 0.5   # fixed omega for beta/alpha sweeps
+
+# Detection methods to run
+METHODS <- c("DCP", "FMM_LRT")
+
+# Load FMM-LRT null calibration table (built by build_FMM_LRT_null_table)
+fmm_null_table <- NULL
+null_tbl_path  <- "output/fmm_lrt_null_table.rds"
+if (file.exists(null_tbl_path)) {
+  fmm_null_table <- readRDS(null_tbl_path)
+  cat(sprintf("Loaded FMM-LRT null table (%d n values)\n", length(fmm_null_table$n)))
+} else {
+  cat("WARNING: FMM-LRT null table not found — FMM_LRT will use chi-squared(4) fallback.\n")
+  cat("Run build_FMM_LRT_null_table() first for calibrated p-values.\n")
+}
 
 all_results <- list()
 
-# Helper to run one dataset for a given sweep + design
+# Helper: run one dataset for a given sweep + design + detection method
 run_dataset <- function(ds_name, ds, bio, design_type, sweep_param,
-                         sweep_vals, fixed_omega, fixed_beta, tag) {
+                         sweep_vals, fixed_omega, fixed_beta, fixed_alpha = NULL,
+                         method = "DCP", null_table = NULL, tag) {
   pilot_tod <- if (design_type == "passive") ds$tod else NULL
   df <- run_fmm_power(bio, N_GRID, sweep_vals,
-                       sweep_param = sweep_param,
-                       fixed_omega = fixed_omega,
-                       fixed_beta  = fixed_beta,
-                       B_val       = if (design_type=="active") B_ACTIVE else NULL,
-                       design_type = design_type,
-                       pilot_tod   = pilot_tod,
+                       sweep_param  = sweep_param,
+                       fixed_omega  = fixed_omega,
+                       fixed_beta   = fixed_beta,
+                       fixed_alpha  = fixed_alpha,
+                       B_val        = if (design_type=="active") B_ACTIVE else NULL,
+                       design_type  = design_type,
+                       pilot_tod    = pilot_tod,
+                       method       = method,
+                       null_table   = null_table,
                        nsims = NSIMS, ngenes = NGENES,
                        fdr_thresh = FDR_THRESH, n_cores = N_CORES,
                        ds_name = ds_name)
-  design_label <- if (design_type=="active")
-    "Active (B = 12, every 2h)" else "Passive"
-  sweep_label  <- if (sweep_param=="omega")
-    sprintf("%s — ω sweep (β=π)", design_label) else
-    sprintf("%s — β sweep (ω=%.1f)", design_label, fixed_omega)
+  design_label <- if (design_type=="active") "Active (B=12, every 2h)" else "Passive"
+  sweep_label  <- switch(sweep_param,
+    omega = sprintf("%s — omega sweep (beta=pi)", design_label),
+    beta  = sprintf("%s — beta sweep (omega=%.1f)", design_label, fixed_omega),
+    alpha = sprintf("%s — alpha sweep (omega=%.1f)", design_label, fixed_omega))
   df$design      <- if (design_type=="active") "Active (B=12, every 2h)" else "Passive (KDE TOD)"
   df$design_row  <- sweep_label
   df$panel_label <- ds$label
   df$snr_col     <- ds$snr
   saveRDS(df, file.path(out_dir, "results",
-          sprintf("results_%s_FMM_%s.rds", ds_name, tag)))
+          sprintf("results_%s_FMM_%s_%s.rds", ds_name, tag, method)))
   df
 }
 
-cat("\n=== ROW 1: Active — ω sweep (β = π) ===\n")
-for (ds_name in names(active_datasets)) {
-  ds  <- active_datasets[[ds_name]]
-  cat(sprintf("\n  %s\n", gsub("\n.*","",ds$label)))
-  bio <- estCircadianParam(ds$mat, times = ds$tod, period = 24, verbose = TRUE)
-  all_results[[paste0("r1_", ds_name)]] <- run_dataset(
-    ds_name, ds, bio, "active", "omega", OMEGA_VALS,
-    fixed_omega = 1.0, fixed_beta = pi, tag = "active_omega")
+# ─── Helper: estimate pilot bio once per dataset ─────────────────────
+get_bio <- function(ds) {
+  if (!is.null(ds$bio_pre)) ds$bio_pre else
+    estCircadianParam(ds$mat, times = ds$tod, period = 24, verbose = TRUE)
 }
 
-cat("\n=== ROW 2: Passive — ω sweep (β = π) ===\n")
-for (ds_name in names(passive_datasets)) {
-  ds  <- passive_datasets[[ds_name]]
-  cat(sprintf("\n  %s\n", gsub("\n.*","",ds$label)))
-  bio <- if (!is.null(ds$bio_pre)) ds$bio_pre else
-         estCircadianParam(ds$mat, times = ds$tod, period = 24, verbose = TRUE)
-  all_results[[paste0("r2_", ds_name)]] <- run_dataset(
-    ds_name, ds, bio, "passive", "omega", OMEGA_VALS,
-    fixed_omega = 1.0, fixed_beta = pi, tag = "passive_omega")
-}
+# ─── Run all 6 rows × 2 methods ──────────────────────────────────────
+sweep_specs <- list(
+  list(row_a = 1, row_p = 2, param = "omega",
+       vals  = OMEGA_VALS, fw = 1.0,        fb = pi,       fa = NULL,
+       tag   = "omega"),
+  list(row_a = 3, row_p = 4, param = "beta",
+       vals  = BETA_VALS,  fw = OMEGA_FIXED, fb = pi,       fa = NULL,
+       tag   = "beta"),
+  list(row_a = 5, row_p = 6, param = "alpha",
+       vals  = ALPHA_VALS, fw = OMEGA_FIXED, fb = pi,       fa = 0,
+       tag   = "alpha")
+)
 
-cat(sprintf("\n=== ROW 3: Active — β sweep (ω = %.1f) ===\n", OMEGA_FIXED))
-for (ds_name in names(active_datasets)) {
-  ds  <- active_datasets[[ds_name]]
-  cat(sprintf("\n  %s\n", gsub("\n.*","",ds$label)))
-  bio <- estCircadianParam(ds$mat, times = ds$tod, period = 24, verbose = TRUE)
-  all_results[[paste0("r3_", ds_name)]] <- run_dataset(
-    ds_name, ds, bio, "active", "beta", BETA_VALS,
-    fixed_omega = OMEGA_FIXED, fixed_beta = pi, tag = "active_beta")
-}
+for (meth in METHODS) {
+  cat(sprintf("\n========== METHOD: %s ==========\n", meth))
+  nt <- if (meth == "FMM_LRT") fmm_null_table else NULL
 
-cat(sprintf("\n=== ROW 4: Passive — β sweep (ω = %.1f) ===\n", OMEGA_FIXED))
-for (ds_name in names(passive_datasets)) {
-  ds  <- passive_datasets[[ds_name]]
-  cat(sprintf("\n  %s\n", gsub("\n.*","",ds$label)))
-  bio <- if (!is.null(ds$bio_pre)) ds$bio_pre else
-         estCircadianParam(ds$mat, times = ds$tod, period = 24, verbose = TRUE)
-  all_results[[paste0("r4_", ds_name)]] <- run_dataset(
-    ds_name, ds, bio, "passive", "beta", BETA_VALS,
-    fixed_omega = OMEGA_FIXED, fixed_beta = pi, tag = "passive_beta")
+  for (sp in sweep_specs) {
+    cat(sprintf("\n--- %s sweep  (rows %d/%d) ---\n",
+                toupper(sp$param), sp$row_a, sp$row_p))
+
+    # Active datasets
+    cat(sprintf("  == Active (rows %d) ==\n", sp$row_a))
+    for (ds_name in names(active_datasets)) {
+      ds  <- active_datasets[[ds_name]]
+      cat(sprintf("    %s\n", gsub("\n.*","",ds$label)))
+      bio <- get_bio(ds)
+      key <- sprintf("r%d_%s_%s", sp$row_a, ds_name, meth)
+      all_results[[key]] <- run_dataset(
+        ds_name, ds, bio, "active", sp$param, sp$vals,
+        fixed_omega = sp$fw, fixed_beta = sp$fb, fixed_alpha = sp$fa,
+        method = meth, null_table = nt,
+        tag = sprintf("active_%s", sp$tag))
+    }
+
+    # Passive datasets
+    cat(sprintf("  == Passive (rows %d) ==\n", sp$row_p))
+    for (ds_name in names(passive_datasets)) {
+      ds  <- passive_datasets[[ds_name]]
+      cat(sprintf("    %s\n", gsub("\n.*","",ds$label)))
+      bio <- get_bio(ds)
+      key <- sprintf("r%d_%s_%s", sp$row_p, ds_name, meth)
+      all_results[[key]] <- run_dataset(
+        ds_name, ds, bio, "passive", sp$param, sp$vals,
+        fixed_omega = sp$fw, fixed_beta = sp$fb, fixed_alpha = sp$fa,
+        method = meth, null_table = nt,
+        tag = sprintf("passive_%s", sp$tag))
+    }
+  }
 }
 
 # =====================================================================
@@ -338,9 +386,16 @@ theme_fig4 <- theme_bw(base_size = 11) + theme(
 
 col_labeller <- as_labeller(snr_col_labels)
 
-# ── Generate figure via plotFMMViolation ─────────────────────────
-fig4_path <- file.path(out_dir, "figures", "fig4_fmm_violation.pdf")
-plotFMMViolation(full_df, nsims = NSIMS, omega_fixed = OMEGA_FIXED,
-                 output_file = fig4_path, width = 16, height = 14)
-cat(sprintf("\nSaved: %s\n", fig4_path))
+# ── Generate one figure per detection method ─────────────────────
+for (meth in METHODS) {
+  df_meth <- full_df[full_df$method == meth, ]
+  fig_path <- file.path(out_dir, "figures",
+                        sprintf("fig4_fmm_%s.pdf", tolower(meth)))
+  plotFMMViolation(df_meth, nsims = NSIMS, omega_fixed = OMEGA_FIXED,
+                   output_file = fig_path, width = 16, height = 21)
+  # also save to main_figures
+  main_path <- sprintf("output/main_figures/Fig4_FMM_%s.pdf", meth)
+  file.copy(fig_path, main_path, overwrite = TRUE)
+  cat(sprintf("Saved: %s\n", fig_path))
+}
 cat("\n=== Done ===\n")

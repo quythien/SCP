@@ -626,7 +626,7 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
 #' @seealso \code{\link{simCircadianSingleCohort}}, \code{\link{estCircadianParam}},
 #'   \code{\link{plotFMMViolation}}
 simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
-                            seed = NULL) {
+                            alpha_fixed = NULL, seed = NULL) {
   stopifnot(inherits(bio.opts, "CircadianBioOptions"))
   if (omega < 0 || omega > 1)
     stop("omega must be in [0, 1]; got ", omega)
@@ -669,7 +669,11 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
       amp_g[rhythmic_id] <- pmax(
         sample(bio.opts$amplitude, n_rhythmic, replace = TRUE), 0.05)
     }
-    phase_g[rhythmic_id] <- sample(bio.opts$phase, n_rhythmic, replace = TRUE)
+    if (!is.null(alpha_fixed)) {
+      phase_g[rhythmic_id] <- alpha_fixed   # override: all rhythmic genes share this acrophase
+    } else {
+      phase_g[rhythmic_id] <- sample(bio.opts$phase, n_rhythmic, replace = TRUE)
+    }
   }
 
   r_values <- amp_g / sigma_g
