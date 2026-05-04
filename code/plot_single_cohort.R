@@ -218,8 +218,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   matplot(seq_len(n_strata_plt), 100 * t(mean_pow_plt[disp_idx, , drop = FALSE]),
           type = "l", lwd = 2, col = size_colors[disp_idx], lty = 1,
           xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, 100), bty = "l",
-          xlab = "r = A/sigma", ylab = "Power (%)",
-          main = sprintf("Stratified Power by r (%s)", fdr_label), xaxt = "n")
+          xlab = expression(tilde(r) == A/sigma), ylab = "Power (%)",
+          main = bquote("Stratified Power by" ~ tilde(r) ~ .(sprintf("(%s)", fdr_label))), xaxt = "n")
   axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 0.6)
   for (j in disp_idx) {
     points(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
@@ -241,8 +241,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   plot(seq_len(n_strata_plt), rep(0, n_strata_plt),
        type = "n", bty = "l",
        xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, y_max_TD),
-       xlab = "r = A/sigma", ylab = "# True Discoveries",
-       main = sprintf("True Discoveries by r (%s)", fdr_label), xaxt = "n")
+       xlab = expression(tilde(r) == A/sigma), ylab = "# True Discoveries",
+       main = bquote("True Discoveries by" ~ tilde(r) ~ .(sprintf("(%s)", fdr_label))), xaxt = "n")
   axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 0.6)
 
   # Gene-count overlay as step histogram (bars span k-0.5 to k+0.5, centered on labels)

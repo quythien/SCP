@@ -28,7 +28,9 @@ optional_packages = c(
   "rain",          # For RAIN rhythmicity detection (detect_RAIN)
   "circacompare",  # For CircaCompare differential analysis (detect_CircaCompare)
   "limorhyde",     # For LimoRhyde differential rhythmicity (detect_LimoRhyde)
-  "FMM"            # For FMM waveform simulation (simCircadianFMM)
+  "FMM",           # For FMM waveform simulation (simCircadianFMM)
+  "tidyr",         # For plotFMMDifferential() (pivot_longer)
+  "dplyr"          # For plotFMMDifferential() (data manipulation)
 )
 
 cat("Checking required packages...\n")
