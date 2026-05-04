@@ -48,10 +48,13 @@ plotBvsMPower <- function(x,
   # ── Extract tidy data frame ─────────────────────────────────────
   if (inherits(x, "SCPSingleResult")) {
     df <- x$power_df
+  } else if (is.list(x) && !is.data.frame(x) &&
+             all(vapply(x, inherits, FALSE, "SCPSingleResult"))) {
+    df <- do.call(rbind, lapply(x, `[[`, "power_df"))
   } else if (is.data.frame(x)) {
     df <- x
   } else {
-    stop("x must be an SCPSingleResult or a data.frame with columns N, B, power, power_se")
+    stop("x must be an SCPSingleResult, a list of SCPSingleResult, or a data.frame with columns N, B, power, power_se")
   }
 
   required_cols <- c("N", "B", "power", "power_se")

@@ -891,6 +891,12 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
 
       mesor_g <- bio.opts$lBaselineExpr
       sigma_g <- exp(bio.opts$lOD)
+      # Resample to match ngenes if pilot vectors are shorter (bio$ngenes override)
+      if (length(mesor_g) != ngenes) {
+        idx     <- sample(length(mesor_g), ngenes, replace = TRUE)
+        mesor_g <- mesor_g[idx]
+        sigma_g <- sigma_g[idx]
+      }
       amp_g   <- numeric(ngenes)
       phase_g <- numeric(ngenes)
 
