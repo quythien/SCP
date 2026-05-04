@@ -390,17 +390,26 @@ CircadianBioOptions <- function(ngenes = 5000,
 #'
 #' @return Object of class "CircadianDesignOptions"
 CircadianDesignOptions <- function(sample_sizes = c(10, 20, 40, 60, 80, 100),
-                                   nsims = 100,
-                                   design = c("active", "passive"),
-                                   cts = NULL,
-                                   B_values = NULL,
-                                   test_types = c("DR", "DP", "DM")) {
+                                   nsims      = 100,
+                                   design     = c("active", "passive"),
+                                   cts        = NULL,
+                                   B_values   = NULL,
+                                   test_types = c("DR", "DP", "DM"),
+                                   omega      = 1.0,
+                                   beta       = pi) {
+  # omega: FMM waveform shape parameter.
+  #   omega = 1  (default) → pure cosinor simulation (traditional path).
+  #   omega < 1  → FMM non-sinusoidal simulation via simCircadianFMM().
+  #   omega = 0  is not allowed (degenerate flat waveform).
+  # beta: FMM orientation parameter (peak location offset, default pi).
+  #   Only used when omega < 1; ignored for cosinor simulation.
 
   design <- match.arg(design)
   stopifnot(all(sample_sizes > 0), nsims > 0)
-  if (design == "passive" && is.null(cts)) {
+  if (design == "passive" && is.null(cts))
     stop("cts (time-of-day vector) is required for passive design")
-  }
+  if (omega <= 0 || omega > 1)
+    stop("omega must be in (0, 1]. Use omega = 1 (default) for the cosinor path.")
 
   opts <- list(
     sample_sizes = sample_sizes,
@@ -408,7 +417,9 @@ CircadianDesignOptions <- function(sample_sizes = c(10, 20, 40, 60, 80, 100),
     design       = design,
     cts          = cts,
     B_values     = B_values,
-    test_types   = test_types
+    test_types   = test_types,
+    omega        = omega,
+    beta         = beta
   )
   class(opts) <- "CircadianDesignOptions"
   opts
@@ -653,6 +664,13 @@ print.CircadianDesignOptions <- function(x, ...) {
   }
   if (!is.null(x$cts)) {
     cat(sprintf("  cts:            %d time points\n", length(x$cts)))
+  }
+  omega <- x$omega %||% 1.0
+  if (omega < 1.0) {
+    cat(sprintf("  sim model:      FMM  (omega = %.2f, beta = %.4f)\n",
+                omega, x$beta %||% pi))
+  } else {
+    cat("  sim model:      cosinor  (omega = 1, traditional)\n")
   }
   invisible(x)
 }

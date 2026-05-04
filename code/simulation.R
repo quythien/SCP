@@ -483,10 +483,23 @@ simCircadianDiff <- function(ngenes = 5000,
 #'
 #' @seealso \code{\link{estCircadianParam}}, \code{\link{simCircadianDiff}}
 simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
+                                     omega = 1.0, beta = pi,
                                      seed = NULL) {
   stopifnot(inherits(bio.opts, "CircadianBioOptions"))
+  if (omega <= 0 || omega > 1)
+    stop("omega must be in (0, 1]. Use omega = 1 (default) for cosinor simulation.")
+
+  # FMM and Fourier harmonic paths are mutually exclusive.
+  # omega < 1 activates the FMM generator; alpha2/alpha3 are then ignored.
+  if (omega < 1.0 && (alpha2 != 0 || alpha3 != 0))
+    warning("simCircadianSingleCohort: omega < 1 activates FMM simulation; ",
+            "alpha2/alpha3 are ignored. Set omega = 1 to use the Fourier harmonic path.")
 
   if (!is.null(seed)) set.seed(seed)
+
+  # FMM path: non-sinusoidal waveform when omega < 1
+  if (omega < 1.0)
+    return(simCircadianFMM(bio.opts, cts, omega = omega, beta = beta))
 
   ngenes        <- bio.opts$ngenes
   prop_rhythmic <- bio.opts$prop_rhythmic
