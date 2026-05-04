@@ -185,8 +185,9 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   # Open device
   # ------------------------------------------------------------------
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
-  par(mfrow = c(1, 3), mai = c(0.9, 1.0, 0.5, 0.2),
-      mgp = c(3, 0.5, 0), oma = c(0, 0, 2, 0))
+  par(mfrow = c(1, 3), mai = c(0.8, 0.9, 0.45, 0.15),
+      mgp = c(2.6, 0.5, 0), oma = c(0, 0, 1.8, 0),
+      cex.axis = 1.05, cex.lab = 1.1, cex.main = 1.05)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
   # ---- Panel A: marginal power vs n, multiple FDR lines ----
