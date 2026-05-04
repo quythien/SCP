@@ -336,8 +336,8 @@ plotDiffPower <- function(res_list,
               type = "l", lwd = 2, col = size_colors[disp_idx], lty = 1,
               xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, 100), bty = "l",
               xaxt = "n",
-              xlab = "r = A/sigma", ylab = "Power (%)",
-              main = sprintf("Stratified Power by r\n(%s)", fdr_label),
+              xlab = expression(tilde(r) == A/sigma), ylab = "Power (%)",
+              main = bquote("Stratified Power by" ~ tilde(r) ~ .(sprintf("(%s)", fdr_label))),
               cex.main = 0.75)
       axis(1, at = seq_len(n_strata_plt), labels = strata_lbl,
            las = 2, cex.axis = 0.6)
@@ -359,8 +359,8 @@ plotDiffPower <- function(res_list,
       plot(seq_len(n_strata_plt), rep(0, n_strata_plt),
            type = "n", bty = "l", xaxt = "n",
            xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, y_max_TD),
-           xlab = "r = A/sigma", ylab = sprintf("# True %s Discoveries", ep),
-           main = sprintf("True Discoveries by r\n(%s)", fdr_label),
+           xlab = expression(tilde(r) == A/sigma), ylab = sprintf("# True %s Discoveries", ep),
+           main = bquote("True Discoveries by" ~ tilde(r) ~ .(sprintf("(%s)", fdr_label))),
            cex.main = 0.75)
       axis(1, at = seq_len(n_strata_plt), labels = strata_lbl,
            las = 2, cex.axis = 0.6)

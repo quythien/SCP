@@ -7,7 +7,7 @@
 #'
 #' Three panels ordered by pilot size:
 #'   A. Baboon LUN          n_pilot = 12   active  B=4   r~1.72  (small pilot → wide CI)
-#'   B. Mouse D1 striatum   n_pilot = 45   passive B=4   r~0.65  (moderate pilot)
+#'   B. Mouse D1 striatum   n_pilot = 45   active  B=6   r~0.65  (moderate pilot)
 #'   C. Seney CTL ACC       n_pilot = 60   passive B=4   r~0.79  (larger pilot → narrow CI)
 #'
 #' Story: overprediction gap (plug-in minus bootstrap mean) and CI width both
@@ -149,10 +149,10 @@ pA <- .run_sc_comparison(mat_bab, tod_bab, bio_bab, N_GRID_BAB, B_VAL,
 
 
 # =======================================================================
-# PANEL B: Mouse D1 striatum (n=45, passive, r~0.65)
+# PANEL B: Mouse D1 striatum (n=45, active B=6, r~0.65)
 # =======================================================================
 cat("\n================================================================\n")
-cat("PANEL B: Mouse D1 striatum (n=45, passive, r~0.65)\n")
+cat("PANEL B: Mouse D1 striatum (n=45, active B=6, r~0.65)\n")
 cat("================================================================\n")
 
 N_GRID_D1 <- if (SMOKE_TEST) c(40L, 80L, 120L) else c(40L, 60L, 80L, 120L, 160L, 200L, 250L, 300L)
@@ -177,7 +177,7 @@ bio_d1 <- estCircadianParam(mat_d1, times = tod_d1, period = 24,
 bio_d1$ngenes <- NGENES
 
 pB <- .run_sc_comparison(mat_d1, tod_d1, bio_d1, N_GRID_D1, B_VAL,
-                          sprintf("Mouse D1 (n=%d, r~0.65)", ncol(mat_d1)),
+                          sprintf("Mouse D1 (n=%d, active B=6, r̃ ≈0.65)", ncol(mat_d1)),
                           file.path(out_dir, "results", "panelB_d1"))
 
 
@@ -215,7 +215,7 @@ bio_sen <- estCircadianParam(mat_sen, times = tod_sen, period = 24,
 bio_sen$ngenes <- NGENES
 
 pC <- .run_sc_comparison(mat_sen, tod_sen, bio_sen, N_GRID_SEN, B_VAL,
-                          sprintf("Seney CTL (n=%d, r~0.79)", ncol(mat_sen)),
+                          sprintf("Human post-mortem ACC (n=%d, r̃ ≈0.79)", ncol(mat_sen)),
                           file.path(out_dir, "results", "panelC_seney"))
 
 

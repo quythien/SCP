@@ -182,9 +182,9 @@ cat("\nGenerating Figure 3...\n")
 fig3_dat <- res_df[res_df$alpha2 == 0, ]
 fig3_dat$dataset_label <- factor(fig3_dat$dataset,
   levels = c("LIV", "LUN", "D1"),
-  labels = c("Mouse LIV\n(r~2.88, strong)",
-             "Baboon LUN\n(r~1.72, moderate)",
-             "Mouse D1\n(r~0.65, weak)"))
+  labels = c("'Mouse LIV'~(tilde(r)%~~%2.88*', strong')",
+             "'Baboon LUN'~(tilde(r)%~~%1.72*', moderate')",
+             "'Mouse D1 Striatum'~(tilde(r)%~~%0.65*', weak')"))
 fig3_dat$B_fac <- factor(fig3_dat$B, levels = B_VALS)
 
 p3 <- ggplot(fig3_dat, aes(x = N, y = 100 * power, colour = B_fac, group = B_fac)) +
@@ -193,7 +193,7 @@ p3 <- ggplot(fig3_dat, aes(x = N, y = 100 * power, colour = B_fac, group = B_fac
   geom_line(linewidth = 0.8) +
   geom_point(size = 1.5) +
   geom_hline(yintercept = 80, linetype = "dashed", colour = "grey50", linewidth = 0.4) +
-  facet_wrap(~ dataset_label, nrow = 1) +
+  facet_wrap(~ dataset_label, nrow = 1, labeller = label_parsed) +
   scale_colour_manual(values = b_colors, labels = b_labels, name = "Time bins (B)") +
   scale_fill_manual(values   = b_colors, labels = b_labels, name = "Time bins (B)") +
   scale_x_continuous(breaks = seq(12, 96, by = 12)) +

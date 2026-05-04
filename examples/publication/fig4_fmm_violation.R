@@ -307,8 +307,8 @@ active_labels  <- sapply(active_datasets,  function(d) d$label)
 passive_labels <- sapply(passive_datasets, function(d) d$label)
 
 full_df$omega_fac   <- factor(as.character(full_df$omega), levels = omega_levels)
-full_df$design_row  <- factor(full_df$design_row,
-  levels = c("Active (B = 12, every 2h)", "Passive"))
+# design_row levels are re-derived internally by plotFMMViolation via grepl("^Active", ...)
+# Do not re-factor here to avoid level mismatch with actual sweep_label strings
 full_df$snr_col <- factor(full_df$snr_col, levels = c("Strong", "Moderate", "Weak"))
 
 # Build column headers that include both SNR tier and dataset names
@@ -338,54 +338,7 @@ theme_fig4 <- theme_bw(base_size = 11) + theme(
 
 col_labeller <- as_labeller(snr_col_labels)
 
-make_panel <- function(sub_df, sweep_fac_levels, colors, color_labels,
-                        legend_name, x_label, title_str) {
-  sub_df$sweep_fac  <- factor(as.character(sub_df$sweep_val), levels = sweep_fac_levels)
-  sub_df$design_row <- factor(sub_df$design_row)
-  sub_df$snr_col    <- factor(sub_df$snr_col, levels = c("Strong","Moderate","Weak"))
-  ggplot(sub_df, aes(x=N, y=100*power, colour=sweep_fac, group=sweep_fac)) +
-    geom_errorbar(aes(ymin=100*(power-power_sd), ymax=100*(power+power_sd)),
-                  width=2, linewidth=0.45, alpha=0.8) +
-    geom_line(linewidth=0.8) + geom_point(size=1.5) +
-    geom_hline(yintercept=80, linetype="dashed", colour="grey50", linewidth=0.4) +
-    facet_grid(design_row ~ snr_col, labeller=labeller(snr_col=col_labeller)) +
-    scale_colour_manual(values=colors, labels=color_labels, name=legend_name) +
-    scale_fill_manual(values=colors, labels=color_labels, name=legend_name) +
-    scale_x_continuous(breaks=x_breaks) +
-    scale_y_continuous(limits=c(0,100), breaks=seq(0,100,20)) +
-    labs(x=x_label, y="Power (%)", title=title_str) +
-    theme_fig4
-}
-
-# ── Rows 1–2: ω sweep ─────────────────────────────────────────────
-p_omega <- make_panel(
-  full_df[full_df$sweep_param=="omega",],
-  sweep_fac_levels = omega_levels,
-  colors = omega_colors, color_labels = omega_labels,
-  legend_name = expression(omega),
-  x_label = "",
-  title_str = "(A) Waveform shape: varying ω  (fixed β = π)"
-)
-
-# ── Rows 3–4: β sweep ─────────────────────────────────────────────
-p_beta <- make_panel(
-  full_df[full_df$sweep_param=="beta",],
-  sweep_fac_levels = beta_levels,
-  colors = beta_colors, color_labels = beta_labels,
-  legend_name = expression(beta),
-  x_label = "Total sample size N",
-  title_str = sprintf("(B) Waveform orientation: varying β  (fixed ω = %.1f)", OMEGA_FIXED)
-)
-
-# ── Combine and save ──────────────────────────────────────────────
-suppressPackageStartupMessages(library(patchwork))
-p4_combined <- p_omega / p_beta +
-  plot_layout(heights = c(1, 1)) +
-  plot_annotation(
-    title   = "DCP power under cosinor violation: waveform robustness for single-cohort biomarker detection",
-    theme   = theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 13))
-  )
-
+# ── Generate figure via plotFMMViolation ─────────────────────────
 fig4_path <- file.path(out_dir, "figures", "fig4_fmm_violation.pdf")
 plotFMMViolation(full_df, nsims = NSIMS, omega_fixed = OMEGA_FIXED,
                  output_file = fig4_path, width = 16, height = 14)
