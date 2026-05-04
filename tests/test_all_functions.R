@@ -683,7 +683,287 @@ if (!is.null(np)) {
 }
 
 # ---------------------------------------------------------------------------
-# 18.  Summary
+# 18. (expanded) FMM pipeline tests
+# ---------------------------------------------------------------------------
+cat("\n--- Section 18: FMM pipeline ---\n")
+
+if (!requireNamespace("FMM", quietly = TRUE)) {
+  cat("  [SKIP] Section 18 — FMM package not installed\n")
+} else {
+
+  # --- Pilot data with meaningful rhythmic signal for FMM tests ---
+  set.seed(42)
+  B_fmm  <- 6L
+  m_fmm  <- 2L
+  n_fmm  <- B_fmm * m_fmm
+  times_fmm <- rep(seq(0, 24 * (1 - 1 / B_fmm), length.out = B_fmm), each = m_fmm)
+  expr_fmm  <- matrix(rnorm(500L * n_fmm, 5, 1), 500L, n_fmm)
+  for (g in 1:80) expr_fmm[g, ] <- expr_fmm[g, ] + 1.5 * cos(2 * pi / 24 * times_fmm - pi / 3)
+  bio_fmm <- suppressWarnings(suppressMessages(
+    estCircadianParam(expr_fmm, times = times_fmm, period = 24, verbose = FALSE)
+  ))
+  bio_fmm$ngenes <- 200L
+
+  # 18.1 CircadianDesignOptions stores omega/beta correctly
+  d_fmm <- tryCatch(
+    CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 2L, design = "active",
+                           B_values = B_fmm, omega = 0.5, beta = pi),
+    error = function(e) NULL
+  )
+  .expect_true("FMM18.1: CircadianDesignOptions(omega=0.5) stores omega",
+               !is.null(d_fmm) && abs(d_fmm$omega - 0.5) < 1e-9)
+  .expect_true("FMM18.1: CircadianDesignOptions(omega=0.5) stores beta",
+               !is.null(d_fmm) && abs(d_fmm$beta - pi) < 1e-9)
+
+  # 18.2 CircadianDesignOptions(omega=0) must error
+  err_omega0 <- tryCatch(
+    { CircadianDesignOptions(sample_sizes = c(24), nsims = 2L, design = "active", omega = 0); FALSE },
+    error = function(e) TRUE
+  )
+  .expect_true("FMM18.2: CircadianDesignOptions(omega=0) errors", err_omega0)
+
+  # 18.3 CircadianDesignOptions(omega=1.5) must error
+  err_omega15 <- tryCatch(
+    { CircadianDesignOptions(sample_sizes = c(24), nsims = 2L, design = "active", omega = 1.5); FALSE },
+    error = function(e) TRUE
+  )
+  .expect_true("FMM18.3: CircadianDesignOptions(omega=1.5) errors", err_omega15)
+
+  # 18.4 simCircadianSingleCohort(omega=0.5) invokes FMM (expr dims correct)
+  cts_fmm_test <- rep(seq(0, 24 * (1 - 1 / B_fmm), length.out = B_fmm), each = m_fmm)
+  sc_fmm_test <- tryCatch(
+    simCircadianSingleCohort(bio_fmm, cts_fmm_test, omega = 0.5, beta = pi, seed = 42L),
+    error = function(e) { cat("  ERROR simCircadianSingleCohort(omega=0.5):", conditionMessage(e), "\n"); NULL }
+  )
+  .expect_true("FMM18.4: simCircadianSingleCohort(omega=0.5) returns non-NULL", !is.null(sc_fmm_test))
+  .expect_true("FMM18.4: expr dims [ngenes x n_fmm]",
+               !is.null(sc_fmm_test) &&
+               nrow(sc_fmm_test$expr) == 200L &&
+               ncol(sc_fmm_test$expr) == n_fmm)
+  .expect_true("FMM18.4: $is_rhythmic length == ngenes",
+               !is.null(sc_fmm_test) && length(sc_fmm_test$is_rhythmic) == 200L)
+
+  # 18.5 simCircadianSingleCohort(omega=1, alpha2=0.5) uses Fourier path — no warning expected
+  warnmsg_cosinor <- tryCatch({
+    withCallingHandlers(
+      simCircadianSingleCohort(bio_fmm, cts_fmm_test, omega = 1.0, alpha2 = 0.5, seed = 1L),
+      warning = function(w) invokeRestart("muffleWarning")
+    )
+    ""   # no warning = empty string
+  }, error = function(e) paste("ERROR:", conditionMessage(e)))
+  .expect_true("FMM18.5: simCircadianSingleCohort(omega=1, alpha2=0.5) does not error",
+               !startsWith(warnmsg_cosinor, "ERROR"))
+
+  # 18.6 simCircadianSingleCohort(omega=0.5, alpha2=0.5) warns about FMM precedence
+  saw_warn <- FALSE
+  tryCatch({
+    withCallingHandlers(
+      simCircadianSingleCohort(bio_fmm, cts_fmm_test, omega = 0.5, alpha2 = 0.5, seed = 1L),
+      warning = function(w) {
+        if (grepl("FMM|alpha2", conditionMessage(w), ignore.case = TRUE))
+          saw_warn <<- TRUE
+        invokeRestart("muffleWarning")
+      }
+    )
+  }, error = function(e) NULL)
+  .expect_true("FMM18.6: simCircadianSingleCohort(omega=0.5, alpha2=0.5) warns about FMM precedence",
+               saw_warn)
+
+  # 18.7 runSingleCohortGrid with omega=0.5 returns valid SCPSingleResult with power in [0,1]
+  design_fmm_grid <- tryCatch(
+    CircadianDesignOptions(
+      sample_sizes = c(24L, 48L),
+      nsims        = 2L,
+      design       = "active",
+      B_values     = B_fmm,
+      omega        = 0.5
+    ),
+    error = function(e) NULL
+  )
+  sc_fmm_grid <- if (!is.null(design_fmm_grid)) {
+    tryCatch(
+      suppressWarnings(suppressMessages(
+        runSingleCohortGrid(bio_fmm, design_fmm_grid,
+                            CircadianAnalysisOptions(),
+                            methods = "DCP", mc.cores = 1L, verbose = FALSE)
+      )),
+      error = function(e) { cat("  ERROR runSingleCohortGrid(omega=0.5):", conditionMessage(e), "\n"); NULL }
+    )
+  } else NULL
+  .expect_class("FMM18.7: runSingleCohortGrid(omega=0.5) returns SCPSingleResult",
+                sc_fmm_grid, "SCPSingleResult")
+  .expect_range("FMM18.7: power_df$power in [0,1]",
+                if (!is.null(sc_fmm_grid)) sc_fmm_grid$power_df$power else NA_real_)
+
+  # 18.8 runSingleCohortPower with omega=0.5 returns valid result
+  design_fmm_sc <- tryCatch(
+    CircadianDesignOptions(
+      sample_sizes = c(24L, 48L),
+      nsims        = 2L,
+      design       = "active",
+      omega        = 0.5
+    ),
+    error = function(e) NULL
+  )
+  sc_fmm_power <- if (!is.null(design_fmm_sc)) {
+    tryCatch(
+      suppressWarnings(suppressMessages(
+        runSingleCohortPower(bio_fmm, design_fmm_sc,
+                             CircadianAnalysisOptions(),
+                             methods = "DCP", plot = FALSE,
+                             mc.cores = 1L, verbose = FALSE)
+      )),
+      error = function(e) { cat("  ERROR runSingleCohortPower(omega=0.5):", conditionMessage(e), "\n"); NULL }
+    )
+  } else NULL
+  .expect_true("FMM18.8: runSingleCohortPower(omega=0.5) returns non-NULL", !is.null(sc_fmm_power))
+  .expect_range("FMM18.8: $marginal_power in [0,1]",
+                if (!is.null(sc_fmm_power))
+                  sc_fmm_power$marginal_power[!is.na(sc_fmm_power$marginal_power)]
+                else NA_real_)
+
+  # 18.9 FMM and cosinor generate structurally different expression matrices
+  # Directly compare expression from simCircadianSingleCohort(omega=1) vs (omega=0.5).
+  # The two generators use different code paths (cosinor vs FMM interpolation), so
+  # the resulting expression matrices must not be byte-identical regardless of power.
+  set.seed(123)
+  sc_cos09 <- tryCatch(
+    simCircadianSingleCohort(bio_fmm, cts_fmm_test, omega = 1.0, seed = 77L),
+    error = function(e) NULL
+  )
+  set.seed(123)
+  sc_fmm09 <- tryCatch(
+    simCircadianSingleCohort(bio_fmm, cts_fmm_test, omega = 0.5, seed = 77L),
+    error = function(e) NULL
+  )
+  .expect_true("FMM18.9: cosinor and FMM expression matrices are not identical (different generators)",
+               !is.null(sc_cos09) && !is.null(sc_fmm09) &&
+               !identical(sc_cos09$expr, sc_fmm09$expr))
+}
+
+# ---------------------------------------------------------------------------
+# 19. npower additional tests
+# ---------------------------------------------------------------------------
+cat("\n--- Section 19: npower additional tests ---\n")
+
+if (!is.null(sc_full)) {
+
+  # 19.1  n_interp <= n_grid always (when both defined and target reached)
+  np19 <- tryCatch(npower(sc_full, target_power = 0.40, fdr = 0.05, interpolate = TRUE),
+                   error = function(e) NULL)
+  np19g <- tryCatch(npower(sc_full, target_power = 0.40, fdr = 0.05, interpolate = FALSE),
+                    error = function(e) NULL)
+  .expect_true("NPW19.1: npower()$n <= npower()$n_grid (interpolation is always <= grid snap)",
+               !is.null(np19) && !is.null(np19g) &&
+               (is.na(np19$n) || is.na(np19g$n_grid) ||
+                np19$n <= np19g$n_grid))
+
+  # 19.2  interpolate=FALSE: $n == $n_grid always (even when both NA)
+  np19f <- tryCatch(npower(sc_full, target_power = 0.99, fdr = 0.05, interpolate = FALSE),
+                    error = function(e) NULL)
+  .expect_true("NPW19.2: npower(interpolate=FALSE)$n == $n_grid",
+               !is.null(np19f) && identical(np19f$n, np19f$n_grid))
+
+  # 19.3  n_interp is NA when interpolate=FALSE
+  np19fa <- tryCatch(npower(sc_full, target_power = 0.40, fdr = 0.05, interpolate = FALSE),
+                     error = function(e) NULL)
+  .expect_true("NPW19.3: npower(interpolate=FALSE)$n_interp is NA",
+               !is.null(np19fa) && is.na(np19fa$n_interp))
+
+} else {
+  cat("  [SKIP] Section 19 — sc_full unavailable\n")
+}
+
+# ---------------------------------------------------------------------------
+# 20. fitCosinorAll sigma fix
+# ---------------------------------------------------------------------------
+cat("\n--- Section 20: fitCosinorAll sigma consistency ---\n")
+
+{
+  # Build a small, perfectly rhythmic gene to compare fitCosinorAll sigma
+  # against what one_cosinor_OLS would produce directly.
+  set.seed(999)
+  n_sigma  <- 24L   # >= 10 per the test requirement
+  t_sigma  <- seq(0, 23, length.out = n_sigma)
+  y_sigma  <- 5 + 1.2 * cos(2 * pi / 24 * t_sigma - pi / 4) + rnorm(n_sigma, 0, 0.4)
+
+  # Expected sigma: RSS / (n - 3) as implemented in fitCosinorAll
+  fit_ref  <- tryCatch(one_cosinor_OLS(t_sigma, y_sigma, period = 24), error = function(e) NULL)
+  if (!is.null(fit_ref)) {
+    yhat_ref <- fit_ref$M + fit_ref$A * cos(2 * pi / 24 * t_sigma - 2 * pi / 24 * fit_ref$phi)
+    sigma_ref <- sqrt(sum((y_sigma - yhat_ref)^2) / (n_sigma - 3L))
+
+    fca20 <- tryCatch(fitCosinorAll(matrix(y_sigma, nrow = 1), t_sigma, period = 24),
+                      error = function(e) NULL)
+    .expect_true("SIG20.1: fitCosinorAll sigma within 15% of one_cosinor_OLS sigma (n=24)",
+                 !is.null(fca20) && !is.na(fca20$sigma[1]) && !is.na(sigma_ref) &&
+                 abs(fca20$sigma[1] - sigma_ref) / max(sigma_ref, 1e-9) < 0.15)
+
+    # Cross-check: both should use n-3 denominator (exact equality, not just 15%)
+    .expect_true("SIG20.2: fitCosinorAll sigma == one_cosinor_OLS RSS/(n-3) exactly",
+                 !is.null(fca20) && !is.na(fca20$sigma[1]) &&
+                 abs(fca20$sigma[1] - sigma_ref) < 1e-10)
+  } else {
+    cat("  [SKIP] Section 20 — one_cosinor_OLS failed\n")
+  }
+}
+
+# ---------------------------------------------------------------------------
+# 21. plotBvsMPower list input
+# ---------------------------------------------------------------------------
+cat("\n--- Section 21: plotBvsMPower list of SCPSingleResult ---\n")
+
+if (requireNamespace("ggplot2", quietly = TRUE) && !is.null(sc_grid)) {
+
+  # Create a second SCPSingleResult with a different dataset label
+  design_grid2 <- tryCatch(
+    CircadianDesignOptions(
+      sample_sizes = c(12L, 24L),
+      nsims        = 2L,
+      design       = "active",
+      B_values     = c(4L, 6L)
+    ),
+    error = function(e) NULL
+  )
+  sc_grid2 <- if (!is.null(design_grid2)) {
+    tryCatch(
+      suppressWarnings(suppressMessages(
+        runSingleCohortGrid(bio, design_grid2, analysis,
+                            methods = "DCP", mc.cores = 1L, verbose = FALSE)
+      )), error = function(e) NULL)
+  } else NULL
+
+  if (!is.null(sc_grid2)) {
+    # Tag each result with a dataset label for faceting
+    sc_grid$power_df$dataset  <- "DatasetA"
+    sc_grid2$power_df$dataset <- "DatasetB"
+
+    .expect_no_error(
+      "PLT21.1: plotBvsMPower(list(res1, res2)) runs without error",
+      function() {
+        p <- plotBvsMPower(list(sc_grid, sc_grid2), nsims = 2L)
+        invisible(p)
+      }
+    )
+
+    # Also verify that a single SCPSingleResult still works
+    .expect_no_error(
+      "PLT21.2: plotBvsMPower(single SCPSingleResult) runs without error",
+      function() {
+        p <- plotBvsMPower(sc_grid, nsims = 2L)
+        invisible(p)
+      }
+    )
+  } else {
+    cat("  [SKIP] PLT21 — sc_grid2 creation failed\n")
+  }
+
+} else {
+  cat("  [SKIP] Section 21 — ggplot2 unavailable or sc_grid is NULL\n")
+}
+
+# ---------------------------------------------------------------------------
+# Summary (updated)
 # ---------------------------------------------------------------------------
 total <- .PASS + .FAIL
 cat(sprintf("\n=================================================\n"))

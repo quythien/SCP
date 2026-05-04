@@ -471,7 +471,15 @@ simCircadianDiff <- function(ngenes = 5000,
 #'   the number of simulated samples (\code{N}).
 #' @param alpha2 Second-harmonic coefficient (default 0). Adds a
 #'   \eqn{A \cdot \alpha_2 \cos(4\pi t/T - 4\pi\phi/T)} term.
-#' @param alpha3 Third-harmonic coefficient (default 0).
+#'   Only used when \code{omega = 1} (cosinor path). Ignored when \code{omega < 1}.
+#' @param alpha3 Third-harmonic coefficient (default 0). Same conditions as \code{alpha2}.
+#' @param omega FMM waveform shape parameter in \eqn{(0, 1]} (default \code{1.0}).
+#'   \code{omega = 1} uses the traditional cosinor generator (with \code{alpha2}/\code{alpha3}).
+#'   \code{omega < 1} uses \code{\link{simCircadianFMM}} — a non-sinusoidal Möbius waveform.
+#'   The two paths are mutually exclusive: FMM takes precedence when \code{omega < 1}.
+#' @param beta FMM orientation parameter (default \eqn{\pi}). Controls the phase of
+#'   waveform asymmetry. Only used when \code{omega < 1}. \eqn{\beta}-invariance
+#'   ensures DCP detection power is unaffected by \code{beta}.
 #' @param seed Optional integer random seed for reproducibility.
 #'
 #' @return Named list with:
@@ -505,7 +513,7 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
   prop_rhythmic <- bio.opts$prop_rhythmic
   period        <- bio.opts$period %||% 24
   N             <- length(cts)
-  omega         <- 2 * pi / period
+  omega_circ    <- 2 * pi / period   # circular frequency — distinct from FMM omega param
 
   has_joint <- !is.null(bio.opts$sigma_rhythmic) &&
                length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)
@@ -537,10 +545,16 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
       amp_g[rhythmic_id]   <- pmax(bio.opts$amplitude[ji], 0.05)
       sigma_g[rhythmic_id] <- pmax(bio.opts$sigma_rhythmic[ji], 1e-6)
     } else {
+      amp_src <- bio.opts$amplitude
       amp_g[rhythmic_id] <- pmax(
-        sample(bio.opts$amplitude, n_rhythmic, replace = TRUE), 0.05)
+        if (length(amp_src) == 1L) rep(amp_src, n_rhythmic)
+        else sample(amp_src, n_rhythmic, replace = TRUE), 0.05)
     }
-    phase_g[rhythmic_id] <- sample(bio.opts$phase, n_rhythmic, replace = TRUE)
+    phase_src <- bio.opts$phase
+    phase_g[rhythmic_id] <- if (length(phase_src) == 1L)
+      rep(phase_src, n_rhythmic)
+    else
+      sample(phase_src, n_rhythmic, replace = TRUE)
   }
 
   r_values <- amp_g / sigma_g
@@ -553,9 +567,9 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
     expr <- matrix(NA_real_, nrow = ngenes, ncol = N)
     for (g in seq_len(ngenes)) {
       mu <- mesor_g[g] +
-            amp_g[g] * (cos(omega * cts - omega * phase_g[g]) +
-                        alpha2 * cos(2 * omega * cts - 2 * omega * phase_g[g]) +
-                        alpha3 * cos(3 * omega * cts - 3 * omega * phase_g[g]))
+            amp_g[g] * (cos(omega_circ * cts - omega_circ * phase_g[g]) +
+                        alpha2 * cos(2 * omega_circ * cts - 2 * omega_circ * phase_g[g]) +
+                        alpha3 * cos(3 * omega_circ * cts - 3 * omega_circ * phase_g[g]))
       expr[g, ] <- rnorm(N, mu, sigma_g[g])
     }
   }
