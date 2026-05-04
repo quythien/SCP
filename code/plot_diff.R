@@ -234,10 +234,10 @@ plotDiffPower <- function(res_list,
   # ------------------------------------------------------------------
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
   par(mfrow = c(n_ep * n_comps, 3),
-      mai   = c(1.25, 0.9, 0.5, 0.15),
-      mgp   = c(3.0, 0.6, 0),
-      oma   = c(0, 0, 1.8, 0),
-      cex.axis = 1.0, cex.lab = 1.1, font.main = 2)
+      mai   = c(1.35, 1.0, 0.6, 0.15),
+      mgp   = c(3.2, 0.65, 0),
+      oma   = c(0, 0, 2.2, 0),
+      cex.axis = 1.05, cex.lab = 1.2, font.main = 2, cex.main = 1.05)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
   panel_data       <- list()
@@ -310,49 +310,49 @@ plotDiffPower <- function(res_list,
       row_label <- sprintf("%s — %s", ep, comp_label)
 
       # ---- Panel A: marginal power vs n ----
-      par(mgp = c(3.0, 0.6, 0))
+      par(mgp = c(3.2, 0.65, 0))
       matplot(ss_disp, 100 * marginal_mean[disp_idx, , drop = FALSE],
-              type = "b", pch = 19, lwd = 2,
+              type = "b", pch = 19, lwd = 2.2,
               col = thresh_cols, lty = 1,
               xlim = c(0, max(ss_disp) * 1.05), ylim = c(0, 100),
               xlab = "Sample size (n)", ylab = "Power (%)",
-              main = sprintf("%s — Genome-wide Power", row_label),
-              cex.main = 0.95)
+              main = sprintf("%s — Genome-wide Power", row_label))
       for (t in seq_len(n_thresh)) {
         add_se_bars(ss_disp, 100 * marginal_mean[disp_idx, t],
                     100 * marginal_se[disp_idx, t], col = thresh_cols[t])
       }
       vline_n <- n80_by_comp[[ci]]
-      abline(h = 80, lty = 2, col = "grey50", lwd = 1.2)
+      abline(h = 80, lty = 2, col = "grey50", lwd = 1.3)
       if (!is.na(vline_n) && is.finite(vline_n)) {
-        abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.5)
-        text(vline_n, 15, sprintf("n=%d", vline_n), col = "steelblue", cex = 0.72, adj = -0.1)
+        abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.8)
+        text(vline_n, 15, sprintf("n=%d", vline_n),
+             col = "steelblue", cex = 0.85, adj = -0.1, font = 2)
       }
       grid()
       legend("bottomright", thresh_labels,
-             col = thresh_cols, lty = 1, pch = 19, lwd = 2, cex = 0.72)
+             col = thresh_cols, lty = 1, pch = 19, lwd = 2.2, cex = 0.82)
 
-      # ---- Panel B: power by r-stratum — use larger mgp for las=2 + r̃ label ----
-      par(mgp = c(4.8, 0.6, 0))
+      # ---- Panel B: power by r-stratum — bold() needed for bquote titles ----
+      par(mgp = c(5.0, 0.65, 0))
       matplot(seq_len(n_strata_plt),
               100 * t(mean_pow_plt[disp_idx, , drop = FALSE]),
-              type = "l", lwd = 2, col = size_colors[disp_idx], lty = 1,
+              type = "l", lwd = 2.2, col = size_colors[disp_idx], lty = 1,
               xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, 100), bty = "l",
               xaxt = "n",
               xlab = expression(tilde(r) == A/sigma), ylab = "Power (%)",
-              main = bquote("Stratified Power by" ~ tilde(r) ~ .(sprintf("(%s)", fdr_label))),
-              cex.main = 0.95)
+              main = bquote(bold("Stratified Power by") ~
+                              bold(tilde(r)) ~ bold(.(sprintf("(%s)", fdr_label)))))
       axis(1, at = seq_len(n_strata_plt), labels = strata_lbl,
-           las = 2, cex.axis = 0.72)
+           las = 2, cex.axis = 0.82)
       for (j in disp_idx) {
         points(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
-               pch = 19, col = size_colors[j], cex = 0.65)
+               pch = 19, col = size_colors[j], cex = 0.75)
         add_se_bars(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
                     100 * se_pow_plt[j, ], col = size_colors[j])
       }
       grid()
       legend("bottomright", paste0("n=", ss_disp),
-             col = size_colors[disp_idx], lty = 1, lwd = 2, cex = 0.68)
+             col = size_colors[disp_idx], lty = 1, lwd = 2.2, cex = 0.80)
 
       # ---- Panel C: TD by r-stratum ----
       y_max_TD      <- max(gene_counts) * 1.15
@@ -363,20 +363,20 @@ plotDiffPower <- function(res_list,
            xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, y_max_TD),
            xlab = expression(tilde(r) == A/sigma),
            ylab = sprintf("# True %s Discoveries", ep),
-           main = bquote("True Discoveries by" ~ tilde(r) ~ .(sprintf("(%s)", fdr_label))),
-           cex.main = 0.95)
+           main = bquote(bold("True Discoveries by") ~
+                           bold(tilde(r)) ~ bold(.(sprintf("(%s)", fdr_label)))))
       axis(1, at = seq_len(n_strata_plt), labels = strata_lbl,
-           las = 2, cex.axis = 0.72)
+           las = 2, cex.axis = 0.82)
 
       step_x <- rep(seq(0.5, n_strata_plt + 0.5, by = 1), each = 2)
       step_y <- c(0, rep(scaled_counts, each = 2), 0)
       polygon(step_x, step_y, col = "#cccccc55", border = NA)
-      lines(step_x, step_y, col = "grey60", lwd = 1.5, lty = 2)
+      lines(step_x, step_y, col = "grey60", lwd = 1.8, lty = 2)
 
       for (j in disp_idx) {
-        lines(seq_len(n_strata_plt), mean_TD_plt[j, ], col = size_colors[j], lwd = 2)
+        lines(seq_len(n_strata_plt), mean_TD_plt[j, ], col = size_colors[j], lwd = 2.2)
         points(seq_len(n_strata_plt), mean_TD_plt[j, ], pch = 19,
-               col = size_colors[j], cex = 0.65)
+               col = size_colors[j], cex = 0.75)
         add_se_bars(seq_len(n_strata_plt), mean_TD_plt[j, ],
                     se_TD_plt[j, ], col = size_colors[j])
       }
@@ -385,8 +385,8 @@ plotDiffPower <- function(res_list,
              c(paste0("n=", ss_disp), "# Target Discoveries"),
              col = c(size_colors[disp_idx], "grey60"),
              lty = c(rep(1, length(disp_idx)), 2),
-             lwd = c(rep(2, length(disp_idx)), 1.5), cex = 0.68)
-      par(mgp = c(3.0, 0.6, 0))   # restore
+             lwd = c(rep(2.2, length(disp_idx)), 1.8), cex = 0.80)
+      par(mgp = c(3.2, 0.65, 0))   # restore
 
       panel_data[[paste(ep, ci, sep = "_")]] <- list(
         marginal_mean = marginal_mean, marginal_se = marginal_se,

@@ -187,9 +187,9 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
   # Panel A uses numeric x-axis (mgp[1]=3.0 fine)
   # Panels B & C use las=2 strata labels + tilde(r) xlabel — need mgp[1]=4.8
-  par(mfrow = c(1, 3), mai = c(1.3, 0.95, 0.55, 0.15),
-      mgp = c(3.0, 0.6, 0), oma = c(0, 0, 1.8, 0),
-      cex.axis = 1.0, cex.lab = 1.1, cex.main = 1.1, font.main = 2)
+  par(mfrow = c(1, 3), mai = c(1.35, 1.0, 0.6, 0.15),
+      mgp = c(3.2, 0.65, 0), oma = c(0, 0, 2.2, 0),
+      cex.axis = 1.05, cex.lab = 1.2, cex.main = 1.1, font.main = 2)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
   # ---- Panel A: marginal power vs n, multiple FDR lines ----
@@ -224,7 +224,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
           type = "l", lwd = 2, col = size_colors[disp_idx], lty = 1,
           xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, 100), bty = "l",
           xlab = expression(tilde(r) == A/sigma), ylab = "Power (%)",
-          main = bquote("Stratified Power by" ~ tilde(r) ~ .(sprintf("(%s)", fdr_label))),
+          main = bquote(bold("Stratified Power by") ~
+                          bold(tilde(r)) ~ bold(.(sprintf("(%s)", fdr_label)))),
           xaxt = "n")
   axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 0.72)
   for (j in disp_idx) {
@@ -246,7 +247,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
        type = "n", bty = "l",
        xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, y_max_TD),
        xlab = expression(tilde(r) == A/sigma), ylab = "# True Discoveries",
-       main = bquote("True Discoveries by" ~ tilde(r) ~ .(sprintf("(%s)", fdr_label))),
+       main = bquote(bold("True Discoveries by") ~
+                       bold(tilde(r)) ~ bold(.(sprintf("(%s)", fdr_label)))),
        xaxt = "n")
   axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 0.72)
 
