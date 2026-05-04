@@ -32,7 +32,7 @@
 | Given fixed N, how to spread across time points vs replicates? | `recommendDesign()` |
 | How wide are power estimates when the pilot is small? | `runBootstrapDesignGrid()` |
 
-The framework is **semiparametric**: amplitude, noise, and proportion-rhythmic distributions are estimated from real pilot data; the cosinor waveform structure governs simulation.
+The framework is **semiparametric**: amplitude, noise, and proportion-rhythmic distributions are estimated from real pilot data. The default simulation uses the cosinor model (pure sinusoid), but users can switch to the FMM (Frequency Modulated Möbius) model for robustness testing under non-sinusoidal waveforms by setting `omega < 1` in `CircadianDesignOptions`.
 
 ### Detection endpoints
 
@@ -391,7 +391,7 @@ saveRDS(res, "output/single_cohort_power.rds")   # save for replotting
 **When to use the simulation path:**
 - You have a pilot dataset with ≥ 15 samples
 - You plan to use JTK, RAIN, or MH (B-sensitive methods)
-- You want to evaluate cosinor waveform violation (α₂ > 0)
+- You want to evaluate robustness under non-sinusoidal waveforms (`omega < 1` or `alpha2 > 0`)
 - Final study design requiring publication-quality power estimates
 
 ### Multi-method B vs m sweep
@@ -403,9 +403,43 @@ the B-sensitivity guidance automatically. See [§6](#6-b-vs-m-trade-off-and-meth
 `runSingleCohortPower()` accepts a single method only; passing multiple methods
 raises a warning and uses only the first.
 
-### Cosinor violation parameter (α₂)
+### Choosing a data-generating model
 
-`alpha2` adds a second harmonic to the simulated signal:
+SCP supports two simulation paths, selected via `CircadianDesignOptions`:
+
+| Parameter | Value | Generator | Waveform | Use case |
+|-----------|-------|-----------|----------|----------|
+| `omega = 1` (default) | `alpha2 = 0` | Cosinor | Pure sinusoid | Standard power analysis |
+| `omega = 1` | `alpha2 > 0` | Fourier | 1st + 2nd harmonic | Mild Fourier violation |
+| `omega < 1` | (ignored) | FMM (Peddada 2019) | Non-sinusoidal Möbius | True waveform violation |
+
+The two paths are **mutually exclusive**: setting `omega < 1` activates FMM and `alpha2`/`alpha3` are ignored. A warning is raised if both are set.
+
+```r
+# Standard cosinor simulation (default)
+design <- CircadianDesignOptions(sample_sizes=c(40,80), nsims=100L, design="active",
+                                  cts=seq(0,22,by=2))
+
+# FMM non-sinusoidal simulation — same runner, different generator
+design_fmm <- CircadianDesignOptions(sample_sizes=c(40,80), nsims=100L, design="active",
+                                      cts=seq(0,22,by=2),
+                                      omega = 0.5,   # shape: 0.5 = moderately peaked
+                                      beta  = pi)    # orientation: symmetric peak (default)
+
+# Any detection method works with either design
+res_dcp  <- runSingleCohortPower(bio, design,     analysis, methods="DCP")
+res_fmm  <- runSingleCohortPower(bio, design_fmm, analysis, methods="DCP")
+res_rain <- runSingleCohortPower(bio, design_fmm, analysis, methods="RAIN")
+```
+
+**Interpreting `omega`:**
+- `omega = 1`: pure sinusoid — DCP has maximum power (model matches test)
+- `omega = 0.6`: mild asymmetry — DCP loses < 5pp; effective SNR = r · c(ω) where c(ω) = 2ω/(1+ω²)
+- `omega = 0.3`: strong peaking — meaningful power loss for DCP; MH/RAIN may outperform
+
+### Fourier violation parameter (α₂)
+
+When `omega = 1`, `alpha2` adds a second harmonic to the simulated signal:
 
 $$y \sim M + A\bigl[\cos(\omega t - \phi) + \alpha_2 \cos(2\omega t - \phi)\bigr] + \varepsilon$$
 
@@ -415,7 +449,7 @@ $$y \sim M + A\bigl[\cos(\omega t - \phi) + \alpha_2 \cos(2\omega t - \phi)\bigr
 | 0.5 | Moderate non-sinusoidal | Unchanged | Slight gain |
 | 1.0 | Equal 1st + 2nd harmonic | Unchanged | Clear gain at B ≥ 6 |
 
-DCP is omnibus and B-invariant; MH benefits from both higher B (more harmonics fit) and higher α₂ (more signal in harmonics).
+DCP is omnibus and B-invariant; MH benefits from both higher B and higher α₂.
 
 ### Choosing between fast and simulation paths
 
@@ -735,7 +769,7 @@ saveRDS(res, sprintf("output/single_cohort/results/fig1_nac_%s.rds",
 
 | Function | Key parameters | Notes |
 |----------|---------------|-------|
-| `CircadianDesignOptions()` | `sample_sizes`, `nsims`, `design`, `cts`, `B_values` | `cts` required for `design="passive"`; `B_values` for B vs m sweep |
+| `CircadianDesignOptions()` | `sample_sizes`, `nsims`, `design`, `cts`, `B_values`, `omega`, `beta` | `omega=1` (default) = cosinor; `omega<1` = FMM non-sinusoidal generator |
 | `CircadianAnalysisOptions()` | `alpha`, `p.adjust.method`, `fdr_thresholds`, `r_strata`, `reference_n`, `DCmethod` | `fdr_thresholds` drives Panel A; `r_strata` drives Panels B/C |
 | `CircadianBootstrapOptions()` | `design_vector`, `B_values`, `N_values`, `nboot`, `nsims_inner`, `design`, `seed` | `design_vector` is positional (required) |
 | `makeAdaptiveRStrata()` | `bio`, `bin_width` | Auto-sets r-strata breakpoints from pilot distribution |

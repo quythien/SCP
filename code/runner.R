@@ -87,6 +87,8 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     cts           <- design.opts$cts
     test_types    <- design.opts$test_types
     harmonics     <- design.opts$harmonics %||% NULL
+    fmm_omega     <- design.opts$omega %||% 1.0   # 1 = cosinor; <1 = FMM
+    fmm_beta      <- design.opts$beta  %||% pi
     period        <- bio.opts$period
     alpha         <- analysis.opts$alpha
     p.adjust.method <- analysis.opts$p.adjust.method
@@ -181,7 +183,13 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
         }
       }
 
-      sim_data = do.call(simCircadianDiff, sim_args)
+      # FMM path: non-sinusoidal waveform when fmm_omega < 1
+      if (fmm_omega < 1.0) {
+        sim_data <- do.call(simCircadianDiffFMM,
+                            c(sim_args, list(omega = fmm_omega, beta = fmm_beta)))
+      } else {
+        sim_data <- do.call(simCircadianDiff, sim_args)
+      }
 
       if (j == 1) {
         diff_type_i  <- sim_data$ground_truth$diff_type
