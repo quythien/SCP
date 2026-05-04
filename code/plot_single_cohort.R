@@ -185,9 +185,11 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   # Open device
   # ------------------------------------------------------------------
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
-  par(mfrow = c(1, 3), mai = c(0.8, 0.9, 0.45, 0.15),
-      mgp = c(2.6, 0.5, 0), oma = c(0, 0, 1.8, 0),
-      cex.axis = 1.05, cex.lab = 1.1, cex.main = 1.05)
+  # Panel A uses numeric x-axis (mgp[1]=3.0 fine)
+  # Panels B & C use las=2 strata labels + tilde(r) xlabel — need mgp[1]=4.8
+  par(mfrow = c(1, 3), mai = c(1.3, 0.95, 0.55, 0.15),
+      mgp = c(3.0, 0.6, 0), oma = c(0, 0, 1.8, 0),
+      cex.axis = 1.0, cex.lab = 1.1, cex.main = 1.1, font.main = 2)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
   # ---- Panel A: marginal power vs n, multiple FDR lines ----
@@ -208,34 +210,35 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   abline(h = 80, lty = 2, col = "grey50", lwd = 1.2)
   if (!is.na(vline_n)) {
     abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.5)
-    text(vline_n, 15, sprintf("n=%d", vline_n), col = "steelblue", cex = 0.72, adj = -0.1)
+    text(vline_n, 15, sprintf("n=%d", vline_n), col = "steelblue", cex = 0.78, adj = -0.1)
   }
   grid()
   legend("bottomright", thresh_labels,
-         col = thresh_cols, lty = 1, pch = 19, lwd = 2, cex = 0.7)
-  mtext("A", side = 3, at = par("usr")[1], font = 2, line = 0.5)
+         col = thresh_cols, lty = 1, pch = 19, lwd = 2, cex = 0.82)
+  mtext("A", side = 3, at = par("usr")[1], font = 2, cex = 1.3, line = 0.4)
 
   # ---- Panel B: stratified power by r, lines per n ----
+  # Increase mgp[1] so r̃ label clears the vertical (las=2) tick labels
+  par(mgp = c(4.8, 0.6, 0))
   matplot(seq_len(n_strata_plt), 100 * t(mean_pow_plt[disp_idx, , drop = FALSE]),
           type = "l", lwd = 2, col = size_colors[disp_idx], lty = 1,
           xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, 100), bty = "l",
           xlab = expression(tilde(r) == A/sigma), ylab = "Power (%)",
-          main = bquote("Stratified Power by" ~ tilde(r) ~ .(sprintf("(%s)", fdr_label))), xaxt = "n")
-  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 0.6)
+          main = bquote("Stratified Power by" ~ tilde(r) ~ .(sprintf("(%s)", fdr_label))),
+          xaxt = "n")
+  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 0.72)
   for (j in disp_idx) {
     points(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
-           pch = 19, col = size_colors[j], cex = 0.6)
+           pch = 19, col = size_colors[j], cex = 0.65)
     add_se_bars(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
                 100 * se_pow_plt[j, ], col = size_colors[j])
   }
   grid()
   legend("bottomright", paste0("n=", sample_sizes[disp_idx]),
-         col = size_colors[disp_idx], lty = 1, lwd = 2, cex = 0.6)
-  mtext("B", side = 3, at = par("usr")[1], font = 2, line = 0.5)
+         col = size_colors[disp_idx], lty = 1, lwd = 2, cex = 0.72)
+  mtext("B", side = 3, at = par("usr")[1], font = 2, cex = 1.3, line = 0.4)
 
   # ---- Panel C: TD by r-stratum, n lines + overlaid gene distribution ----
-  # gene_counts and mean_TD are both in units of genes — use the same natural axis.
-  # y-axis set by gene_counts (the upper bound); TD lines sit below by construction.
   y_max_TD      <- max(gene_counts_plt) * 1.15
   scaled_counts <- gene_counts_plt
 
@@ -243,10 +246,10 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
        type = "n", bty = "l",
        xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, y_max_TD),
        xlab = expression(tilde(r) == A/sigma), ylab = "# True Discoveries",
-       main = bquote("True Discoveries by" ~ tilde(r) ~ .(sprintf("(%s)", fdr_label))), xaxt = "n")
-  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 0.6)
+       main = bquote("True Discoveries by" ~ tilde(r) ~ .(sprintf("(%s)", fdr_label))),
+       xaxt = "n")
+  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 0.72)
 
-  # Gene-count overlay as step histogram (bars span k-0.5 to k+0.5, centered on labels)
   step_x <- rep(seq(0.5, n_strata_plt + 0.5, by = 1), each = 2)
   step_y <- c(0, rep(scaled_counts, each = 2), 0)
   polygon(step_x, step_y, col = "#cccccc55", border = NA)
@@ -254,18 +257,19 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
 
   for (j in disp_idx) {
     lines(seq_len(n_strata_plt), mean_TD_plt[j, ], col = size_colors[j], lwd = 2)
-    points(seq_len(n_strata_plt), mean_TD_plt[j, ], pch = 19, col = size_colors[j], cex = 0.6)
+    points(seq_len(n_strata_plt), mean_TD_plt[j, ], pch = 19, col = size_colors[j], cex = 0.65)
     add_se_bars(seq_len(n_strata_plt), mean_TD_plt[j, ], se_TD_plt[j, ], col = size_colors[j])
   }
   grid()
   legend("topright",
          c(paste0("n=", sample_sizes[disp_idx]), "# Target Discoveries"),
          col = c(size_colors[disp_idx], "grey60"), lty = c(rep(1, length(disp_idx)), 2),
-         lwd = c(rep(2, length(disp_idx)), 1.5), cex = 0.6)
-  mtext("C", side = 3, at = par("usr")[1], font = 2, line = 0.5)
+         lwd = c(rep(2, length(disp_idx)), 1.5), cex = 0.72)
+  mtext("C", side = 3, at = par("usr")[1], font = 2, cex = 1.3, line = 0.4)
+  par(mgp = c(3.0, 0.6, 0))   # restore
 
   if (nchar(title) > 0)
-    mtext(title, outer = TRUE, cex = 1.0, font = 2)
+    mtext(title, outer = TRUE, cex = 1.1, font = 2)
 
   invisible(list(marginal_mean = marginal_mean, marginal_se = marginal_se,
                  mean_TD = mean_TD, mean_pow = mean_pow))
