@@ -124,21 +124,8 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
   if (prop_rhythmic > 0.99) prop_rhythmic <- 0.99
 
   # Keep A and sigma paired from the same gene (joint sampling preserves A-sigma correlation)
-  # Apply top-K cap matching estCircadianParam: use only the strongest K=min(300,n_rhythmic)
-  # genes ranked by p-value, so the bootstrap bio has the same selection rule as the plug-in.
   rhythmic_valid <- rhythmic_mask & !is.na(boot_df$A) & boot_df$A > 0 &
                     !is.na(boot_df$sigma) & boot_df$sigma > 0
-  if (sum(rhythmic_valid) > 300L) {
-    # Rank by p-value ascending (smallest p = strongest signal) and keep top 300
-    pv_order <- order(boot_df$pvalue[rhythmic_valid])
-    keep_idx <- which(rhythmic_valid)[pv_order[seq_len(300L)]]
-    rhythmic_valid_topk <- logical(nrow(boot_df))
-    rhythmic_valid_topk[keep_idx] <- TRUE
-    rhythmic_valid <- rhythmic_valid_topk
-    # Update prop_rhythmic to reflect the full candidate set, not just top-K
-    # (same convention as estCircadianParam: pi_R = |G_R_cand| / G_0)
-    prop_rhythmic <- mean(rhythmic_mask, na.rm = TRUE)
-  }
   amplitude_vec      <- boot_df$A[rhythmic_valid]
   sigma_rhythmic_vec <- boot_df$sigma[rhythmic_valid]
 
