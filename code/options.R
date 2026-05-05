@@ -342,7 +342,27 @@ CircadianBioOptions <- function(ngenes = 5000,
   lBaselineExpr2_resolved <- if (!is.null(lBaselineExpr2)) setBaselineExpr(lBaselineExpr2, ngenes) else NULL
   lOD_resolved  <- setOD(lOD,  ngenes)
   lOD2_resolved <- if (!is.null(lOD2)) setOD(lOD2, ngenes) else NULL
-  amplitude_resolved  <- setAmplitude(amplitude,  n_rhythmic)
+  # Amplitude and sigma must be sampled JOINTLY from the same gene indices to
+  # preserve the empirical (A, σ) pairing and thus the r̃ = A/σ distribution.
+  # When sigma_rhythmic is provided and has the same length as amplitude, draw
+  # both using a shared index vector.
+  if (!is.null(sigma_rhythmic) &&
+      is.numeric(amplitude) && length(amplitude) > 1L &&
+      length(amplitude) == length(sigma_rhythmic) &&
+      length(amplitude) != n_rhythmic) {
+    ji               <- sample(length(amplitude), n_rhythmic, replace = TRUE)
+    amplitude_resolved  <- amplitude[ji]
+    sigma_rhythmic      <- sigma_rhythmic[ji]
+  } else {
+    amplitude_resolved  <- setAmplitude(amplitude, n_rhythmic)
+    # If sigma_rhythmic length still differs, resample independently as fallback
+    if (!is.null(sigma_rhythmic) && length(sigma_rhythmic) != n_rhythmic) {
+      sigma_rhythmic <- if (length(sigma_rhythmic) == 1L)
+        rep(sigma_rhythmic, n_rhythmic)
+      else
+        sample(sigma_rhythmic, n_rhythmic, replace = TRUE)
+    }
+  }
   amplitude2_resolved <- if (!is.null(amplitude2)) setAmplitude(amplitude2, n_rhythmic) else NULL
   phase_resolved <- setPhase(phase, n_rhythmic, period)
 

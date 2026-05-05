@@ -123,9 +123,20 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
   if (prop_rhythmic < 0.01) prop_rhythmic <- 0.01
   if (prop_rhythmic > 0.99) prop_rhythmic <- 0.99
 
-  # Keep A and sigma paired from the same gene (joint sampling preserves A-sigma correlation)
+  # Keep A and sigma paired from the same gene (joint sampling preserves A-sigma correlation).
+  # Apply the same top-K=min(300, n_rhythmic) selection as estCircadianParam so that the
+  # bootstrap bio mirrors the plug-in's pipeline exactly: only the top-300 rhythmic genes
+  # ranked by p-value are used for the amplitude/sigma distribution.
   rhythmic_valid <- rhythmic_mask & !is.na(boot_df$A) & boot_df$A > 0 &
-                    !is.na(boot_df$sigma) & boot_df$sigma > 0
+                    !is.na(boot_df$sigma) & boot_df$sigma > 0 & !is.na(boot_df$pvalue)
+  if (sum(rhythmic_valid) > 300L) {
+    # Rank by p-value ascending; keep top-300 (strongest signal, matching estCircadianParam)
+    rv_idx   <- which(rhythmic_valid)
+    pv_order <- order(boot_df$pvalue[rv_idx])
+    keep     <- rv_idx[pv_order[seq_len(300L)]]
+    rhythmic_valid <- logical(nrow(boot_df))
+    rhythmic_valid[keep] <- TRUE
+  }
   amplitude_vec      <- boot_df$A[rhythmic_valid]
   sigma_rhythmic_vec <- boot_df$sigma[rhythmic_valid]
 
@@ -357,7 +368,10 @@ runBootstrapDesignGrid <- function(pilot_data,
         }
 
         bio_b_n        <- bio_b
-        bio_b_n$ngenes <- nrow(boot_list[[b]])
+        # Use the user-specified ngenes (from bio_diff.opts) rather than the raw gene count
+        # from the bootstrap draw. This ensures the bootstrap simulation uses the same
+        # number of genes as the plug-in for consistent FDR calibration.
+        bio_b_n$ngenes <- bio_diff.opts$ngenes %||% nrow(boot_list[[b]])
 
         iter_design <- CircadianDesignOptions(
           sample_sizes = actual_N,
