@@ -1461,16 +1461,25 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
     cat(sprintf("  alpha2: %s\n", paste(alpha2, collapse = ", ")))
   }
 
+  design_type <- design.opts$design %||% "active"
+  pilot_cts   <- design.opts$cts   # used for passive KDE sampling
+
   run_cell <- function(i) {
     N   <- grid$N[i];  B  <- grid$B[i]
     a2  <- grid$alpha2[i]; a3 <- grid$alpha3[i]
     mth <- grid$method[i]
-    cts <- rep(seq(0, period * (1 - 1/B), length.out = B), each = N / B)
     fn  <- detect_fn[[mth]]
+
+    # Respect design: active = equispaced; passive = sample from pilot TOD KDE
+    cts_active <- rep(seq(0, period * (1 - 1/B), length.out = B), each = N / B)
 
     fmm_omega_i <- design.opts$omega %||% 1.0
     fmm_beta_i  <- design.opts$beta  %||% pi
     sims <- vapply(seq_len(nsims), function(s) {
+      cts <- if (design_type == "passive" && !is.null(pilot_cts))
+               sampleTimesFromDist(N, pilot_cts)
+             else
+               cts_active
       dat <- simCircadianSingleCohort(bio.opts, cts, alpha2 = a2, alpha3 = a3,
                                       omega = fmm_omega_i, beta = fmm_beta_i,
                                       seed = GLOBAL_SEED + i * 1000L + s)
