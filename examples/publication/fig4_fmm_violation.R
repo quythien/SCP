@@ -34,8 +34,9 @@ OMEGA_VALS <- if (SMOKE_TEST) c(0.0, 0.5, 1.0) else c(0.0, 0.1, 0.2, 0.4, 0.6, 0
 # All N divisible by B_ACTIVE=12 so active design uses every cell
 N_GRID     <- if (SMOKE_TEST) c(12L, 24L, 36L) else as.integer(seq(12L, 192L, by = 12L))
 B_ACTIVE   <- 12L    # every 2h — Hughes 2017 >=2h recommendation
-NSIMS      <- if (SMOKE_TEST) 5L   else 30L
-NGENES     <- if (SMOKE_TEST) 200L else 5000L
+NSIMS           <- if (SMOKE_TEST) 5L   else 30L
+NGENES          <- if (SMOKE_TEST) 200L else 5000L
+NGENES_FMM_LRT  <- if (SMOKE_TEST) 100L else 1000L   # reduced G for FMM-LRT speed
 FDR_THRESH <- 0.05
 N_CORES      <- as.integer(Sys.getenv("MC_CORES",      unset = "8"))
 GENE_CORES   <- as.integer(Sys.getenv("GENE_CORES",   unset = "4"))  # for FMM-LRT gene-level
@@ -246,7 +247,8 @@ run_dataset <- function(ds_name, ds, bio, design_type, sweep_param,
                        pilot_tod    = pilot_tod,
                        method       = method,
                        null_table   = null_table,
-                       nsims = NSIMS, ngenes = NGENES,
+                       nsims = NSIMS,
+                       ngenes = if (method == "FMM_LRT") NGENES_FMM_LRT else NGENES,
                        fdr_thresh = FDR_THRESH, n_cores = N_CORES,
                        gene_cores = if (method == "FMM_LRT") GENE_CORES else 1L,
                        ds_name = ds_name)
