@@ -36,7 +36,7 @@ N_GRID     <- if (SMOKE_TEST) c(12L, 24L, 36L) else as.integer(seq(12L, 192L, by
 B_ACTIVE   <- 12L    # every 2h — Hughes 2017 >=2h recommendation
 NSIMS           <- if (SMOKE_TEST) 5L   else 30L
 NGENES          <- if (SMOKE_TEST) 200L else 5000L
-NGENES_FMM_LRT  <- if (SMOKE_TEST) 100L else 1000L   # reduced G for FMM-LRT speed
+NGENES_FMM_LRT  <- if (SMOKE_TEST) 100L else 5000L   # G=5000 validation run
 FDR_THRESH <- 0.05
 N_CORES      <- as.integer(Sys.getenv("MC_CORES",      unset = "8"))
 GENE_CORES   <- as.integer(Sys.getenv("GENE_CORES",   unset = "4"))  # for FMM-LRT gene-level
@@ -277,9 +277,7 @@ sweep_specs <- list(
   list(row_a = 1, row_p = 2, param = "omega",
        vals  = OMEGA_VALS, fw = 1.0,        fb = pi,       fa = NULL,
        tag   = "omega"),
-  list(row_a = 3, row_p = 4, param = "beta",
-       vals  = BETA_VALS,  fw = OMEGA_FIXED, fb = pi,       fa = NULL,
-       tag   = "beta"),
+  # beta sweep skipped for G=5000 validation run
   list(row_a = 5, row_p = 6, param = "alpha",
        vals  = ALPHA_VALS, fw = OMEGA_FIXED, fb = pi,       fa = 0,
        tag   = "alpha")
@@ -331,7 +329,7 @@ library(ggplot2)
 full_df <- do.call(rbind, all_results)
 # Convert SE → SD for visible error bars (SD = SE * sqrt(nsims))
 full_df$power_sd <- full_df$power_se * sqrt(NSIMS)
-saveRDS(full_df, file.path(out_dir, "results", "results_FMM_all.rds"))
+saveRDS(full_df, file.path(out_dir, "results", "results_FMM_LRT_G5000_all.rds"))
 
 # ── Color schemes ──────────────────────────────────────────────────
 # ω sweep: dark→light blue
@@ -396,11 +394,10 @@ col_labeller <- as_labeller(snr_col_labels)
 for (meth in METHODS) {
   df_meth <- full_df[full_df$method == meth, ]
   fig_path <- file.path(out_dir, "figures",
-                        sprintf("fig4_fmm_%s.pdf", tolower(meth)))
+                        sprintf("fig4_fmm_%s_G5000.pdf", tolower(meth)))
   plotFMMViolation(df_meth, nsims = NSIMS, omega_fixed = OMEGA_FIXED,
                    output_file = fig_path, width = 16, height = 21)
-  # also save to main_figures
-  main_path <- sprintf("output/main_figures/Fig4_FMM_%s.pdf", meth)
+  main_path <- sprintf("output/main_figures/Fig4_FMM_%s_G5000.pdf", meth)
   file.copy(fig_path, main_path, overwrite = TRUE)
   cat(sprintf("Saved: %s\n", fig_path))
 }
