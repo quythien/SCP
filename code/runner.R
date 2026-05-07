@@ -783,7 +783,10 @@ summaryRunPower <- function(powerOutput, verbose = TRUE) {
 #'   Build with \code{estCircadianParam()}.
 #' @param design.opts   \code{CircadianDesignOptions} — sample sizes, nsims, design.
 #' @param analysis.opts \code{CircadianAnalysisOptions} — alpha, p.adjust.method.
-#' @param method        Detection method: \code{"DCP"} (default), \code{"JTK"}, \code{"RAIN"}, \code{"MH"}.
+#' @param method        Detection method: \code{"DCP"} (default cosinor F-test),
+#'   \code{"JTK"}, \code{"RAIN"}, \code{"MH"} (multi-harmonic), or \code{"FMM_LRT"}
+#'   (likelihood-ratio test for the FMM model; auto-loads the bundled empirical
+#'   null calibration table from \code{data/fmm_lrt_null_table.rds}).
 #' @param harmonics     Numeric length-2: \code{c(alpha2, alpha3)} harmonic coefficients (default \code{c(0,0)}).
 #' @param verbose       Print progress (default TRUE).
 #' @param mc.cores      Parallel cores (default 1).
@@ -828,7 +831,7 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
   stopifnot(inherits(design.opts, "CircadianDesignOptions"))
   if (missing(analysis.opts)) analysis.opts <- CircadianAnalysisOptions()
 
-  method    <- match.arg(method, c("DCP", "JTK", "RAIN", "MH"))
+  method    <- match.arg(method, c("DCP", "JTK", "RAIN", "MH", "FMM_LRT"))
   harmonics <- rep_len(as.numeric(harmonics), 2L)
 
   sample_sizes    <- design.opts$sample_sizes
@@ -861,10 +864,14 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
                length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)
 
   detect_fn <- switch(method,
-    DCP  = function(e, t) detect_DCP(e, t, period = period),
-    JTK  = function(e, t) detect_JTK(e, t, period = period),
-    RAIN = function(e, t) detect_RAIN(e, t, period = period),
-    MH   = function(e, t) detect_MH(e, t, period = period)
+    DCP     = function(e, t) detect_DCP(e, t, period = period),
+    JTK     = function(e, t) detect_JTK(e, t, period = period),
+    RAIN    = function(e, t) detect_RAIN(e, t, period = period),
+    MH      = function(e, t) detect_MH(e, t, period = period),
+    # FMM_LRT auto-loads bundled null table from data/fmm_lrt_null_table.rds.
+    # Inner mc.cores=1L because outer mclapply already parallelizes across sims;
+    # nested parallelism would over-subscribe cores.
+    FMM_LRT = function(e, t) detect_FMM_LRT(e, t, period = period, mc.cores = 1L)
   )
 
   # CircaPower n80 estimate from median r
