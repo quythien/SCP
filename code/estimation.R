@@ -311,6 +311,7 @@ estCircadianParam <- function(data, times, period = 24,
                               dp_shift_mode = c("fixed", "uniform"),
                               dr_amp_scale = 1.0,
                               dr_sigma_scale = 1.0,
+                              paired_sigma = FALSE,
                               sim.seed = 12345, verbose = TRUE) {
 
   dp_shift_mode <- match.arg(dp_shift_mode)
@@ -331,14 +332,13 @@ estCircadianParam <- function(data, times, period = 24,
   lOD_emp <- log(sigma_valid)
 
   # Amplitude and sigma: top-K estimation set (G_R), paired to preserve A-sigma correlation
+  # Phase: top-K estimation set only
   estim_idx   <- params$raw$in_estim_set
   estim_valid <- estim_idx & !is.na(params$raw$A) & params$raw$A > 0 &
                  !is.na(params$raw$sigma) & params$raw$sigma > 0
   amp_emp            <- params$raw$A[estim_valid]
   sigma_rhythmic_emp <- params$raw$sigma[estim_valid]
-
-  # Phase: top-K estimation set only
-  phase_emp <- params$raw$phi[estim_idx & !is.na(params$raw$phi)]
+  phase_emp          <- params$raw$phi[estim_idx & !is.na(params$raw$phi)]
 
   # Cap differential proportions at the estimated rhythmic budget.
   # CircadianBioOptions requires prop_DR + prop_DP + prop_DM <= prop_rhythmic
@@ -365,6 +365,7 @@ estCircadianParam <- function(data, times, period = 24,
     lOD = lOD_emp,
     amplitude = amp_emp,
     sigma_rhythmic = sigma_rhythmic_emp,
+    paired_sigma = paired_sigma,
     cts = times,
     phase = phase_emp,
     prop_DR = prop_DR,
@@ -378,6 +379,184 @@ estCircadianParam <- function(data, times, period = 24,
     dr_sigma_scale = dr_sigma_scale,
     sim.seed = sim.seed
   )
+}
+
+
+#' Estimate CircadianBioOptions with FMM Per-Gene Parameters
+#'
+#' @description Like \code{\link{estCircadianParam}}, but additionally fits the
+#' FMM (Frequency Modulated Möbius) waveform per top-K rhythmic gene to obtain
+#' empirical \eqn{\hat\omega_g} (shape) and \eqn{\hat\alpha_g} (peak location,
+#' radians). Returns a \code{CircadianBioOptions} populated with paired
+#' \code{omega_rhythmic} and \code{alpha_rhythmic} vectors (paired with
+#' amplitude and sigma_rhythmic by gene index). A \code{$diagnostics} list
+#' carries empirical fit summaries: Beta(1, β̂) MoM estimate, σ̂_α (standard
+#' deviation of alpha in hours), median R² of the FMM fits, and the raw
+#' per-gene vectors for diagnostic plotting.
+#'
+#' Used by Fig 5 (B-vs-m grid under empirical FMM truth) and the diagnostic
+#' supplementary figure. Fig 4 (sensitivity sweep) does NOT need this — it
+#' uses synthetic \code{omega_dist}/\code{alpha_dist} draws.
+#'
+#' @param data Gene expression matrix (genes × samples).
+#' @param times Sample collection times (length = ncol(data)).
+#' @param period Period in hours (default 24).
+#' @param min_rhythm_pval Cosinor pre-screen p-value threshold (default 0.01).
+#' @param top_k Cap on number of FMM-fitted genes (default 300, matches
+#'   estCircadianParam's top-K logic).
+#' @param paired_sigma Logical (default TRUE). Forwarded to CircadianBioOptions.
+#' @param paired_omega Logical (default TRUE). Forwarded.
+#' @param paired_alpha Logical (default TRUE). Forwarded.
+#' @param mc.cores Parallel cores for FMM fitting (default 1).
+#' @param verbose Print progress (default TRUE).
+#' @param ... Additional args passed to CircadianBioOptions().
+#'
+#' @return CircadianBioOptions object with:
+#'   - amplitude, sigma_rhythmic, omega_rhythmic, alpha_rhythmic vectors
+#'     of equal length (= number of successfully fitted top-K genes)
+#'   - $diagnostics list: beta_hat, sigma_alpha_hat (hours), R2_median,
+#'     omega_emp, alpha_emp, n_fitted
+#'
+#' @export
+estCircadianParamFMM <- function(data, times, period = 24,
+                                 min_rhythm_pval = 0.01,
+                                 top_k = 300L,
+                                 paired_sigma = TRUE,
+                                 paired_omega = TRUE,
+                                 paired_alpha = TRUE,
+                                 prop_DR = 0.0,
+                                 prop_DP = 0.0,
+                                 prop_DM = 0.0,
+                                 mc.cores = 1L,
+                                 verbose = TRUE,
+                                 ...) {
+
+  if (!requireNamespace("FMM", quietly = TRUE))
+    stop("estCircadianParamFMM requires the FMM package. Install with install.packages('FMM').")
+
+  # Step 1: cosinor pre-screen
+  if (verbose) cat("Step 1: cosinor pre-screen...\n")
+  pdf_ <- fitCosinorAll(data, times, period = period,
+                        min_rhythm_pval = min_rhythm_pval)
+  rhy <- which(!is.na(pdf_$is_rhythmic) & pdf_$is_rhythmic &
+               !is.na(pdf_$A) & pdf_$A > 0 &
+               !is.na(pdf_$sigma) & pdf_$sigma > 0 &
+               !is.na(pdf_$pvalue))
+  if (length(rhy) == 0)
+    stop("No rhythmic genes passed cosinor pre-screen at p < ", min_rhythm_pval)
+
+  # Top-K selection by p-value (matches estCircadianParam pattern)
+  if (length(rhy) > top_k) {
+    rhy <- rhy[order(pdf_$pvalue[rhy])][seq_len(top_k)]
+  }
+  if (verbose) cat(sprintf("  Pre-screen: %d rhythmic genes -> top-%d for FMM fitting\n",
+                            sum(pdf_$is_rhythmic, na.rm = TRUE), length(rhy)))
+
+  # Step 2: fit FMM per top-K gene (radians timepoints)
+  if (verbose) cat(sprintf("Step 2: fit FMM (mc.cores=%d)...\n", mc.cores))
+  tod_rad <- (times %% period) * 2 * pi / period
+
+  fit_one <- function(g) {
+    y <- as.numeric(data[g, ])
+    tryCatch({
+      fit <- FMM::fitFMM(y, timePoints = tod_rad,
+                         lengthAlphaGrid = 12L,
+                         lengthOmegaGrid = 12L,
+                         showProgress = FALSE)
+      list(omega = fit@omega, alpha = fit@alpha,
+           A = fit@A, R2 = fit@R2)
+    }, error = function(e) NULL)
+  }
+  fmm_fits <- if (mc.cores > 1L) {
+    parallel::mclapply(rhy, fit_one, mc.cores = mc.cores)
+  } else {
+    lapply(rhy, fit_one)
+  }
+
+  ok_idx <- which(!sapply(fmm_fits, is.null))
+  if (length(ok_idx) == 0)
+    stop("All FMM fits failed; check input data and FMM package.")
+  if (verbose) cat(sprintf("  FMM fit: %d/%d succeeded\n",
+                            length(ok_idx), length(rhy)))
+
+  # Aligned vectors (only successfully fitted genes)
+  rhy_ok <- rhy[ok_idx]
+  fits_ok <- fmm_fits[ok_idx]
+
+  amp_emp            <- pdf_$A[rhy_ok]                          # cosinor amplitude
+  sigma_rhythmic_emp <- pdf_$sigma[rhy_ok]                      # cosinor residual sd
+  phase_emp          <- pdf_$phi[rhy_ok]                        # cosinor acrophase (hours)
+  omega_emp          <- vapply(fits_ok, `[[`, numeric(1), "omega")
+  alpha_emp          <- vapply(fits_ok, `[[`, numeric(1), "alpha")
+  R2_emp             <- vapply(fits_ok, `[[`, numeric(1), "R2")
+
+  # Step 3: empirical diagnostics
+  beta_hat        <- (1 - mean(omega_emp)) / mean(omega_emp)    # MoM for Beta(1, β)
+  sigma_alpha_hat <- sd(alpha_emp) * 24 / (2 * pi)              # in hours
+  R2_median       <- median(R2_emp, na.rm = TRUE)
+
+  if (verbose) {
+    cat(sprintf("  Diagnostics: beta_hat=%.3f  sigma_alpha_hat=%.3fh  R2_median=%.3f\n",
+                beta_hat, sigma_alpha_hat, R2_median))
+  }
+
+  # Step 4: assemble baseline (mesor and lOD distributions across ALL genes,
+  # same as estCircadianParam — these aren't FMM-specific)
+  lBaselineExpr_emp <- pdf_$M[!is.na(pdf_$M)]
+  sigma_valid       <- pdf_$sigma[!is.na(pdf_$sigma) & pdf_$sigma > 0]
+  lOD_emp           <- log(sigma_valid)
+
+  # prop_rhythmic from full pre-screen, not just top-K
+  prop_rhythmic_emp <- mean(pdf_$is_rhythmic, na.rm = TRUE)
+
+  # Auto-scale differential props if they exceed the rhythmic budget,
+  # mirroring the logic in estCircadianParam.
+  total_diff <- prop_DR + prop_DP + prop_DM
+  if (total_diff > prop_rhythmic_emp && total_diff > 0) {
+    scale_factor <- prop_rhythmic_emp / total_diff
+    if (verbose) {
+      message(sprintf(
+        paste0("estCircadianParamFMM: prop_DR+prop_DP+prop_DM (%.3f) exceeds estimated ",
+               "prop_rhythmic (%.3f). Scaling differential props by %.3f to fit budget."),
+        total_diff, prop_rhythmic_emp, scale_factor))
+    }
+    prop_DR <- prop_DR * scale_factor
+    prop_DP <- prop_DP * scale_factor
+    prop_DM <- prop_DM * scale_factor
+  }
+
+  opts <- CircadianBioOptions(
+    ngenes         = nrow(data),
+    prop_rhythmic  = prop_rhythmic_emp,
+    period         = period,
+    lBaselineExpr  = lBaselineExpr_emp,
+    lOD            = lOD_emp,
+    amplitude      = amp_emp,
+    sigma_rhythmic = sigma_rhythmic_emp,
+    omega_rhythmic = omega_emp,
+    alpha_rhythmic = alpha_emp,
+    paired_sigma   = paired_sigma,
+    paired_omega   = paired_omega,
+    paired_alpha   = paired_alpha,
+    prop_DR        = prop_DR,
+    prop_DP        = prop_DP,
+    prop_DM        = prop_DM,
+    cts            = times,
+    phase          = phase_emp,
+    ...
+  )
+  opts$diagnostics <- list(
+    beta_hat        = beta_hat,
+    sigma_alpha_hat = sigma_alpha_hat,
+    R2_median       = R2_median,
+    omega_emp       = omega_emp,
+    alpha_emp       = alpha_emp,
+    R2_emp          = R2_emp,
+    n_fitted        = length(ok_idx),
+    n_pre_screen    = sum(pdf_$is_rhythmic, na.rm = TRUE),
+    top_k_used      = length(rhy)
+  )
+  opts
 }
 
 
@@ -431,6 +610,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
                                       prop_DM = NULL,
                                       mesor_diff = NULL,
                                       dp_shift_mode = c("uniform", "fixed"),
+                                      paired_sigma = FALSE,
                                       sim.seed = 12345,
                                       verbose = TRUE) {
 
@@ -662,6 +842,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
     lOD2            = lOD_emp2,            # F̂_σ2: group-2 noise distribution
     amplitude       = amp_emp,
     sigma_rhythmic  = sigma_rhythmic_emp,
+    paired_sigma    = paired_sigma,
     cts             = times_1,             # F̂_TOD1: group-1 sampling time distribution
     amplitude2      = amp_emp2,            # F̂_A2: used for g2-only DR genes
     cts2            = times_2,             # F̂_TOD2: group-2 sampling time distribution
