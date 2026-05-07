@@ -432,20 +432,33 @@ by sweeping the full $(N, B, \mathrm{method}, \alpha_2)$ grid on pilot data,
 producing joint power surfaces that make the allocation tradeoff explicit for
 each study context (Section~\ref{sec:bvsm_results}).
 
-\paragraph{Active design under cosinor vs.\ FMM truth.}
-The $B$-invariance result \eqref{eq:ncp_invariance} is derived under the
-cosinor data-generating model. When the underlying truth is non-sinusoidal
-(realistic per Section~\ref{sec:fmm_robustness}), denser temporal sampling
-(higher $B$) better captures the asymmetric peak shape, and the trade-off
-becomes non-trivial. We therefore evaluate the $(N, B)$ grid under both
-truth conditions: (i) cosinor truth ($\omega = 1$, $\alpha = 0$), where
-power is approximately flat across $B$ at fixed $N$; and (ii) empirical
-FMM truth, where per-gene $(\hat A_g, \hat\sigma_g, \hat\phi_g, \hat\omega_g,
-\hat\alpha_g)$ are drawn jointly from the same pilot gene index, preserving
-the empirical $(A, \sigma, \omega, \alpha)$ correlations. The contrast
-between the two rows in Fig~\ref{fig:active_vs_passive} quantifies how
-much the cosinor approximation costs in design-sensitivity at the elbow
-of the power curve.
+\paragraph{Detection method determines whether $B$-invariance holds.}
+The $B$-invariance result \eqref{eq:ncp_invariance} is derived for the cosinor
+$F$-test (\textsc{DCP}). Crucially, this invariance is a consequence of the
+detector projecting onto the first Fourier harmonic basis: the non-centrality
+parameter $\lambda_g = (A_g \cdot c(\omega_g))^2 \cdot N / (2\sigma_g^2)$
+depends only on the per-gene effect size and total sample size $N$ — never
+on the $(B, m)$ split. \emph{This invariance therefore holds under both
+cosinor and FMM truth alike, when \textsc{DCP} is the detector.}
+
+A different conclusion emerges if the detector is FMM-LRT, which fits the
+full FMM model and uses higher-harmonic information. Under FMM truth, the
+per-gene FMM likelihood-ratio statistic depends on how well the peak shape
+is resolved, which in turn depends on $B$ (the number of distinct sampling
+times within one period). With $B = 3$, the FMM model is identifiable but
+each gene's $(\hat\omega, \hat\alpha)$ has high variance; with $B = 12$, the
+asymmetric peak is captured precisely and the LR statistic is larger.
+\emph{FMM-LRT power therefore increases with $B$ at fixed $N$ under FMM truth.}
+
+We evaluate both detectors on the same empirical FMM truth (per-gene
+$(\hat A_g, \hat\sigma_g, \hat\phi_g, \hat\omega_g, \hat\alpha_g)$ drawn
+jointly via shared gene index from \texttt{estCircadianParamFMM}, preserving
+empirical correlations). Three baboon CAMO active-design tissues (LIV, LUN,
+KIC) are evaluated across an $(N, B)$ grid. The two rows of
+Fig~\ref{fig:active_vs_passive} contrast the predictions: top row (\textsc{DCP})
+verifies $B$-invariance empirically; bottom row (\textsc{FMM-LRT}) shows
+$B$-sensitivity emerge as the practical advantage of likelihood-ratio
+detection under cosinor violation.
 
 % =====================================================================
 \subsection{Robustness of DCP power to non-sinusoidal waveforms}
@@ -526,34 +539,50 @@ Real datasets do not have a single $\omega^*$; per-gene FMM fits to active-desig
 pilot data show empirical $\hat\omega_g$ distributed across $(0, 1)$ (median
 $\approx 0.4$--$0.6$ across six baboon CAMO tissues, all far from the cosinor
 reference $\omega^* = 1$; Supplementary Fig.~S\ref{sec:supp_fmm_diagnostic}).
-We therefore replace the fixed-$\omega^*$ sweep with a population-level
-parameterization in which each simulated rhythmic gene draws its own
-shape parameter from
+We therefore replace the fixed-$\omega^*$ sweep with two parametric
+population-level sensitivity sweeps, parameterized as 1-parameter families
+so each has a single x-axis knob:
 \[
-\omega_g \sim \mathrm{Beta}(1, \beta),
+\omega_g \sim \mathrm{Beta}(1, \beta), \qquad
+\alpha_g \sim \mathrm{vonMises}(0, \kappa)
 \]
-with $\beta$ as the single sensitivity knob. As $\beta \to 0^+$, the
-distribution concentrates at $\omega = 1$ (pure cosinor); $\beta = 1$ gives
-$\mathrm{Uniform}(0, 1)$; $\beta \to \infty$ concentrates mass at $\omega = 0$
-(arrhythmic limit). The empirical $\hat\beta$ from a Method-of-Moments fit
-$(1 - \overline{\hat\omega})/\overline{\hat\omega}$ marks where the real
-data sits on the sweep axis. As an orthogonal sensitivity dimension, we
-also sweep additive von Mises noise on the empirical peak location:
-$\alpha_g^* = \mathrm{vM}(\hat\alpha_g, \kappa)$ with $\kappa = (24/(2\pi
-\sigma_\alpha))^2$ and $\sigma_\alpha$ in hours, with $\sigma_\alpha = 0$
-recovering the empirical baseline.
+where $\kappa = 1/\sigma_{\alpha,\mathrm{rad}}^2$ and
+$\sigma_{\alpha,\mathrm{rad}} = \sigma_\alpha \cdot 2\pi/24$ converts the
+user-facing dispersion in hours to a circular concentration parameter.
+For $\omega$: $\beta \to 0^+$ concentrates mass at $\omega = 1$ (pure cosinor);
+$\beta = 1$ gives $\mathrm{Uniform}(0, 1)$; $\beta \to \infty$ concentrates
+mass at $\omega = 0$ (arrhythmic limit). For $\alpha$: $\sigma_\alpha = 0$
+fixes all genes at a common phase; $\sigma_\alpha$ large gives circular-uniform
+phase. Empirical anchor estimates are reported alongside each sweep:
+$\hat\beta = (1 - \overline{\hat\omega})/\overline{\hat\omega}$ from
+Method-of-Moments on the empirical $\hat\omega_g$ distribution, and
+$\hat\sigma_\alpha = \mathrm{sd}(\hat\alpha_g) \cdot 24/(2\pi)$ from the
+sample standard deviation of empirical FMM peak locations.
+
+\paragraph{Detector choice.}
+Both sweeps are evaluated with the FMM-LRT (likelihood-ratio) detector, which
+fits the full FMM model and is sensitive to non-sinusoidal peak shapes. The
+DCP cosinor $F$-test is omitted from this figure because its non-centrality
+under FMM truth follows analytically from \eqref{eq:fmm_power}: power scales
+as $\mathrm{Power}_{\mathrm{cosinor}}(n, r \cdot c(\omega))$ with attenuation
+$c(\omega) = 2\omega/(1+\omega^2)$. The FMM-LRT detector is the natural
+counterpart that can recover power lost by DCP under cosinor violation.
 
 \paragraph{Simulation design.}
 Data were generated using \textsc{FMM}~v0.4.1 \citep{rueda2019fmm} via
 \texttt{generateFMM()}, sweeping
-$\beta \in \{0.01, 0.1, 0.5, 1, 2, 5, 20, 50\}$ on a logarithmic axis and
+$\beta \in \{0.5, 1, 2, 5, 20\}$ on a logarithmic axis and
 $\sigma_\alpha \in \{0, 0.5, 1, 2, 4\}$ hours. The anchor pilot is Baboon LUN
-($n=12$ active, $\hat\beta \approx 1.2$, $\hat\sigma_\alpha \approx 2$ h);
-results across additional active-design tissues (Mouse LIV, Mouse D1 Striatum,
-Baboon KIC, Baboon ADM) are reported in the supplementary material. The
-$\omega$ sweep traverses 0--100\% power across the cosinor-to-arrhythmic
-spectrum; the $\sigma_\alpha$ sweep verifies that phase noise alone has
-minimal effect on power, isolating the cosinor-violation effect to $\omega$.
+($n_\text{pilot}=12$ active, $\hat\beta \approx 1.0$,
+$\hat\sigma_\alpha \approx 2.1$ h, FMM-fit $R^2$ median $\approx 0.87$);
+diagnostics for additional active-design tissues (Mouse D1 Striatum, Baboon
+LIV, KIC, ADM) appear in the supplementary material. Power is plotted against
+sample size $N$ with one curve per sweep value. The $\omega$ sweep traverses
+the cosinor-to-arrhythmic spectrum; the $\sigma_\alpha$ sweep verifies that
+phase distribution alone has minimal effect on power, isolating the
+cosinor-violation effect to $\omega$. Phase invariance is theoretically
+predicted: under full TOD coverage the cosinor $F$-test and FMM-LRT
+non-centralities are independent of $\alpha$.
 
 % =====================================================================
 \subsection{Sensitivity Analysis via Bootstrap}
