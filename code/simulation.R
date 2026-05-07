@@ -712,11 +712,8 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
     # Determine the "base" acrophase in radians (from phase_g, in hours, → radians)
     alpha_base_rad <- phase_g[rhythmic_id] * (2 * pi / 24)
 
-    # Phase noise: when sd_hours is small the wrapped-normal approximates
-    # Gaussian jitter; for sd_hours >= 3 it becomes effectively circular-uniform.
-    # Use von Mises (the principled circular analog of Gaussian noise on a
-    # circle) so the alpha sweep is statistically defensible at any σ.
-    # rvonmises (Best & Fisher 1979 rejection method, simple implementation).
+    # von Mises sampler (Best & Fisher 1979 rejection method).
+    # Used for synthetic alpha distribution sweep; principled circular Gaussian.
     .rvonmises <- function(n, mu, kappa) {
       if (kappa <= 0 || !is.finite(kappa)) return(runif(n, 0, 2 * pi))
       a <- 1 + sqrt(1 + 4 * kappa^2)
@@ -736,28 +733,26 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
       }
       out
     }
+
+    # Resolution priority (mutually exclusive branches):
+    #   alpha_dist    : SYNTHETIC direct draw (Fig 4 sensitivity sweep).
+    #                   Replaces empirical alpha entirely. mu in radians,
+    #                   sd_hours converted to radians for von Mises kappa.
+    #   alpha_rhythmic: EMPIRICAL paired (Fig 5 truth, paired_alpha = TRUE).
+    #   else          : Empirical phase distribution from bio.opts$phase.
     alpha_g <- if (!is.null(bio.opts$alpha_dist)) {
       spec   <- bio.opts$alpha_dist
+      if (!spec$family %in% c("normal", "vonmises"))
+        stop("Unknown alpha_dist$family: ", spec$family,
+             " (allowed: 'normal', 'vonmises')")
       sd_hr  <- spec$sd_hours %||% spec$sd %||% 0
-      sd_rad <- sd_hr * (2 * pi / 24)   # hours → radians
+      sd_rad <- sd_hr * (2 * pi / 24)
       mu     <- spec$mean %||% 0
-      if (spec$family != "normal")
-        stop("Unknown alpha_dist$family: ", spec$family)
-      # When sd_rad is small (< pi/6 ≈ 1 hr), Gaussian and von Mises coincide
-      # to first order. We use von Mises throughout for principled circular noise.
-      kappa <- if (sd_rad <= 0) Inf else 1 / sd_rad^2
-      base_alpha <- if (!is.null(bio.opts$alpha_rhythmic) &&
-                        length(bio.opts$alpha_rhythmic) == n_rhythmic) {
-        bio.opts$alpha_rhythmic
+      if (sd_rad <= 0) {
+        rep(mu, n_rhythmic)            # all genes at same phase
       } else {
-        alpha_base_rad
-      }
-      if (sd_rad == 0) {
-        base_alpha
-      } else {
-        # Add circular noise gene-by-gene around each gene's empirical alpha
-        sapply(seq_len(n_rhythmic), function(i)
-          .rvonmises(1, mu = base_alpha[i] + mu, kappa = kappa))
+        kappa <- 1 / sd_rad^2
+        .rvonmises(n_rhythmic, mu = mu, kappa = kappa)
       }
     } else if (!is.null(bio.opts$alpha_rhythmic) &&
                length(bio.opts$alpha_rhythmic) == n_rhythmic) {
