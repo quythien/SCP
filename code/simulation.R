@@ -505,8 +505,18 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
 
   if (!is.null(seed)) set.seed(seed)
 
-  # FMM path: non-sinusoidal waveform when omega < 1
-  if (omega < 1.0)
+  # FMM path is also activated when bio.opts has per-gene FMM parameters
+  # (omega_dist, alpha_dist, omega_rhythmic, or alpha_rhythmic) — these are
+  # only respected by simCircadianFMM, not the cosinor generator.
+  has_fmm_per_gene <- !is.null(bio.opts$omega_dist) ||
+                       !is.null(bio.opts$alpha_dist) ||
+                       (!is.null(bio.opts$omega_rhythmic) &&
+                        length(bio.opts$omega_rhythmic) > 0) ||
+                       (!is.null(bio.opts$alpha_rhythmic) &&
+                        length(bio.opts$alpha_rhythmic) > 0)
+
+  # FMM path: non-sinusoidal waveform when omega < 1 OR per-gene FMM params present
+  if (omega < 1.0 || has_fmm_per_gene)
     return(simCircadianFMM(bio.opts, cts, omega = omega, beta = beta))
 
   ngenes        <- bio.opts$ngenes
