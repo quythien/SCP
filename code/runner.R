@@ -837,6 +837,16 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
   cts             <- design.opts$cts
   fmm_omega       <- design.opts$omega %||% 1.0   # 1 = cosinor; <1 = FMM
   fmm_beta        <- design.opts$beta  %||% pi
+  # Per-gene FMM activation: bio.opts carries omega_dist / alpha_dist /
+  # omega_rhythmic / alpha_rhythmic (set by estCircadianParamFMM or by Fig 4
+  # sweep code). When any of these is present, force the FMM simulation path
+  # so the per-gene parameters are honoured even though design.opts$omega == 1.
+  has_fmm_per_gene <- !is.null(bio.opts$omega_dist) ||
+                       !is.null(bio.opts$alpha_dist) ||
+                       (!is.null(bio.opts$omega_rhythmic) &&
+                        length(bio.opts$omega_rhythmic) > 0) ||
+                       (!is.null(bio.opts$alpha_rhythmic) &&
+                        length(bio.opts$alpha_rhythmic) > 0)
   alpha           <- analysis.opts$alpha
   p.adjust.method <- analysis.opts$p.adjust.method
   r_strata        <- analysis.opts$r_strata
@@ -934,8 +944,9 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
       }
 
       # Simulate expression [ngenes x n]
-      # FMM path: non-sinusoidal waveform when fmm_omega < 1
-      if (fmm_omega < 1.0) {
+      # FMM path: non-sinusoidal waveform when fmm_omega < 1 OR when bio.opts
+      # carries per-gene FMM parameters (omega_dist / alpha_dist / *_rhythmic).
+      if (fmm_omega < 1.0 || has_fmm_per_gene) {
         fmm_out     <- simCircadianFMM(bio.opts, times_i, omega = fmm_omega,
                                        beta = fmm_beta)
         expr        <- fmm_out$expr
