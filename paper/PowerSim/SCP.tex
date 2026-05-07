@@ -432,6 +432,21 @@ by sweeping the full $(N, B, \mathrm{method}, \alpha_2)$ grid on pilot data,
 producing joint power surfaces that make the allocation tradeoff explicit for
 each study context (Section~\ref{sec:bvsm_results}).
 
+\paragraph{Active design under cosinor vs.\ FMM truth.}
+The $B$-invariance result \eqref{eq:ncp_invariance} is derived under the
+cosinor data-generating model. When the underlying truth is non-sinusoidal
+(realistic per Section~\ref{sec:fmm_robustness}), denser temporal sampling
+(higher $B$) better captures the asymmetric peak shape, and the trade-off
+becomes non-trivial. We therefore evaluate the $(N, B)$ grid under both
+truth conditions: (i) cosinor truth ($\omega = 1$, $\alpha = 0$), where
+power is approximately flat across $B$ at fixed $N$; and (ii) empirical
+FMM truth, where per-gene $(\hat A_g, \hat\sigma_g, \hat\phi_g, \hat\omega_g,
+\hat\alpha_g)$ are drawn jointly from the same pilot gene index, preserving
+the empirical $(A, \sigma, \omega, \alpha)$ correlations. The contrast
+between the two rows in Fig~\ref{fig:active_vs_passive} quantifies how
+much the cosinor approximation costs in design-sensitivity at the elbow
+of the power curve.
+
 % =====================================================================
 \subsection{Robustness of DCP power to non-sinusoidal waveforms}
 \label{sec:fmm_robustness}
@@ -506,20 +521,39 @@ $c(\omega^*)$ but is independent of $\beta$. Consequently,
 $\mathrm{Power}_{\mathrm{FMM}}(n,r_g,\omega^*)$ does not depend on $\beta$.
 \end{proposition}
 
+\paragraph{Population-level sensitivity sweep.}
+Real datasets do not have a single $\omega^*$; per-gene FMM fits to active-design
+pilot data show empirical $\hat\omega_g$ distributed across $(0, 1)$ (median
+$\approx 0.4$--$0.6$ across six baboon CAMO tissues, all far from the cosinor
+reference $\omega^* = 1$; Supplementary Fig.~S\ref{sec:supp_fmm_diagnostic}).
+We therefore replace the fixed-$\omega^*$ sweep with a population-level
+parameterization in which each simulated rhythmic gene draws its own
+shape parameter from
+\[
+\omega_g \sim \mathrm{Beta}(1, \beta),
+\]
+with $\beta$ as the single sensitivity knob. As $\beta \to 0^+$, the
+distribution concentrates at $\omega = 1$ (pure cosinor); $\beta = 1$ gives
+$\mathrm{Uniform}(0, 1)$; $\beta \to \infty$ concentrates mass at $\omega = 0$
+(arrhythmic limit). The empirical $\hat\beta$ from a Method-of-Moments fit
+$(1 - \overline{\hat\omega})/\overline{\hat\omega}$ marks where the real
+data sits on the sweep axis. As an orthogonal sensitivity dimension, we
+also sweep additive von Mises noise on the empirical peak location:
+$\alpha_g^* = \mathrm{vM}(\hat\alpha_g, \kappa)$ with $\kappa = (24/(2\pi
+\sigma_\alpha))^2$ and $\sigma_\alpha$ in hours, with $\sigma_\alpha = 0$
+recovering the empirical baseline.
+
 \paragraph{Simulation design.}
 Data were generated using \textsc{FMM}~v0.4.1 \citep{rueda2019fmm} via
 \texttt{generateFMM()}, sweeping
-$\omega^*\in\{0,\,0.1,\,0.2,\,0.4,\,0.6,\,0.8,\,1.0\}$ across three pilot
-datasets (Mouse LIV, Baboon LUN, Mouse D1 Striatum) and both active and
-passive designs, with all other simulation settings identical to those in
-Section~\ref{sec:single_cohort}. The value $\omega^*=0$ represents the
-arrhythmic limit (null); $\omega^*=1$ is the pure cosinor baseline.
-Additionally, $\beta$ was swept over
-$\{0,\,\pi/4,\,\pi/2,\,3\pi/4,\,\pi,\,3\pi/2\}$ at each $\omega^*$ to
-verify Proposition~\ref{prop:beta_invariance} empirically. The key quantity
-of interest is the power loss at each $\omega^*$ relative to the $\omega^*=1$
-baseline; equation~\eqref{eq:fmm_power} gives an analytic prediction for this
-loss that the simulation tests against observed power.
+$\beta \in \{0.01, 0.1, 0.5, 1, 2, 5, 20, 50\}$ on a logarithmic axis and
+$\sigma_\alpha \in \{0, 0.5, 1, 2, 4\}$ hours. The anchor pilot is Baboon LUN
+($n=12$ active, $\hat\beta \approx 1.2$, $\hat\sigma_\alpha \approx 2$ h);
+results across additional active-design tissues (Mouse LIV, Mouse D1 Striatum,
+Baboon KIC, Baboon ADM) are reported in the supplementary material. The
+$\omega$ sweep traverses 0--100\% power across the cosinor-to-arrhythmic
+spectrum; the $\sigma_\alpha$ sweep verifies that phase noise alone has
+minimal effect on power, isolating the cosinor-violation effect to $\omega$.
 
 % =====================================================================
 \subsection{Sensitivity Analysis via Bootstrap}
