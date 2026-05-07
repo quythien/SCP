@@ -684,36 +684,70 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
   #                     alpha_rhythmic > derived from phase_g (acrophase, radians)
   # All clipped/wrapped to safe ranges.
   if (n_rhythmic > 0) {
+    .clip_omega <- function(x) pmin(pmax(x, 1e-4), 1 - 1e-4)
     omega_g <- if (!is.null(bio.opts$omega_dist)) {
       spec <- bio.opts$omega_dist
-      switch(spec$family,
-        beta  = pmin(pmax(rbeta(n_rhythmic, spec$a, spec$b), 1e-4), 1 - 1e-4),
+      raw  <- switch(spec$family,
+        beta  = rbeta(n_rhythmic, spec$a, spec$b),
         fixed = rep(spec$value, n_rhythmic),
         stop("Unknown omega_dist$family: ", spec$family))
+      .clip_omega(raw)
     } else if (!is.null(bio.opts$omega_rhythmic) &&
                length(bio.opts$omega_rhythmic) == n_rhythmic) {
-      pmin(pmax(bio.opts$omega_rhythmic, 1e-4), 1 - 1e-4)
+      .clip_omega(bio.opts$omega_rhythmic)
     } else {
-      rep(omega, n_rhythmic)  # backward-compat scalar
+      rep(omega, n_rhythmic)  # backward-compat scalar (no clip — caller validated)
     }
 
     # Determine the "base" acrophase in radians (from phase_g, in hours, → radians)
     alpha_base_rad <- phase_g[rhythmic_id] * (2 * pi / 24)
 
+    # Phase noise: when sd_hours is small the wrapped-normal approximates
+    # Gaussian jitter; for sd_hours >= 3 it becomes effectively circular-uniform.
+    # Use von Mises (the principled circular analog of Gaussian noise on a
+    # circle) so the alpha sweep is statistically defensible at any σ.
+    # rvonmises (Best & Fisher 1979 rejection method, simple implementation).
+    .rvonmises <- function(n, mu, kappa) {
+      if (kappa <= 0 || !is.finite(kappa)) return(runif(n, 0, 2 * pi))
+      a <- 1 + sqrt(1 + 4 * kappa^2)
+      b <- (a - sqrt(2 * a)) / (2 * kappa)
+      r <- (1 + b^2) / (2 * b)
+      out <- numeric(n); k <- 0L
+      while (k < n) {
+        z <- cos(pi * runif(1))
+        f <- (1 + r * z) / (r + z)
+        c <- kappa * (r - f)
+        u <- runif(1)
+        if (u < c * (2 - c) || log(c / u) + 1 - c >= 0) {
+          k <- k + 1L
+          theta <- if (runif(1) - 0.5 < 0) -acos(f) else acos(f)
+          out[k] <- (mu + theta) %% (2 * pi)
+        }
+      }
+      out
+    }
     alpha_g <- if (!is.null(bio.opts$alpha_dist)) {
       spec   <- bio.opts$alpha_dist
       sd_hr  <- spec$sd_hours %||% spec$sd %||% 0
       sd_rad <- sd_hr * (2 * pi / 24)   # hours → radians
       mu     <- spec$mean %||% 0
-      noise  <- if (spec$family == "normal") rnorm(n_rhythmic, mu, sd_rad)
-                else stop("Unknown alpha_dist$family: ", spec$family)
-      if (!is.null(bio.opts$alpha_rhythmic) &&
-          length(bio.opts$alpha_rhythmic) == n_rhythmic) {
-        # Phase-jitter on empirical (Option A from plan)
-        bio.opts$alpha_rhythmic + noise
+      if (spec$family != "normal")
+        stop("Unknown alpha_dist$family: ", spec$family)
+      # When sd_rad is small (< pi/6 ≈ 1 hr), Gaussian and von Mises coincide
+      # to first order. We use von Mises throughout for principled circular noise.
+      kappa <- if (sd_rad <= 0) Inf else 1 / sd_rad^2
+      base_alpha <- if (!is.null(bio.opts$alpha_rhythmic) &&
+                        length(bio.opts$alpha_rhythmic) == n_rhythmic) {
+        bio.opts$alpha_rhythmic
       } else {
-        # Pure noise around base
-        alpha_base_rad + noise
+        alpha_base_rad
+      }
+      if (sd_rad == 0) {
+        base_alpha
+      } else {
+        # Add circular noise gene-by-gene around each gene's empirical alpha
+        sapply(seq_len(n_rhythmic), function(i)
+          .rvonmises(1, mu = base_alpha[i] + mu, kappa = kappa))
       }
     } else if (!is.null(bio.opts$alpha_rhythmic) &&
                length(bio.opts$alpha_rhythmic) == n_rhythmic) {
