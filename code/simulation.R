@@ -678,46 +678,103 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
 
   r_values <- amp_g / sigma_g
 
+  # --- Resolve per-gene omega_g and alpha_g (radians) for rhythmic genes ---
+  # Priority for omega: omega_dist > omega_rhythmic > scalar `omega` arg
+  # Priority for alpha: alpha_dist (with optional jitter on alpha_rhythmic) >
+  #                     alpha_rhythmic > derived from phase_g (acrophase, radians)
+  # All clipped/wrapped to safe ranges.
+  if (n_rhythmic > 0) {
+    omega_g <- if (!is.null(bio.opts$omega_dist)) {
+      spec <- bio.opts$omega_dist
+      switch(spec$family,
+        beta  = pmin(pmax(rbeta(n_rhythmic, spec$a, spec$b), 1e-4), 1 - 1e-4),
+        fixed = rep(spec$value, n_rhythmic),
+        stop("Unknown omega_dist$family: ", spec$family))
+    } else if (!is.null(bio.opts$omega_rhythmic) &&
+               length(bio.opts$omega_rhythmic) == n_rhythmic) {
+      pmin(pmax(bio.opts$omega_rhythmic, 1e-4), 1 - 1e-4)
+    } else {
+      rep(omega, n_rhythmic)  # backward-compat scalar
+    }
+
+    # Determine the "base" acrophase in radians (from phase_g, in hours, → radians)
+    alpha_base_rad <- phase_g[rhythmic_id] * (2 * pi / 24)
+
+    alpha_g <- if (!is.null(bio.opts$alpha_dist)) {
+      spec   <- bio.opts$alpha_dist
+      sd_hr  <- spec$sd_hours %||% spec$sd %||% 0
+      sd_rad <- sd_hr * (2 * pi / 24)   # hours → radians
+      mu     <- spec$mean %||% 0
+      noise  <- if (spec$family == "normal") rnorm(n_rhythmic, mu, sd_rad)
+                else stop("Unknown alpha_dist$family: ", spec$family)
+      if (!is.null(bio.opts$alpha_rhythmic) &&
+          length(bio.opts$alpha_rhythmic) == n_rhythmic) {
+        # Phase-jitter on empirical (Option A from plan)
+        bio.opts$alpha_rhythmic + noise
+      } else {
+        # Pure noise around base
+        alpha_base_rad + noise
+      }
+    } else if (!is.null(bio.opts$alpha_rhythmic) &&
+               length(bio.opts$alpha_rhythmic) == n_rhythmic) {
+      bio.opts$alpha_rhythmic
+    } else {
+      alpha_base_rad
+    }
+
+    # Wrap to [0, 2pi) for FMM
+    alpha_g <- alpha_g %% (2 * pi)
+  } else {
+    omega_g <- numeric(0)
+    alpha_g <- numeric(0)
+  }
+
   # --- FMM time grid (radians): FMM package uses [0, 2*pi] ---
-  # Convert collection times from hours to radians
   cts_rad <- cts * (2 * pi / 24)
+
+  # Per-gene rhythmic index lookup: for gene g, find its position in rhythmic_id
+  rhythmic_pos <- integer(ngenes)
+  rhythmic_pos[rhythmic_id] <- seq_len(n_rhythmic)
 
   # --- expression matrix ---
   expr <- matrix(NA_real_, nrow = ngenes, ncol = N)
 
   for (g in seq_len(ngenes)) {
-    if (is_rhythmic[g] && omega > 0) {
-      # omega=0 → flat signal; skip FMM call and fall through to arrhythmic branch
-      # Phase in radians (FMM alpha parameter)
-      alpha_rad <- phase_g[g] * (2 * pi / 24)
+    if (is_rhythmic[g]) {
+      gp        <- rhythmic_pos[g]   # 1..n_rhythmic position
+      omega_use <- omega_g[gp]
+      alpha_use <- alpha_g[gp]
 
-      fmm_out <- FMM::generateFMM(
-        M          = mesor_g[g],
-        A          = amp_g[g],
-        alpha      = alpha_rad,
-        beta       = beta,
-        omega      = omega,
-        from       = 0,
-        to         = 2 * pi + 1e-4,  # ensure cts at t=24h (2pi rad) are covered
-        length.out = 1000L,
-        plot       = FALSE,
-        outvalues  = TRUE,
-        sigmaNoise = 0
-      )
-
-      # Interpolate the noiseless FMM signal at the actual (radian) sample times
-      fmm_signal <- approx(fmm_out$t, fmm_out$y, xout = cts_rad,
-                           method = "linear", rule = 2)$y
-
-      expr[g, ] <- rnorm(N, fmm_signal, sigma_g[g])
+      if (omega_use > 0) {
+        fmm_out <- FMM::generateFMM(
+          M          = mesor_g[g],
+          A          = amp_g[g],
+          alpha      = alpha_use,
+          beta       = beta,
+          omega      = omega_use,
+          from       = 0,
+          to         = 2 * pi + 1e-4,
+          length.out = 1000L,
+          plot       = FALSE,
+          outvalues  = TRUE,
+          sigmaNoise = 0
+        )
+        fmm_signal <- approx(fmm_out$t, fmm_out$y, xout = cts_rad,
+                             method = "linear", rule = 2)$y
+        expr[g, ] <- rnorm(N, fmm_signal, sigma_g[g])
+      } else {
+        # omega=0 → flat (FMM degenerate)
+        expr[g, ] <- rnorm(N, mesor_g[g], sigma_g[g])
+      }
     } else {
-      # Arrhythmic genes OR omega=0 (FMM flat limit): flat at mesor with noise
       expr[g, ] <- rnorm(N, mesor_g[g], sigma_g[g])
     }
   }
 
   list(expr = expr, is_rhythmic = is_rhythmic, r_values = r_values,
-       omega = omega)
+       omega = omega,
+       omega_g = if (n_rhythmic > 0) omega_g else NULL,
+       alpha_g = if (n_rhythmic > 0) alpha_g else NULL)
 }
 
 
