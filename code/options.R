@@ -228,6 +228,26 @@ setPhase <- function(input, n_rhythmic, period) {
 #' @param sigma_rhythmic Optional numeric vector of per-gene noise values for
 #'   rhythmic genes (same length as \code{amplitude}). When provided, amplitude
 #'   and sigma are drawn jointly to preserve pilot A-sigma correlation.
+#' @param paired_omega Logical. If \code{TRUE} and \code{omega_rhythmic} is
+#'   supplied (same length as \code{amplitude}), expand omega using the same
+#'   shared gene-index used for amplitude/sigma so all three are paired per gene.
+#' @param paired_alpha Logical. Same as \code{paired_omega} for \code{alpha_rhythmic}.
+#' @param omega_rhythmic Optional numeric vector of per-gene FMM omega values
+#'   from a pilot FMM fit (same length as \code{amplitude}). Used when
+#'   \code{paired_omega = TRUE}; ignored when \code{omega_dist} is also set.
+#' @param alpha_rhythmic Optional numeric vector of per-gene FMM alpha values
+#'   in radians from a pilot FMM fit (same length as \code{amplitude}).
+#' @param omega_dist Optional list specifying a distribution from which omega
+#'   is drawn at simulation time, e.g. \code{list(family="beta", a=1, b=5)} or
+#'   \code{list(family="fixed", value=0.7)}. Overrides \code{omega_rhythmic}
+#'   when both are provided.
+#' @param alpha_dist Optional list specifying a distribution for alpha,
+#'   \code{list(family="normal", mean=0, sd_hours=2)}. Internally
+#'   \code{sd_hours} is converted to radians via \code{sd_rad = sd_hours * 2*pi/24}.
+#'   When \code{alpha_rhythmic} is also provided and lengths match,
+#'   the perturbation is added to each gene's empirical alpha
+#'   (alpha_g = alpha_rhythmic[g] + N(0, sd_rad^2)).
+#'   When \code{alpha_rhythmic} is missing, alpha_g = N(0, sd_rad^2).
 #' @param cts Numeric vector of sample collection times for passive design.
 #' @param cts2 As \code{cts} for group 2.
 #' @param phase Phase distribution for rhythmic genes. \code{"uniform"} (default)
@@ -257,6 +277,13 @@ CircadianBioOptions <- function(ngenes = 5000,
                                 amplitude = NULL,
                                 amplitude2 = NULL,
                                 sigma_rhythmic = NULL,
+                                paired_sigma = FALSE,
+                                paired_omega = FALSE,
+                                paired_alpha = FALSE,
+                                omega_rhythmic = NULL,
+                                alpha_rhythmic = NULL,
+                                omega_dist = NULL,
+                                alpha_dist = NULL,
                                 cts = NULL,
                                 cts2 = NULL,
                                 phase = "uniform",
@@ -342,20 +369,46 @@ CircadianBioOptions <- function(ngenes = 5000,
   lBaselineExpr2_resolved <- if (!is.null(lBaselineExpr2)) setBaselineExpr(lBaselineExpr2, ngenes) else NULL
   lOD_resolved  <- setOD(lOD,  ngenes)
   lOD2_resolved <- if (!is.null(lOD2)) setOD(lOD2, ngenes) else NULL
-  # Amplitude and sigma must be sampled JOINTLY from the same gene indices to
-  # preserve the empirical (A, σ) pairing and thus the r̃ = A/σ distribution.
-  # When sigma_rhythmic is provided and has the same length as amplitude, draw
-  # both using a shared index vector.
-  if (!is.null(sigma_rhythmic) &&
+  # paired_sigma=TRUE: expand amplitude and sigma_rhythmic jointly using a shared
+  # index so each simulated rhythmic gene draws (A, σ) from the same pilot gene,
+  # preserving the empirical r̃ = A/σ distribution.
+  # paired_sigma=FALSE (default): original behaviour — amplitude expanded independently
+  # via setAmplitude, σ drawn from lOD in simulation (has_joint=FALSE).
+  #
+  # If paired_omega = TRUE / paired_alpha = TRUE and the corresponding *_rhythmic
+  # vector matches the amplitude length, we reuse the SAME ji index so that
+  # (A, σ, ω, α) for each simulated gene all come from the same pilot gene.
+  amp_len_orig   <- if (is.numeric(amplitude)) length(amplitude) else NA_integer_
+  paired_pairing <- !is.na(amp_len_orig) && amp_len_orig >= 2L
+
+  # Compute the shared ji once if any pairing is requested with sufficient
+  # amplitude length. Used for sigma, omega, and alpha jointly.
+  any_pair_request <- (paired_sigma && !is.null(sigma_rhythmic) &&
+                       is.numeric(amplitude) && length(amplitude) > 1L &&
+                       length(amplitude) == length(sigma_rhythmic) &&
+                       length(amplitude) != n_rhythmic) ||
+                      (paired_omega && !is.null(omega_rhythmic) &&
+                       length(omega_rhythmic) == amp_len_orig &&
+                       length(omega_rhythmic) != n_rhythmic) ||
+                      (paired_alpha && !is.null(alpha_rhythmic) &&
+                       length(alpha_rhythmic) == amp_len_orig &&
+                       length(alpha_rhythmic) != n_rhythmic)
+  ji <- if (any_pair_request && paired_pairing)
+          sample(amp_len_orig, n_rhythmic, replace = TRUE) else NULL
+
+  if (paired_sigma &&
+      !is.null(sigma_rhythmic) &&
       is.numeric(amplitude) && length(amplitude) > 1L &&
       length(amplitude) == length(sigma_rhythmic) &&
       length(amplitude) != n_rhythmic) {
-    ji               <- sample(length(amplitude), n_rhythmic, replace = TRUE)
-    amplitude_resolved  <- amplitude[ji]
-    sigma_rhythmic      <- sigma_rhythmic[ji]
+    amplitude_resolved <- amplitude[ji]
+    sigma_rhythmic     <- sigma_rhythmic[ji]
   } else {
-    amplitude_resolved  <- setAmplitude(amplitude, n_rhythmic)
-    # If sigma_rhythmic length still differs, resample independently as fallback
+    amplitude_resolved <- setAmplitude(amplitude, n_rhythmic)
+    # Independent fallback resample when sigma_rhythmic is supplied without
+    # pairing (or with a length mismatch the paired branch couldn't handle).
+    # Without this, a length(sigma_rhythmic) != n_rhythmic value would silently
+    # propagate to the simulator and either crash or recycle incorrectly.
     if (!is.null(sigma_rhythmic) && length(sigma_rhythmic) != n_rhythmic) {
       sigma_rhythmic <- if (length(sigma_rhythmic) == 1L)
         rep(sigma_rhythmic, n_rhythmic)
@@ -363,6 +416,43 @@ CircadianBioOptions <- function(ngenes = 5000,
         sample(sigma_rhythmic, n_rhythmic, replace = TRUE)
     }
   }
+
+  # Expand omega_rhythmic with the shared ji when paired_omega requested.
+  # If the paired expansion cannot proceed (length mismatch or amplitude is
+  # not a numeric vector), warn so the caller knows pairing is silently off.
+  if (paired_omega) {
+    if (!is.null(omega_rhythmic) &&
+        length(omega_rhythmic) == amp_len_orig &&
+        length(omega_rhythmic) != n_rhythmic &&
+        !is.null(ji)) {
+      omega_rhythmic <- omega_rhythmic[ji]
+    } else if (!is.null(omega_rhythmic) &&
+               length(omega_rhythmic) != n_rhythmic) {
+      warning(sprintf(
+        "paired_omega=TRUE but omega_rhythmic length (%d) does not match amplitude length (%s) or n_rhythmic (%d); pairing skipped.",
+        length(omega_rhythmic),
+        if (is.na(amp_len_orig)) "NA (amplitude is non-numeric)" else as.character(amp_len_orig),
+        n_rhythmic))
+    }
+  }
+
+  # Same for alpha.
+  if (paired_alpha) {
+    if (!is.null(alpha_rhythmic) &&
+        length(alpha_rhythmic) == amp_len_orig &&
+        length(alpha_rhythmic) != n_rhythmic &&
+        !is.null(ji)) {
+      alpha_rhythmic <- alpha_rhythmic[ji]
+    } else if (!is.null(alpha_rhythmic) &&
+               length(alpha_rhythmic) != n_rhythmic) {
+      warning(sprintf(
+        "paired_alpha=TRUE but alpha_rhythmic length (%d) does not match amplitude length (%s) or n_rhythmic (%d); pairing skipped.",
+        length(alpha_rhythmic),
+        if (is.na(amp_len_orig)) "NA (amplitude is non-numeric)" else as.character(amp_len_orig),
+        n_rhythmic))
+    }
+  }
+
   amplitude2_resolved <- if (!is.null(amplitude2)) setAmplitude(amplitude2, n_rhythmic) else NULL
   phase_resolved <- setPhase(phase, n_rhythmic, period)
 
@@ -380,6 +470,12 @@ CircadianBioOptions <- function(ngenes = 5000,
     amplitude_spec = amplitude,
     amplitude2 = amplitude2_resolved,
     sigma_rhythmic = sigma_rhythmic,
+    paired_omega   = paired_omega,
+    paired_alpha   = paired_alpha,
+    omega_rhythmic = omega_rhythmic,
+    alpha_rhythmic = alpha_rhythmic,
+    omega_dist     = omega_dist,
+    alpha_dist     = alpha_dist,
     cts = cts,
     cts2 = cts2,
     phase = phase_resolved,
