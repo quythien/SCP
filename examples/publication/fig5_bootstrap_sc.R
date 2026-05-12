@@ -260,7 +260,7 @@ if (length(panels) > 0) {
   source("examples/publication/_pub_style.R")
 
   fig_path_local <- file.path(out_dir, "figures", "fig_bootstrap_sc.pdf")
-  fig_path_main  <- "output/main_figures/Fig5_bootstrap_singlecohort.pdf"
+  fig_path_main  <- "output/main_figures/Fig3_bootstrap_singlecohort.pdf"
   dir.create("output/main_figures", recursive = TRUE, showWarnings = FALSE)
 
   pal_DT <- pub_palette_detector()
