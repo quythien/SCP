@@ -481,7 +481,6 @@ the loss, introduces the K-harmonic likelihood-ratio test (LRT) that
 recovers it, and reports a sensitivity sweep over the waveform-shape and
 phase-dispersion parameters of the data-generating process.
 
-\paragraph{Empirical motivation.}
 Across the six baboon CAMO active-design tissues, FMM
 \citep{rueda2019fmm} pilot fits yield $\hat{\omega}$ medians from $0.32$
 (KIC) to $0.57$ (LIV), far below the cosinor reference $\omega = 1$
@@ -490,7 +489,6 @@ median $R^2$ is $0.82$--$0.93$, while cosinor $R^2$ on the same genes is
 typically lower. Cosinor violation is therefore not a hypothetical concern
 but a typical feature of high-resolution active-design data.
 
-\paragraph{The cosinor model as the first-harmonic projection of FMM.}
 Among the parametric circadian families, FMM provides a tractable departure
 from sinusoidality. The FMM signal is
 \begin{equation}
@@ -550,7 +548,6 @@ phase without changing its amplitude, so the noncentrality parameter of
 the cosinor $F$-test, which depends only on the squared first-harmonic
 amplitude, is invariant in $\beta$.
 
-\paragraph{Why a direct FMM-LRT is not the right test.}
 The natural likelihood-ratio test of $H_0: A = 0$ in the nonlinear
 parameterization \eqref{eq:fmm_model} runs into the Davies boundary
 problem \citep{Davies1977,Davies1987}: under $H_0$ the parameters
@@ -563,7 +560,6 @@ than the cosinor $F$-test and inflated critical values relative to nominal
 $F$-thresholds (the ``Davies tax''). The K-harmonic linearisation introduced
 below avoids the boundary problem entirely.
 
-\paragraph{Linearisation to the K-harmonic LRT.}
 Truncating \eqref{eq:fmm_fourier} at $K$ harmonics and \emph{releasing} the
 geometric-decay constraint, that is, letting the harmonic coefficients
 $(a_k, b_k)$ be free, yields the linear regression
@@ -616,7 +612,6 @@ noncentrality formula \eqref{eq:ncp_K_fmm} continues to apply, because
 eBayes shrinks the variance estimator but does not change the underlying
 linear model.
 
-\paragraph{Identifiability and the Nyquist condition.}
 The K-harmonic linear model \eqref{eq:Kharmonic_model} has $2K + 1$ free
 parameters (one intercept, $K$ cosine coefficients, $K$ sine
 coefficients), so its design matrix has $2K + 1$ columns. Identifiability
@@ -635,7 +630,6 @@ per-subject collection times are typically distinct, so the condition
 is satisfied automatically; in active designs it imposes an explicit
 constraint on the sampling grid.
 
-\paragraph{Choice of $K = 2$ as default.}
 The variance fraction captured by truncation at $K$ is
 $V_K / V_\infty = 1 - r^{2K}$ where $r = (\omega - 1)/(\omega + 1)$. For
 empirically observed $\omega \in [0.3, 0.5]$ (Supplementary
@@ -658,7 +652,6 @@ well documented in liver, gut and immune tissues), and is identifiable in
 any active design with $B \geq 5$. The $K = 2$ choice can be overridden
 via the \texttt{K} argument of \texttt{detect\_FMM}.
 
-\paragraph{Sensitivity sweep.}
 To characterise the operating region of \texttt{detect\_FMM(K = 2)} on a
 cosinor-violating pilot we use a two-axis parametric sweep on the Baboon
 LUN pilot ($\hat{\beta} = 1.60$ under the new \texttt{detect\_FMM}
@@ -697,7 +690,6 @@ which detector is in use. We resolve this interaction in two steps: first
 a brief noncentrality calculation under cosinor and FMM truth, then an
 empirical comparison on one active and one passive pilot.
 
-\paragraph{Noncentrality under cosinor and FMM truth.}
 Under cosinor truth and a balanced equally spaced active design with
 $B \geq 3$, $d(\phi) = 1/2$ uniformly in $\phi$ (Section~\ref{sec:single_cohort})
 and the DCP noncentrality is
@@ -726,7 +718,6 @@ make two predictions: DCP power should be approximately $B$-invariant under
 both truths, and the K-harmonic LRT should dominate DCP when
 $c(\omega) < 1$ and the Nyquist condition is met.
 
-\paragraph{Empirical contrast.}
 Figure~\ref{fig:active_vs_passive} arranges the empirical comparison as a
 $2 \times 2$ grid: detector (DCP top row, K-harmonic LRT with $K = 2$
 bottom row) crossed with design (active KIM, $\hat{\beta} = 2.62$ under
@@ -758,7 +749,6 @@ sharp-peak regime), so the second harmonic carries little additional
 signal and $K = 2$ pays a degrees-of-freedom cost without a noncentrality
 gain. The detector that is the LRT for the truth at hand, cosinor, wins.
 
-\paragraph{Practical recommendation.}
 The picture is therefore not ``active wins'' or ``passive wins'' in any
 absolute sense. Within active designs, neither DCP nor the K-harmonic
 LRT depends on the $(B, m)$ allocation at fixed $N$ above its
@@ -1095,8 +1085,6 @@ K-harmonic LRT with the same qualitative behaviour.
 % Six threads, one paragraph each.
 % -----------------------------------------------------------------------
 
-\paragraph{Effect-size heterogeneity drives sample-size requirements more than
-any single design choice.}
 The five pilot datasets span a ${\sim}5$-fold range in $\tilde{r}$, and the
 resulting $n_{80}$ estimates differ by more than an order of magnitude. On
 the active GTEx pilots, $n_{80}$ for single-cohort detection is $\approx 19$
@@ -1108,8 +1096,6 @@ circadian setting and reinforces the need for effect-size-aware,
 dataset-specific planning rather than generic ``circadian sample size''
 recommendations.
 
-\paragraph{Active design confers a design-factor advantage over passive,
-but passive remains the only option for human observational data.}
 The equispaced active design achieves a noncentrality parameter
 $\lambda_g = N r_g^2 / 2$, twice the value of an unstructured passive
 design with the same $N$ (design factor $d = 1/2$ vs.\ $d \approx 0.24$
@@ -1130,9 +1116,11 @@ through the pilot $\hat{\omega}$-median: empirically, the baboon active
 tissues have $\hat{\omega}$-median in $[0.3, 0.5]$ and the human passive
 cohorts (Seney) have $\hat{\omega}$-median in $[0.7, 0.9]$. We recommend
 $K = 2$ when the pilot $\hat{\omega}$-median is $\leq 0.6$ and the design
-satisfies $B \geq 2K + 1 = 5$, and DCP otherwise. Above the
-identifiability threshold ($B \geq 3$ for DCP, $B \geq 5$ for $K = 2$),
-the $(B, m)$ allocation does not affect power at fixed $N$: on the
+satisfies $B \geq 2K + 1 = 5$, and DCP (which is the K-harmonic LRT at
+$K = 1$) otherwise. The general harmonic-regression identifiability rule
+is $B \geq 2K + 1$ distinct sampling phases per period: $B \geq 3$ for
+DCP, $B \geq 5$ for $K = 2$, $B \geq 7$ for $K = 3$. Above this
+threshold the $(B, m)$ allocation does not affect power at fixed $N$: on the
 active KIM pilot, the four sampling grids $B \in \{6, 8, 12, 24\}$
 overlap within Monte Carlo noise ($\leq 4$\,pp) for both detectors
 (Figure~\ref{fig:active_vs_passive}). The $B$-versus-$m$ trade-off
@@ -1161,7 +1149,6 @@ bootstrap mean agree within Monte Carlo noise and the bootstrap serves
 as a sanity check; for large pilots ($n_{\mathrm{pilot}} \gtrsim 250$)
 the plug-in recommendation is faithful.
 
-\paragraph{Differential analyses pay a two-stage cost.}
 DR, DP, and DM tests are conditional on a data-derived TOJR
 classification, which breaks analytic tractability and increases the
 required sample size per group relative to single-cohort detection. For
@@ -1189,10 +1176,14 @@ cosinor F-test (DCP). The choice between the two is governed by
 waveform shape, not by active vs.\ passive design \emph{per se}.
 
 \textbf{Step 2, sampling grid.}
-Choose any $B$ at or above the detector's identifiability threshold:
-$B \geq 3$ for DCP, $B \geq 5$ for $K = 2$. Above the threshold, the
-$(B, m)$ allocation does not affect power; the design choice reduces
-to a single decision on total $N$.
+Choose any $B$ at or above the harmonic-regression identifiability
+threshold $B \geq 2K + 1$: that is, $B \geq 3$ for DCP, $B \geq 5$ for
+$K = 2$, $B \geq 7$ for $K = 3$. Above the threshold, the $(B, m)$
+allocation does not affect power; the design choice reduces to a
+single decision on total $N$. The detection functions
+\texttt{detect\_DCP} and \texttt{detect\_FMM} can also be called
+stand-alone outside the power-analysis pipeline, with the same
+identifiability requirement on the supplied design.
 
 \textbf{Step 3, sample size.}
 Read $n_{80}$ off the closed-form power curve at your pilot
@@ -1216,7 +1207,6 @@ check (typical CI widths $\leq 10$\,pp). For
 $n_{\mathrm{pilot}} \gtrsim 250$, the plug-in curve is a faithful
 summary and the bootstrap is optional.
 
-\paragraph{Limitations.}
 The cosinor model assumes a single sinusoidal harmonic and the
 K-harmonic LRT assumes Gaussian residuals; both are robust to mild
 violations but degrade for heavily sharp-peaked, near-arrhythmic, or

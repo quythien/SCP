@@ -1771,6 +1771,13 @@ detect_DCP <- function(expr, times, period = 24) {
 #' Fits K harmonics where B = number of unique time points.
 #' Tests all harmonic terms jointly via an F-test against intercept-only null.
 #'
+#' @note Superseded by \code{\link{detect_FMM}}, which supports explicit K,
+#'   the LimoRhyde-style \code{limma::lmFit} + \code{limma::eBayes} backend
+#'   with cross-gene variance shrinkage, and a richer return value
+#'   (per-gene F, df1, df2, R2, p.adjust, discovery). Retained for
+#'   backwards compatibility; new code should call
+#'   \code{detect_FMM(expr, times, K = <K>, ebayes = TRUE/FALSE)} instead.
+#'
 #' @param expr   Gene x sample expression matrix
 #' @param times  Numeric time vector (length = ncol(expr))
 #' @param period Period (default 24)
@@ -1954,6 +1961,11 @@ detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
 #' @param K Number of harmonics to include (default 2). K=1 reduces to
 #'   standard cosinor (DCP). K=2 is the recommended default for non-cosinor
 #'   signals; K=3 may improve power for very sharp peaks (omega < 0.15).
+#'   Identifiability requires the design to have at least \code{2*K + 1}
+#'   distinct sampling phases per period (B >= 3 for K=1, B >= 5 for K=2,
+#'   B >= 7 for K=3). \code{detect_FMM} can be called stand-alone on any
+#'   gene-by-sample expression matrix; the function emits a warning when
+#'   the supplied design violates the identifiability bound.
 #' @param ebayes Logical. If \code{TRUE} (default), variance is moderated
 #'   across genes via \code{limma::eBayes}. If \code{FALSE}, the unshrunk
 #'   exact F-test is used (useful for null-calibration verification). The
