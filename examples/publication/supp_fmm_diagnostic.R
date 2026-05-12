@@ -159,17 +159,18 @@ for (out_pdf in fig_paths) {
     sa_hat    <- d$sigma_alpha_hat
 
     # --- omega panel ---
+    om_med <- median(omega_emp)
     hist(omega_emp, breaks = seq(0, 1, by = 0.05), freq = FALSE,
-         main = sprintf("%s, omega", t),
+         main = bquote(.(t) * ", " * omega),
          xlab = expression(hat(omega)),
          col = col_omega, border = "white", xlim = c(0, 1))
     panel_label(letters_seq[2L * ti - 1L])
     curve(dbeta(x, 1, beta_hat), add = TRUE, col = col_fit, lwd = 1.8)
     abline(v = 1, lty = 3, col = "grey60")
-    abline(v = median(omega_emp), lty = 2, col = col_median, lwd = 1.2)
+    abline(v = om_med, lty = 2, col = col_median, lwd = 1.2)
     pub_legend("topright",
-               legend = c(sprintf("median = %.2f", median(omega_emp)),
-                          expression(Beta(1, hat(beta)))),
+               legend = pub_exprs(bquote(median == .(format(round(om_med, 2), nsmall = 2))),
+                                   bquote(Beta(1, hat(beta)))),
                col = c(col_median, col_fit),
                lty = c(2, 1), lwd = c(1.2, 1.8))
 
@@ -179,7 +180,7 @@ for (out_pdf in fig_paths) {
     mu_a   <- mean(alpha_emp)
 
     hist(alpha_emp, breaks = 18, freq = FALSE,
-         main = sprintf("%s, alpha", t),
+         main = bquote(.(t) * ", " * alpha),
          xlab = expression(hat(alpha) ~ "(rad)"),
          col = col_alpha, border = "white", xlim = c(0, 2 * pi))
     panel_label(letters_seq[2L * ti])
@@ -189,8 +190,8 @@ for (out_pdf in fig_paths) {
       curve(vm_dens, add = TRUE, col = col_fit, lwd = 1.8)
     }
     pub_legend("topright",
-               legend = c(sprintf("mean = %.2f rad", mu_a),
-                          expression(vonMises(hat(mu), hat(kappa)))),
+               legend = pub_exprs(bquote(mean == .(format(round(mu_a, 2), nsmall = 2)) ~ "rad"),
+                                   bquote(vonMises(hat(mu), hat(kappa)))),
                col = c(col_fit, col_fit),
                lty = c(NA, 1), lwd = c(NA, 1.8),
                pch = c(NA, NA))

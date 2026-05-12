@@ -25,7 +25,10 @@ pub_par <- function(mfrow = c(1, 1), mar = c(4.2, 4.2, 2.2, 1.0),
       las   = 1,
       tcl   = -0.3,       # tick length inward, modest
       mgp   = c(2.5, 0.6, 0),  # axis title / tick label / line offsets
-      family = "sans",
+      family = "Helvetica",    # fontconfig-resolves to Nimbus Sans
+                                # (Adobe-clone, metric-compatible with
+                                # Helvetica), so PDF can be reprocessed
+                                # with the proper font by the publisher.
       cex.lab  = 1.0,
       cex.axis = 0.9,
       cex.main = 1.0,
@@ -66,4 +69,15 @@ pub_legend <- function(x = "bottomright", legend, col, lwd = 1.8, lty = 1,
                        pch = NA, title = NULL, cex = 0.85) {
   legend(x, legend = legend, col = col, lwd = lwd, lty = lty, pch = pch,
          title = title, bty = "n", cex = cex)
+}
+
+# Build a legend-ready expression vector from a mixed list of plain-text
+# strings and bquote-style math expressions. R's c() drops the expression
+# class when mixing types; do.call(expression, list(...)) preserves it.
+# Usage:
+#   labs <- pub_exprs(bquote(median == .(0.28)),
+#                     bquote(Beta(1, hat(beta))))
+#   pub_legend("topright", legend = labs, ...)
+pub_exprs <- function(...) {
+  do.call(expression, list(...))
 }
