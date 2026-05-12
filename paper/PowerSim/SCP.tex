@@ -486,10 +486,10 @@ phase-dispersion parameters of the data-generating process.
 Across the six baboon CAMO active-design tissues, FMM
 \citep{rueda2019fmm} pilot fits yield $\hat{\omega}$ medians from $0.32$
 (KIC) to $0.57$ (LIV), far below the cosinor reference $\omega = 1$
-(Supplementary Figure~S1); the FMM goodness-of-fit
-median $R^2$ is $0.82$--$0.93$, while cosinor $R^2$ on the same genes is
-typically lower. Cosinor violation is therefore not a hypothetical concern
-but a typical feature of high-resolution active-design data.
+(Supplementary Figure~S1). The FMM goodness-of-fit median $R^2$ is
+$0.82$--$0.93$ on these tissues, while cosinor $R^2$ on the same genes
+is typically lower. Cosinor violation is therefore a typical feature of
+high-resolution active-design data, not a hypothetical concern.
 
 Among the parametric circadian families, FMM provides a tractable departure
 from sinusoidality. The FMM signal is
@@ -703,8 +703,8 @@ a brief noncentrality calculation under cosinor and FMM truth, then an
 empirical comparison on one active and one passive pilot.
 
 Under cosinor truth and a balanced equally spaced active design with
-$B \geq 3$, $d(\phi) = 1/2$ uniformly in $\phi$ (Section~\ref{sec:single_cohort})
-and the DCP noncentrality is
+$B \geq 3$, the design factor $d(\phi) = 1/2$ uniformly in $\phi$
+(Section~\ref{sec:single_cohort}), and the DCP noncentrality is
 \begin{equation}
 \mathrm{NCP}_{\mathrm{DCP}}^{\mathrm{cos}}(N) = \frac{(A/\sigma)^2\, N}{2},
 \label{eq:ncp_dcp_cos}
@@ -766,17 +766,21 @@ so the choice does not affect the rest of the framework.
 \subsection{Pilot datasets and simulation setup}
 \label{sec:pilot_datasets}
 
-Five pilot datasets spanning a ${\sim}5$-fold range in signal-to-noise ratio
-are used throughout. For single-cohort power (Figure~\ref{fig:sc_adrliv}) and the active vs.\ passive comparison (Figure~\ref{fig:active_vs_passive}), we use the human adrenal gland
-(\textsc{GTEx} ADR; $n = 220$, passive; $\tilde{r} \approx 0.97$) and
-mouse liver (\textsc{GSE54651} LIV; $n = 8$, active $B = 8$;
-$\tilde{r} \approx 2.88$), spanning a passive moderate-signal pilot and
-an active high-signal pilot. For the $B$-vs-$m$ multi-method
-analysis we additionally use the baboon lung (CAMO LUN; $n = 12$, active;
-$\tilde{r} \approx 1.72$) and mouse D1 striatum (\textsc{D1D2};
-$n_{\text{pilot}} = 45$, active $B=6$; $\tilde{r} \approx 0.65$), which brackets
-the weak-signal regime. For the bootstrap figure, the Seney ACC control cohort
-($n = 60$; $\tilde{r} \approx 0.79$, passive) is added as a third panel.
+Pilot datasets spanning a ${\sim}5$-fold range in signal-to-noise ratio
+are used throughout. Single-cohort power (Figure~\ref{fig:sc_adrliv})
+uses the human adrenal gland (\textsc{GTEx} ADR; $n = 220$, passive;
+$\tilde{r} \approx 0.97$) and mouse liver (\textsc{GSE54651} LIV;
+$n = 8$, active $B = 8$; $\tilde{r} \approx 2.88$), giving a passive
+moderate-signal pilot and an active high-signal pilot. The K-harmonic
+sensitivity sweep (Figure~\ref{fig:fmm_sensitivity}) uses baboon lung
+(CAMO LUN; $n_\text{pilot} = 12$, active $B = 12$;
+$\tilde{r} \approx 1.72$). The active vs.\ passive comparison
+(Figure~\ref{fig:active_vs_passive}) contrasts baboon KIM (CAMO KIM;
+active, $\hat{\eta} = 2.62$) with the Seney ACC control cohort
+($n_\text{pilot} = 60$, passive; $\tilde{r} \approx 0.79$). The
+bootstrap (Figure~\ref{fig:bootstrap_sc}) spans four passive pilots
+ranging from $n_\text{pilot} = 28$ (Putamen-SCZ) to
+$n_\text{pilot} = 416$ (GTEx Thyroid).
 All simulations use $G = 5{,}000$ genes, $N_{\text{sim}} = 30$, and BH-adjusted
 FDR control at $\alpha = 0.05$.
 
