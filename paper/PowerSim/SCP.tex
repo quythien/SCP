@@ -1004,51 +1004,66 @@ invariance of the squared-amplitude noncentrality (Proposition~\ref{prop:beta_in
 \label{sec:bootstrap_results}
 
 % --- FIGURE 5 PLACEHOLDER ---
-% Source script: 08f_bootstrap_sc.R (boot_sc screen running)
-% Will produce: output/bootstrap_sc/figures/fig_bootstrap_sc.pdf
-% Panels: A=Baboon LUN n=12, B=Mouse D1 n=45, C=Seney CTL n=60
+% Source script: examples/publication/fig5_bootstrap_sc.R
+% Generated figure: output/main_figures/Fig5_bootstrap_singlecohort.pdf
+% Panels (left to right, top to bottom):
+%   A=Putamen SCZ n=28, B=Seney ACC n=60,
+%   C=GTEx Pancreas n=249, D=GTEx Thyroid n=416
 
 \begin{figure}[H]
 \centering
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
   FIGURE 5 PLACEHOLDER\\[6pt]
-  Bootstrap vs plug-in, single-cohort DCP, $B = 4$.\\
-  Panels: (A) Baboon LUN $n_\text{pilot}=12$,
-          (B) Mouse D1 $n_\text{pilot}=45$,
-          (C) Seney CTL $n_\text{pilot}=60$.\\
-  boot\_sc screen running.
+  Bootstrap vs plug-in, single-cohort \textsc{DCP}.\\
+  Panels: (A) Putamen SCZ $n_\text{pilot}=28$,
+          (B) Seney ACC $n_\text{pilot}=60$,
+          (C) GTEx Pancreas $n_\text{pilot}=249$,
+          (D) GTEx Thyroid $n_\text{pilot}=416$.\\
+  Source: Fig5\_bootstrap\_singlecohort.pdf.
   \vspace{3cm}}}
-\caption{Bootstrap uncertainty in single-cohort power estimates.
-Blue curve: plug-in power (parameters estimated once from pilot, treated as
-fixed). Red curve with shaded band: bootstrap mean power $\pm$ 95\,\% CI
-($R_{\mathrm{boot}} = 50$ resamples, $N_{\mathrm{sim}} = 20$ inner simulations,
-\textsc{DCP}, $B = 4$). \textbf{(A)} Putamen schizophrenia controls ($n_\mathrm{pilot} = 28$, passive):
-the plug-in projects 28\% power at $N = 40$ while the bootstrap mean is 43\%, and
-the 95\% CI reaches a maximum width of 20.5\,pp at $N = 40$, the strongest signal
-of pilot-induced uncertainty across the four panels. \textbf{(B)} Seney ACC
-controls ($n_\mathrm{pilot} = 60$, passive): maximum CI width ${\sim}10$\,pp at
-$N = 60$. \textbf{(C)} GTEx Pancreas ($n_\mathrm{pilot} = 249$): maximum CI width
-6.8\,pp at $N = 160$. \textbf{(D)} GTEx Thyroid ($n_\mathrm{pilot} = 416$):
-maximum CI width 6.4\,pp at $N = 120$.
-The ordered sequence illustrates that bootstrap correction matters most when
-the pilot is small, and that the active vs.\ passive design character of the
-pilot influences CI width independently of $n$.}
+\caption{Bootstrap uncertainty in single-cohort power estimates. Blue
+curve: plug-in power (parameters estimated once from pilot, treated as
+fixed). Red curve with error bars: bootstrap mean power and pointwise
+$95\%$ CI ($B_{\mathrm{out}} = 50$ outer resamples,
+$N_{\mathrm{sim}}^{\mathrm{in}} = 25$ inner simulations, $G = 5{,}000$
+genes, \textsc{DCP} detector at the cosinor-screen FDR threshold
+$0.05$). All four pilots are passive. \textbf{(A)} Putamen
+schizophrenia controls ($n_{\mathrm{pilot}} = 28$): plug-in projects
+$28\%$ power at $N = 40$ while the bootstrap mean is $43\%$, and the
+$95\%$ CI reaches a maximum width of $20.5$\,pp at $N = 40$. This is the
+strongest pilot-induced-uncertainty signal across the four panels.
+\textbf{(B)} Seney ACC controls ($n_{\mathrm{pilot}} = 60$): maximum
+CI width $9.5$\,pp at $N = 60$; plug-in and bootstrap mean agree within
+$\sim 1$\,pp throughout. \textbf{(C)} GTEx Pancreas
+($n_{\mathrm{pilot}} = 249$): maximum CI width $6.7$\,pp at $N = 160$.
+\textbf{(D)} GTEx Thyroid ($n_{\mathrm{pilot}} = 416$): maximum CI
+width $6.4$\,pp at $N = 120$. The ordered sequence illustrates that
+bootstrap correction matters most when the pilot is small, and that
+CI width contracts monotonically with $n_{\mathrm{pilot}}$ until it
+saturates against the inner-Monte-Carlo noise floor at large pilots.}
 \label{fig:bootstrap_sc}
 \end{figure}
 
-Bootstrap and plug-in power estimates agree closely when the pilot is large and
-the signal is moderate, but diverge when both are small
-(Figure~\ref{fig:bootstrap_sc}). For mouse D1 striatum ($n_\mathrm{pilot}=45$,
-active, $\tilde{r}\approx 0.65$), plug-in and bootstrap estimates agree within
-0.5\,pp; the 95\,\% CI width is ${\sim}8$\,pp at $N=40$ and narrows to
-$<3$\,pp at $N=80$, with interpolated $N_{80}\approx 49$. For human post-mortem
-ACC ($n_\mathrm{pilot}=60$, passive, $\tilde{r}\approx 0.79$), CI width is
-7--9\,pp at $N=40$--$80$ and narrows to $<2$\,pp at $N=160$; the passive design
-inflates uncertainty relative to an active pilot of similar size, and $N_{80}
-\approx 120$ reflects the design-factor efficiency loss. Bootstrap uncertainty
-is widest precisely where design decisions are most consequential --- near the
-80\,\% power threshold --- recommending its routine use as a sensitivity
-analysis whenever $\tilde{r}<1$.
+Three features of Figure~\ref{fig:bootstrap_sc} carry the bootstrap
+message. First, the plug-in and bootstrap mean diverge most strongly at
+the smallest pilot: at Putamen-SCZ $N = 40$, plug-in is $27.7\%$ but
+the bootstrap mean is $42.6\%$, a $15$-point gap that the plug-in curve
+alone hides. The bootstrap CI at the same $N$ spans $33.5\%$ to
+$54.0\%$, so even averaging across $50$ resamples does not collapse the
+uncertainty in the recommendation. Second, for the moderate pilot
+(Seney, $n_{\mathrm{pilot}} = 60$) plug-in and bootstrap mean agree
+within Monte Carlo noise at every $N$, and the CI is $\leq 10$\,pp;
+the plug-in curve here is a faithful summary. Third, for the two large
+GTEx pilots ($n_{\mathrm{pilot}} \in \{249, 416\}$), CI widths plateau
+at $6$--$7$\,pp, dominated by inner-simulation Monte Carlo rather than
+pilot variability; further increases in $n_{\mathrm{pilot}}$ would not
+materially tighten the recommendation. The bootstrap is therefore
+essential for $n_{\mathrm{pilot}} \lesssim 40$, useful as a sanity
+check for $n_{\mathrm{pilot}} \approx 60$, and unnecessary for
+$n_{\mathrm{pilot}} \gtrsim 250$ at this inner-simulation budget. The
+figure uses \textsc{DCP} throughout; the uncertainty story is in the
+pilot summary $\hat{\Psi}$ and therefore extends in principle to the
+K-harmonic LRT with the same qualitative behaviour.
 
 % (Archived pre-pivot prose moved to _archive/SCP_pre_pivot.tex on 2026-05-09)
 
