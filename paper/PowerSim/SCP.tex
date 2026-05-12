@@ -62,14 +62,14 @@ y_{gi}
 =
 \mu_g
 +
-A_g\cos \bigl(\omega(t_i - \phi_g)\bigr)
+A_g\cos \bigl(\omega_0 (t_i - \phi_g)\bigr)
 +
 \varepsilon_{gi},
 \qquad
 \varepsilon_{gi}\overset{\text{iid}}{\sim}N(0,\sigma_g^2),
 \label{eq:cosinor_model}
 \end{equation}
-where $\omega=2\pi/24$, $\mu_g$ is the MESOR (Midline Estimating Statistic Of Rhythm; i.e., rhythm-adjusted mean expression), $A_g\geq 0$ is the amplitude,
+where $\omega_0 = 2\pi/24$ is the angular frequency of the $24$-hour cycle (the cosinor subscript distinguishes it from the FMM shape parameter $\omega \in (0, 1]$ introduced in Section~\ref{sec:cosinor_violation}), $\mu_g$ is the MESOR (Midline Estimating Statistic Of Rhythm; i.e., rhythm-adjusted mean expression), $A_g\geq 0$ is the amplitude,
 $\phi_g\in[0,24)$ is the acrophase, and $\sigma_g$ is the noise level. The CircaPower paper by Zong et al. \cite{zong2023circapower} established the theoretical foundations of power calculation of circadian biomarker detection below under the cosinor model with Gaussian errors. To test for rhythmicity of gene $g$, $F$-statistic for $H_0: A_g = 0$ versus $H_A: A_g > 0$ was considered: 
 \begin{equation}
 F_g
@@ -102,9 +102,9 @@ where $r_g = A_g/\sigma_g$ is the intrinsic effect size of gene $g$, and the des
 \begin{equation}
 d(\phi_g)
 =
-\frac{1}{n}\sum_{i=1}^n \cos^2\bigl(\omega(t_i - \phi_g)\bigr)
+\frac{1}{n}\sum_{i=1}^n \cos^2\bigl(\omega_0 (t_i - \phi_g)\bigr)
 -
-\left(\frac{1}{n}\sum_{i=1}^n \cos\bigl(\omega(t_i - \phi_g)\bigr)\right)^{\!2}.
+\left(\frac{1}{n}\sum_{i=1}^n \cos\bigl(\omega_0 (t_i - \phi_g)\bigr)\right)^{\!2}.
 \label{eq:design_factor_circapower}
 \end{equation}
 
@@ -196,7 +196,7 @@ M_0\!\left(\mu_g^{(s)}, \sigma_g^{(s)}\right), & Z_{g,s}^R = 0,
 where the rhythmic model $M_1$ is the cosinor model
 \[
 M_1:\quad
-y_{g,i}^{(s)} = \mu_g^{(s)} + A_g^{(s)} \cos\!\bigl(\omega t_i + \phi_g^{(s)}\bigr)
+y_{g,i}^{(s)} = \mu_g^{(s)} + A_g^{(s)} \cos\!\bigl(\omega_0 t_i + \phi_g^{(s)}\bigr)
 + \varepsilon_{g,i}^{(s)}, \qquad
 \varepsilon_{g,i}^{(s)} \sim \mathcal{N}\bigl(0, (\sigma_g^{(s)})^2\bigr),
 \]
@@ -277,11 +277,13 @@ $Z_{g,s}^E\in\{0,1\}$ denotes the true differential status. A targeted indicator
 $\delta_{g,s}^{\mathrm{DR}} = |R_{g,1,s}^2 - R_{g,2,s}^2|$ is the absolute difference in cosinor goodness-of-fit between groups,
 $\delta_{g,s}^{\mathrm{DP}} = \min\!\bigl(|\phi_{g,1,s}-\phi_{g,2,s}|,\,24-|\phi_{g,1,s}-\phi_{g,2,s}|\bigr)$ is the circular phase distance,
 and $\delta_{g,s}^{\mathrm{DM}} = |\mu_{g,2,s} - \mu_{g,1,s}|$ is the absolute mesor difference.
-Here $R_{g,k,s}^2$ denotes the coefficient of determination of the
-cosinor model fit restricted to group $k$, that is,
-$R_{g,k,s}^2 = 1 - \mathrm{SSE}_{g,k,s}/\mathrm{SST}_{g,k,s}$, where
-$\mathrm{SSE}$ and $\mathrm{SST}$ are the residual and total sums of
-squares of the group-$k$ cosinor fit.
+Here $R_{g,k,s}^2$ for $k \in \{1, 2\}$ denotes the coefficient of
+determination of the cosinor model fit restricted to group $k$, that
+is, $R_{g,k,s}^2 = 1 - \mathrm{SSE}_{g,k,s}/\mathrm{SST}_{g,k,s}$,
+where $\mathrm{SSE}$ and $\mathrm{SST}$ are the residual and total sums
+of squares of the group-$k$ cosinor fit. The group index $k$ used here
+is distinct from the harmonic index $k$ in
+Section~\ref{sec:cosinor_violation}.
 
 When comparing rhythmic patterns between two groups, inference becomes
 multi-stage: genes are first partitioned by per-group rhythmicity, followed by
@@ -497,23 +499,30 @@ y(t) = \mu + A\cos\!\bigl(\beta + 2\arctan\!\bigl(\omega\tan\tfrac{t-\alpha}{2}\
 \label{eq:fmm_model}
 \end{equation}
 with shape parameter $\omega$ and orientation parameter $\beta$;
-$\alpha$ is the peak location and $\mu, A, \sigma$ retain their cosinor
-meaning. At $\omega = 1$ the phase transformation $u(t) = 2\arctan(\tan((t-\alpha)/2))$
-is the identity and \eqref{eq:fmm_model} collapses to the cosinor model
-with acrophase $\phi = \alpha - \beta$; decreasing $\omega$ sharpens and
-asymmetrises the waveform along a single interpretable axis.
+$\alpha$ is the peak location in radians (distinct from the
+inference-stage threshold $\alpha$ used in Sections~\ref{sec:single_cohort}
+and~\ref{sec:differential}; from here through Section~\ref{sec:active_passive},
+$\alpha$ refers to the FMM peak phase), and $\mu, A, \sigma$ retain their
+cosinor meaning. At $\omega = 1$ the phase transformation
+$u(t) = 2\arctan(\tan((t-\alpha)/2))$ is the identity and
+\eqref{eq:fmm_model} collapses to the cosinor model with acrophase
+$\phi = \alpha - \beta$; decreasing $\omega$ sharpens and asymmetrises
+the waveform along a single interpretable axis.
 
 A direct computation (Supplementary Section~S2;
-the M\"{o}bius / Blaschke form $e^{iu(t)} = (e^{is}-r)/(1-r\,e^{is})$ with
-$r = (\omega - 1)/(\omega + 1)$ and $s = t - \alpha$) shows that the FMM
+the M\"{o}bius / Blaschke form $e^{iu(t)} = (e^{is}-\rho)/(1-\rho\,e^{is})$ with
+$\rho = (\omega - 1)/(\omega + 1)$ and $s = t - \alpha$) shows that the FMM
 signal admits the exact Fourier expansion
 \begin{equation}
-y(t) = \mu' + A(1 - r^2) \sum_{k=1}^{\infty} r^{k-1} \cos\!\bigl(k(t - \alpha) + \beta\bigr) + \varepsilon,
-\qquad \mu' \equiv \mu - A r\cos\beta.
+y(t) = \mu' + A(1 - \rho^2) \sum_{k=1}^{\infty} \rho^{k-1} \cos\!\bigl(k(t - \alpha) + \beta\bigr) + \varepsilon,
+\qquad \mu' \equiv \mu - A \rho\cos\beta.
 \label{eq:fmm_fourier}
 \end{equation}
-The $k$th harmonic amplitude is $A(1 - r^2)\,|r|^{k-1}$ and the geometric
-decay rate is $|r| = (1 - \omega)/(1 + \omega)$. The first-harmonic amplitude
+The $k$th harmonic amplitude is $A(1 - \rho^2)\,|\rho|^{k-1}$ and the geometric
+decay rate is $|\rho| = (1 - \omega)/(1 + \omega)$. The Möbius parameter $\rho$ is
+distinct from the cosinor effect size $r = A/\sigma$ used in
+Section~\ref{sec:single_cohort}: $\rho$ encodes the waveform shape, whereas
+$r$ encodes signal strength. The first-harmonic amplitude
 relative to the cosinor benchmark $A$ is
 \begin{equation}
 c(\omega) = \frac{2\omega}{1 + \omega^2},
@@ -542,7 +551,7 @@ $\mathrm{Power}_{\mathrm{cosinor}}^{\mathrm{FMM}}(n, r, \omega)$ does not
 depend on $\beta$.
 \end{proposition}
 \noindent A short proof: at any harmonic $k$, the squared magnitude of the
-Fourier coefficient is $|c_k|^2 + |s_k|^2 = A^2(1-r^2)^2 r^{2(k-1)}$,
+Fourier coefficient is $|c_k|^2 + |s_k|^2 = A^2(1-\rho^2)^2 \rho^{2(k-1)}$,
 independent of $\beta$. The orientation parameter rotates each harmonic's
 phase without changing its amplitude, so the noncentrality parameter of
 the cosinor $F$-test, which depends only on the squared first-harmonic
@@ -590,7 +599,7 @@ exactly under Gaussianity, with no Davies tax and no empirical calibration.
 The test is implemented as \texttt{detect\_FMM(K)} in our codebase; at
 $K = 1$ it reduces to the cosinor $F$-test \eqref{eq:rhythm_f_test} (DCP).
 The full derivation, including the M\"{o}bius reparameterisation, geometric
-Fourier expansion, and variance-retention bound $V_K / V_\infty = 1 - r^{2K}$,
+Fourier expansion, and variance-retention bound $V_K / V_\infty = 1 - \rho^{2K}$,
 is given in Supplementary Section~S2.
 
 The K-harmonic regression \eqref{eq:Kharmonic_model} is fitted in
@@ -631,14 +640,14 @@ is satisfied automatically; in active designs it imposes an explicit
 constraint on the sampling grid.
 
 The variance fraction captured by truncation at $K$ is
-$V_K / V_\infty = 1 - r^{2K}$ where $r = (\omega - 1)/(\omega + 1)$. For
+$V_K / V_\infty = 1 - \rho^{2K}$ where $\rho = (\omega - 1)/(\omega + 1)$. For
 empirically observed $\omega \in [0.3, 0.5]$ (Supplementary
 Fig.~\ref{fig:supp_fmm_diagnostic}), $K = 2$ captures $80$--$97\%$ of FMM
 variance, $K = 3$ captures $91$--$99\%$, and higher $K$ pays an
 increasing degrees-of-freedom cost in the denominator of
 \eqref{eq:Kharmonic_F}. We compared $K \in \{1, 2, 3, 4, 5\}$ on three
-baboon tissues (KIM, $\hat{\beta} = 1.68$; KIC, $\hat{\beta} = 2.38$;
-SUN, $\hat{\beta} = 1.31$; $N_{\mathrm{sim}} = 30$ outer replicates).
+baboon tissues (KIM, $\hat{\eta} = 1.68$; KIC, $\hat{\eta} = 2.38$;
+SUN, $\hat{\eta} = 1.31$; $N_{\mathrm{sim}} = 30$ outer replicates).
 At moderate $N$ ($24$--$48$) $K = 2$ dominated: on KIM at $N = 24$, the
 power was $0.498$ for $K = 2$ versus $0.455$ for $K = 1$, $0.387$ for
 $K = 3$, $0.275$ for $K = 4$, and $0.136$ for $K = 5$; the steep drop
@@ -654,21 +663,24 @@ via the \texttt{K} argument of \texttt{detect\_FMM}.
 
 To characterise the operating region of \texttt{detect\_FMM(K = 2)} on a
 cosinor-violating pilot we use a two-axis parametric sweep on the Baboon
-LUN pilot ($\hat{\beta} = 1.60$ under the new \texttt{detect\_FMM}
+LUN pilot ($\hat{\eta} = 1.60$ under the new \texttt{detect\_FMM}
 pre-screen, $\hat{\sigma}_\alpha \approx 2.23$\,h, median FMM $R^2 = 0.88$,
 active $B = 12$). Per-gene shape and peak parameters are drawn from the
 one-parameter families
 \[
-\omega_g \sim \mathrm{Beta}(1, \beta), \qquad
+\omega_g \sim \mathrm{Beta}(1, \eta), \qquad
 \alpha_g \sim \mathrm{vonMises}(0, \kappa),\quad
 \kappa = (24/(2\pi\sigma_\alpha))^2,
 \]
-so $\beta \to 0$ concentrates $\omega$ at one (pure cosinor), $\beta = 1$ is
-uniform on $(0, 1)$, and $\beta \to \infty$ pushes mass toward zero (the
-sharp-peak limit). At $N = 144$, power decreases monotonically with $\beta$:
-$\mathrm{Power}(\beta = 0.5) = 0.97$, $\mathrm{Power}(\beta = 1) = 0.95$,
-$\mathrm{Power}(\beta = 5) = 0.75$, $\mathrm{Power}(\beta = 20) = 0.35$
-(Figure~\ref{fig:fmm_sensitivity}A). The empirical anchor $\hat{\beta} = 1.60$
+where the second Beta shape $\eta$ is the cross-gene concentration
+parameter for $\omega$ (distinct from the per-gene FMM orientation
+$\beta$). As $\eta \to 0$ the $\omega$-distribution concentrates at
+one (pure cosinor), $\eta = 1$ is uniform on $(0, 1)$, and $\eta \to
+\infty$ pushes mass toward zero (the sharp-peak limit). At $N = 144$,
+power decreases monotonically with $\eta$:
+$\mathrm{Power}(\eta = 0.5) = 0.97$, $\mathrm{Power}(\eta = 1) = 0.95$,
+$\mathrm{Power}(\eta = 5) = 0.75$, $\mathrm{Power}(\eta = 20) = 0.35$
+(Figure~\ref{fig:fmm_sensitivity}A). The empirical anchor $\hat{\eta} = 1.60$
 sits in the high-power region of the curve. The $\alpha$ sweep
 ($\sigma_\alpha \in \{0, 0.5, 1, 2, 4\}$\,h) is essentially flat at $0.91$
 to $0.99$ across all values (Figure~\ref{fig:fmm_sensitivity}B), as
@@ -711,7 +723,7 @@ K-harmonic LRT recovers it whenever $B \geq 2K + 1$:
 \mathrm{NCP}_{\mathrm{K}}^{\mathrm{FMM}}(N) \approx \frac{N}{2\sigma^2} \sum_{k=1}^{K} |c_k|^2,
 \label{eq:ncp_K_fmm}
 \end{equation}
-with $|c_k|^2 = A^2(1 - r^2)^2 r^{2(k-1)}$ from \eqref{eq:fmm_fourier};
+with $|c_k|^2 = A^2(1 - \rho^2)^2 \rho^{2(k-1)}$ from \eqref{eq:fmm_fourier};
 when $B < 2K + 1$ the regression \eqref{eq:Kharmonic_model} is rank-deficient
 and \eqref{eq:ncp_K_fmm} is not realised. \eqref{eq:ncp_dcp_cos}--\eqref{eq:ncp_K_fmm}
 make two predictions: DCP power should be approximately $B$-invariant under
@@ -720,7 +732,7 @@ $c(\omega) < 1$ and the Nyquist condition is met.
 
 Figure~\ref{fig:active_vs_passive} arranges the empirical comparison as a
 $2 \times 2$ grid: detector (DCP top row, K-harmonic LRT with $K = 2$
-bottom row) crossed with design (active KIM, $\hat{\beta} = 2.62$ under
+bottom row) crossed with design (active KIM, $\hat{\eta} = 2.62$ under
 the \textsc{LimoRhyde} pre-screen, left column; passive Seney ACC,
 $n_{\mathrm{pilot}} = 60$, right column). Each active panel sweeps
 $B \in \{6, 8, 12, 24\}$, all of which satisfy the identifiability
@@ -928,7 +940,7 @@ simulation indispensable.
   Passive Seney ACC). Source: Fig5\_active\_vs\_passive.pdf.
   \vspace{3cm}}}
 \caption{Detector $\times$ design interaction. \textbf{Top row, DCP.}
-\textbf{(A)} Active Baboon KIM, $\hat{\beta}=2.62$, $B \in \{6, 8, 12, 24\}$:
+\textbf{(A)} Active Baboon KIM, $\hat{\eta}=2.62$, $B \in \{6, 8, 12, 24\}$:
 DCP power curves overlap within ${\sim}1$\,pp across all $B$, empirically
 confirming the $B$-invariance prediction of
 \eqref{eq:ncp_dcp_cos}--\eqref{eq:ncp_dcp_fmm}. \textbf{(B)} Passive Seney
@@ -975,8 +987,8 @@ active versus passive distinction \emph{per se}.
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
   FIGURE 4 PLACEHOLDER\\[6pt]
   K-harmonic LRT ($K = 2$) sensitivity sweeps on Baboon LUN active pilot
-  ($\hat{\beta} = 1.60$, $B = 12$). Panel A: $\omega$ sweep
-  ($\omega_g \sim \mathrm{Beta}(1, \beta)$, $\beta \in \{0.5, 1, 2, 5, 20\}$).
+  ($\hat{\eta} = 1.60$, $B = 12$). Panel A: $\omega$ sweep
+  ($\omega_g \sim \mathrm{Beta}(1, \eta)$, $\eta \in \{0.5, 1, 2, 5, 20\}$).
   Panel B: $\alpha$ sweep
   ($\alpha_g \sim \mathrm{vonMises}(0, \kappa)$,
   $\sigma_\alpha \in \{0, 0.5, 1, 2, 4\}$\,h).
@@ -984,11 +996,11 @@ active versus passive distinction \emph{per se}.
   \vspace{3cm}}}
 \caption{K-harmonic LRT (\texttt{detect\_FMM}, $K = 2$) sensitivity to
 waveform shape and peak dispersion on the Baboon LUN active pilot
-($\hat{\beta} = 1.60$, median FMM $R^2 \approx 0.88$, $B = 12$).
-\textbf{(A)} $\omega$ sweep: $\omega_g \sim \mathrm{Beta}(1, \beta)$ with
-$\beta \in \{0.5, 1, 2, 5, 20\}$. At $N = 144$, power is $0.97$, $0.95$,
+($\hat{\eta} = 1.60$, median FMM $R^2 \approx 0.88$, $B = 12$).
+\textbf{(A)} $\omega$ sweep: $\omega_g \sim \mathrm{Beta}(1, \eta)$ with
+$\eta \in \{0.5, 1, 2, 5, 20\}$. At $N = 144$, power is $0.97$, $0.95$,
 $0.89$, $0.75$, $0.35$ respectively; the empirical anchor
-$\hat{\beta} = 1.60$ sits in the high-power region. \textbf{(B)} $\alpha$
+$\hat{\eta} = 1.60$ sits in the high-power region. \textbf{(B)} $\alpha$
 sweep: $\alpha_g \sim \mathrm{vonMises}(0, \kappa)$ with
 $\sigma_\alpha \in \{0, 0.5, 1, 2, 4\}$\,h. At $N = 144$, power is
 approximately flat at $0.91$ to $0.99$, confirming approximate rotation
@@ -1000,7 +1012,7 @@ The $\omega$ sweep (Figure~\ref{fig:fmm_sensitivity}A) traces the
 cosinor-to-arrhythmic spectrum: power degrades smoothly as the
 $\mathrm{Beta}(1, \beta)$ distribution of $\omega$ concentrates mass away
 from one, with the steepest drop between $\beta = 5$ and $\beta = 20$.
-The empirical Baboon LUN anchor at $\hat{\beta} = 1.60$ sits in the upper
+The empirical Baboon LUN anchor at $\hat{\eta} = 1.60$ sits in the upper
 plateau of the curve, indicating that \texttt{detect\_FMM(K = 2)} retains
 substantial power on real cosinor-violating data. The $\alpha$ sweep
 (Figure~\ref{fig:fmm_sensitivity}B) shows that dispersing peak times across
