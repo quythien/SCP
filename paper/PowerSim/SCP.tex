@@ -446,10 +446,23 @@ $n_{\mathrm{pilot}} \gtrsim 250$ the bootstrap CI is dominated by the
 inner-Monte-Carlo noise rather than pilot variability, and further
 increases in $n_{\mathrm{pilot}}$ yield diminishing returns.
 
-Practically, the bootstrap is essential whenever $n_{\mathrm{pilot}}$ is small
-($\lesssim 40$) or the pilot signal-to-noise ratio is weak; for large,
-well-rhythmic pilots the bootstrap CI is narrow and the plug-in
-recommendation is a faithful summary.
+A word on interpretation is in order. The bootstrap quantifies
+pilot-induced sampling variability of the design recommendation but
+does not by itself correct plug-in bias: at $n_{\mathrm{pilot}} = 28$
+the cosinor pre-screen at $\alpha_{\mathrm{pilot}} = 0.01$ retains only
+the highest-$R^2$ rhythmic genes (a finite-sample winner's-curse effect
+on $\hat{F}_{A,\sigma}$), so neither the plug-in
+$\widehat{\mathrm{Power}}$ nor the bootstrap mean
+$\bar{\mathrm{Power}}$ is unbiased for the true population power.
+What the bootstrap does provide, and what the plug-in alone hides, is
+the magnitude of that uncertainty: at Putamen-SCZ $N = 40$ the $95\%$
+bootstrap CI of $33$ to $54\%$ would lead a researcher to question
+whether $N = 40$ is adequate, a conclusion the $28\%$ plug-in point
+estimate alone could not support either way. The bootstrap is therefore
+essential whenever $n_{\mathrm{pilot}}$ is small ($\lesssim 40$),
+useful as a sanity check for moderate pilots
+($n_{\mathrm{pilot}} \approx 60$); for large, well-rhythmic pilots the
+plug-in recommendation is a faithful summary.
 
 % =====================================================================
 % NEW SECTION 2.4 --- Cosinor violation, K-harmonic LRT
