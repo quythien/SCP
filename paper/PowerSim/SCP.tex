@@ -26,7 +26,7 @@
 \maketitle
 
 \begin{abstract}
-Circadian disruption is a hallmark of numerous human diseases, yet detecting condition-specific changes in gene expression rhythms remains a significant challenge. Circadian transcriptomic studies aim to identify rhythmic biomarkers within a given condition or to characterize differential circadian biomarkers across conditions. Given the constraints of limited budgets and sample availability, rigorous power calculation and thoughtful study design are critical for planning such studies. Existing approaches, such as CircaPower, offer closed-form analytical solutions for circadian biomarker detection but do not account for gene-specific signal-to-noise ratios or genome-wide false discovery. To address these limitations, we present SCP (Simulation-based Circadian Power), a simulation-based framework for the study design of circadian transcriptomic analyses. Using gene-specific information from pilot or publicly available data, SCP enables pilot-calibrated, FDR-controlled power calculations across the transcriptome. The framework supports sample size determination for circadian biomarker detection and accommodates multi-faceted differential rhythm analyses, including differential rhythmicity, differential phase, and differential MESOR. For active experimental designs such as in animal studies, we further investigate the trade-off between sampling frequency and biological replicates and resolve it analytically: above the harmonic-regression identifiability threshold, power depends on total sample size alone. For pilots whose waveforms deviate from a pure cosinor, SCP also provides a K-harmonic F-test that extends the LimoRhyde framework to user-tunable harmonic order. Additionally, a bootstrap procedure is introduced to quantify uncertainty in power curves and sample size recommendations. SCP is evaluated on simulated and real circadian datasets across active and passive design regimes.
+Circadian disruption is a hallmark of numerous human diseases, yet detecting condition-specific changes in gene expression rhythms remains a significant challenge. Circadian transcriptomic studies aim to identify rhythmic biomarkers within a given condition or to characterize differential circadian biomarkers across conditions. Given the constraints of limited budgets and sample availability, rigorous power calculation and thoughtful study design are critical for planning such studies. Existing approaches, such as CircaPower, offer closed-form analytical solutions for circadian biomarker detection but do not account for gene-specific signal-to-noise ratios or genome-wide false discovery. To address these limitations, we present SCP (Simulation-based Circadian Power), a simulation-based framework for the study design of circadian transcriptomic analyses. Using gene-specific information from pilot or publicly available data, SCP enables pilot-calibrated, FDR-controlled power calculations across the transcriptome. The framework supports sample size determination for circadian biomarker detection and accommodates multi-faceted differential rhythm analyses, including differential rhythmicity, differential phase, and differential MESOR. For active experimental designs such as in animal studies, we further investigate the trade-off between sampling frequency and biological replicates and resolve it analytically: above the harmonic-regression identifiability threshold, power depends on total sample size alone. For pilots whose waveforms deviate from a pure cosinor, SCP also provides a K-harmonic F-test that builds on the LimoRhyde linear-modelling pipeline by stacking $K$ periodic bases and testing the joint harmonic null with the resulting nested F-statistic. Additionally, a bootstrap procedure is introduced to quantify uncertainty in power curves and sample size recommendations. SCP is evaluated on simulated and real circadian datasets across active and passive design regimes.
 \end{abstract}
 %% ====================================================================
 \section{Introduction}
@@ -763,20 +763,19 @@ gain. The detector that is the LRT for the truth at hand, cosinor, wins.
 
 The picture is therefore not ``active wins'' or ``passive wins'' in any
 absolute sense. Within active designs, neither DCP nor the K-harmonic
-LRT depends on the $(B, m)$ allocation at fixed $N$ above its
+F-test depends on the $(B, m)$ allocation at fixed $N$ above its
 identifiability threshold, so the $B$-versus-$m$ trade-off classically
 emphasised in design guidance \citep{Hughes2017guidelines} reduces to a
 single choice: pick any $B \geq 3$ (DCP) or $B \geq 5$ ($K = 2$), then
 allocate $N = B \times m$ subjects in whatever way is logistically
-convenient. The K-harmonic F-test is the right default when the pilot
-shows cosinor violation ($\hat{\omega}$ median $< 1$) and the design
-satisfies $B \geq 2K + 1$, both of which are typical of high-resolution
-active animal studies; the cosinor $F$-test is the right default when the
-pilot is cosinor-like, which is common for passive human cohorts of the
-sort used in post-mortem psychiatric studies. We recommend the K-harmonic
-LRT with $K = 2$ for active designs with $B \geq 5$ and pilot evidence of
-cosinor violation, and the cosinor $F$-test otherwise; the two detectors
-share the same upstream parameter-estimation and downstream BH pipeline,
+convenient. The detector choice is governed by the pilot waveform rather
+than by the active vs. passive distinction: we recommend the K-harmonic
+F-test ($K = 2$) when the pilot $\hat{\omega}$-median is $\leq 0.6$ and
+the design satisfies $B \geq 2K + 1$, and the cosinor $F$-test otherwise.
+In our pilots, baboon active tissues fall in the K-harmonic regime and
+human passive cohorts fall in the cosinor regime, but the underlying
+criterion is waveform shape rather than design type. The two detectors
+share the same upstream parameter estimation and downstream BH pipeline,
 so the choice does not affect the rest of the framework.
 
 %% ====================================================================
@@ -795,9 +794,10 @@ so the choice does not affect the rest of the framework.
 
 Five pilot datasets spanning a ${\sim}5$-fold range in signal-to-noise ratio
 are used throughout. For single-cohort power (Figure~\ref{fig:sc_adrliv}) and the active vs.\ passive comparison (Figure~\ref{fig:active_vs_passive}), we use the human adrenal gland
-(\textsc{GTEx} ADR; $n = 220$; $\tilde{r} \approx 2.1$) and mouse liver
-(\textsc{GSE54651} LIV; $n = 8$, $B = 8$; $\tilde{r} \approx 2.88$),
-representing high-signal active designs. For the $B$-vs-$m$ multi-method
+(\textsc{GTEx} ADR; $n = 220$, passive; $\tilde{r} \approx 0.97$) and
+mouse liver (\textsc{GSE54651} LIV; $n = 8$, active $B = 8$;
+$\tilde{r} \approx 2.88$), spanning a passive moderate-signal pilot and
+an active high-signal pilot. For the $B$-vs-$m$ multi-method
 analysis we additionally use the baboon lung (CAMO LUN; $n = 12$, active;
 $\tilde{r} \approx 1.72$) and mouse D1 striatum (\textsc{D1D2};
 $n_{\text{pilot}} = 45$, active $B=6$; $\tilde{r} \approx 0.65$), which brackets
@@ -857,16 +857,19 @@ show $r \approx 2$--$6$.}
 % \includegraphics[width=\textwidth]{../../output/single_cohort/figures/single_cohort_power_GTEx_AdrenalGland_v3.pdf}
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
   FIGURE 1 PLACEHOLDER\\[6pt]
-  Single-cohort power curves: ADR (active, $\tilde{r}\approx 2.1$) and LIV
-  (active, $\tilde{r}\approx 2.88$). Power vs $N$, stratified by $r$-stratum
-  and FDR threshold. Already generated.
+  Single-cohort power curves: ADR (passive, $\tilde{r}\approx 0.97$) and
+  LIV (active, $\tilde{r}\approx 2.88$). Power vs $N$, stratified by
+  $r$-stratum and FDR threshold.
   \vspace{3cm}}}
-\caption{Single-cohort rhythmicity detection power as a function of sample size.
-\textbf{(A, B)} GTEx Adrenal Gland (ADR, $\tilde{r}\approx 2.1$, active design)
-and mouse liver (LIV, $\tilde{r}\approx 2.88$, active design). Power is shown
-stratified by signal-to-noise stratum ($r < 0.5$ to $r > 2$) at FDR 5\%.
-High-$r$ strata reach 80\% power at $N \approx 20$--$30$; low-$r$ strata
-remain substantially underpowered even at $N = 200$. \textbf{(C)} An additional passive panel (NAc, Ketchesin et al.) is included in the supplementary material.}
+\caption{Single-cohort rhythmicity detection power as a function of
+sample size. \textbf{(A)} GTEx Adrenal Gland (ADR;
+$\tilde{r}\approx 0.97$, passive design) and \textbf{(B)} mouse liver
+(LIV; $\tilde{r}\approx 2.88$, active design). Power is shown stratified
+by signal-to-noise stratum ($r < 0.5$ to $r > 2$) at FDR $0.05$. High-$r$
+strata reach $80\%$ power at $N \approx 20$ to $30$; low-$r$ strata
+remain substantially underpowered even at $N = 200$. An additional
+passive NAc panel (Ketchesin et al.) is provided in the supplementary
+material.}
 \label{fig:sc_adrliv}
 \end{figure}
 
@@ -1010,8 +1013,8 @@ invariance at the genome scale.}
 
 The $\omega$ sweep (Figure~\ref{fig:fmm_sensitivity}A) traces the
 cosinor-to-arrhythmic spectrum: power degrades smoothly as the
-$\mathrm{Beta}(1, \beta)$ distribution of $\omega$ concentrates mass away
-from one, with the steepest drop between $\beta = 5$ and $\beta = 20$.
+$\mathrm{Beta}(1, \eta)$ distribution of $\omega$ concentrates mass away
+from one, with the steepest drop between $\eta = 5$ and $\eta = 20$.
 The empirical Baboon LUN anchor at $\hat{\eta} = 1.60$ sits in the upper
 plateau of the curve, indicating that \texttt{detect\_FMM(K = 2)} retains
 substantial power on real cosinor-violating data. The $\alpha$ sweep
@@ -1099,10 +1102,10 @@ K-harmonic F-test with the same qualitative behaviour.
 
 The five pilot datasets span a ${\sim}5$-fold range in $\tilde{r}$, and the
 resulting $n_{80}$ estimates differ by more than an order of magnitude. On
-the active GTEx pilots, $n_{80}$ for single-cohort detection is $\approx 19$
-on Liver ($\tilde{r} \approx 2.88$) and $\approx 49$ on Adrenal Gland
-($\tilde{r} \approx 0.97$); on the passive Seney ACC pilot
-($\tilde{r} \approx 0.79$), $n_{80} \approx 100$. This reproduces the core
+the active mouse liver pilot ($\tilde{r} \approx 2.88$), $n_{80}$ for
+single-cohort detection is $\approx 19$; on the passive GTEx adrenal
+gland pilot ($\tilde{r} \approx 0.97$), $n_{80} \approx 49$; and on the
+passive Seney ACC pilot ($\tilde{r} \approx 0.79$), $n_{80} \approx 100$. This reproduces the core
 message of \textsc{PROPER} for RNA-seq \citep{wu2015proper} in the
 circadian setting and reinforces the need for effect-size-aware,
 dataset-specific planning rather than generic ``circadian sample size''
@@ -1170,9 +1173,9 @@ is approximately $150$. The two-stage cost is roughly $2$ to $5\times$
 the matched single-cohort $n_{80}$, with the gap widest at low
 $\tilde{r}$ where TOJR classification is noisiest. DP power tracks
 phase-shift effect size and DM tracks mesor-shift signal-to-noise; both
-are easier than DR at matched effect size because they conditional only
-on rhythmicity in at least one group rather than a difference in
-rhythmicity status.
+are easier than DR at matched effect size because they condition only
+on the presence of rhythmicity in at least one group, rather than on a
+difference in rhythmicity status between groups.
 
 \subsection{A decision tree for circadian study planning}
 \label{sec:decision_tree}
