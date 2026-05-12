@@ -1,6 +1,6 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
-\usepackage{amsmath,amssymb}
+\usepackage{amsmath,amsfonts,amssymb,amsthm}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{multirow}
@@ -8,14 +8,17 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{caption}
 \usepackage{float}
+\usepackage{natbib}
 
 \renewcommand{\thetable}{S\arabic{table}}
 \renewcommand{\thefigure}{S\arabic{figure}}
 \renewcommand{\thesection}{S\arabic{section}}
+\renewcommand{\theequation}{S\arabic{equation}}
 
-\newcommand{\software}[1]{\texttt{#1}}
+\newtheorem{proposition}{Proposition}
 
-\title{Supplementary Materials for:\\SCP: Simulation-Based Power Analysis for Circadian Rhythm Studies}
+\title{Supplementary Materials for\\
+``Simulation-Based Power Calculation and Study Design for Circadian Rhythmic Analysis''}
 \author{}
 \date{}
 
@@ -24,553 +27,671 @@
 \maketitle
 
 %% ====================================================================
-\section{Detailed Power Results}
-\label{sec:detailed_power}
+% Table S1: Pilot dataset summary (placed before Section S1 so the
+% S1, S2, ..., S9 section numbering and the corresponding main-text
+% cross-references remain unchanged).
 %% ====================================================================
 
-Tables~\ref{tab:dr_detail}--\ref{tab:da_detail} extend the main text Table~1 with simulation-level standard errors and average false discoveries for DR, DP, and DA. DR power SEs are modest (0.3--1.0 percentage points; Table~\ref{tab:dr_detail}), confirming that $N_{\text{sim}} = 50$ simulations provide stable estimates. Empirical FDR is well controlled for all three tests: average false discoveries remain below 5 for DR (Table~\ref{tab:dr_detail}), below 12 for DP (Table~\ref{tab:dp_detail}), and below 5 for DA (Table~\ref{tab:da_summary}). DA achieves consistently higher power than DR at every $n$ and is competitive with DP: at $n = 60$, DA power (58.8\%) exceeds DR (13.1\%) and approaches DP (50.1\%). The DA FDR is exceptionally well controlled (0.002--0.007), the tightest of the three tests, because the amplitude LRT with \v{S}id\'{a}k correction is conservative. Sensitivity to the nominal FDR threshold is shown in the main text Figures~1B,D, 2B,D, and 3B,D; the empirical distribution of targets across $r$ strata is shown in panels F of those figures.
-
-\begin{table}[H]
-\centering
-\begin{tabular}{r|cc|cc|cc}
-\toprule
-$n$ & Power (\%) & SE & Emp.\ FDR & SE & Avg TD & Avg FD \\
-\midrule
-20  & 1.1  & 0.3  & 0.028 & 0.005 & 8   & 0.2 \\
-40  & 5.4  & 0.5  & 0.018 & 0.003 & 40  & 0.7 \\
-60  & 13.1 & 0.8  & 0.020 & 0.003 & 98  & 2.0 \\
-80  & 22.4 & 1.0  & 0.025 & 0.004 & 168 & 4.3 \\
-100 & 30.5 & 1.0  & 0.021 & 0.003 & 229 & 4.8 \\
-\bottomrule
-\end{tabular}
-\caption{Differential rhythmicity (DR) power analysis. 5,000 genes, 50 simulations, 15\% DR proportion, FDR 5\% threshold, DCP method. SE = standard error across simulations.}
-\label{tab:dr_detail}
-\end{table}
-
-\begin{table}[H]
-\centering
-\begin{tabular}{r|cc|cc|cc}
-\toprule
-$n$ & Power (\%) & SE & Emp.\ FDR & SE & Avg TD & Avg FD \\
-\midrule
-20  & 13.3 & 0.6  & 0.063 & 0.007 & 99  & 7 \\
-40  & 34.5 & 0.7  & 0.031 & 0.003 & 259 & 8 \\
-60  & 50.1 & 0.7  & 0.024 & 0.002 & 376 & 9 \\
-80  & 61.4 & 0.7  & 0.020 & 0.002 & 460 & 10 \\
-100 & 68.7 & 0.6  & 0.023 & 0.002 & 515 & 12 \\
-\bottomrule
-\end{tabular}
-\caption{Differential phase (DP) power analysis ($\pm$6\,h uniform phase shift). 5,000 genes, 50 simulations, 15\% DP proportion, FDR 5\% threshold, DCP method.}
-\label{tab:dp_detail}
-\end{table}
-
-\begin{table}[H]
-\centering
-\begin{tabular}{r|cc|cc|cc}
-\toprule
-$n$ & Power (\%) & SE & Emp.\ FDR & SE & Avg TD & Avg FD \\
-\midrule
-20  & 17.7 & 0.34 & 0.002 & 0.000 & 133 & 0.2 \\
-40  & 42.6 & 0.36 & 0.003 & 0.000 & 320 & 1.1 \\
-60  & 58.8 & 0.41 & 0.006 & 0.000 & 441 & 2.7 \\
-80  & 69.0 & 0.30 & 0.006 & 0.001 & 517 & 3.1 \\
-100 & 75.5 & 0.28 & 0.007 & 0.001 & 566 & 4.3 \\
-\bottomrule
-\end{tabular}
-\caption{Differential amplitude (DA) power analysis ($[2,4]\times$ amplitude fold-change). 5,000 genes, 50 simulations, 15\% DA proportion, FDR 5\% threshold, DCP method. DA FDR is the tightest of the three tests (0.002--0.007) across all sample sizes.}
-\label{tab:da_summary}
-\end{table}
-
-%% ====================================================================
-\section{Phase Shift Sensitivity: Full Results}
-\label{sec:phase_sweep}
-%% ====================================================================
-
-Tables~\ref{tab:phase_power}--\ref{tab:phase_td} present the complete phase shift sensitivity analysis across 8 shift magnitudes (0.5--12\,h) and 5 sample sizes, corresponding to the main text Figure~3. This sweep serves as sensitivity analysis for the target definition based on phase shift magnitude $\Delta\phi$ (hours). Three key patterns emerge: (1) power increases monotonically with shift magnitude but saturates beyond $\sim$8\,h (Table~\ref{tab:phase_power}: 52.6\% at 8\,h vs.\ 53.1\% at 12\,h for $n = 60$), reflecting the geometric limit of cosine separation; (2) FDR is well controlled ($\leq 0.036$; Table~\ref{tab:phase_fdr}) for shifts $\geq 2$\,h at $n \geq 40$, with inflation at small shifts and small $n$ expected due to very few total rejections; and (3) Table~\ref{tab:phase_td} shows absolute true discoveries, which scale linearly with sample size and plateau beyond 8\,h.
+Table~\ref{tab:pilot_summary} summarises the pilot datasets used in
+the main text figures. A complete pilot inventory (including all
+GTEx tissues and all CAMO baboon tissues, with full per-tissue
+parameter estimates) is provided as a separate supplementary
+spreadsheet.
 
 \begin{table}[H]
 \centering
 \small
-\begin{tabular}{r|rrrrr}
+\caption{Pilot datasets used in the main-text figures. For active
+designs the number of distinct sampling phases per period is denoted
+$B$; for passive designs $B$ is empirical and listed as ``passive''.
+Median effect size $\tilde r = \tilde A / \tilde \sigma$ is computed
+on the rhythmic gene set (cosinor screen at $\alpha_{\mathrm{pilot}}
+= 0.01$). The FMM concentration parameter $\hat\eta$ is the
+moment-of-moments estimate of the second Beta shape parameter for the
+empirical $\hat\omega_g$ distribution; lower $\hat\eta$ indicates a
+more cosinor-like waveform and higher $\hat\eta$ indicates sharper
+peaks. Median $\hat\omega$ over rhythmic genes is reported where
+fitted.}
+\label{tab:pilot_summary}
+\begin{tabular}{llcccccc}
 \toprule
-Phase (h) & $n=20$ & $n=40$ & $n=60$ & $n=80$ & $n=100$ \\
+Species & Pilot dataset & $n_{\mathrm{pilot}}$ & Design ($B$) & $\tilde r$ & $\hat\omega$ med & $\hat\eta$ & Used in \\
 \midrule
-0.5  & 0.0   & 0.1   & 0.2   & 0.3   & 0.6   \\
-1.0  & 0.2   & 0.6   & 0.9   & 1.5   & 2.3   \\
-2.0  & 1.5   & 4.7   & 8.6   & 13.3  & 18.5  \\
-4.0  & 8.9   & 25.2  & 39.0  & 49.5  & 57.5  \\
-6.0  & 13.3  & 34.5  & 50.1  & 61.4  & 68.7  \\
-8.0  & 14.6  & 36.8  & 52.6  & 63.8  & 70.6  \\
-10.0 & 14.9  & 37.0  & 53.1  & 64.2  & 71.0  \\
-12.0 & 15.1  & 37.2  & 53.1  & 64.2  & 71.3  \\
+\multicolumn{8}{l}{\textit{Active-design pilots}} \\
+\midrule
+\textit{P.\ anubis}  & CAMO KIM  & $12$ & active ($12$) & $\approx 2.6$  & $0.28$ & $2.62$ & Fig.~5 \\
+\textit{P.\ anubis}  & CAMO LUN  & $12$ & active ($12$) & $1.72$ & $0.41$ & $1.60$ & Fig.~4 \\
+\textit{M.\ musculus} & GSE54651 LIV & $8$ & active ($8$) & $2.88$ & --     & --     & Fig.~1 \\
+\midrule
+\multicolumn{8}{l}{\textit{Passive-design pilots}} \\
+\midrule
+\textit{H.\ sapiens} & GTEx ADR        & $220$ & passive & $0.97$ & --     & --     & Fig.~1 \\
+\textit{H.\ sapiens} & Seney ACC ctrl  & $60$  & passive & $0.79$ & --     & --     & Fig.~3, Fig.~5 \\
+\textit{H.\ sapiens} & Putamen SCZ ctrl & $28$  & passive & $\approx 0.8$ & --     & --     & Fig.~3 \\
+\textit{H.\ sapiens} & GTEx Pancreas   & $249$ & passive & $\approx 0.7$ & --     & --     & Fig.~3 \\
+\textit{H.\ sapiens} & GTEx Thyroid    & $416$ & passive & $\approx 0.8$ & --     & --     & Fig.~3 \\
 \bottomrule
 \end{tabular}
-\caption{DP marginal power (\%) by phase shift magnitude and sample size (FDR 5\%, DCP method, 50 simulations). Power saturates beyond 8\,h shift (ratio 8h/12h $= 0.99$).}
-\label{tab:phase_power}
 \end{table}
+
+Table~\ref{tab:pilot_fmm_extended} lists the six CAMO baboon tissues
+whose empirical FMM waveform diagnostics are shown in
+Figure~\ref{fig:fmm_diagnostic}. The fitted $\hat\omega$ medians span
+$0.28$ (KIC) to $0.53$ (LIV), bracketing the empirically observed
+non-cosinor regime that motivates the K-harmonic F-test
+default $K = 2$.
 
 \begin{table}[H]
 \centering
 \small
-\begin{tabular}{r|rrrrr}
+\caption{CAMO baboon active-design tissues with empirical FMM waveform
+diagnostics. All six pilots have $n_{\mathrm{pilot}} = 12$ at
+$B = 12$ (one collection per subject across $12$ time-of-day points).
+$R^2$ is the FMM goodness-of-fit median across rhythmic genes;
+$n_{\mathrm{fitted}}$ is the number of rhythmic genes that pass the
+FMM convergence filter.}
+\label{tab:pilot_fmm_extended}
+\begin{tabular}{lccccc}
 \toprule
-Phase (h) & $n=20$ & $n=40$ & $n=60$ & $n=80$ & $n=100$ \\
+Tissue & $\hat\omega$ med & $\hat\eta$ & Median FMM $R^2$ & $\hat\sigma_\alpha$ (h) & $n_{\mathrm{fitted}}$ \\
 \midrule
-0.5  & 0.333 & 0.091 & 0.150 & 0.000 & 0.059 \\
-1.0  & 0.076 & 0.011 & 0.023 & 0.013 & 0.021 \\
-2.0  & 0.063 & 0.049 & 0.035 & 0.025 & 0.036 \\
-4.0  & 0.078 & 0.037 & 0.026 & 0.022 & 0.024 \\
-6.0  & 0.063 & 0.031 & 0.024 & 0.020 & 0.023 \\
-8.0  & 0.059 & 0.031 & 0.023 & 0.020 & 0.022 \\
-10.0 & 0.059 & 0.030 & 0.023 & 0.020 & 0.022 \\
-12.0 & 0.058 & 0.030 & 0.023 & 0.020 & 0.022 \\
+KIC (kidney cortex)     & $0.28$ & $2.53$ & $0.94$ & $1.02$ & $200$ \\
+LUN (lung)              & $0.41$ & $1.40$ & $0.86$ & $1.71$ & $200$ \\
+ADM (adrenal medulla)   & $0.46$ & $1.18$ & $0.90$ & $2.04$ & $200$ \\
+LIV (liver)             & $0.53$ & $0.92$ & $0.79$ & $5.15$ & $67$  \\
+ADC (adrenal cortex)    & $0.48$ & $0.99$ & $0.84$ & $2.96$ & $200$ \\
+PAN (pancreas)          & $0.32$ & $1.85$ & $0.77$ & $5.24$ & $200$ \\
 \bottomrule
 \end{tabular}
-\caption{Empirical FDR by phase shift magnitude. FDR is well controlled ($\leq 0.036$) for shifts $\geq 2$\,h at $n \geq 40$.}
-\label{tab:phase_fdr}
 \end{table}
 
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{r|rrrrr}
-\toprule
-Phase (h) & $n=20$ & $n=40$ & $n=60$ & $n=80$ & $n=100$ \\
-\midrule
-0.0  & 0.0   & 0.0   & 0.0   & 0.0   & 0.0   \\
-0.5  & 0.1   & 0.2   & 0.5   & 0.6   & 1.1   \\
-1.0  & 1.0   & 3.4   & 5.7   & 9.0   & 14.0  \\
-2.0  & 11.1  & 34.8  & 63.6  & 98.4  & 137.4 \\
-4.0  & 66.9  & 188.8 & 292.4 & 370.6 & 430.8 \\
-6.0  & 99.3  & 258.9 & 375.9 & 460.4 & 514.8 \\
-8.0  & 109.3 & 275.7 & 394.5 & 478.2 & 529.4 \\
-10.0 & 111.9 & 277.8 & 398.0 & 481.4 & 532.7 \\
-12.0 & 113.2 & 278.6 & 398.2 & 481.5 & 534.7 \\
-\bottomrule
-\end{tabular}
-\caption{Average true discoveries by phase shift magnitude and sample size.}
-\label{tab:phase_td}
-\end{table}
 
 %% ====================================================================
-\section{Method Comparison: Detailed Results}
-\label{sec:method_detail}
+\section{Empirical FMM waveform diagnostics across pilot tissues}
+\label{sec:fmm_diag}
 %% ====================================================================
 
-Tables~\ref{tab:da_detail}--\ref{tab:dm_type1} present the full method comparison results with standard errors, extending the summary in the main text (Table~2). DCP uses likelihood ratio tests; CircaCompare (CC) uses Wald $t$-tests from per-gene nonlinear least squares.
+Figure~\ref{fig:fmm_diagnostic} shows the empirical distributions of the
+fitted FMM shape parameter $\hat\omega_g$ and peak phase $\hat\alpha_g$
+across the rhythmic gene set of six pilot tissues (KIC, LUN, ADM, LIV,
+ADC, PAN). The fitted $\hat\omega$-medians span $0.28$ (KIC) to $0.53$
+(LIV), uniformly below the cosinor reference $\omega = 1$, with the
+empirical Beta$(1, \hat\eta)$ MLE fit overlaid in red. The $\hat\alpha$
+distributions are well-fit by the von Mises model with the maximum
+likelihood concentration $\hat\kappa$ shown in each panel. The mean
+peak phase $\hat\mu$ varies across tissues and is reported in each
+panel.
 
-\subsection{Differential Amplitude (DA) Comparison}
-
-With 15\% of genes having amplitude fold-changes drawn from $[2, 4]\times$, CircaCompare achieves 5--7 percentage points higher DA power than DCP across all sample sizes (Table~\ref{tab:da_detail}). Crucially, both methods maintain empirical FDR well below the nominal 5\%, indicating that the power difference reflects genuine sensitivity gains rather than inflated false discoveries.
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{r|cc|cc|cc|cc}
-\toprule
-& \multicolumn{2}{c|}{Power (\%)} & \multicolumn{2}{c|}{SE} & \multicolumn{2}{c|}{Emp.\ FDR} & \multicolumn{2}{c}{Avg TD} \\
-$n$ & DCP & CC & DCP & CC & DCP & CC & DCP & CC \\
-\midrule
-20  & 17.7 & 23.6 & 0.34 & 0.41 & 0.002 & 0.002 & 133 & 177 \\
-40  & 42.6 & 50.3 & 0.36 & 0.35 & 0.003 & 0.004 & 320 & 377 \\
-60  & 58.8 & 65.7 & 0.41 & 0.42 & 0.006 & 0.006 & 441 & 493 \\
-80  & 69.0 & 75.0 & 0.30 & 0.31 & 0.006 & 0.006 & 517 & 563 \\
-100 & 75.5 & 80.9 & 0.28 & 0.25 & 0.007 & 0.007 & 566 & 607 \\
-\bottomrule
-\end{tabular}
-\caption{DA comparison: DCP (LRT) vs.\ CircaCompare (CC, Wald NLS). Amplitude fold-change $[2, 4]\times$, 15\% DA proportion, FDR 5\%, 50 simulations. Both methods maintain FDR $\leq 0.007$.}
-\label{tab:da_detail}
-\end{table}
-
-\subsection{Differential Phase (DP) Comparison}
-
-For DP ($\pm$6\,h phase shift, 15\% DP proportion), CircaCompare achieves 9--12 percentage points higher power than DCP (Table~\ref{tab:dp_comparison}). However, this comes at the cost of substantially inflated FDR: CircaCompare's empirical FDR ranges from 8.7\% ($n=100$) to 19.6\% ($n=20$), far exceeding the nominal 5\% threshold. The excess false discoveries (CC: 43--56 vs.\ DCP: 7--12) account for much of the apparent power advantage.
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{r|cc|cc|cc|cc}
-\toprule
-& \multicolumn{2}{c|}{Power (\%)} & \multicolumn{2}{c|}{SE} & \multicolumn{2}{c|}{Emp.\ FDR} & \multicolumn{2}{c}{Avg TD} \\
-$n$ & DCP & CC & DCP & CC & DCP & CC & DCP & CC \\
-\midrule
-20  & 13.2 & 23.5 & 0.28 & 0.39 & 0.063 & 0.196 & 99  & 176 \\
-40  & 34.5 & 46.8 & 0.34 & 0.40 & 0.031 & 0.127 & 259 & 351 \\
-60  & 50.1 & 61.8 & 0.36 & 0.32 & 0.024 & 0.100 & 376 & 463 \\
-80  & 61.4 & 71.3 & 0.34 & 0.33 & 0.020 & 0.090 & 460 & 535 \\
-100 & 68.6 & 77.5 & 0.27 & 0.24 & 0.023 & 0.087 & 515 & 581 \\
-\bottomrule
-\end{tabular}
-\caption{DP comparison. CircaCompare achieves 9--12 points higher power but inflates FDR to 9--20\% (vs.\ nominal 5\%).}
-\label{tab:dp_comparison}
-\end{table}
-
-\subsection{Differential Mesor (DM) Type I Error}
-
-No true mesor differences were simulated, so any DM rejection is a false positive. Both methods are highly conservative (Table~\ref{tab:dm_type1}), with Type~I rates two orders of magnitude below the nominal 5\%. CircaCompare is even more conservative than DCP, likely because NLS failures for borderline genes default to $p = 1$.
-
-\begin{table}[H]
-\centering
-\begin{tabular}{r|cc|cc}
-\toprule
-& \multicolumn{2}{c|}{Type I Rate} & \multicolumn{2}{c}{SE} \\
-$n$ & DCP & CC & DCP & CC \\
-\midrule
-20  & 0.00138 & 0.00007 & 0.00024 & 0.00003 \\
-40  & 0.00033 & 0.00001 & 0.00007 & 0.00001 \\
-60  & 0.00014 & 0.00002 & 0.00005 & 0.00001 \\
-80  & 0.00017 & 0.00002 & 0.00004 & 0.00001 \\
-100 & 0.00017 & 0.000004 & 0.00004 & 0.000004 \\
-\bottomrule
-\end{tabular}
-\caption{DM Type I error under null (no true mesor differences). Both methods are highly conservative.}
-\label{tab:dm_type1}
-\end{table}
-
-%% ====================================================================
-\section{Stratified Method Comparison}
-\label{sec:strat_comparison}
-%% ====================================================================
-
-The main text (Table~2) reports marginal power comparisons between DCP and CircaCompare. Here we stratify by effect size $r = A/\sigma$ to identify where the methods differ most. Figure~\ref{fig:strat_comparison} shows that the power gap between methods is concentrated in moderate-$r$ strata ($0.5 < r < 1.5$), where CircaCompare's NLS approach captures additional signal that DCP's LRT misses. At high $r$ ($> 2$), both methods converge to near-perfect power in Figure~\ref{fig:strat_comparison}, and at very low $r$ ($< 0.25$), neither method detects anything. Figure~\ref{fig:td_by_r} translates these power differences into absolute true discovery counts by $r$ stratum. Figure~\ref{fig:power_comparison} summarizes the marginal power comparison, while Figure~\ref{fig:fdr_comparison} highlights CircaCompare's DP FDR inflation relative to the nominal 5\% threshold.
+These distributions support two methodological claims in the main text:
+(i) all six pilots are non-cosinor on the central tendency of the
+$\hat\omega$ distribution, so cosinor violation is a typical feature
+of high-resolution active circadian data, and (ii) the empirical
+$\hat\omega$ range $[0.28, 0.53]$ falls within the regime where the
+K-harmonic F-test at $K = 2$ retains substantial power
+(see~Section~\ref{sec:k_sweep}).
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{method_comparison/figures/power_by_r_comparison.pdf}
-\caption{Power by $r$ stratum comparing DCP and CircaCompare. The power gap between methods is concentrated in moderate-$r$ strata ($0.5 < r < 1.5$); at high $r$ both methods achieve near-perfect power.}
-\label{fig:strat_comparison}
+\includegraphics[width=0.95\textwidth]{../../output/main_figures/SuppFig_FMM_diagnostic.pdf}
+\caption{Empirical $\hat\omega$ and $\hat\alpha$ distributions across
+six pilot tissues (baboon CAMO KIC, LUN, ADM, LIV, ADC and human
+GTEx PAN). Left column: $\hat\omega$ histogram with the Beta$(1, \hat\eta)$
+MLE fit (red) and the $\hat\omega$-median (blue dashed). Right column:
+$\hat\alpha$ histogram (radians) with the von Mises($\hat\mu, \hat\kappa$)
+MLE fit (red). Each panel reports $\hat\eta$, the median FMM $R^2$, and
+the per-gene sample size $n_\mathrm{fitted}$.}
+\label{fig:fmm_diagnostic}
 \end{figure}
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{method_comparison/figures/td_by_r_comparison.pdf}
-\caption{True discoveries by $r$ stratum comparing DCP and CircaCompare.}
-\label{fig:td_by_r}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{method_comparison/figures/power_comparison.pdf}
-\caption{Marginal power comparison between DCP and CircaCompare for DA and DP tests.}
-\label{fig:power_comparison}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{method_comparison/figures/fdr_comparison.pdf}
-\caption{FDR comparison between DCP and CircaCompare. CircaCompare inflates DP FDR substantially above the nominal 5\% threshold (dashed line).}
-\label{fig:fdr_comparison}
-\end{figure}
 
 %% ====================================================================
-\section{Validation Details}
-\label{sec:validation}
+\section{From the FMM model to the K-harmonic F-test}
+\label{sec:fmm_derivation}
 %% ====================================================================
 
-\subsection{Type I Error Control Under Null}
+This section presents the complete derivation that links the K-harmonic
+linear regression test \texttt{detect\_FMM} to the FMM
+generative model. The K-harmonic F-test in the main text is the
+linearised rhythmicity test obtained from a truncated Fourier expansion
+of the FMM signal.
 
-We ran 50 simulations under the complete null hypothesis (prop\_DR $= 0$, prop\_DP $= 0$, prop\_DA $= 0$; 5,000 genes; $n \in \{20, 40, 60, 80, 100\}$). Under this null, genes have identical parameters between groups (no differential rhythmicity, phase, or amplitude). Any rejection is a false positive.
+\subsection{The FMM signal model}
 
-Results from 50 null simulations:
+The Frequency Modulated M\"{o}bius model \citep{rueda2019fmm} represents
+a single rhythmic gene's expression profile as
+\begin{equation}
+y(t) = M + A \cos\!\big\{ \beta + u(t) \big\} + \varepsilon,
+\qquad \varepsilon \sim \mathcal{N}(0, \sigma^2),
+\label{eq:supp_fmm}
+\end{equation}
+with the phase transformation
+\begin{equation}
+u(t) = 2 \arctan\!\left( \omega \tan\!\frac{t - \alpha}{2} \right),
+\qquad \omega \in (0, 1].
+\label{eq:supp_phase_xform}
+\end{equation}
+Here $M$ is the mesor, $A \geq 0$ the amplitude, $\alpha \in [0, 2\pi)$
+the peak location, $\beta \in [0, 2\pi)$ the orientation, and $\omega$
+the shape parameter; $\omega = 1$ recovers a pure sinusoid (cosinor).
+
+A direct likelihood-ratio test of $H_0: A = 0$ in the nonlinear
+parameterisation \eqref{eq:supp_fmm} is intractable because
+$\{\beta, \alpha, \omega\}$ are unidentifiable when $A = 0$
+\citep{Davies1977,Davies1987}. We bypass this by re-expressing the FMM
+signal as a Fourier series and testing in the linear basis.
+
+\subsection{M\"{o}bius form of the FMM phase}
+
+Let $s = t - \alpha$. Using the identity
+$e^{2i\arctan x} = (1 + ix)/(1 - ix)$ with $x = \omega \tan(s/2)$ and
+the half-angle representation
+$i \tan(s/2) = (e^{is} - 1)/(e^{is} + 1)$, we obtain
+\begin{equation}
+e^{i u(t)} = \frac{e^{is} - \rho}{1 - \rho\, e^{is}},
+\qquad \rho \equiv \frac{\omega - 1}{\omega + 1} \in (-1, 0].
+\label{eq:supp_mobius}
+\end{equation}
+The map in \eqref{eq:supp_mobius} is a M\"{o}bius / Blaschke
+transformation of the unit circle. The parameter $\rho$ controls the
+sharpness of the FMM waveform: at $\omega = 1$, $\rho = 0$ and the
+transformation reduces to the identity; as $\omega \to 0$, $\rho \to -1$
+and the waveform sharpens. The use of $\rho$ here is to distinguish the
+M\"{o}bius parameter from the effect-size $r = A / \sigma$ used in the
+main-text cosinor sections.
+
+\subsection{Geometric Fourier expansion}
+
+Since $|\rho| < 1$ for $\omega \in (0, 1]$, the geometric series
+$1 / (1 - \rho\, e^{is}) = \sum_{j \geq 0} \rho^j e^{ijs}$ converges.
+Expanding \eqref{eq:supp_mobius} and grouping by harmonic gives
+\begin{equation}
+e^{i u(t)} = -\rho \;+\; (1 - \rho^2) \sum_{k=1}^{\infty} \rho^{k-1} e^{iks}.
+\label{eq:supp_eu_expansion}
+\end{equation}
+Taking real parts and incorporating $\beta$ yields the FMM signal as an
+exact infinite Fourier series:
+\begin{equation}
+y(t) = M' + A(1 - \rho^2)
+\sum_{k=1}^{\infty} \rho^{k-1} \cos\!\big\{ k(t - \alpha) + \beta \big\}
++ \varepsilon,
+\qquad M' = M - A \rho \cos\beta.
+\label{eq:supp_fmm_fourier}
+\end{equation}
+The $k$th-harmonic amplitude is
+$A (1 - \rho^2) \, |\rho|^{k-1}$ and the geometric decay rate is
+$|\rho| = (1 - \omega) / (1 + \omega)$, increasing from $0$ at $\omega = 1$
+(cosinor) toward $1$ as $\omega \to 0$ (very sharp peak).
+
+\subsection{Variance captured by truncation at $K$ harmonics}
+
+By Parseval, the contribution of harmonic $k$ to total signal variance is
+proportional to $|c_k|^2 = A^2 (1 - \rho^2)^2 \rho^{2(k-1)}$. Summing
+the geometric series gives the total signal variance
+$V_\infty = A^2 (1 - \rho^2)$ and the variance in the first $K$ harmonics
+$V_K = A^2 (1 - \rho^2) (1 - \rho^{2K})$. The variance fraction captured
+by truncation at $K$ is therefore
+\begin{equation}
+\frac{V_K}{V_\infty} = 1 - \rho^{2K}
+= 1 - \left( \frac{1 - \omega}{1 + \omega} \right)^{2K}.
+\label{eq:supp_variance_capture}
+\end{equation}
+Table~\ref{tab:variance_capture} reports
+\eqref{eq:supp_variance_capture} across $\omega \in [0.1, 0.5]$.
 
 \begin{table}[H]
 \centering
-\small
-\begin{tabular}{r|ccc|ccc}
+\caption{Variance fraction $V_K / V_\infty$ captured by truncating the
+FMM Fourier series at $K$ harmonics, as a function of the FMM shape
+parameter $\omega$.}
+\label{tab:variance_capture}
+\begin{tabular}{c|c|cccc}
 \toprule
-& \multicolumn{3}{c|}{Raw FPR} & \multicolumn{3}{c}{BH FPR} \\
-$n$ & DR & DP & DA & DR & DP & DA \\
+$\omega$ & $|\rho|$ & $K = 1$ (DCP) & $K = 2$ & $K = 3$ & $K = 4$ \\
 \midrule
-20  & 0.072 & 0.065 & 0.034 & 0.000 & 0.000 & 0.000 \\
-40  & 0.061 & 0.058 & 0.041 & 0.000 & 0.000 & 0.000 \\
-60  & 0.057 & 0.054 & 0.042 & 0.000 & 0.000 & 0.000 \\
-80  & 0.058 & 0.054 & 0.044 & 0.000 & 0.000 & 0.000 \\
-100 & 0.054 & 0.052 & 0.045 & 0.000 & 0.000 & 0.000 \\
+$0.50$ & $0.333$ & $0.889$ & $0.988$ & $0.999$ & $0.9998$ \\
+$0.40$ & $0.429$ & $0.816$ & $0.966$ & $0.994$ & $0.999$ \\
+$0.30$ & $0.538$ & $0.710$ & $0.916$ & $0.976$ & $0.993$ \\
+$0.20$ & $0.667$ & $0.556$ & $0.802$ & $0.912$ & $0.961$ \\
+$0.10$ & $0.818$ & $0.330$ & $0.552$ & $0.701$ & $0.801$ \\
 \bottomrule
 \end{tabular}
-\caption{Type I error rates under the complete null. Raw FPR is near nominal 0.05 for DR and DP; DA is slightly conservative (0.034--0.045). After BH correction, no false positives are produced.}
-\label{tab:null_typeI}
 \end{table}
 
-DR and DP raw FPR values are slightly above 0.05 at small $n$ (0.072 for DR at $n=20$), converging toward 0.05 as $n$ increases. DA raw FPR is consistently below 0.05, indicating a conservative test. After BH multiple testing correction, the false positive rate is exactly 0.000 for all tests and sample sizes, confirming proper error control.
+For empirically observed $\omega \in [0.28, 0.53]$ (Figure~\ref{fig:fmm_diagnostic}),
+$K = 2$ captures $80\%$ to $98\%$ of FMM variance; $K = 3$ captures
+$91\%$ to $99\%$.
 
-See Figure~\ref{fig:null_pval} for $p$-value uniformity histograms under the null.
+\subsection{From the FMM signal to K-harmonic regression}
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{validation/null_pvalue_uniformity.pdf}
-\caption{$P$-value distributions under the complete null for DR, DP, and DA tests ($n = 60$, 50 simulations, 5{,}000 genes). Under a correctly calibrated test, $p$-values should follow a Uniform(0,1) distribution (red dashed line). DP is near-perfectly uniform. DR shows a mild left-skew (slight excess of small $p$-values), while DA is slightly conservative (deficit of small $p$-values). These deviations are minor---density remains within $[0.8, 1.5]$---and are fully absorbed by BH multiple testing correction (BH-adjusted FPR $= 0$ for all three tests).}
-\label{fig:null_pval}
-\end{figure}
+Truncating \eqref{eq:supp_fmm_fourier} at $K$ and expanding each
+$\cos\{k(t - \alpha) + \beta\}$ as
+$\cos(k \alpha - \beta) \cos(k \omega_0 t) + \sin(k \alpha - \beta) \sin(k \omega_0 t)$
+(with $\omega_0 = 2\pi / T$ the fundamental angular frequency) gives
+the truncated signal
+\begin{equation}
+y(t) \approx M + \sum_{k=1}^{K} \big[ a_k \cos(k \omega_0 t) + b_k \sin(k \omega_0 t) \big] + \varepsilon
+\label{eq:supp_truncated}
+\end{equation}
+with $a_k = A (1 - \rho^2) \rho^{k-1} \cos(\beta - k\alpha)$ and
+$b_k = A (1 - \rho^2) \rho^{k-1} \sin(\beta - k\alpha)$. The FMM model
+imposes the geometric-decay constraint
+$\sqrt{a_k^2 + b_k^2} = A (1 - \rho^2) |\rho|^{k-1}$. Releasing this
+constraint and treating each $(a_k, b_k)$ as a free parameter yields
+the K-harmonic linear regression
+\begin{equation}
+y(t) = M + \sum_{k=1}^{K} \big[ a_k \cos(k \omega_0 t) + b_k \sin(k \omega_0 t) \big] + \varepsilon,
+\label{eq:supp_kharmonic}
+\end{equation}
+with $2K + 1$ free parameters: an intercept and $2K$ harmonic
+coefficients.
 
-\subsection{Power Monotonicity}
+\subsection{Hypothesis test and exact F-distribution}
 
-Power should increase monotonically with sample size for a well-behaved test. From the main text Table~1 and Supplementary Tables~\ref{tab:dr_detail}--\ref{tab:da_summary}, marginal power at FDR 5\% for $n \in \{20, 40, 60, 80, 100\}$:
-\begin{itemize}
-\item DR: 1.1\% $\to$ 5.4\% $\to$ 13.1\% $\to$ 22.4\% $\to$ 30.5\% (strictly monotonic: PASS)
-\item DP: 13.3\% $\to$ 34.5\% $\to$ 50.1\% $\to$ 61.4\% $\to$ 68.7\% (strictly monotonic: PASS)
-\item DA: 17.7\% $\to$ 42.6\% $\to$ 58.8\% $\to$ 69.0\% $\to$ 75.5\% (strictly monotonic: PASS)
-\end{itemize}
-This is also visible in the main text Figures~1C, 2C, and 3C (marginal power vs.\ sample size panels).
+We test the null hypothesis of no rhythm,
+\begin{equation}
+H_0:\; a_1 = b_1 = a_2 = b_2 = \cdots = a_K = b_K = 0,
+\end{equation}
+against the alternative that at least one $(a_k, b_k) \neq (0, 0)$.
+Stacking the $n$ observations into $\mathbf{y} \in \mathbb{R}^n$ and
+building the design matrix
+\begin{equation}
+\mathbf{X}_K = \big[ \mathbf{1},\; \cos(\omega_0 \mathbf{t}),\; \sin(\omega_0 \mathbf{t}),\; \ldots,\; \cos(K \omega_0 \mathbf{t}),\; \sin(K \omega_0 \mathbf{t}) \big]
+\in \mathbb{R}^{n \times (2K+1)},
+\end{equation}
+the nested-model F-statistic is
+\begin{equation}
+F = \frac{( \mathrm{SSE}_0 - \mathrm{SSE}_K ) / (2K)}
+        {\mathrm{SSE}_K / (n - 2K - 1)},
+\label{eq:supp_f_stat}
+\end{equation}
+where $\mathrm{SSE}_0 = \sum_i (y_i - \bar y)^2$ and
+$\mathrm{SSE}_K = \mathbf{y}^\top (\mathbf{I} - \mathbf{H}_K) \mathbf{y}$
+with $\mathbf{H}_K = \mathbf{X}_K (\mathbf{X}_K^\top \mathbf{X}_K)^{-1} \mathbf{X}_K^\top$.
+Under Gaussian errors and the null,
+\begin{equation}
+F \mid H_0 \sim F(2K,\; n - 2K - 1) \quad \text{(exact, finite-sample)}.
+\label{eq:supp_null_dist}
+\end{equation}
+No asymptotics, boundary correction, or empirical calibration is
+required, because \eqref{eq:supp_kharmonic} is fully linear in
+$(M, a_k, b_k)$ and every parameter is identifiable under both $H_0$
+(where they equal zero) and $H_1$.
 
-\subsection{Effect Size Ordering}
+In practice, \texttt{detect\_FMM} fits \eqref{eq:supp_kharmonic} through
+the LimoRhyde \citep{Singer2019LimoRhyde} \texttt{limma::lmFit} +
+\texttt{limma::eBayes} pipeline, returning the moderated F-statistic
+when \texttt{ebayes = TRUE} (default, for $G \geq 50$) and the exact
+F-statistic when \texttt{ebayes = FALSE} (or under the small-$G$
+fallback). The moderated F approximates the LRT under an
+empirical-Bayes prior on the residual variance and is the test used
+throughout the main paper.
 
-Power should increase with effect size magnitude. The phase sweep (Table~\ref{tab:phase_power}) confirms monotonic power increase from 0.5\,h through 12\,h at all sample sizes, consistent with the main text Figure~3C. Power saturates near 8\,h (8h/12h ratio $= 0.99$), reflecting the geometric limit of cosine separation.
-
-\subsection{FDR Calibration}
-
-Empirical FDR was computed as the average proportion of false discoveries among all BH-rejections. From Tables~\ref{tab:dr_detail}--\ref{tab:da_summary}:
-\begin{itemize}
-\item DR: empirical FDR ranges from 0.018 ($n = 40$) to 0.028 ($n = 20$), all below the nominal 5\%.
-\item DP: empirical FDR ranges from 0.020 ($n = 80$) to 0.063 ($n = 20$). Slight inflation at $n = 20$ is expected due to few total rejections, where a single false discovery disproportionately affects the FDR estimate.
-\item DA: empirical FDR ranges from 0.002 ($n = 20$) to 0.007 ($n = 100$), the most conservative of the three tests, consistent with the \v{S}id\'{a}k correction applied to the DA LRT.
-\end{itemize}
-Phase sweep FDR (Table~\ref{tab:phase_fdr}) further confirms proper control across a range of effect sizes.
-
-\subsection{Stratification Necessity}
-
-At $n = 60$, DR stratified power ranges from near 0\% (low $r$) to $>$83\% (high $r$), while marginal power is 13.1\% (main text Figure~1A). DP stratified power ranges from near 0\% to $>$92\% (main text Figure~2A). DA stratified power ranges from 1\% ($r < 0.25$) to 100\% ($r > 0.75$), while marginal power is 58.8\% (main text Figure~3A). Across all three tests, the within-stratum range exceeds 80 percentage points at $n = 60$, confirming that marginal power is a misleading summary when effect sizes are heterogeneous, justifying the stratified analysis approach advocated by PROPER \cite{wu2015proper}.
 
 %% ====================================================================
-\section{Simulation Algorithm}
+\section{Type-I error validation of \texttt{detect\_FMM}}
+\label{sec:typeI}
+%% ====================================================================
+
+Type-I error of \texttt{detect\_FMM} was validated by simulating
+$G \times n$ null datasets ($G = 2000$ genes drawn from
+$\mathcal{N}(0, 1)$ independent of $n$ time points on an equispaced
+active grid) at $n \in \{12, 24, 48, 72, 144\}$ and reporting the
+empirical rejection rate at nominal $\alpha = 0.05$. Both ebayes paths
+were tested at $K = 1$ and $K = 2$; the exact-F path was tested at
+$K = 3$ for $n \geq 24$ where the design is identifiable. The
+rank-deficient case ($K = 2$ at $B = 4$, $n = 24$) was tested
+separately to confirm that \texttt{detect\_FMM} emits an
+identifiability warning and that the test remains conservative
+(empirical type-I error $\leq \alpha$). The full reproducible script
+is at \texttt{tests/test\_detect\_FMM\_typeI.R}.
+
+Across the calibration grid, empirical type-I error remained within
+$[0.035, 0.065]$ of the nominal $0.05$ (the Monte Carlo $\pm 3$\,SE
+tolerance band at $G = 2000$). Kolmogorov-Smirnov uniformity tests on
+the simulated null p-values did not reject uniformity at $p_{KS} > 0.01$.
+At the rank-deficient design ($B = 4$, $K = 2$), the dispatch-level
+Nyquist warning fired as designed and the empirical type-I error was
+$\leq 0.05$ in every replication.
+
+
+%% ====================================================================
+\section{Choice of $K$: power across the harmonic-order grid}
+\label{sec:k_sweep}
+%% ====================================================================
+
+We compared $K \in \{1, 2, 3, 4, 5\}$ on three baboon CAMO active
+tissues (KIM with $\hat\eta = 1.68$, KIC with $\hat\eta = 2.38$, SUN with
+$\hat\eta = 1.31$) over a sample-size grid $N \in \{24, 48, 72, 144\}$
+with $N_{\mathrm{sim}} = 30$ outer replicates. On the dominant
+operating regime $N \in \{24, 48\}$, $K = 2$ dominates: on KIM at
+$N = 24$ the power was $0.498$ for $K = 2$ versus $0.455$ for $K = 1$,
+$0.387$ for $K = 3$, $0.275$ for $K = 4$, and $0.136$ for $K = 5$. The
+steep drop from $K = 2$ toward $K = 4$ reflects the degrees-of-freedom
+cost in the F-statistic denominator (each additional harmonic loses
+two df from the residual). At high $N \geq 72$ all $K$ values converge
+to near-saturation power.
+
+$K = 3$ marginally outperforms $K = 2$ on KIC and SUN at $N \geq 72$,
+but at the cost of a larger identifiability threshold ($B \geq 7$
+instead of $B \geq 5$). Empirically, the variance-capture bound
+\eqref{eq:supp_variance_capture} predicts that $K = 2$ captures at
+least $80\%$ of FMM variance for $\omega \geq 0.20$, which covers the
+full empirical range observed in Figure~\ref{fig:fmm_diagnostic}.
+Combining these arguments leads to the $K = 2$ default adopted in
+Section~2.4 of the main text. The \texttt{K} argument of
+\texttt{detect\_FMM} can be set to any value $\geq 1$ for users who
+wish to override the default.
+
+
+%% ====================================================================
+\section{Simulation algorithm}
 \label{sec:algorithm}
 %% ====================================================================
 
-The following pseudocode describes the data generation procedure for a single simulation replicate at sample size $n$, as implemented in \texttt{simCircadianDiff()}.
+Algorithm~S1 describes the data-generation procedure for a single
+simulation replicate of the two-group differential setting at sample
+size $n$, as implemented in \texttt{simCircadianDiff()}. The
+single-cohort case is recovered by setting the differential
+proportions $\pi_{\mathrm{DR}} = \pi_{\mathrm{DP}} = \pi_{\mathrm{DM}} = 0$
+and the second-group parameter modifications to no-ops.
 
 \begin{figure}[H]
 \small
 \hrule\vspace{4pt}
-\textbf{Algorithm S1}: \texttt{simCircadianDiff} --- Two-group circadian simulation\vspace{2pt}
+\textbf{Algorithm S1}: \texttt{simCircadianDiff} (two-group circadian
+simulation) \vspace{2pt}
 \hrule\vspace{4pt}
-\textbf{Input}: $G$ genes, sample size $n$, proportions $\pi_R, \pi_{\text{DR}}, \pi_{\text{DP}}, \pi_{\text{DA}}$, empirical mesor distribution $\hat{F}_M$, empirical joint amplitude-noise distribution $\hat{F}_{A,\sigma}$, empirical phase distribution $\hat{F}_{\phi}$, phase shift $\Delta\phi$, amplitude fold-change range $[a_{\min}, a_{\max}]$, pilot collection times $\mathbf{t}_{\text{pilot}}$, seed $s$ \\
-\textbf{Output}: Expression matrices $\mathbf{Y}_1, \mathbf{Y}_2 \in \mathbb{R}^{G \times n}$, ground truth $\mathbf{D}$\vspace{4pt}
+\textbf{Input}: number of genes $G$, sample size $n$, type
+probabilities $\pi_R, \pi_{\mathrm{DR}}, \pi_{\mathrm{DP}}, \pi_{\mathrm{DM}}$,
+empirical pilot distributions $\hat{F}_\mu, \hat{F}_{A,\sigma}, \hat{F}_\phi$
+and empirical TOD distribution $\hat{F}_{\mathrm{TOD}}$, design type
+(active or passive), phase shift $\Delta\phi$, mesor shift $\Delta\mu$,
+seed $s$.\\
+\textbf{Output}: expression matrices $\mathbf{Y}_1, \mathbf{Y}_2 \in \mathbb{R}^{G \times n}$
+and the ground-truth type assignment $\mathbf{T}$.
+\vspace{4pt}
 
-\begin{enumerate}\setlength{\itemsep}{2pt}
-\item \textbf{Set seed}$(s)$. Resample with replacement for $g = 1,\ldots,G$: mesor $M_g$ from $\hat{F}_M$, the paired amplitude-noise tuple $(A_g,\sigma_g)$ jointly from $\hat{F}_{A,\sigma}$, and phase $\phi_g$ from $\hat{F}_{\phi}$. Joint sampling of $(A_g,\sigma_g)$ preserves the pilot-estimated gene-level signal-to-noise distribution $r_g = A_g/\sigma_g$.
+\begin{enumerate}
+\setlength{\itemsep}{2pt}
+\item \textbf{Seed} $s$. For $g = 1, \ldots, G$, draw baseline
+parameters: $\mu_g \sim \hat{F}_\mu$, $(A_g, \sigma_g) \sim \hat{F}_{A,\sigma}$
+(joint draw preserves the pilot's amplitude-noise dependence), and
+$\phi_g \sim \hat{F}_\phi$.
 
-\item \textbf{Assign gene types sequentially} (independent of $n$; all types mutually exclusive):
-  (a) Sample $\lfloor G \cdot \pi_{\text{DR}} \rfloor$ DR genes from the full pool; split equally into type~2 (G1-only rhythmic) and type~3 (G2-only rhythmic).
-  (b) From the remaining non-DR genes, sample $\lfloor (G - n_{\text{DR}}) \cdot \pi_R \rfloor$ as \emph{rhythmic-in-both}.
-  (c) From rhythmic-in-both, sample $\lfloor G \cdot \pi_{\text{DP}} \rfloor$ as type~4 (DP).
-  (d) From rhythmic-in-both \emph{excluding DP genes}, sample $\lfloor G \cdot \pi_{\text{DA}} \rfloor$ as type~5 (DA).
-  (e) Remaining rhythmic-in-both genes become type~1 (rhythmic, no difference); all other genes are type~0 (arrhythmic).
-  Note: a gene cannot simultaneously be DR, DP, and DA; compound multi-parameter changes are not modeled.
+\item \textbf{Assign gene types} $T_g \in \{0, 1, 2, 3, 4, 5\}$ by
+sampling from the categorical with probabilities
+$P(T_g = 0) = 1 - \pi_R - \pi_{\mathrm{DR}} - \pi_{\mathrm{DP}} - \pi_{\mathrm{DM}}$,
+$P(T_g = 1) = \pi_R$,
+$P(T_g = 2) = P(T_g = 3) = \pi_{\mathrm{DR}} / 2$,
+$P(T_g = 4) = \pi_{\mathrm{DP}}$,
+$P(T_g = 5) = \pi_{\mathrm{DM}}$.
 
-\item \textbf{Set group-specific parameters}. For rhythmic genes, initialize group~1 with $(A_{g,1}, \phi_{g,1}) = (A_g, \phi_g)$. Then modify group~2 according to gene type:
-  type~2: $A_{g,2} = 0$ (arrhythmic in G2);
-  type~3: $A_{g,1} = 0$, draw a fresh paired tuple $(A_{g,2}, \sigma_{g,2})$ and phase $\phi_{g,2}$ from the corresponding pilot-derived empirical distributions;
-  type~4: $\phi_{g,2} = (\phi_{g,1} + \Delta\phi) \bmod 24$, $A_{g,2} = A_{g,1}$;
-  type~5: $A_{g,2} = A_{g,1} \cdot u$, $u \sim \text{Unif}(a_{\min}, a_{\max})$.
+\item \textbf{Initialise group parameters} as
+$(\mu_{g,k}, A_{g,k}, \sigma_{g,k}, \phi_{g,k}) = (\mu_g, A_g, \sigma_g, \phi_g)$
+for $k \in \{1, 2\}$, then modify according to $T_g$:
+$T_g = 0$: $A_{g,1} = A_{g,2} = 0$ (arrhythmic);
+$T_g = 1$: no modification (rhythmic in both);
+$T_g = 2$: $A_{g,2} = 0$ (rhythmic in group 1 only);
+$T_g = 3$: $A_{g,1} = 0$ and resample $(A_{g,2}, \phi_{g,2})$
+independently from $\hat{F}_{A,\sigma}$ and $\hat{F}_\phi$;
+$T_g = 4$: $\phi_{g,2} = (\phi_{g,1} + \Delta\phi) \bmod 24$;
+$T_g = 5$: $\mu_{g,2} = \mu_{g,1} + \Delta\mu$.
 
-\item \textbf{Set seed}$(s + 7919n)$. Generate collection times $t_{k,i}$ for group $k \in \{1,2\}$ and $i = 1,\ldots,n$. For passive designs, sample from the pilot-implied empirical time-of-day distribution estimated from $\mathbf{t}_{\text{pilot}}$ using a circular density estimator. For active designs, assign times deterministically from the user-specified schedule.
+\item \textbf{Reseed} $s + 7919 n$. For each group $k$ and each
+$i = 1, \ldots, n$, draw collection times $t_{k,i}$: from
+$\hat{F}_{\mathrm{TOD}}$ for passive designs, or from the equispaced
+active grid otherwise. This second seeding step makes time-of-day
+draws sample-size-specific while preserving the per-gene biological
+parameters across $n$.
 
-\item \textbf{Generate expression}. For each gene $g$, group $k$, and sample $i$:
+\item \textbf{Generate expression}. For each gene $g$, group $k$, and
+sample $i$,
 \[
-Y_{g,k,i}(t_i) = M_g + A_{g,k}\cos(\omega t_i - \omega\phi_{g,k}) + \varepsilon_{g,k,i}, \quad \varepsilon_{g,k,i} \stackrel{\text{iid}}{\sim} N(0, \sigma_{g,k}^2), \quad \omega = 2\pi/24
+y_{g,k,i} = \mu_{g,k} + A_{g,k} \cos\!\big( \omega_0 t_{k,i} + \phi_{g,k} \big)
++ \varepsilon_{g,k,i},
+\qquad \varepsilon_{g,k,i} \sim \mathcal{N}\!\big(0, \sigma_{g,k}^2 \big),
 \]
+with $\omega_0 = 2\pi / 24$.
 
-\item \textbf{Record ground truth}: gene type, $r_{g,k} = A_{g,k}/\sigma_{g,k}$, phase and amplitude differences.
+\item \textbf{Record ground truth} $\mathbf{T} = (T_1, \ldots, T_G)$
+along with per-gene effect sizes $r_{g,k} = A_{g,k} / \sigma_{g,k}$,
+phase differences, and mesor differences.
 \end{enumerate}
 \vspace{2pt}\hrule
 \end{figure}
 
-The two-stage seeding strategy (steps 1 and 4) ensures that gene-type assignments and baseline biological parameters are identical across sample sizes within a simulation, while the $n$-dependent reseed in step~4 introduces appropriate stochastic variation in collection times and expression noise. In particular, the initial seed fixes all $n$-independent biological quantities---such as gene-type indicators and baseline parameters $(M_g, A_g, \sigma_g, \phi_g)$---so that the true differential structure is held constant across $n$. The reseed of the form $s + 7919n$ then produces independent realizations of sampling times $t_i$ and residual errors $\varepsilon_{gi}$ for each sample size, preventing the dataset at $n_2 > n_1$ from being a simple extension of the dataset at $n_1$. Consequently, comparisons of $\mathrm{Power}(n)$ isolate the effect of sample size on sampling variability while keeping the underlying biological configuration fixed.
-
-
-\section{Robustness of the Cosinor Model Assumption}
-\label{sec:fourier_robustness}
-%% ====================================================================
-
-The cosinor model assumes that each gene's rhythmic expression follows a pure sinusoid. In practice, circadian waveforms can deviate from this ideal, and the key question is whether such deviations affect power projections. To evaluate this, we simulated data with a second-harmonic component added to the generating model, so the true signal follows $A[\cos(2\pi t/24) + \alpha_2 \cos(4\pi t/24)]$, where $\alpha_2 \in [0, 1]$ controls departure from a pure sinusoid ($\alpha_2 = 0$: standard cosinor; $\alpha_2 = 1$: second harmonic as large as the fundamental). DR power simulations were run at $\alpha_2 \in \{0, 0.25, 0.5, 0.75, 1.0\}$ with $\alpha_3 = 0$, using 20 simulation replicates and 3,000 genes. Each dataset was evaluated at two temporal designs---sparse (low $B$) and dense (high $B$)---at a dataset-specific reference sample size (Figure~\ref{fig:fourier_robustness}).
-
-Key findings:
-
-\begin{enumerate}
-  \item \textbf{At $\alpha_2 = 0$, sparse and dense designs yield equivalent power}, confirming Proposition~1 and validating the sinusoidal simulation baseline. Power differences between $B$ values are $\leq 1$\,pp at $\alpha_2 = 0$ across all datasets.
-  \item \textbf{Power is robust to moderate distortion ($\alpha_2 \leq 0.5$) for $B \geq 4$}: at $\alpha_2 = 0.5$, DR power loss relative to $\alpha_2 = 0$ is modest for dense designs (e.g., Baboon $B=12$: $42\% \to 27\%$; Mouse $B=8$: $79\% \to 33\%$). Empirical bulk RNA-seq circadian waveforms rarely exceed $\alpha_2 \approx 0.5$ \cite{hughes2009harmonics}.
-  \item \textbf{At extreme distortion ($\alpha_2 > 0.5$), power degrades substantially for most designs}. However, sparse designs ($B = 4$) can outperform dense designs ($B = 8$) at extreme $\alpha_2$: Mouse LIV shows $B=8$ collapsing to near-zero while $B=4$ retains 28\% power at $\alpha_2 = 1.0$. This is a partial aliasing effect analogous to (but weaker than) the $B=3$ aliasing in Finding~4: at $B=4$ the second harmonic is not fully resolved, so the cosinor model absorbs part of the harmonic distortion into its amplitude estimate rather than treating it as residual noise.
-  \item \textbf{$B = 3$ equally-spaced timepoints produces artifactual power gain}: for Mouse D1D2 ($B=3$), DR power \emph{increases} with $\alpha_2$ (20\% $\to$ 35\% at $\alpha_2=1.0$). This is an aliasing artifact: the second-harmonic $\cos(4\pi t/24)$ is identical to the fundamental $\cos(2\pi t/24)$ at equally-spaced 3-point grids (0, 8, 16\,h), so the cosinor model absorbs the harmonic into its amplitude estimate. $B = 3$ should not be used for circadian sampling.
-\end{enumerate}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/fourier_robustness.pdf}
-\caption{Robustness of the cosinor assumption to non-sinusoidal waveforms. DR power vs.\ second-harmonic strength $\alpha_2$ ($\alpha_3 = 0$) for three active-design datasets at dataset-specific reference sample sizes. Each panel shows one dataset; solid line: sparse design (low $B$); dashed line: dense design (high $B$); per-dataset $B$ values: GSE54651 $B \in \{4, 8\}$ at $N=24$; Baboon $B \in \{4, 12\}$ at $N=12$; D1D2 $B \in \{3, 6\}$ at $N=45$. Vertical dashed line: $\alpha_2 = 0.5$ (practical upper bound for bulk RNA-seq). At $\alpha_2 = 0$, sparse and dense designs coincide (B-invariance). Power loss is modest for $B \geq 4$ up to $\alpha_2 = 0.5$. The D1D2 $B=3$ sparse line shows an artifactual power \emph{increase} due to second-harmonic aliasing at 3 equally-spaced timepoints (see finding~4 above).}
-\label{fig:fourier_robustness}
-\end{figure}
+The two-stage seeding (steps 1 and 4) holds the gene-type assignment
+and baseline parameters fixed across sample sizes within a simulation
+replicate while reseeding only the $n$-dependent quantities (collection
+times and residual noise). This isolates the effect of $n$ on power
+from incidental variation in the gene-level biological configuration.
 
 
 %% ====================================================================
-\section{Design Matrix Properties and B-Invariance}
+\section{Design matrix properties and B-invariance under cosinor truth}
 \label{sec:b_invariance}
 %% ====================================================================
 
-This section provides the mathematical derivation underlying Proposition~1
-(B-invariance) stated in the main text. Under balanced equally spaced sampling
-with $B\geq 3$ distinct time points, the Fisher information block for the
-harmonic coefficients is $\frac{n}{2}I_2$, independent of $B$.
+This section provides the mathematical derivation underlying the
+$B$-invariance result stated in the main text Section~2.5. Under
+balanced equally spaced sampling with $B \geq 3$ distinct time points
+and $m$ replicates per time point ($n = B m$), the harmonic-coefficient
+block of the cosinor design matrix is diagonal and proportional to $n$,
+which removes any dependence of the noncentrality on $B$.
 
-\subsection{Setup and notation}
+\subsection{Setup}
 
-Sampling times for individual subjects are denoted by $t_i$, $i=1,\dots,n$.
-Distinct sampling times are denoted by $t_b$, $b=1,\dots,B$, with replicate
-counts $m_b$, so $n=\sum_{b=1}^B m_b$. The harmonic basis vector is
-$f(t)=[1,\cos(\omega t),\sin(\omega t)]^\top$ with $\omega=2\pi/24$.
-For evenly spaced sampling over one full 24\,h cycle,
-$t_b=(b-1)\cdot 24/B$ and $\theta_b:=\omega t_b=2\pi(b-1)/B$.
+Let $t_b = (b - 1) \cdot 24 / B$ for $b = 1, \ldots, B$ denote the
+distinct sampling times of a balanced equally spaced active design over
+one $24$-hour cycle, and $\theta_b = \omega_0 t_b = 2 \pi (b - 1) / B$
+the corresponding phases on the unit circle. The cosinor design matrix
+for one gene is $X_{ij} = f(t_i)_j$ with
+$f(t) = [1, \cos(\omega_0 t), \sin(\omega_0 t)]^\top$.
 
-\subsection{Balanced evenly spaced design: \texorpdfstring{$X^\top X$}{X'X}}
+\subsection{Off-diagonal terms vanish for $B \geq 3$}
 
-For one group and one gene with design matrix
-$X_{ij}=f(t_i)_j$, the $(2,2)$ and $(3,3)$ diagonal blocks of $X^\top X$
-involve sums of $\cos^2(\theta_b)$ and $\sin^2(\theta_b)$ over the equally
-spaced grid. Using $\cos^2\theta=\tfrac{1+\cos(2\theta)}{2}$ and the finite
-cosine sum formula with $d=4\pi/B$:
-\[
-\sum_{k=0}^{B-1}\cos\!\left(\frac{4\pi k}{B}\right)
-=
-\frac{\sin(2\pi)}{\sin(2\pi/B)}\cos\!\left(\frac{2\pi(B-1)}{B}\right)
-= 0 \quad (B\geq 3),
-\]
-one obtains $\sum_{b=1}^B \cos^2(\theta_b)=B/2$ and by the same argument
-$\sum_{b=1}^B \sin^2(\theta_b)=B/2$. The off-diagonal terms
-$\sum_{b=1}^B\cos(\theta_b)$, $\sum_{b=1}^B\sin(\theta_b)$, and
-$\sum_{b=1}^B\sin(\theta_b)\cos(\theta_b)$ all vanish by the finite
-trigonometric sum formulas (requiring $B\geq 3$ so that $\sin(2\pi/B)\neq 0$
-and $\sin(\pi/B)\neq 0$). With balanced replication $m_b\equiv m$ and $n=Bm$:
+The off-diagonal sums
+$\sum_b \cos(\theta_b), \sum_b \sin(\theta_b),$ and
+$\sum_b \sin(\theta_b) \cos(\theta_b)$
+are finite geometric sums of complex exponentials and all vanish for
+$B \geq 3$ by the standard finite-sum identity (the denominators
+$\sin(\pi / B)$ and $\sin(2 \pi / B)$ are non-zero for $B \geq 3$). At
+$B = 2$ the sine column of $X$ is identically zero, so the cosinor
+design is rank-deficient; we therefore impose $B \geq 3$ throughout.
+
+\subsection{Diagonal terms equal $B / 2$}
+
+Using $\cos^2 \theta = (1 + \cos 2\theta) / 2$ and the same finite
+trigonometric sum identity to make $\sum_b \cos(4 \pi (b-1) / B) = 0$
+for $B \geq 3$, we obtain
+$\sum_b \cos^2 \theta_b = \sum_b \sin^2 \theta_b = B / 2$. With
+balanced replication $m_b \equiv m$ and $n = B m$, the design
+information matrix takes the diagonal form
 \begin{equation}
-X^\top X
-=
-\begin{pmatrix}
-n & 0 & 0\\
-0 & n/2 & 0\\
-0 & 0 & n/2
-\end{pmatrix}.
-\label{eq:xtx_balanced}
+X^\top X = \mathrm{diag}\!\big( n,\; n / 2,\; n / 2 \big),
+\qquad B \geq 3.
+\label{eq:supp_xtx_balanced}
 \end{equation}
 
-The condition $B\geq 3$ is necessary: at $B=2$ the sampling times are
-$\{0,\tau/2\}$, the sine column of $X$ is identically zero, and the design
-is rank-deficient.
+\subsection{Noncentrality and B-invariance}
 
-\subsection{Proof of Proposition~1 (B-invariance)}
-\label{sec:proof_b_invariance}
-
-Under balanced equally spaced sampling with $B\geq 3$ distinct time points and
-common replication $m$ per time point ($n=Bm$), the Fisher information block
-for $(\beta_1,\beta_2)$ is $(n/2)I_2$ by \eqref{eq:xtx_balanced}. The
-noncentrality parameter for the global rhythmicity test
-$H_0:\beta_1=\beta_2=0$ is therefore
-\[
-\lambda
-=
-\frac{1}{\sigma^2}
-\begin{pmatrix}\beta_1 & \beta_2\end{pmatrix}
-\begin{pmatrix} n/2 & 0 \\ 0 & n/2 \end{pmatrix}
-\begin{pmatrix}\beta_1 \\ \beta_2\end{pmatrix}
-=
-\frac{n}{2\sigma^2}(\beta_1^2+\beta_2^2)
-=
-\frac{n}{2}\!\left(\frac{A}{\sigma}\right)^{\!2},
-\]
-which depends on $n$ and $A/\sigma$ but not separately on $B$ and $m$.
-
-For phase-invariance, using $\cos^2(x)=\{1+\cos(2x)\}/2$,
-\[
-d(\phi)
-=
-\frac{1}{B}\sum_{b=1}^B \cos^2(\omega t_b-\omega\phi)
-=
-\frac{1}{2}
-+
-\frac{1}{2B}\sum_{b=1}^B \cos\!\bigl(2\omega t_b-2\omega\phi\bigr).
-\]
-The remaining sum is zero by the finite cosine sum formula applied to the
-equally spaced grid (the argument above), so $d(\phi)=1/2$ for all $\phi$.\qed
-
-\section{Limitations}
-\label{sec:limitations}
-
-Current limitations of \textsc{SCP} include the following.
-
-\begin{enumerate}[(i)]
-  \item \textbf{Marginal resampling of mesor and phase.} The joint distribution
-    $\hat{F}_{A,\sigma}$ is sampled as paired per-gene tuples, preserving the
-    empirical $r=A/\sigma$ distribution. However, correlations between mesor
-    $\mu_g$ or phase $\phi_g$ and the $(A,\sigma)$ pair are not modeled; mesor
-    and phase are resampled marginally from their respective empirical
-    distributions.
-  \item \textbf{Passive design specificity.} Passive-design power projections
-    depend on the pilot study's time-of-day distribution. Different tissues or
-    cohorts may have different $F_{\text{TOD}}$ and hence different
-    phase-dependent design factors $d_{g,k}$; projections should not be
-    extrapolated to cohorts with substantially different collection schedules.
-  \item \textbf{Computational cost of CircaCompare.} When CircaCompare is
-    included in a method comparison, its nonlinear fitting (${\sim}150$\,s per
-    simulation vs.\ ${\sim}2$\,s for DCP) limits the feasible number of
-    simulation replicates $N_{\text{sim}}$ in reasonable wall time.
-  \item \textbf{Cosinor model assumption.} The framework assumes sinusoidal
-    waveforms. We evaluated this by simulating data with increasing
-    non-sinusoidal distortion (second-harmonic strength $\alpha_2 \leq 0.5$,
-    covering realistic bulk RNA-seq waveforms \cite{hughes2009harmonics}) and
-    found power loss of at most 2--9\,pp for $B \geq 4$ at $N \geq 48$
-    (Supplementary~S7). The assumption is therefore not consequential for the
-    active designs considered; more extreme distortions ($\alpha_2 > 0.5$)
-    applicable to single-cell data are shown in Supplementary~S7.
-  \item \textbf{Gene independence assumption.} BH multiple-testing control
-    assumes independence or PRDS across genes, whereas gene--gene expression
-    correlations may affect calibration in practice. Empirical FDR in our
-    validation (Supplementary~S5) was at or below nominal, suggesting the
-    assumption is adequate for the scenarios examined here.
-\end{enumerate}
-
-A further limitation is that differential gene types are modeled as mutually
-exclusive: each gene is assigned to exactly one of DR or DP, and compound
-changes (e.g., a gene that simultaneously shifts phase and loses rhythmicity)
-are not simulated. Simulating each differential type in isolation is the
-standard approach in power analysis for multi-parameter tests---it allows clean,
-interpretable power curves for each test and avoids confounding from compound
-effects. The one-at-a-time design is appropriate when investigators need to know
-the power for a specific hypothesis. Future work could extend the framework to
-compound-type genes to evaluate robustness of test specificity under realistic
-multi-parameter disruption.
+Under cosinor truth $y_{g,i} = \mu_g + A_g \cos(\omega_0 t_i - \omega_0 \phi_g) + \varepsilon_{g,i}$,
+the harmonic-coefficient OLS estimator has Fisher information block
+$(n / 2) I_2$ by~\eqref{eq:supp_xtx_balanced}. The noncentrality
+parameter of the F-test for $H_0: A_g = 0$ is therefore
+\begin{equation}
+\lambda_g = \frac{n}{2} \cdot \frac{A_g^2}{\sigma_g^2} = \frac{n\, r_g^2}{2},
+\qquad r_g = A_g / \sigma_g,
+\label{eq:supp_ncp_cosinor}
+\end{equation}
+which depends on $n$ and the per-gene effect size $r_g$ but not on $B$.
+This is the design factor $d(\phi) = 1 / 2$ uniformly in $\phi$ used in
+the main text. Identical reasoning at each harmonic block of the
+K-harmonic regression \eqref{eq:supp_kharmonic} extends the result to
+$K \geq 2$ above the identifiability threshold $B \geq 2K + 1$,
+yielding the $B$-invariance of the K-harmonic noncentrality in
+Section~2.5.
 
 
 %% ====================================================================
-\section{Amplitude Fold-Change Sensitivity (Historical)}
-\label{sec:amp_sweep}
+\section{Design factor under passive sampling}
+\label{sec:design_factor}
 %% ====================================================================
 
-The following results were produced under an earlier version of the framework
-that used Differential Amplitude (DA) as an endpoint. The current framework
-uses Differential Mesor (DM) instead. These results are retained for reference.
+For passive designs, the per-gene design factor depends on the
+empirical TOD distribution rather than on a chosen grid. Let
+$\hat{F}_{\mathrm{TOD}}$ denote the empirical distribution of collection
+times across the planned cohort (or its bootstrap-resampled equivalent
+in Section~\ref{sec:bootstrap_impl}). For a planned sample size $n$,
+draw $t_{i} \sim \hat{F}_{\mathrm{TOD}}$ independently for
+$i = 1, \ldots, n$; the conditional design factor is then
+\begin{equation}
+d(\phi_g) = \frac{1}{n} \sum_{i=1}^{n} \cos^2\!\big( \omega_0 (t_i - \phi_g) \big)
+- \left[ \frac{1}{n} \sum_{i=1}^{n} \cos\!\big( \omega_0 (t_i - \phi_g) \big) \right]^2,
+\label{eq:supp_d_passive}
+\end{equation}
+which is the conditional version of the CircaPower design factor
+\citep{zong2023circapower}. Averaging $d(\phi_g)$ over the per-gene
+phase distribution gives the marginal design efficiency loss relative
+to the active-design value of $1/2$. For the post-mortem brain pilots
+used in the main text (Putamen-SCZ, Seney ACC, GTEx), the marginal
+$d$ is approximately $0.20$ to $0.30$, depending on how concentrated
+the empirical TOD distribution is. The active vs.\ passive design
+factor difference quantifies the efficiency advantage of active
+designs (factor of about $2$) at matched $n$ and $r$.
 
-Table~\ref{tab:amp_sweep_power} presents marginal DA power across 5 fold-change
-values and 5 sample sizes. Power is negligible for 1.25$\times$ fold-changes
-($<2\%$ at all $n \leq 100$), rises sharply for 2$\times$ (4.7\%--54.2\%),
-and approaches main DA scenario levels at 3$\times$--4$\times$.
 
-\begin{table}[H]
-\centering
+%% ====================================================================
+\section{Bootstrap implementation}
+\label{sec:bootstrap_impl}
+%% ====================================================================
+
+The outer subject bootstrap of Section~2.3 propagates pilot
+sampling variability into the projected power curve. Algorithm~S2
+summarises the implementation; the function
+\texttt{runBootstrapDesignGrid()} in the \texttt{SCP} package
+exposes the corresponding API.
+
+\begin{figure}[H]
 \small
-\begin{tabular}{r|rrrrr}
-\toprule
-& \multicolumn{5}{c}{Amplitude Fold-Change} \\
-$n$ & 1.25$\times$ & 1.5$\times$ & 2$\times$ & 3$\times$ & 4$\times$ \\
-\midrule
-20  & 0.1  & 0.7  & 4.7  & 18.4 & 27.0 \\
-40  & 0.4  & 2.5  & 19.2 & 45.4 & 53.3 \\
-60  & 0.8  & 5.6  & 33.4 & 61.8 & 67.6 \\
-80  & 1.1  & 9.6  & 44.9 & 72.1 & 76.4 \\
-100 & 1.7  & 14.3 & 54.2 & 78.3 & 81.5 \\
-\bottomrule
-\end{tabular}
-\caption{DA marginal power (\%) by amplitude fold-change and sample size.}
-\label{tab:amp_sweep_power}
-\end{table}
+\hrule\vspace{4pt}
+\textbf{Algorithm S2}: \texttt{runBootstrapDesignGrid} (single-cohort
+outer-bootstrap power) \vspace{2pt}
+\hrule\vspace{4pt}
+\textbf{Input}: pilot expression matrix $\mathbf{Y}_{\mathrm{pilot}} \in \mathbb{R}^{G \times n_{\mathrm{pilot}}}$,
+pilot collection times $\mathbf{t}_{\mathrm{pilot}}$, sample-size grid
+$\{N_1, \ldots, N_J\}$, outer-resample count $B_{\mathrm{out}}$,
+inner-simulation count $N_{\mathrm{sim}}^{\mathrm{in}}$, screening
+threshold $\alpha_{\mathrm{pilot}}$, FDR level $\alpha$.\\
+\textbf{Output}: $(B_{\mathrm{out}} \times J)$ matrix of bootstrap
+power replicates and pointwise $95\%$ CI bands.
+\vspace{4pt}
 
-\nocite{*}
+\begin{enumerate}
+\setlength{\itemsep}{2pt}
+\item For $b = 1, \ldots, B_{\mathrm{out}}$:
+\begin{enumerate}
+\setlength{\itemsep}{1pt}
+\item \textbf{Resample subjects.} Draw $n_{\mathrm{pilot}}$ subject
+indices with replacement from $\{1, \ldots, n_{\mathrm{pilot}}\}$ to
+form $\mathbf{Y}^{(b)} \in \mathbb{R}^{G \times n_{\mathrm{pilot}}}$
+and the matched time vector $\mathbf{t}^{(b)}$.
+
+\item \textbf{Re-estimate pilot summary.} Run
+\texttt{estCircadianParam}(${\mathbf{Y}^{(b)}, \mathbf{t}^{(b)}}$) to
+obtain $\hat{\Psi}^{(b)} = ( \hat{F}_\mu^{(b)}, \hat{F}_{A,\sigma}^{(b)}, \hat{F}_\phi^{(b)}, \hat{F}_{\mathrm{TOD}}^{(b)}, \hat{\pi}_R^{(b)} )$.
+
+\item \textbf{Inner simulation.} For each $j$ and each
+$s = 1, \ldots, N_{\mathrm{sim}}^{\mathrm{in}}$, simulate a fresh
+gene-by-sample matrix from $\hat{\Psi}^{(b)}$ at sample size $N_j$ via
+the procedure of Algorithm~S1, run the chosen detector
+(\texttt{detect\_DCP} or \texttt{detect\_FMM}), apply BH adjustment at
+$\alpha$, and record the rhythmicity discovery rate.
+
+\item \textbf{Aggregate.} Average the discovery rate across the
+$N_{\mathrm{sim}}^{\mathrm{in}}$ inner replicates to obtain the bootstrap
+power estimate $\widehat{\mathrm{Power}}^{(b)}(N_j)$.
+\end{enumerate}
+\item \textbf{Summarise across outer resamples.} Compute the bootstrap
+mean
+$\bar{\mathrm{Power}}(N_j) = B_{\mathrm{out}}^{-1} \sum_b \widehat{\mathrm{Power}}^{(b)}(N_j)$
+and the pointwise $2.5$th and $97.5$th percentiles of
+$\widehat{\mathrm{Power}}^{(b)}(N_j)$ across $b$.
+\end{enumerate}
+\vspace{2pt}\hrule
+\end{figure}
+
+Default production settings are $B_{\mathrm{out}} = 50$,
+$N_{\mathrm{sim}}^{\mathrm{in}} = 25$, $G = 5000$, and
+$\alpha_{\mathrm{pilot}} = 0.01$, used for all four bootstrap panels in
+the main text. The total simulation cost scales as
+$B_{\mathrm{out}} \times N_{\mathrm{sim}}^{\mathrm{in}} \times G \times J$
+per detector call; at the default settings, a single pilot panel takes
+roughly $1$ to $4$ CPU-hours on a 60-core node depending on
+$n_{\mathrm{pilot}}$.
+
+
+%% ====================================================================
+\section{Extended limitations}
+\label{sec:limitations}
+%% ====================================================================
+
+This section expands on the limitations paragraph of the main text
+Discussion.
+
+\textbf{Sinusoidal and K-harmonic assumptions.} The cosinor model
+assumes a single sinusoidal harmonic and the K-harmonic F-test assumes
+Gaussian residuals. Both are stable under mild violations: at typical
+empirical $\omega \in [0.28, 0.53]$ and $K = 2$, the variance-capture
+bound \eqref{eq:supp_variance_capture} retains $80\%$ to $98\%$ of the
+underlying signal variance. The remaining residual is absorbed into the
+noise estimate, slightly inflating $\hat\sigma_g$ but preserving the
+nominal type-I rate of the F-test
+(Section~\ref{sec:typeI}). For genes with very sharp peaks or
+near-arrhythmic profiles ($\omega \leq 0.1$), the K-harmonic F-test at
+$K = 2$ retains only about $33\%$ to $55\%$ of the underlying variance
+and substantially under-detects; users with such pilots should consider
+$K = 3$ or a non-parametric detector.
+
+\textbf{Mutually exclusive gene types in the differential simulator.}
+Algorithm~S1 assigns each gene to exactly one of the six types
+$T_g \in \{0, \ldots, 5\}$; compound multi-parameter changes
+(simultaneous DR and DP, for example) are not directly simulated. In
+practice, compound effects are rare for true biology in healthy vs.\
+disease comparisons because the underlying mechanisms typically
+disrupt one of rhythmicity, phase, or mesor at a time. Users who
+specifically need to test compound-change detection can extend the
+type assignment in step~2 of Algorithm~S1.
+
+\textbf{Passive-design dependency on $\hat{F}_{\mathrm{TOD}}$.}
+Passive-design power calculations are sensitive to the empirical TOD
+distribution of the pilot. If the planned cohort has a different
+recruitment time profile, the pilot's $\hat{F}_{\mathrm{TOD}}$ will not
+generalise. We recommend computing a sensitivity analysis by
+re-running the power calculation under several plausible passive TOD
+distributions: a uniform TOD as the upper bound on passive efficiency,
+the empirical TOD of the pilot, and a more concentrated TOD as the
+lower bound.
+
+\textbf{Bootstrap compute cost.} The outer-bootstrap of
+Section~\ref{sec:bootstrap_impl} costs roughly
+$B_{\mathrm{out}} \times N_{\mathrm{sim}}^{\mathrm{in}}$ inner
+simulations per pilot and per sample-size point, which is computationally
+heavy for large pilot sizes. The main text recommends running the
+bootstrap only when $n_{\mathrm{pilot}} \lesssim 40$, where it most
+affects the recommendation; for $n_{\mathrm{pilot}} \gtrsim 250$ the
+plug-in projection is a faithful summary and bootstrap is optional.
+
+\textbf{Cross-tissue or cross-species generalisation.} The pilot
+calibration is tissue- and species-specific. Power projections for a
+study in tissue $A$ using a pilot from tissue $B$ assume that the
+amplitude-noise distribution $\hat{F}_{A,\sigma}$ and the rhythmic
+proportion $\hat{\pi}_R$ transfer; this is a non-trivial assumption.
+In practice, we recommend pilots that share tissue, condition, and
+assay platform with the planned study.
+
+
+%% ====================================================================
 \bibliographystyle{plain}
 \bibliography{references}
 
