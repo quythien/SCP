@@ -129,6 +129,7 @@ write.csv(summary_df,
 # 3. Plot — one row per tissue, two columns (omega, alpha)
 # =====================================================================
 cat("\n=== Step 2: render diagnostic figure ===\n")
+source("examples/publication/_pub_style.R")
 
 n_t <- length(bio_list)
 fig_paths <- c(
@@ -137,12 +138,20 @@ fig_paths <- c(
 )
 dir.create("output/main_figures", recursive = TRUE, showWarnings = FALSE)
 
-for (out_pdf in fig_paths) {
-  pdf(out_pdf, width = 10, height = 2.4 * n_t + 1)
-  par(mfrow = c(n_t, 2), mar = c(4.4, 4.2, 2.6, 1.2), las = 1,
-      cex.lab = 1.05, cex.axis = 0.95, cex.main = 1.0, font.main = 2)
+col_omega   <- "#B0C4DE"   # lightsteelblue, soft
+col_alpha   <- "#FAA582"   # soft salmon
+col_fit     <- "#9E2A2B"   # muted dark red
+col_median  <- "#0072B2"   # Wong blue, matches detector palette
 
-  for (t in names(bio_list)) {
+tissue_names <- names(bio_list)
+letters_seq  <- letters[seq_len(2 * length(tissue_names))]
+
+for (out_pdf in fig_paths) {
+  cairo_pdf(out_pdf, width = 7.2, height = 1.9 * n_t + 0.4)
+  pub_par(mfrow = c(n_t, 2), mar = c(3.6, 4.0, 2.4, 0.8))
+
+  for (ti in seq_along(tissue_names)) {
+    t <- tissue_names[ti]
     b <- bio_list[[t]]; d <- b$diagnostics
     omega_emp <- d$omega_emp
     alpha_emp <- d$alpha_emp
@@ -151,18 +160,18 @@ for (out_pdf in fig_paths) {
 
     # --- omega panel ---
     hist(omega_emp, breaks = seq(0, 1, by = 0.05), freq = FALSE,
-         main = sprintf("%s — ω (β̂=%.2f, R²=%.2f)",
-                         t, beta_hat, d$R2_median),
+         main = sprintf("%s, omega", t),
          xlab = expression(hat(omega)),
-         col = "lightsteelblue", border = "white", xlim = c(0, 1))
-    curve(dbeta(x, 1, beta_hat), add = TRUE, col = "darkred", lwd = 2)
-    abline(v = 1, lty = 3, col = "grey50")  # cosinor reference
-    abline(v = median(omega_emp), lty = 2, col = "darkblue", lwd = 1.5)
-    legend("topright", bty = "n", cex = 0.85,
-           legend = c(sprintf("ω-median=%.2f", median(omega_emp)),
-                      "Beta(1, β̂)"),
-           col = c("darkblue", "darkred"),
-           lty = c(2, 1), lwd = c(1.5, 2))
+         col = col_omega, border = "white", xlim = c(0, 1))
+    panel_label(letters_seq[2L * ti - 1L])
+    curve(dbeta(x, 1, beta_hat), add = TRUE, col = col_fit, lwd = 1.8)
+    abline(v = 1, lty = 3, col = "grey60")
+    abline(v = median(omega_emp), lty = 2, col = col_median, lwd = 1.2)
+    pub_legend("topright",
+               legend = c(sprintf("median = %.2f", median(omega_emp)),
+                          expression(Beta(1, hat(beta)))),
+               col = c(col_median, col_fit),
+               lty = c(2, 1), lwd = c(1.2, 1.8))
 
     # --- alpha panel ---
     sd_rad <- sa_hat * (2 * pi / 24)
@@ -170,18 +179,21 @@ for (out_pdf in fig_paths) {
     mu_a   <- mean(alpha_emp)
 
     hist(alpha_emp, breaks = 18, freq = FALSE,
-         main = sprintf("%s — α (σ̂_α=%.2fh, n_fitted=%d)",
-                         t, sa_hat, d$n_fitted),
+         main = sprintf("%s, alpha", t),
          xlab = expression(hat(alpha) ~ "(rad)"),
-         col = "lightsalmon", border = "white", xlim = c(0, 2 * pi))
+         col = col_alpha, border = "white", xlim = c(0, 2 * pi))
+    panel_label(letters_seq[2L * ti])
     if (is.finite(kappa)) {
       vm_dens <- function(x) exp(kappa * cos(x - mu_a)) /
                               (2 * pi * besselI(kappa, 0))
-      curve(vm_dens, add = TRUE, col = "darkred", lwd = 2)
+      curve(vm_dens, add = TRUE, col = col_fit, lwd = 1.8)
     }
-    legend("topright", bty = "n", cex = 0.85,
-           legend = sprintf("μ̂=%.2f rad", mu_a),
-           col = "darkred", lty = 1, lwd = 2)
+    pub_legend("topright",
+               legend = c(sprintf("mean = %.2f rad", mu_a),
+                          expression(vonMises(hat(mu), hat(kappa)))),
+               col = c(col_fit, col_fit),
+               lty = c(NA, 1), lwd = c(NA, 1.8),
+               pch = c(NA, NA))
   }
 
   dev.off()

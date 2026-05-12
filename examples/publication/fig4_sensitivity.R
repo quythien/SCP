@@ -1,9 +1,9 @@
 #' =======================================================================
-#' fig4_sensitivity.R — Sensitivity to cosinor violation (FMM-LRT)
+#' fig4_sensitivity.R — Sensitivity to cosinor violation (FMM (K=2))
 #' =======================================================================
 #'
 #' Two orthogonal sensitivity sweeps anchored on Baboon LUN. Both panels
-#' use FMM-LRT detection and parametric distributions for ω and α.
+#' use FMM (K=2) detection and parametric distributions for ω and α.
 #'
 #' Panel A — ω sweep (α distribution fixed at empirical):
 #'   ω_g ~ Beta(1, β),    sweep β over a log grid
@@ -14,12 +14,12 @@
 #'   α_g ~ vonMises(0, κ),  κ = 1/sd_rad²,  sd_rad = sd_hours · 2π/24
 #'   x-axis: N (total samples), one curve per σ_α (hours) value
 #'   σ̂_α from sd of empirical α̂_g marked as a curve label
-#'   Expected: curves overlap (rotation-invariance of cosinor / FMM-LRT)
+#'   Expected: curves overlap (rotation-invariance of cosinor / FMM (K=2))
 #'
-#' Detector: FMM_LRT only.  DCP behavior is closed-form
+#' Detector: detect_FMM (K=2 harmonic LRT) only.  DCP behavior is closed-form
 #' (NCP = (r·c(ω))²·N/2) and would just shift the whole sweep down with
 #' attenuation c(ω)² — uninformative. The interesting question is whether
-#' FMM-LRT preserves power under non-cosinor truth.
+#' the K-harmonic LRT preserves power under non-cosinor truth.
 #'
 #' USAGE:
 #'   Rscript examples/publication/fig4_sensitivity.R
@@ -29,13 +29,13 @@ SMOKE_TEST  <- identical(Sys.getenv("SMOKE_TEST"), "true")
 NGENES      <- if (SMOKE_TEST) 500L  else 2000L
 NSIMS       <- if (SMOKE_TEST) 5L    else 20L
 N_CORES     <- as.integer(Sys.getenv("MC_CORES", unset = "20"))
-TOP_K_FMM   <- if (SMOKE_TEST) 50L  else 200L
+TOP_K_FMM   <- if (SMOKE_TEST) 50L  else 300L  # codebase default min(300, n_cand)
 RHYTHM_PVAL <- 0.01
 GLOBAL_SEED <- 2025L
 
 # x-axis: sample size grid
 # N must be divisible by B_VAL=12 (active design with 12 timepoints).
-N_GRID  <- if (SMOKE_TEST) c(24L, 36L) else c(12L, 24L, 36L, 48L, 60L, 72L)
+N_GRID  <- if (SMOKE_TEST) c(24L, 36L) else c(12L, 24L, 36L, 48L, 60L, 72L, 96L, 120L, 144L)
 
 # Sweep grids
 BETA_GRID <- if (SMOKE_TEST) c(0.5, 1, 5)        else c(0.5, 1, 2, 5, 20)
@@ -113,7 +113,7 @@ run_sweep_curve <- function(bio_k, label) {
                                       cts = cts_design, B_values = B_VAL)
     set.seed(GLOBAL_SEED)
     res <- runSimsSingleCohort(bio_k, design, analysis,
-                                method   = "FMM_LRT",
+                                method   = "FMM", K = 2L,
                                 mc.cores = N_CORES, verbose = FALSE)
     mean(res$marginal_power, na.rm = TRUE)
   }, numeric(1))
@@ -125,7 +125,7 @@ run_sweep_curve <- function(bio_k, label) {
 # ====================================================================
 # 2. Panel A — ω sweep (α distribution fixed at empirical)
 # ====================================================================
-cat("\n=== Step 2: ω sweep (FMM-LRT) ===\n")
+cat("\n=== Step 2: ω sweep (FMM (K=2)) ===\n")
 power_A <- matrix(NA_real_, nrow = length(N_GRID), ncol = length(BETA_GRID),
                   dimnames = list(paste0("N=", N_GRID),
                                   paste0("beta=", BETA_GRID)))
@@ -142,7 +142,7 @@ for (k in seq_along(BETA_GRID)) {
 # ====================================================================
 # 3. Panel B — α sweep (ω distribution fixed at empirical Beta(1, β̂))
 # ====================================================================
-cat("\n=== Step 3: α sweep (FMM-LRT) ===\n")
+cat("\n=== Step 3: α sweep (FMM (K=2)) ===\n")
 power_B <- matrix(NA_real_, nrow = length(N_GRID), ncol = length(SDHR_GRID),
                   dimnames = list(paste0("N=", N_GRID),
                                   paste0("sdh=", SDHR_GRID)))
@@ -178,58 +178,52 @@ cat(sprintf("\nSaved: %s\n", rds_path))
 # 5. Plot — 1×2 layout
 # ====================================================================
 cat("\n=== Step 4: render Fig 4 ===\n")
+source("examples/publication/_pub_style.R")
+
 fig_paths <- c(
   file.path(out_dir_fig, "fig4_sensitivity.pdf"),
   "output/main_figures/Fig4_sensitivity.pdf"
 )
 dir.create("output/main_figures", recursive = TRUE, showWarnings = FALSE)
 
-# Color palette: viridis-like sequential
-.pal <- function(n) {
-  cols <- c("#440154", "#3b528b", "#21918c", "#5ec962", "#fde725",
-            "#bb3754", "#ff7e6d")
-  cols[seq_len(n)]
-}
-
 for (out_pdf in fig_paths) {
-  pdf(out_pdf, width = 12, height = 5.5)
-  par(mfrow = c(1, 2), mar = c(4.6, 4.6, 3, 1.4), las = 1,
-      cex.lab = 1.15, cex.axis = 1.0, cex.main = 1.1, font.main = 2)
+  cairo_pdf(out_pdf, width = 7.2, height = 3.4)
+  pub_par(mfrow = c(1, 2), mar = c(4.2, 4.2, 2.4, 1.0))
 
-  # --- Panel A: ω sweep ---
+  pal_A <- pub_palette_sequential(length(BETA_GRID))
+  pal_B <- pub_palette_sequential(length(SDHR_GRID))
+
+  # --- Panel a: omega sweep ---
   plot(NA, xlim = range(N_GRID), ylim = c(0, 1),
-       xlab = "N (total samples)", ylab = "Power (FMM-LRT)",
-       main = sprintf("(A) ω sweep — Beta(1, β),  β̂ ≈ %.2f", beta_hat))
-  abline(h = 0.80, lty = 3, col = "grey50")
-  pal_A <- .pal(length(BETA_GRID))
+       xlab = "N (total samples)", ylab = "Power",
+       main = expression(omega ~ "sweep"))
+  panel_label("a")
+  abline_80pct()
   for (k in seq_along(BETA_GRID)) {
     lty_k <- if (abs(BETA_GRID[k] - beta_hat) < 0.05) 1 else 2
-    lwd_k <- if (abs(BETA_GRID[k] - beta_hat) < 0.05) 2.4 else 1.6
+    lwd_k <- if (abs(BETA_GRID[k] - beta_hat) < 0.05) 2.2 else 1.5
     lines(N_GRID, power_A[, k], col = pal_A[k], lwd = lwd_k, lty = lty_k)
-    points(N_GRID, power_A[, k], pch = 19, col = pal_A[k], cex = 0.9)
+    points(N_GRID, power_A[, k], pch = 19, col = pal_A[k], cex = 0.7)
   }
-  legend("bottomright", bty = "n", title = expression(beta),
-         legend = sprintf("%.2f", BETA_GRID),
-         lwd = 1.6, col = pal_A, cex = 0.9)
+  pub_legend("bottomright",
+             legend = sprintf("%g", BETA_GRID),
+             col = pal_A, lwd = 1.6,
+             title = expression(beta))
 
-  # --- Panel B: α sweep ---
+  # --- Panel b: alpha sweep ---
   plot(NA, xlim = range(N_GRID), ylim = c(0, 1),
-       xlab = "N (total samples)", ylab = "Power (FMM-LRT)",
-       main = sprintf("(B) α sweep — vonMises (σ_α hours),  σ̂_α ≈ %.2fh",
-                       sigma_alpha_hat))
-  abline(h = 0.80, lty = 3, col = "grey50")
-  pal_B <- .pal(length(SDHR_GRID))
+       xlab = "N (total samples)", ylab = "Power",
+       main = expression(alpha ~ "sweep"))
+  panel_label("b")
+  abline_80pct()
   for (k in seq_along(SDHR_GRID)) {
-    lines(N_GRID, power_B[, k], col = pal_B[k], lwd = 1.8)
-    points(N_GRID, power_B[, k], pch = 19, col = pal_B[k], cex = 0.9)
+    lines(N_GRID, power_B[, k], col = pal_B[k], lwd = 1.6)
+    points(N_GRID, power_B[, k], pch = 19, col = pal_B[k], cex = 0.7)
   }
-  legend("bottomright", bty = "n", title = expression(sigma[alpha] ~ "(h)"),
-         legend = sprintf("%.1f", SDHR_GRID),
-         lwd = 1.8, col = pal_B, cex = 0.9)
-
-  mtext(sprintf("Fig 4: Sensitivity to cosinor violation (Baboon LUN, n=%d, FMM-LRT)",
-                length(tod_lun)),
-        outer = TRUE, line = -1.4, cex = 1.05, font = 2)
+  pub_legend("bottomright",
+             legend = sprintf("%g", SDHR_GRID),
+             col = pal_B, lwd = 1.6,
+             title = expression(sigma[alpha] ~ "(h)"))
 
   dev.off()
   cat(sprintf("Saved: %s\n", out_pdf))

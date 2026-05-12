@@ -257,21 +257,27 @@ cat("\n=== Generating combined figure ===\n")
 panels <- Filter(Negate(is.null), list(pSCZ, pA, pB, pC))
 
 if (length(panels) > 0) {
+  source("examples/publication/_pub_style.R")
+
   fig_path_local <- file.path(out_dir, "figures", "fig_bootstrap_sc.pdf")
   fig_path_main  <- "output/main_figures/Fig5_bootstrap_singlecohort.pdf"
   dir.create("output/main_figures", recursive = TRUE, showWarnings = FALSE)
 
+  pal_DT <- pub_palette_detector()
+  col_plugin <- unname(pal_DT["DCP"])   # teal/blue, Wong blue
+  col_boot   <- unname(pal_DT["FMM"])   # orange, Wong vermilion
+
   for (out_pdf in c(fig_path_local, fig_path_main)) {
-    n_panels <- length(panels)
+    n_panels    <- length(panels)
     layout_dims <- if (n_panels >= 4) c(2L, 2L)
                     else if (n_panels == 3) c(1L, 3L)
                     else c(1L, n_panels)
-    pdf_h <- if (layout_dims[1] == 2) 9 else 5
-    cairo_pdf(out_pdf, width = 14, height = pdf_h)
-    par(mfrow = layout_dims, mar = c(4.2, 4.2, 3, 1), las = 1,
-        cex.lab = 1.1, cex.axis = 1.0, cex.main = 1.05, font.main = 2)
+    pdf_w <- if (layout_dims[2] == 2) 7.2 else 7.2
+    pdf_h <- if (layout_dims[1] == 2) 6.4 else 3.4
+    cairo_pdf(out_pdf, width = pdf_w, height = pdf_h)
+    pub_par(mfrow = layout_dims, mar = c(4.0, 4.2, 2.4, 1.0))
 
-    panel_letters <- LETTERS[seq_along(panels)]
+    letters_seq <- letters[seq_along(panels)]
     for (pi in seq_along(panels)) {
       p      <- panels[[pi]]
       N_grid <- p$N_grid
@@ -280,23 +286,21 @@ if (length(panels) > 0) {
       bt_lo  <- p$boot$power_ci_lo[, 1, 1]
       bt_hi  <- p$boot$power_ci_hi[, 1, 1]
 
-      plot(N_grid, tp, type = "l", lwd = 2.2, col = "steelblue",
+      plot(N_grid, tp, type = "l", lwd = 1.8, col = col_plugin,
            ylim = c(0, 1), xlab = "N (total samples)", ylab = "Power",
-           main = sprintf("(%s) %s", panel_letters[pi], p$label))
-      # Bootstrap mean trend line (thin) + vertical 95% CI error bars at each tested N
-      lines(N_grid, bt_mn, lwd = 1, col = "tomato", lty = 2)
+           main = p$label)
+      panel_label(letters_seq[pi])
+      abline_80pct()
+      lines(N_grid, bt_mn, lwd = 1.0, col = col_boot, lty = 2)
       arrows(N_grid, bt_lo, N_grid, bt_hi,
-             code = 3, angle = 90, length = 0.05, lwd = 2, col = "tomato")
-      points(N_grid, bt_mn, pch = 19, col = "tomato", cex = 0.9)
-      abline(h = 0.80, lty = 2, col = "grey50")
+             code = 3, angle = 90, length = 0.04, lwd = 1.6, col = col_boot)
+      points(N_grid, bt_mn, pch = 19, col = col_boot, cex = 0.7)
       if (pi == 1) {
-        legend("bottomright", bty = "n",
-               legend = c("Plug-in (point estimate)",
-                          "Bootstrap mean + 95% CI"),
-               lwd    = c(2.2, 2),
-               lty    = c(1, NA),
-               pch    = c(NA, 19),
-               col    = c("steelblue", "tomato"))
+        pub_legend("bottomright",
+                   legend = c("Plug-in", "Bootstrap mean + 95% CI"),
+                   col = c(col_plugin, col_boot),
+                   lwd = c(1.8, 1.6), lty = c(1, NA),
+                   pch = c(NA, 19))
       }
     }
     dev.off()
