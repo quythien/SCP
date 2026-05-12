@@ -33,10 +33,20 @@
 %% ====================================================================
 
 Table~\ref{tab:pilot_summary} summarises the pilot datasets used in
-the main text figures. A complete pilot inventory (including all
-GTEx tissues and all CAMO baboon tissues, with full per-tissue
-parameter estimates) is provided as a separate supplementary
-spreadsheet.
+the main text figures. A complete pilot inventory (123 tissues across
+GTEx, GSE54651 mouse, GSE98965 baboon, BA11/BA47, GSE160521, and Seney
+ACC, with per-tissue median $\tilde r$ and rhythmic-gene counts
+computed on the top-$300$ rhythmic genes) is provided as a separate
+supplementary spreadsheet (\texttt{tissue\_signal\_summary.csv}).
+Across all entries in Table~\ref{tab:pilot_summary} and the
+supplementary spreadsheet, $\tilde r$ is defined as the median of
+$r_g = A_g / \sigma_g$ over the top-$300$ rhythmic genes ranked by
+cosinor F-test p-value (the same $300$-gene set used to calibrate
+$\hat{F}_{A,\sigma}$ in the simulation pipeline; see
+Section~\ref{sec:single_cohort} of the main text). This convention
+ensures that reported $\tilde r$ values are directly comparable across
+pilots and align with the effect-size strength that the simulation
+machinery actually uses.
 
 \begin{table}[H]
 \centering
@@ -65,13 +75,18 @@ Species & Pilot dataset & $n_{\mathrm{pilot}}$ & Design ($B$) & $\tilde r$ & $\h
 \midrule
 \multicolumn{8}{l}{\textit{Passive-design pilots}} \\
 \midrule
-\textit{H.\ sapiens} & GTEx ADR        & $220$ & passive & $0.97$ & --     & --     & Fig.~1 \\
-\textit{H.\ sapiens} & Seney ACC ctrl  & $60$  & passive & $0.79$ & --     & --     & Fig.~3, Fig.~5 \\
-\textit{H.\ sapiens} & Putamen SCZ ctrl & $28$  & passive & $\approx 0.8$ & --     & --     & Fig.~3 \\
-\textit{H.\ sapiens} & GTEx Pancreas   & $249$ & passive & $\approx 0.7$ & --     & --     & Fig.~3 \\
-\textit{H.\ sapiens} & GTEx Thyroid    & $416$ & passive & $\approx 0.8$ & --     & --     & Fig.~3 \\
+\textit{H.\ sapiens} & GTEx ADR        & $187$ & passive & $0.97$ & --     & --     & Fig.~1 \\
+\textit{H.\ sapiens} & Seney ACC ctrl  & $60$  & passive & $0.73$ & --     & --     & Fig.~3, Fig.~5 \\
+\textit{H.\ sapiens} & GSE160521 Putamen ctrl & $28^{\dagger}$ & passive & $1.02$ & --     & --     & Fig.~3 \\
+\textit{H.\ sapiens} & GTEx Pancreas   & $249$ & passive & $0.44$ & --     & --     & Fig.~3 \\
+\textit{H.\ sapiens} & GTEx Thyroid    & $416$ & passive & $0.45$ & --     & --     & Fig.~3 \\
 \bottomrule
-\end{tabular}
+\end{tabular}\\[2pt]
+{\footnotesize $^{\dagger}$ The Putamen control panel in
+Figure~\ref{fig:bootstrap_sc} uses a stratified subset
+($n = 28$) of the GSE160521 Putamen control cohort ($n = 59$, median
+$\tilde r = 1.08$ on the full set), filtered to match a downstream
+analysis covariate-balance design.}
 \end{table}
 
 Table~\ref{tab:pilot_fmm_extended} lists the six CAMO baboon tissues
