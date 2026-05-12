@@ -23,7 +23,7 @@
 #'
 #' @return List (class \code{SCPDiffResult}) with fields:
 #'   \code{pval_DR}, \code{fdr_DR}, \code{pval_DP}, \code{fdr_DP},
-#'   \code{pval_DM}, \code{fdr_DM} — arrays \code{[ngenes x n_sizes x nsims]};
+#'   \code{pval_DM}, \code{fdr_DM} -- arrays \code{[ngenes x n_sizes x nsims]};
 #'   \code{diff_type}, \code{effectsize}, \code{sample_sizes}, \code{nsims}.
 #'   Pass directly to \code{plotDiffPower()} or \code{npower()}.
 #'
@@ -32,6 +32,7 @@
 # Detection functions (DCP pipeline) should be sourced before this file
 # e.g., source("code/detection.R") in calling script
 
+#' @export
 runSimsDiff <- function(sample_sizes = c(12, 24, 36),
                         nsims = 50,
                         ngenes = 5000,
@@ -779,10 +780,10 @@ summaryRunPower <- function(powerOutput, verbose = TRUE) {
 #' Simulation-based alternative to the closed-form \code{CircaPower} formula:
 #' works for any design (active or passive) and any pilot parameter distribution.
 #'
-#' @param bio.opts      \code{CircadianBioOptions} — pilot parameter distributions.
+#' @param bio.opts      \code{CircadianBioOptions} -- pilot parameter distributions.
 #'   Build with \code{estCircadianParam()}.
-#' @param design.opts   \code{CircadianDesignOptions} — sample sizes, nsims, design.
-#' @param analysis.opts \code{CircadianAnalysisOptions} — alpha, p.adjust.method.
+#' @param design.opts   \code{CircadianDesignOptions} -- sample sizes, nsims, design.
+#' @param analysis.opts \code{CircadianAnalysisOptions} -- alpha, p.adjust.method.
 #' @param method        Detection method: \code{"DCP"} (1-harmonic cosinor F-test),
 #'   \code{"JTK"}, \code{"RAIN"}, \code{"MH"} (multi-harmonic), or \code{"FMM"}
 #'   (K-harmonic LRT motivated by the FMM Fourier expansion; default detector
@@ -799,9 +800,9 @@ summaryRunPower <- function(powerOutput, verbose = TRUE) {
 #'   \item{marginal_FDR}{Matrix [sample_sizes x nsims]}
 #'   \item{marginal_TD}{Matrix [sample_sizes x nsims]}
 #'   \item{marginal_FD}{Matrix [sample_sizes x nsims]}
-#'   \item{marginal_alpha}{Matrix [sample_sizes x nsims] — empirical type-I error}
-#'   \item{pvalues}{Array [sample_sizes x ngenes x nsims] — raw p-values}
-#'   \item{r_values_list}{List[[sample_size]][[sim]] — per-gene A/sigma}
+#'   \item{marginal_alpha}{Matrix [sample_sizes x nsims] -- empirical type-I error}
+#'   \item{pvalues}{Array [sample_sizes x ngenes x nsims] -- raw p-values}
+#'   \item{r_values_list}{List[[sample_size]][[sim]] -- per-gene A/sigma}
 #'   \item{strat_power}{Array [sample_sizes x n_strata x nsims]}
 #'   \item{strat_TD}{Array [sample_sizes x n_strata x nsims]}
 #'   \item{strat_FD}{Array [sample_sizes x n_strata x nsims]}
@@ -875,6 +876,7 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
         call. = FALSE)
     }
   }
+
   fmm_omega       <- design.opts$omega %||% 1.0   # 1 = cosinor; <1 = FMM
   fmm_beta        <- design.opts$beta  %||% pi
   # Per-gene FMM activation: bio.opts carries omega_dist / alpha_dist /
@@ -1118,7 +1120,7 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
 #' @param alpha    Significance level (default 0.05).
 #' @param target_power Target power (default 0.80).
 #' @param n_search Integer vector of candidate sample sizes.
-#' @return Single integer — smallest n achieving target_power, or NA if not found.
+#' @return Single integer -- smallest n achieving target_power, or NA if not found.
 #' @export
 circaPowerApproxN80 <- function(bio.opts, alpha = 0.05, target_power = 0.80,
                                 n_search = seq(5, 500, by = 5)) {
@@ -1224,13 +1226,13 @@ printMethodGuidance <- function(methods = c("DCP","JTK","RAIN","MH"),
 }
 
 
-#' B vs m design study — analytical + simulation
+#' B vs m design study -- analytical + simulation
 #'
 #' Full B vs m study orchestrator. Three sequential steps:
 #'
 #' 1. Print method guidance table (printMethodGuidance)
 #' 2. Analytical: CircaPower closed-form power at each N (DCP; B-invariant).
-#'    For JTK/RAIN/MH no closed form exists — simulation is required.
+#'    For JTK/RAIN/MH no closed form exists -- simulation is required.
 #' 3. Simulation: run runSingleCohortPower() or runDifferentialPower(), or
 #'    absorb a prior_result from a previous call to skip re-running.
 #'
@@ -1255,10 +1257,10 @@ printMethodGuidance <- function(methods = c("DCP","JTK","RAIN","MH"),
 #' @param verbose       Print progress
 #'
 #' @return SCPRecommendResult with:
-#'   $guidance      — data.frame: method guidance table
-#'   $analytical_df — data.frame[method, N, power_analytical] (DCP only)
-#'   $simulation    — runSingleCohortGrid() or runDifferentialPower() result (NULL if not run)
-#'   $recommendation — data.frame[method, optimal_B, n_target, note]
+#'   $guidance      -- data.frame: method guidance table
+#'   $analytical_df -- data.frame[method, N, power_analytical] (DCP only)
+#'   $simulation    -- runSingleCohortGrid() or runDifferentialPower() result (NULL if not run)
+#'   $recommendation -- data.frame[method, optimal_B, n_target, note]
 #' @export
 recommendDesign <- function(bio.opts,
                              design.opts,
@@ -1476,6 +1478,7 @@ plot.SCPRecommendResult <- function(x, output_file = NULL, ...) {
 # Not exported. Called by recommendDesign() to sweep N x B x method x alpha2.
 # Returns SCPSingleResult with $power_df (N, B, method, alpha2, power, power_se)
 # and $n80_df — the compact format needed for the recommendation table.
+#' @export
 runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
                                 methods     = "DCP",
                                 alpha2      = 0,
@@ -1726,7 +1729,7 @@ plot.SCPSingleResult <- function(x, output_file = NULL, ...) {
 #'
 #' @return List (class \code{SCPDiffResult}) from \code{runSimsDiff()}:
 #'   \code{pval_DR}, \code{fdr_DR}, \code{pval_DP}, \code{fdr_DP},
-#'   \code{pval_DM}, \code{fdr_DM} — 3-D arrays \code{[ngenes x n_sizes x nsims]};
+#'   \code{pval_DM}, \code{fdr_DM} -- 3-D arrays \code{[ngenes x n_sizes x nsims]};
 #'   plus \code{diff_type}, \code{effectsize}, \code{sample_sizes}, \code{nsims}.
 #'   Pass to \code{plotDiffPower()} or \code{npower(..., endpoint="DR")}.
 #' @export
