@@ -768,16 +768,22 @@ so the choice does not affect the rest of the framework.
 
 Pilot datasets spanning a ${\sim}5$-fold range in signal-to-noise ratio
 are used throughout. Single-cohort power (Figure~\ref{fig:sc_adrliv})
-uses the human adrenal gland (\textsc{GTEx} ADR; $n = 220$, passive;
-$\tilde{r} \approx 0.97$) and mouse liver (\textsc{GSE54651} LIV;
-$n = 8$, active $B = 8$; $\tilde{r} \approx 2.88$), giving a passive
-moderate-signal pilot and an active high-signal pilot. The K-harmonic
+uses the human adrenal gland (\textsc{GTEx} ADR; $n_\text{pilot} = 187$,
+passive; $\tilde{r} \approx 0.97$) and mouse liver (\textsc{GSE54651}
+LIV; $n_\text{pilot} = 8$, active $B = 8$; $\tilde{r} \approx 2.88$),
+giving a passive moderate-signal pilot and an active high-signal pilot.
+Here and throughout, $\tilde{r}$ denotes the median of the gene-level
+effect size $r_g = A_g / \sigma_g$ computed over the top-$K$ rhythmic
+genes used to calibrate $\hat{F}_{A,\sigma}$ in Step~1
+(Section~\ref{sec:single_cohort}), with $K = \min(300, |\mathcal{G}_R|)$
+and $\mathcal{G}_R$ the set of genes passing the cosinor pre-screen at
+$\alpha_{\mathrm{pilot}} = 0.01$. The K-harmonic
 sensitivity sweep (Figure~\ref{fig:fmm_sensitivity}) uses baboon lung
 (CAMO LUN; $n_\text{pilot} = 12$, active $B = 12$;
 $\tilde{r} \approx 1.72$). The active vs.\ passive comparison
 (Figure~\ref{fig:active_vs_passive}) contrasts baboon KIM (CAMO KIM;
 active, $\hat{\eta} = 2.62$) with the Seney ACC control cohort
-($n_\text{pilot} = 60$, passive; $\tilde{r} \approx 0.79$). The
+($n_\text{pilot} = 60$, passive; $\tilde{r} \approx 0.73$). The
 bootstrap (Figure~\ref{fig:bootstrap_sc}) spans four passive pilots
 ranging from $n_\text{pilot} = 28$ (Putamen-SCZ) to
 $n_\text{pilot} = 416$ (GTEx Thyroid).
@@ -1084,7 +1090,7 @@ resulting $n_{80}$ estimates differ by more than an order of magnitude. On
 the active mouse liver pilot ($\tilde{r} \approx 2.88$), $n_{80}$ for
 single-cohort detection is $\approx 19$; on the passive GTEx adrenal
 gland pilot ($\tilde{r} \approx 0.97$), $n_{80} \approx 49$; and on the
-passive Seney ACC pilot ($\tilde{r} \approx 0.79$), $n_{80} \approx 100$. This reproduces the core
+passive Seney ACC pilot ($\tilde{r} \approx 0.73$), $n_{80} \approx 100$. This reproduces the core
 message of \textsc{PROPER} for RNA-seq \citep{wu2015proper} in the
 circadian setting and reinforces the need for effect-size-aware,
 dataset-specific planning rather than generic ``circadian sample size''
