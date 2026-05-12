@@ -730,39 +730,13 @@ make two predictions: DCP power should be approximately $B$-invariant under
 both truths, and the K-harmonic F-test should dominate DCP when
 $c(\omega) < 1$ and the Nyquist condition is met.
 
-Figure~\ref{fig:active_vs_passive} arranges the empirical comparison as a
-$2 \times 2$ grid: detector (DCP top row, K-harmonic F-test with $K = 2$
-bottom row) crossed with design (active KIM, $\hat{\eta} = 2.62$ under
-the \textsc{LimoRhyde} pre-screen, left column; passive Seney ACC,
-$n_{\mathrm{pilot}} = 60$, right column). Each active panel sweeps
-$B \in \{6, 8, 12, 24\}$, all of which satisfy the identifiability
-threshold $B \geq 2K + 1 = 5$ for $K = 2$; each passive panel uses the
-empirical Seney TOD distribution.
+We test these predictions empirically in
+Section~\ref{sec:active_passive_results} on one active pilot (baboon
+KIM) and one passive pilot (Seney ACC), using
+Figure~\ref{fig:active_vs_passive}.
 
-In the active--DCP panel (top left), the four $B$ curves overlap within
-${\sim}1$\,pp at every $N$, confirming the $B$-invariance prediction of
-\eqref{eq:ncp_dcp_cos}--\eqref{eq:ncp_dcp_fmm}. In the active--$K{=}2$
-panel (bottom left), the four $B$ curves overlap within Monte Carlo
-noise (spread at most $4$\,pp across $B \in \{6, 8, 12, 24\}$ at every
-$N$), confirming that $K = 2$ is also approximately $B$-invariant above
-the identifiability threshold, not only the cosinor-truth $K = 1$ case.
-The K-harmonic F-test picks up $15.3$\,pp at $N = 24$, $10.2$\,pp at
-$N = 48$, and $5.0$\,pp at $N = 72$ relative to DCP, converging within
-$1$\,pp at $N \geq 120$ as both detectors saturate.
-
-The passive panels tell the opposite story. In the passive--DCP panel
-(top right), the single empirical Seney curve reaches 80\% at $N \approx 100$.
-In the passive--$K{=}2$ panel (bottom right), DCP visibly dominates the
-K-harmonic F-test by 10--15 percentage points across $N \leq 120$
-(DCP $0.67$ vs.\ $K{=}2$ $0.50$ at $N = 80$; DCP $0.91$ vs.\ $K{=}2$ $0.83$
-at $N = 120$). The reason is that Seney is approximately cosinor-truth
-(typical human PFC $\omega \approx 0.7$--$0.9$, far above the
-sharp-peak regime), so the second harmonic carries little additional
-signal and $K = 2$ pays a degrees-of-freedom cost without a noncentrality
-gain. The detector that is the LRT for the truth at hand, cosinor, wins.
-
-The picture is therefore not ``active wins'' or ``passive wins'' in any
-absolute sense. Within active designs, neither DCP nor the K-harmonic
+The picture that emerges is not ``active wins'' or ``passive wins'' in
+any absolute sense. Within active designs, neither DCP nor the K-harmonic
 F-test depends on the $(B, m)$ allocation at fixed $N$ above its
 identifiability threshold, so the $B$-versus-$m$ trade-off classically
 emphasised in design guidance \citep{Hughes2017guidelines} reduces to a
@@ -926,56 +900,70 @@ data-derived rhythmicity calls, breaks analytic tractability and makes
 simulation indispensable.
 
 % =====================================================================
-\subsection{Active vs passive design: detector dependence on truth and design}
-\label{sec:active_passive_results}
+\subsection{Bootstrap uncertainty: pilot size and plug-in bias}
+\label{sec:bootstrap_results}
 
-% --- FIGURE 5 (Active vs Passive 2x2) ---
-% Source script: examples/publication/fig5_active_vs_passive.R
-% Generated figure: output/main_figures/Fig5_active_vs_passive.pdf
-% Layout: 2 rows (DCP top, K=2 bottom) x 2 columns (Active KIM, Passive Seney)
+% --- FIGURE 3 PLACEHOLDER ---
+% Source script: examples/publication/fig5_bootstrap_sc.R
+% Generated figure: output/main_figures/Fig3_bootstrap_singlecohort.pdf
+% Panels (left to right, top to bottom):
+%   A=Putamen SCZ n=28, B=Seney ACC n=60,
+%   C=GTEx Pancreas n=249, D=GTEx Thyroid n=416
 
 \begin{figure}[H]
 \centering
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
-  FIGURE 5 PLACEHOLDER\\[6pt]
-  Active vs passive design: $2 \times 2$ grid, detector
-  (DCP / K-harmonic F-test, $K=2$) crossed with design (Active Baboon KIM,
-  Passive Seney ACC). Source: Fig5\_active\_vs\_passive.pdf.
+  FIGURE 3 PLACEHOLDER\\[6pt]
+  Bootstrap vs plug-in, single-cohort \textsc{DCP}.\\
+  Panels: (A) Putamen SCZ $n_\text{pilot}=28$,
+          (B) Seney ACC $n_\text{pilot}=60$,
+          (C) GTEx Pancreas $n_\text{pilot}=249$,
+          (D) GTEx Thyroid $n_\text{pilot}=416$.\\
+  Source: Fig3\_bootstrap\_singlecohort.pdf.
   \vspace{3cm}}}
-\caption{Detector $\times$ design interaction. \textbf{Top row, DCP.}
-\textbf{(A)} Active Baboon KIM, $\hat{\eta}=2.62$, $B \in \{6, 8, 12, 24\}$:
-DCP power curves overlap within ${\sim}1$\,pp across all $B$, empirically
-confirming the $B$-invariance prediction of
-\eqref{eq:ncp_dcp_cos}--\eqref{eq:ncp_dcp_fmm}. \textbf{(B)} Passive Seney
-ACC ($n_{\mathrm{pilot}} = 60$): single empirical TOD distribution, with
-$N_{80} \approx 100$. \textbf{Bottom row, K-harmonic F-test ($K = 2$).}
-\textbf{(C)} Active Baboon KIM, same $B$ grid: $K = 2$ power curves also
-overlap within Monte Carlo noise ($\leq 4$\,pp across $B$ at every $N$),
-mirroring the DCP $B$-invariance above the identifiability threshold
-$B \geq 2K + 1 = 5$. The K-harmonic F-test gains $15.3$\,pp at $N = 24$,
-$10.2$\,pp at $N = 48$, and $5.0$\,pp at $N = 72$ relative to DCP, and
-converges within $1$\,pp at $N \geq 120$ as both detectors saturate.
-\textbf{(D)} Passive Seney ACC: DCP visibly dominates $K = 2$ by
-$10$--$15$\,pp across $N \leq 120$ (DCP $0.67$ vs.\ $K = 2$ $0.50$ at
-$N = 80$; DCP $0.91$ vs.\ $K = 2$ $0.83$ at $N = 120$), because the
-Seney pilot is approximately cosinor-truth ($\omega \approx 0.7$--$0.9$)
-and $K = 2$ pays a degrees-of-freedom cost without a noncentrality
-gain.}
-\label{fig:active_vs_passive}
+\caption{Bootstrap uncertainty in single-cohort power estimates. Blue
+curve: plug-in power (parameters estimated once from pilot, treated as
+fixed). Red curve with error bars: bootstrap mean power and pointwise
+$95\%$ CI ($B_{\mathrm{out}} = 50$ outer resamples,
+$N_{\mathrm{sim}}^{\mathrm{in}} = 25$ inner simulations, $G = 5{,}000$
+genes, \textsc{DCP} detector at the cosinor-screen FDR threshold
+$0.05$). All four pilots are passive. \textbf{(A)} Putamen
+schizophrenia controls ($n_{\mathrm{pilot}} = 28$): plug-in projects
+$28\%$ power at $N = 40$ while the bootstrap mean is $43\%$, and the
+$95\%$ CI reaches a maximum width of $20.5$\,pp at $N = 40$. This is the
+strongest pilot-induced-uncertainty signal across the four panels.
+\textbf{(B)} Seney ACC controls ($n_{\mathrm{pilot}} = 60$): maximum
+CI width $9.5$\,pp at $N = 60$; plug-in and bootstrap mean agree within
+$\sim 1$\,pp throughout. \textbf{(C)} GTEx Pancreas
+($n_{\mathrm{pilot}} = 249$): maximum CI width $6.7$\,pp at $N = 160$.
+\textbf{(D)} GTEx Thyroid ($n_{\mathrm{pilot}} = 416$): maximum CI
+width $6.4$\,pp at $N = 120$. The ordered sequence illustrates that
+bootstrap correction matters most when the pilot is small, and that
+CI width contracts monotonically with $n_{\mathrm{pilot}}$ until it
+saturates against the inner-Monte-Carlo noise floor at large pilots.}
+\label{fig:bootstrap_sc}
 \end{figure}
 
-The active KIM panels (left column) confirm $B$-invariance under FMM truth
-empirically: the four $B$ curves overlap within $\leq 4$\,pp for both
-detectors, matching equations~\eqref{eq:ncp_dcp_cos}--\eqref{eq:ncp_dcp_fmm}.
-The K-harmonic F-test recovers $15.3$\,pp at $N = 24$ and $10.2$\,pp at
-$N = 48$ relative to DCP on the same active pilot, with the gap closing
-to $1$\,pp at $N \geq 120$ as both detectors saturate. The passive Seney panels (right column) reverse
-the comparison: because the pilot is approximately cosinor-truth, DCP is
-the appropriate LRT and $K = 2$ pays a degrees-of-freedom cost without a
-matching noncentrality gain, giving DCP a 10--15\,pp advantage at
-$N \leq 120$. Together, the four panels demonstrate that detector choice
-should be driven by the pilot evidence on $\omega$ rather than by the
-active versus passive distinction \emph{per se}.
+Three features of Figure~\ref{fig:bootstrap_sc} carry the bootstrap
+message. First, the plug-in and bootstrap mean diverge most strongly at
+the smallest pilot: at Putamen-SCZ $N = 40$, plug-in is $27.7\%$ but
+the bootstrap mean is $42.6\%$, a $15$-point gap that the plug-in curve
+alone hides. The bootstrap CI at the same $N$ spans $33.5\%$ to
+$54.0\%$, so even averaging across $50$ resamples does not collapse the
+uncertainty in the recommendation. Second, for the moderate pilot
+(Seney, $n_{\mathrm{pilot}} = 60$) plug-in and bootstrap mean agree
+within Monte Carlo noise at every $N$, and the CI is $\leq 10$\,pp;
+the plug-in curve here is a faithful summary. Third, for the two large
+GTEx pilots ($n_{\mathrm{pilot}} \in \{249, 416\}$), CI widths plateau
+at $6$--$7$\,pp, dominated by inner-simulation Monte Carlo rather than
+pilot variability; further increases in $n_{\mathrm{pilot}}$ would not
+materially tighten the recommendation. The bootstrap is therefore
+essential for $n_{\mathrm{pilot}} \lesssim 40$, useful as a sanity
+check for $n_{\mathrm{pilot}} \approx 60$, and unnecessary for
+$n_{\mathrm{pilot}} \gtrsim 250$ at this inner-simulation budget. The
+figure uses \textsc{DCP} throughout; the uncertainty story is in the
+pilot summary $\hat{\Psi}$ and therefore extends in principle to the
+K-harmonic F-test with the same qualitative behaviour.
 
 % =====================================================================
 \subsection{K-harmonic F-test sensitivity: $\omega$ and $\alpha$ sweeps}
@@ -1024,70 +1012,57 @@ $\sigma_\alpha \in [0, 4]$\,h range, consistent with the rotation
 invariance of the squared-amplitude noncentrality (Proposition~\ref{prop:beta_invariance}).
 
 % =====================================================================
-\subsection{Bootstrap uncertainty: pilot size and plug-in bias}
-\label{sec:bootstrap_results}
+\subsection{Active vs passive design: detector dependence on truth and design}
+\label{sec:active_passive_results}
 
-% --- FIGURE 5 PLACEHOLDER ---
-% Source script: examples/publication/fig5_bootstrap_sc.R
-% Generated figure: output/main_figures/Fig5_bootstrap_singlecohort.pdf
-% Panels (left to right, top to bottom):
-%   A=Putamen SCZ n=28, B=Seney ACC n=60,
-%   C=GTEx Pancreas n=249, D=GTEx Thyroid n=416
+% --- FIGURE 5 (Active vs Passive 2x2) ---
+% Source script: examples/publication/fig5_active_vs_passive.R
+% Generated figure: output/main_figures/Fig5_active_vs_passive.pdf
+% Layout: 2 rows (DCP top, K=2 bottom) x 2 columns (Active KIM, Passive Seney)
 
 \begin{figure}[H]
 \centering
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
   FIGURE 5 PLACEHOLDER\\[6pt]
-  Bootstrap vs plug-in, single-cohort \textsc{DCP}.\\
-  Panels: (A) Putamen SCZ $n_\text{pilot}=28$,
-          (B) Seney ACC $n_\text{pilot}=60$,
-          (C) GTEx Pancreas $n_\text{pilot}=249$,
-          (D) GTEx Thyroid $n_\text{pilot}=416$.\\
-  Source: Fig5\_bootstrap\_singlecohort.pdf.
+  Active vs passive design: $2 \times 2$ grid, detector
+  (DCP / K-harmonic F-test, $K=2$) crossed with design (Active Baboon KIM,
+  Passive Seney ACC). Source: Fig5\_active\_vs\_passive.pdf.
   \vspace{3cm}}}
-\caption{Bootstrap uncertainty in single-cohort power estimates. Blue
-curve: plug-in power (parameters estimated once from pilot, treated as
-fixed). Red curve with error bars: bootstrap mean power and pointwise
-$95\%$ CI ($B_{\mathrm{out}} = 50$ outer resamples,
-$N_{\mathrm{sim}}^{\mathrm{in}} = 25$ inner simulations, $G = 5{,}000$
-genes, \textsc{DCP} detector at the cosinor-screen FDR threshold
-$0.05$). All four pilots are passive. \textbf{(A)} Putamen
-schizophrenia controls ($n_{\mathrm{pilot}} = 28$): plug-in projects
-$28\%$ power at $N = 40$ while the bootstrap mean is $43\%$, and the
-$95\%$ CI reaches a maximum width of $20.5$\,pp at $N = 40$. This is the
-strongest pilot-induced-uncertainty signal across the four panels.
-\textbf{(B)} Seney ACC controls ($n_{\mathrm{pilot}} = 60$): maximum
-CI width $9.5$\,pp at $N = 60$; plug-in and bootstrap mean agree within
-$\sim 1$\,pp throughout. \textbf{(C)} GTEx Pancreas
-($n_{\mathrm{pilot}} = 249$): maximum CI width $6.7$\,pp at $N = 160$.
-\textbf{(D)} GTEx Thyroid ($n_{\mathrm{pilot}} = 416$): maximum CI
-width $6.4$\,pp at $N = 120$. The ordered sequence illustrates that
-bootstrap correction matters most when the pilot is small, and that
-CI width contracts monotonically with $n_{\mathrm{pilot}}$ until it
-saturates against the inner-Monte-Carlo noise floor at large pilots.}
-\label{fig:bootstrap_sc}
+\caption{Detector $\times$ design interaction. \textbf{Top row, DCP.}
+\textbf{(A)} Active Baboon KIM, $\hat{\eta}=2.62$, $B \in \{6, 8, 12, 24\}$:
+DCP power curves overlap within ${\sim}1$\,pp across all $B$, empirically
+confirming the $B$-invariance prediction of
+\eqref{eq:ncp_dcp_cos}--\eqref{eq:ncp_dcp_fmm}. \textbf{(B)} Passive Seney
+ACC ($n_{\mathrm{pilot}} = 60$): single empirical TOD distribution, with
+$N_{80} \approx 100$. \textbf{Bottom row, K-harmonic F-test ($K = 2$).}
+\textbf{(C)} Active Baboon KIM, same $B$ grid: $K = 2$ power curves also
+overlap within Monte Carlo noise ($\leq 4$\,pp across $B$ at every $N$),
+mirroring the DCP $B$-invariance above the identifiability threshold
+$B \geq 2K + 1 = 5$. The K-harmonic F-test gains $15.3$\,pp at $N = 24$,
+$10.2$\,pp at $N = 48$, and $5.0$\,pp at $N = 72$ relative to DCP, and
+converges within $1$\,pp at $N \geq 120$ as both detectors saturate.
+\textbf{(D)} Passive Seney ACC: DCP visibly dominates $K = 2$ by
+$10$--$15$\,pp across $N \leq 120$ (DCP $0.67$ vs.\ $K = 2$ $0.50$ at
+$N = 80$; DCP $0.91$ vs.\ $K = 2$ $0.83$ at $N = 120$), because the
+Seney pilot is approximately cosinor-truth ($\omega \approx 0.7$--$0.9$)
+and $K = 2$ pays a degrees-of-freedom cost without a noncentrality
+gain.}
+\label{fig:active_vs_passive}
 \end{figure}
 
-Three features of Figure~\ref{fig:bootstrap_sc} carry the bootstrap
-message. First, the plug-in and bootstrap mean diverge most strongly at
-the smallest pilot: at Putamen-SCZ $N = 40$, plug-in is $27.7\%$ but
-the bootstrap mean is $42.6\%$, a $15$-point gap that the plug-in curve
-alone hides. The bootstrap CI at the same $N$ spans $33.5\%$ to
-$54.0\%$, so even averaging across $50$ resamples does not collapse the
-uncertainty in the recommendation. Second, for the moderate pilot
-(Seney, $n_{\mathrm{pilot}} = 60$) plug-in and bootstrap mean agree
-within Monte Carlo noise at every $N$, and the CI is $\leq 10$\,pp;
-the plug-in curve here is a faithful summary. Third, for the two large
-GTEx pilots ($n_{\mathrm{pilot}} \in \{249, 416\}$), CI widths plateau
-at $6$--$7$\,pp, dominated by inner-simulation Monte Carlo rather than
-pilot variability; further increases in $n_{\mathrm{pilot}}$ would not
-materially tighten the recommendation. The bootstrap is therefore
-essential for $n_{\mathrm{pilot}} \lesssim 40$, useful as a sanity
-check for $n_{\mathrm{pilot}} \approx 60$, and unnecessary for
-$n_{\mathrm{pilot}} \gtrsim 250$ at this inner-simulation budget. The
-figure uses \textsc{DCP} throughout; the uncertainty story is in the
-pilot summary $\hat{\Psi}$ and therefore extends in principle to the
-K-harmonic F-test with the same qualitative behaviour.
+The active KIM panels (left column) confirm $B$-invariance under FMM truth
+empirically: the four $B$ curves overlap within $\leq 4$\,pp for both
+detectors, matching equations~\eqref{eq:ncp_dcp_cos}--\eqref{eq:ncp_dcp_fmm}.
+The K-harmonic F-test recovers $15.3$\,pp at $N = 24$ and $10.2$\,pp at
+$N = 48$ relative to DCP on the same active pilot, with the gap closing
+to $1$\,pp at $N \geq 120$ as both detectors saturate. The passive Seney
+panels (right column) reverse the comparison: because the pilot is
+approximately cosinor-truth, DCP is the appropriate LRT and $K = 2$ pays
+a degrees-of-freedom cost without a matching noncentrality gain, giving
+DCP a $10$--$15$\,pp advantage at $N \leq 120$. Together, the four
+panels demonstrate that detector choice should be driven by the pilot
+evidence on $\omega$ rather than by the active versus passive
+distinction \emph{per se}.
 
 % (Archived pre-pivot prose moved to _archive/SCP_pre_pivot.tex on 2026-05-09)
 
