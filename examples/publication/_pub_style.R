@@ -10,7 +10,7 @@
 #   - Panel letters: bold lowercase ("a", "b", ...) at top-left, no parens
 #   - No in-figure figure-level titles; titles go in the manuscript caption
 #   - Subtitles per panel carry only a topic word, not parameter values
-#   - Detector palette: teal = DCP, orange = K-harmonic LRT (colorblind-safe)
+#   - Detector palette: teal = DCP, orange = K-harmonic F-test (colorblind-safe)
 #   - Sequential palette: viridis (perceptually uniform)
 # =============================================================================
 
@@ -45,7 +45,7 @@ panel_label <- function(letter, line = 0.6, cex = 1.25) {
 
 # Two-color detector palette. Colorblind-safe (Wong / Okabe-Ito derived):
 #   teal/cyan = DCP (cosinor)
-#   orange    = K-harmonic LRT (K = 2 default)
+#   orange    = K-harmonic F-test (K = 2 default)
 pub_palette_detector <- function() {
   c(DCP = "#0072B2", FMM = "#D55E00")  # Wong blue, Wong vermilion
 }

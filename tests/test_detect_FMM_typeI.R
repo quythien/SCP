@@ -1,7 +1,7 @@
 #' =======================================================================
 #' tests/test_detect_FMM_typeI.R
 #'
-#' Type-I error regression test for detect_FMM (K-harmonic LRT)
+#' Type-I error regression test for detect_FMM (K-harmonic F-test)
 #' and detect_DCP (cosinor F-test).
 #'
 #' Verifies under-null calibration at multiple sample sizes and
