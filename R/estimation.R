@@ -717,6 +717,7 @@ circular_difference <- function(phi1, phi2, period = 24) {
   ((diff + period/2) %% period) - period/2
 }
 
+#' @export
 estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
                                       period = 24,
                                       min_rhythm_pval = 0.01,

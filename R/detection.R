@@ -24,13 +24,8 @@
 # - rootSolve (root finding)
 # - lubridate (time zones)
 
-# Source LR test files (same directory)
-.detection_dir <- tryCatch(dirname(sys.frame(1)$ofile), error = function(e) "code")
-for (.lr_file in c("LRTest_diff_phase.R", "LRTest_diff_amp.R")) {
-  .lr_path <- file.path(.detection_dir, .lr_file)
-  if (file.exists(.lr_path)) source(.lr_path)
-}
-rm(.detection_dir, .lr_file, .lr_path)
+# LRTest_diff_phase.R and LRTest_diff_amp.R are loaded as part of the package;
+# the runtime source() calls used in the legacy code/detection.R are not needed here.
 
 # ==============================================================================
 # SECTION 1: FITTING FUNCTIONS
@@ -1156,12 +1151,7 @@ DCP_DiffPar = function(x, Par = c("A"), TOJR=NULL, alpha = 0.05,
 #'
 #' @export
 DCP_Analyze <- function(expr1, expr2, times1, times2, alpha = 0.05,
-                        gene_names = NULL, parallel.ncores = 1,
-                        period = 24, n_cores = NULL, ...){
-  # Backward-compatible: accept n_cores as an alias for parallel.ncores,
-  # accept (and silently ignore) period for callers that pass it explicitly,
-  # and tolerate arbitrary further keyword arguments for forward compatibility.
-  if (!is.null(n_cores)) parallel.ncores <- as.integer(n_cores)
+                        gene_names = NULL, parallel.ncores = 1){
 
   ngenes <- nrow(expr1)
 
@@ -1952,7 +1942,10 @@ detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
 #' Tests for rhythmicity in time-course data using the K-harmonic Fourier
 #' decomposition of the FMM (Frequency Modulated Mobius) signal model.
 #' Equivalent to a 2K-parameter joint cosinor regression test under
-#' \eqn{H_0: a_1 = b_1 = \cdots = a_K = b_K = 0}.
+#' \eqn{H_0: a_1 = b_1 = \cdots = a_K = b_K = 0}. With \code{ebayes = TRUE}
+#' (default), variance estimates are moderated by \code{limma::eBayes}
+#' following the LimoRhyde framework (Singer & Hughey 2019), extended here
+#' to user-specified \eqn{K}.
 #'
 #' @param expr Numeric matrix (genes x samples) of expression values.
 #' @param times Numeric vector of sample collection times in hours
@@ -1961,22 +1954,29 @@ detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
 #' @param K Number of harmonics to include (default 2). K=1 reduces to
 #'   standard cosinor (DCP). K=2 is the recommended default for non-cosinor
 #'   signals; K=3 may improve power for very sharp peaks (omega < 0.15).
+#' @param ebayes Logical. If \code{TRUE} (default), variance is moderated
+#'   across genes via \code{limma::eBayes}. If \code{FALSE}, the unshrunk
+#'   exact F-test is used (useful for null-calibration verification). The
+#'   function automatically falls back to the unshrunk path when
+#'   \code{nrow(expr) < 50}.
 #' @param adjust.method Multiple-testing adjustment for the BH-style
 #'   discovery flag (default "BH"). Set to NULL or "none" to skip.
 #' @param fdr.threshold FDR cutoff for the \code{discovery} column
 #'   (default 0.05). Ignored if \code{adjust.method} is NULL/"none".
 #' @param return.coefficients If TRUE, the returned data frame includes
 #'   per-gene harmonic coefficients \code{a_1, b_1, ..., a_K, b_K}.
-#' @param mc.cores Parallel cores. Currently unused — the linear-regression
-#'   path is fully vectorised across genes; argument retained for API
+#' @param mc.cores Parallel cores. Currently unused; the linear-regression
+#'   path is fully vectorised across genes. Argument retained for API
 #'   compatibility with other detectors.
 #'
 #' @return Data frame with one row per gene:
 #'   \describe{
 #'     \item{\code{F.stat}}{Numerator-over-denominator F statistic.}
 #'     \item{\code{df1}, \code{df2}}{Numerator (\code{2K}) and denominator
-#'           (\code{n-2K-1}) degrees of freedom.}
-#'     \item{\code{p.value}}{Exact F-test p-value.}
+#'           (\code{n-2K-1}, or the moderated denominator df when
+#'           \code{ebayes = TRUE}) degrees of freedom.}
+#'     \item{\code{p.value}}{F-test p-value (moderated when
+#'           \code{ebayes = TRUE}).}
 #'     \item{\code{p.adjust}}{Adjusted p-value (if \code{adjust.method}
 #'           non-null).}
 #'     \item{\code{R2}}{Coefficient of determination of the K-harmonic fit.}
@@ -1986,9 +1986,15 @@ detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
 #' @details
 #' The test fits the linear model
 #' \deqn{y_t = M + \sum_{k=1}^K [a_k \cos(k\,2\pi t / T) + b_k \sin(k\,2\pi t / T)] + \varepsilon}
-#' and tests the joint null \eqn{H_0: a_1 = b_1 = \cdots = a_K = b_K = 0}
-#' via the standard nested F-test, with exact null distribution
-#' \eqn{F(2K, n - 2K - 1)} under Gaussianity.
+#' and tests the joint null \eqn{H_0: a_1 = b_1 = \cdots = a_K = b_K = 0}.
+#' With \code{ebayes = TRUE}, fitting and inference proceed via
+#' \code{limma::lmFit} on a basis assembled from per-harmonic calls to
+#' \code{limorhyde::limorhyde(times, period = T/k)} for \eqn{k = 1, \ldots, K},
+#' followed by \code{limma::eBayes} variance shrinkage and
+#' \code{limma::topTable} extraction of the joint harmonic F-test. With
+#' \code{ebayes = FALSE}, the same model is fit by a vectorised QR
+#' decomposition and tested by the exact nested F-statistic with null
+#' distribution \eqn{F(2K, n - 2K - 1)} under Gaussianity.
 #'
 #' This is motivated by the FMM model's closed-form Fourier expansion:
 #' the cosine of a Mobius-transformed angle has harmonic amplitudes that
@@ -2001,6 +2007,10 @@ detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
 #' @references
 #' Rueda, C., Larriba, Y., Peddada, S. D. (2019). Frequency Modulated Mobius
 #'   Model for the Estimation of Rhythmic Signals. Sci Rep 9, 18138.
+#'
+#' Singer, J. M., Hughey, J. J. (2019). LimoRhyde: a flexible approach for
+#'   differential analysis of rhythmic transcriptome data. J Biol Rhythms
+#'   34(1), 5-18.
 #'
 #' Hughes, M. E. et al. (2017). Guidelines for genome-scale analysis of
 #'   biological rhythms. J Biol Rhythms 32(5), 380-393.

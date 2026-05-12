@@ -1,0 +1,41 @@
+Package: SCP
+Type: Package
+Title: Simulation-Based Circadian Power Analysis with K-harmonic LRT
+Version: 0.4.0
+Date: 2026-05-09
+Authors@R: person("Thien", "Pham",
+    role = c("aut", "cre"),
+    email = "quythien14@gmail.com",
+    comment = c(affiliation = "University of Pittsburgh"))
+Maintainer: Thien Pham <quythien14@gmail.com>
+Description: Provides simulation-based power analysis for circadian rhythm
+    studies using a semiparametric framework. Empirical parameter distributions
+    are estimated from pilot gene-expression data, and power is evaluated for
+    rhythmicity detection and differential-rhythm tests (DR, DP, DM) across a
+    range of study designs. Includes the DCP pipeline, FMM waveform robustness
+    assessment, and a bootstrap design-grid optimizer.
+Depends: R (>= 4.4.0)
+Imports:
+    ggplot2,
+    reshape2,
+    limma,
+    limorhyde,
+    minpack.lm,
+    nloptr,
+    parallel
+Suggests:
+    FMM,
+    MetaCycle,
+    rain,
+    circacompare,
+    patchwork,
+    cowplot,
+    gtable,
+    Rcpp,
+    RcppArmadillo,
+    readxl,
+    testthat (>= 3.0.0)
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: false
+RoxygenNote: 7.3.2
