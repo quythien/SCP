@@ -172,11 +172,14 @@ The complete pilot summary $\hat{\Psi} = (\hat{F}_\mu, \hat{F}_{A,\sigma},
 steps, where $\hat{F}_{\mathrm{TOD}}$ is the empirical collection-time
 distribution for passive designs. The choice of $\alpha_{\text{pilot}}$ can be
 adjusted by the user. In practice an adequate pilot shares tissue,
-condition, and assay platform with the planned study, has at least
-$n_{\mathrm{pilot}} \geq 30$ subjects for stable estimation of
-$\hat{F}_{A,\sigma}$, and meets the identifiability threshold for the
-intended detector ($B \geq 3$ for DCP, $B \geq 2K + 1$ for the
-K-harmonic LRT).
+condition, and assay platform with the planned study and meets the
+identifiability threshold for the intended detector ($B \geq 3$ for
+DCP, $B \geq 2K + 1$ for the K-harmonic LRT). The pilot summary
+$\hat{\Psi}$ is itself a sample-based estimator: at small
+$n_{\mathrm{pilot}}$, residual variability in $\hat{F}_{A,\sigma}$ and
+$\hat{\pi}_R$ propagates to non-trivial uncertainty in the projected
+power curve, which Section~\ref{sec:bootstrap} quantifies through a
+nonparametric bootstrap.
 
 \emph{Step 2 --- Data generation.}
 For each simulation replicate $s=1,\ldots,S$ and candidate sample size $n$,
@@ -904,15 +907,18 @@ achieve 80\% DR power at $N \approx 80$ per group; passive designs require $N \a
 
 Differential power is lower than single-cohort detection power across all
 three endpoints, reflecting the additional cost of the two-stage TOJR inference
-procedure (Figure~\ref{fig:diff_adrliv}). For GTEx ADR vs.\ LIV (active design),
-DR reaches ${\sim}75\%$ marginal power at $N=200$ per group and DP reaches
-${\sim}85\%$ at $N=200$, confirming that DR is the hardest differential endpoint.
-DM estimates carry large uncertainty at high $\tilde{r}$ strata because only 0--1
-target genes per replicate fall in those bins. Achieving 80\% differential power
-generally requires 2--5$\times$ more subjects than single-cohort rhythmicity
-detection at matched $\tilde{r}$; the TOJR two-stage procedure, contingent on
-data-derived rhythmicity calls, breaks analytic tractability and makes simulation
-indispensable.
+procedure (Figure~\ref{fig:diff_adrliv}). For the active comparison (GTEx
+ADR vs.\ LIV) the per-group $N_{80}$ for DR is approximately $80$; for the
+passive comparison (NAc vs.\ Putamen) the per-group $N_{80}$ for DR is
+approximately $150$. DR is the hardest differential endpoint in both
+comparisons; DP is intermediate; DM tracks the mesor-shift signal-to-noise
+ratio. DM power estimates carry larger uncertainty at high $\tilde{r}$
+strata because only $0$ to $1$ target genes per replicate fall in those
+bins. Achieving $80\%$ differential power generally requires $2$ to $5
+\times$ more subjects per group than single-cohort rhythmicity detection
+at matched $\tilde{r}$; the TOJR two-stage procedure, contingent on
+data-derived rhythmicity calls, breaks analytic tractability and makes
+simulation indispensable.
 
 % =====================================================================
 \subsection{Active vs passive design: detector dependence on truth and design}
@@ -1092,71 +1098,137 @@ K-harmonic LRT with the same qualitative behaviour.
 \paragraph{Effect-size heterogeneity drives sample-size requirements more than
 any single design choice.}
 The five pilot datasets span a ${\sim}5$-fold range in $\tilde{r}$, and the
-resulting $n_{80}$ estimates differ by more than an order of magnitude.
-This reproduces the core message of \textsc{PROPER} for RNA-seq
-\citep{wu2015proper} in the circadian setting, and reinforces the need for
-effect-size-aware, dataset-specific planning rather than generic
-``circadian sample size'' recommendations.
-On the active ADR and LIV pilots, $n_{80}$ for single-cohort detection is $\approx 19$ on LIV and $\approx 49$ on ADR; on the passive Seney pilot with $\tilde{r} \approx 0.79$, $n_{80} \approx 100$.
+resulting $n_{80}$ estimates differ by more than an order of magnitude. On
+the active GTEx pilots, $n_{80}$ for single-cohort detection is $\approx 19$
+on Liver ($\tilde{r} \approx 2.88$) and $\approx 49$ on Adrenal Gland
+($\tilde{r} \approx 0.97$); on the passive Seney ACC pilot
+($\tilde{r} \approx 0.79$), $n_{80} \approx 100$. This reproduces the core
+message of \textsc{PROPER} for RNA-seq \citep{wu2015proper} in the
+circadian setting and reinforces the need for effect-size-aware,
+dataset-specific planning rather than generic ``circadian sample size''
+recommendations.
 
-\paragraph{Active design confers a design-factor advantage over passive.}
-The equispaced active design achieves a non-centrality parameter
-$\lambda_g = N r_g^2/2$ — twice the value of an unstructured passive design
-with the same $N$ (design factor $d = 0.5$ vs.\ $d \approx 0.24$ for
-typical post-mortem TOD distributions). For ADR and LIV, this translates to
-$n_{80} \approx 19$ on LIV and $\approx 49$ on ADR in the active setting, compared with $n_{80} \approx 100$ on Seney ACC in the matched passive regime.
-Passive designs sacrifice this efficiency but remain the only option for
-human observational data; \textsc{SCP} handles both transparently.
+\paragraph{Active design confers a design-factor advantage over passive,
+but passive remains the only option for human observational data.}
+The equispaced active design achieves a noncentrality parameter
+$\lambda_g = N r_g^2 / 2$, twice the value of an unstructured passive
+design with the same $N$ (design factor $d = 1/2$ vs.\ $d \approx 0.24$
+for typical post-mortem TOD distributions). For matched single-cohort
+detection at $\tilde{r} \approx 2$ to $3$, this translates to $n_{80}
+\approx 19$ to $49$ in the active setting versus $\approx 100$ in the
+passive Seney regime. Passive designs sacrifice this efficiency but
+remain the only option for human post-mortem brain, clinical-cohort
+chronobiology, and any setting where collection time is determined by
+external scheduling rather than experimental protocol; \textsc{SCP}
+supports both modes with the same parameter-estimation and inference
+machinery.
 
-\paragraph{Detection method and $B$ interact only at low signal.}
-For high-$\tilde{r}$ datasets (LIV, Baboon), all methods and all $B$ choices
-above the identifiability threshold reach 80\% power within a narrow $N$ range
-and the allocation is inconsequential. At low $\tilde{r}$ (D1 striatum), the
-$B$-method interaction becomes substantial: \textsc{JTK} favors $B \approx 4$--$6$
-for reasons unrelated to biology (MetaCycle collapses replicates before ranking),
-\textsc{RAIN} benefits from distinct time points, and \textsc{MH} uniquely
-leverages denser sampling to capture higher harmonics when $\alpha_2 > 0$.
-This heterogeneity is invisible without method-stratified simulation.
-On Putamen schizophrenia controls ($n_{\mathrm{pilot}} = 28$) the plug-in and bootstrap mean differ by 15 percentage points at $N = 40$ (28\% vs.\ 43\%), and the 95\% CI is 20.5\,pp wide; on Seney ($n_{\mathrm{pilot}} = 60$) the CI narrows to ${\sim}10$\,pp, and on the large GTEx pilots ($n_{\mathrm{pilot}} \geq 249$) the CI is below 7\,pp.
+Within active designs, detector choice and time-sampling allocation
+decouple cleanly. The K-harmonic LRT (default $K = 2$) is the right
+detector when the pilot shows non-cosinor waveforms, operationalised
+through the pilot $\hat{\omega}$-median: empirically, the baboon active
+tissues have $\hat{\omega}$-median in $[0.3, 0.5]$ and the human passive
+cohorts (Seney) have $\hat{\omega}$-median in $[0.7, 0.9]$. We recommend
+$K = 2$ when the pilot $\hat{\omega}$-median is $\leq 0.6$ and the design
+satisfies $B \geq 2K + 1 = 5$, and DCP otherwise. Above the
+identifiability threshold ($B \geq 3$ for DCP, $B \geq 5$ for $K = 2$),
+the $(B, m)$ allocation does not affect power at fixed $N$: on the
+active KIM pilot, the four sampling grids $B \in \{6, 8, 12, 24\}$
+overlap within Monte Carlo noise ($\leq 4$\,pp) for both detectors
+(Figure~\ref{fig:active_vs_passive}). The $B$-versus-$m$ trade-off
+classically emphasised in design guidance therefore reduces, once the
+identifiability bound is met, to a single choice of total $N$. The
+\textsc{SCP} detector slot is generic and accepts any
+$p$-value-emitting rhythmicity test, so the framework extends to
+\textsc{JTK}, \textsc{RAIN}, and other published methods by drop-in
+replacement; this paper focuses on DCP and the K-harmonic LRT because
+they have closed-form noncentralities that make planning recommendations
+analytically tractable.
 
-\paragraph{Waveform non-sinusoidality matters only for \textsc{MH} and only at
-high $B$.}
-At $\alpha_2 \leq 0.5$, \textsc{DCP} and \textsc{RAIN} power losses relative
-to the pure-sinusoid baseline are small ($\leq 5$\,pp for $B \geq 4$ at $\omega \geq 0.6$),
-confirming the robustness of cosinor-based inference. \textsc{MH}'s power gain
-from $\alpha_2 > 0$ emerges only when $B \geq 6$ (enabling $K = 2$) and
-$\tilde{r}$ is low enough that the marginal signal in the second harmonic is
-worth the added model complexity.
-On the Baboon LUN active pilot ($\hat{\beta} = 1.60$, $B = 12$), the K-harmonic LRT achieves power 0.97 at $\beta = 0.5$, 0.95 at $\beta = 1$, 0.75 at $\beta = 5$, and 0.35 at $\beta = 20$ (all at $N = 144$); the $\alpha$-dispersion sweep is approximately flat (0.91 to 0.99 across $\sigma_\alpha \in [0, 4]$\,h).
+The bootstrap of Section~\ref{sec:bootstrap} surfaces pilot-induced
+uncertainty in the design recommendation but does not by itself correct
+plug-in bias. The four panels of Figure~\ref{fig:bootstrap_sc} span
+$n_{\mathrm{pilot}} \in \{28, 60, 249, 416\}$ at maximum CI widths of
+$20.5$, $9.5$, $6.7$, and $6.4$\,pp respectively; the largest reduction
+comes between the two smallest pilots, and CI widths saturate against
+the inner-Monte-Carlo noise floor for $n_{\mathrm{pilot}} \gtrsim 250$.
+At Putamen-SCZ ($n_{\mathrm{pilot}} = 28$) the bootstrap is decisive:
+the plug-in projects $28\%$ power at $N = 40$ but the $95\%$ CI of
+$33$ to $54\%$ would lead a researcher to question whether $N = 40$ is
+adequate, a conclusion the plug-in point estimate cannot support either
+way. For moderate pilots ($n_{\mathrm{pilot}} \approx 60$) plug-in and
+bootstrap mean agree within Monte Carlo noise and the bootstrap serves
+as a sanity check; for large pilots ($n_{\mathrm{pilot}} \gtrsim 250$)
+the plug-in recommendation is faithful.
 
-\paragraph{Bootstrap correction matters most when the pilot is small, not when
-the signal is weak.}
-The plug-in overestimation gap is driven primarily by $n_\mathrm{pilot}$, not
-$\tilde{r}$: the Baboon pilot ($n = 12$, active, $\tilde{r} = 1.72$) shows a
-larger gap than the D1 pilot ($n = 45$, passive, $\tilde{r} = 0.65$), even
-though D1 has weaker signal. The active design's cosinor identifiability — all
-12 time points fully constrain $A$, $\sigma$, and $\phi$ — limits but does not
-eliminate the pilot-size penalty. When $n_\mathrm{pilot} \geq 60$ (Seney), the
-plug-in and bootstrap estimates converge.
-The four bootstrap panels span $n_{\mathrm{pilot}} \in \{28, 60, 249, 416\}$. Maximum 95\% CI widths are 20.5\,pp (Putamen-SCZ, $N = 40$), ${\sim}10$\,pp (Seney, $N = 60$), 6.8\,pp (GTEx Pancreas, $N = 160$), and 6.4\,pp (GTEx Thyroid, $N = 120$); CI width contracts roughly as $1/\sqrt{n_{\mathrm{pilot}}}$.
+\paragraph{Differential analyses pay a two-stage cost.}
+DR, DP, and DM tests are conditional on a data-derived TOJR
+classification, which breaks analytic tractability and increases the
+required sample size per group relative to single-cohort detection. For
+the active GTEx ADR vs.\ LIV comparison the per-group $N_{80}$ for DR
+is approximately $80$; for the passive NAc vs.\ Putamen comparison it
+is approximately $150$. The two-stage cost is roughly $2$ to $5\times$
+the matched single-cohort $n_{80}$, with the gap widest at low
+$\tilde{r}$ where TOJR classification is noisiest. DP power tracks
+phase-shift effect size and DM tracks mesor-shift signal-to-noise; both
+are easier than DR at matched effect size because they conditional only
+on rhythmicity in at least one group rather than a difference in
+rhythmicity status.
 
-\paragraph{Differential vs.\ single-cohort power: the two-stage cost.}
-Differential analyses pay an additional power cost relative to single-cohort
-detection because DR, DP, and DM tests are conditional on the TOJR
-classification, which itself depends on data. At matched $N$ and $\tilde{r}$,
-DR power is substantially lower than rhythmicity detection power, and the gap
-is widest at low $\tilde{r}$ where TOJR classification is noisiest.
-On the ADR vs.\ LIV comparison, single-cohort $n_{80}$ is $\approx 19$ for LIV alone, whereas DR $n_{80}$ between ADR and LIV per group is $\approx 80$, a roughly four-fold cost of moving from single-cohort to two-group inference at matched per-group $\tilde{r}$.
+\subsection{A decision tree for circadian study planning}
+\label{sec:decision_tree}
+
+We close with a four-step rule for using \textsc{SCP} prospectively.
+
+\textbf{Step 1, detector.}
+From a pilot dataset, estimate $\hat{\omega}$-median over the rhythmic
+gene set (Section~\ref{sec:cosinor_violation}). If $\hat{\omega}$-median
+is $\leq 0.6$ and the planned design will satisfy $B \geq 5$, use the
+K-harmonic LRT (\texttt{detect\_FMM}, $K = 2$); otherwise use the
+cosinor F-test (DCP). The choice between the two is governed by
+waveform shape, not by active vs.\ passive design \emph{per se}.
+
+\textbf{Step 2, sampling grid.}
+Choose any $B$ at or above the detector's identifiability threshold:
+$B \geq 3$ for DCP, $B \geq 5$ for $K = 2$. Above the threshold, the
+$(B, m)$ allocation does not affect power; the design choice reduces
+to a single decision on total $N$.
+
+\textbf{Step 3, sample size.}
+Read $n_{80}$ off the closed-form power curve at your pilot
+$\tilde{r}$-median (Sections~\ref{sec:single_cohort}
+and~\ref{sec:differential}); the typical operating points are
+$n_{80} \approx 20$ for active high-$\tilde{r}$ tissue,
+$n_{80} \approx 50$ for active moderate-$\tilde{r}$, and
+$n_{80} \approx 100$ for passive moderate-$\tilde{r}$. For
+differential analyses, plan per group: roughly $80$ per group for
+the active ADR vs.\ LIV regime and $150$ per group for the passive
+NAc vs.\ Putamen regime, with DP and DM at comparable or smaller
+per-group $N$ than DR.
+
+\textbf{Step 4, bootstrap.}
+If $n_{\mathrm{pilot}} \leq 40$, run the outer subject-bootstrap of
+Section~\ref{sec:bootstrap} and report the $95\%$ CI band alongside
+the plug-in curve; the bootstrap is essential at this pilot size to
+surface the uncertainty the plug-in alone hides. For
+$40 < n_{\mathrm{pilot}} \leq 100$, the bootstrap is a useful sanity
+check (typical CI widths $\leq 10$\,pp). For
+$n_{\mathrm{pilot}} \gtrsim 250$, the plug-in curve is a faithful
+summary and the bootstrap is optional.
 
 \paragraph{Limitations.}
-The cosinor model assumes sinusoidal waveforms; power loss for $\alpha_2 \leq
-0.5$ and $B \geq 4$ is at most $5$\,pp at $\omega \geq 0.6$ and $B \geq 4$ (Section~\ref{sec:cosinor_violation}).
-Gene types are modelled as mutually exclusive (compound DR+DP changes are not
-simulated). Passive-design results depend on the pilot's TOD distribution.
-The bootstrap implementation is computationally intensive
-($R_\mathrm{boot} \times N_\mathrm{sim}$ inner simulations); users with large
-pilot and ample compute should prefer the plug-in. Full discussion in
-Supplementary~S9.
+The cosinor model assumes a single sinusoidal harmonic and the
+K-harmonic LRT assumes Gaussian residuals; both are robust to mild
+violations but degrade for heavily sharp-peaked, near-arrhythmic, or
+heteroskedastic genes. Gene types in the differential simulator are
+modelled as mutually exclusive, so compound DR+DP changes are not
+directly evaluated. Passive-design power depends on the empirical TOD
+distribution of the pilot, which may not generalise to a planned
+cohort with different recruitment logistics. The bootstrap is
+computationally intensive ($B_{\mathrm{out}} \times
+N_{\mathrm{sim}}^{\mathrm{in}}$ inner simulations) and is
+recommended only where the analysis above indicates pilot uncertainty
+is large enough to matter.
 
 \textsc{SCP} is available as an open-source R framework.
 
