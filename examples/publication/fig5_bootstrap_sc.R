@@ -258,7 +258,7 @@ panels <- Filter(Negate(is.null), list(pSCZ, pA, pB, pC))
 
 if (length(panels) > 0) {
   fig_path_local <- file.path(out_dir, "figures", "fig_bootstrap_sc.pdf")
-  fig_path_main  <- "output/main_figures/Fig3_bootstrap_singlecohort.pdf"
+  fig_path_main  <- "output/main_figures/Fig5_bootstrap_singlecohort.pdf"
   dir.create("output/main_figures", recursive = TRUE, showWarnings = FALSE)
 
   for (out_pdf in c(fig_path_local, fig_path_main)) {
