@@ -1936,7 +1936,7 @@ detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
 
 
 # ==============================================================================
-# detect_FMM: K-harmonic LRT for rhythmicity detection
+# detect_FMM: K-harmonic F-test for rhythmicity detection
 # ==============================================================================
 # Rather than fitting the nonlinear FMM model
 # y = M + A*cos(beta + 2*atan(omega*tan((t-alpha)/2))) directly, we use its
@@ -1954,7 +1954,7 @@ detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
 # At K=1 this reduces to standard cosinor (DCP). K=2 captures >90% of FMM
 # variance for omega >= 0.3, K=3 captures >97% for omega >= 0.3.
 
-#' FMM-Harmonic LRT for Rhythmicity Detection
+#' FMM-Harmonic F-test for Rhythmicity Detection
 #'
 #' Tests for rhythmicity in time-course data using the K-harmonic Fourier
 #' decomposition of the FMM (Frequency Modulated Mobius) signal model.

@@ -26,7 +26,7 @@
 \maketitle
 
 \begin{abstract}
-Circadian disruption is a hallmark of numerous human diseases, yet detecting condition-specific changes in gene expression rhythms remains a significant challenge. Circadian transcriptomic studies aim to identify rhythmic biomarkers within a given condition or to characterize differential circadian biomarkers across conditions. Given the constraints of limited budgets and sample availability, rigorous power calculation and thoughtful study design are critical for planning such studies. Existing approaches, such as CircaPower, offer closed-form analytical solutions for circadian biomarker detection but do not account for gene-specific signal-to-noise ratios or genome-wide false discovery. To address these limitations, we present SCP (Simulation-based Circadian Power), a versatile simulation-based framework for the study design of circadian transcriptomic analyses. Leveraging gene-specific information from pilot or publicly available data, SCP enables realistic, scientifically driven and statistically principled power calculations with false discovery rate (FDR) control. The framework supports sample size determination for circadian biomarker detection and accommodates multi-faceted differential rhythm analyses, including differential rhythmicity, differential phase, and differential MESOR. For active experimental designs such as in animal studies, we further investigate the trade-off between sampling frequency and biological replicates and resolve it analytically: above the harmonic-regression identifiability threshold, power depends on total sample size alone. For pilots whose waveforms deviate from a pure cosinor, SCP also provides a K-harmonic likelihood-ratio test that extends the LimoRhyde framework to user-tunable harmonic order. Additionally, a bootstrap procedure is introduced to quantify uncertainty in power curves and sample size recommendations. SCP is evaluated through extensive simulations and real data analyses, demonstrating strong performance for realistic and principled study design in circadian transcriptomics.
+Circadian disruption is a hallmark of numerous human diseases, yet detecting condition-specific changes in gene expression rhythms remains a significant challenge. Circadian transcriptomic studies aim to identify rhythmic biomarkers within a given condition or to characterize differential circadian biomarkers across conditions. Given the constraints of limited budgets and sample availability, rigorous power calculation and thoughtful study design are critical for planning such studies. Existing approaches, such as CircaPower, offer closed-form analytical solutions for circadian biomarker detection but do not account for gene-specific signal-to-noise ratios or genome-wide false discovery. To address these limitations, we present SCP (Simulation-based Circadian Power), a versatile simulation-based framework for the study design of circadian transcriptomic analyses. Leveraging gene-specific information from pilot or publicly available data, SCP enables realistic, scientifically driven and statistically principled power calculations with false discovery rate (FDR) control. The framework supports sample size determination for circadian biomarker detection and accommodates multi-faceted differential rhythm analyses, including differential rhythmicity, differential phase, and differential MESOR. For active experimental designs such as in animal studies, we further investigate the trade-off between sampling frequency and biological replicates and resolve it analytically: above the harmonic-regression identifiability threshold, power depends on total sample size alone. For pilots whose waveforms deviate from a pure cosinor, SCP also provides a K-harmonic F-test that extends the LimoRhyde framework to user-tunable harmonic order. Additionally, a bootstrap procedure is introduced to quantify uncertainty in power curves and sample size recommendations. SCP is evaluated through extensive simulations and real data analyses, demonstrating strong performance for realistic and principled study design in circadian transcriptomics.
 \end{abstract}
 %% ====================================================================
 \section{Introduction}
@@ -174,7 +174,7 @@ distribution for passive designs. The choice of $\alpha_{\text{pilot}}$ can be
 adjusted by the user. In practice an adequate pilot shares tissue,
 condition, and assay platform with the planned study and meets the
 identifiability threshold for the intended detector ($B \geq 3$ for
-DCP, $B \geq 2K + 1$ for the K-harmonic LRT). The pilot summary
+DCP, $B \geq 2K + 1$ for the K-harmonic F-test). The pilot summary
 $\hat{\Psi}$ is itself a sample-based estimator: at small
 $n_{\mathrm{pilot}}$, residual variability in $\hat{F}_{A,\sigma}$ and
 $\hat{\pi}_R$ propagates to non-trivial uncertainty in the projected
@@ -470,16 +470,16 @@ useful as a sanity check for moderate pilots
 plug-in recommendation is a faithful summary.
 
 % =====================================================================
-% NEW SECTION 2.4 --- Cosinor violation, K-harmonic LRT
+% NEW SECTION 2.4 --- Cosinor violation, K-harmonic F-test
 % =====================================================================
-\subsection{Sensitivity to cosinor violation and the K-harmonic LRT}
+\subsection{Sensitivity to cosinor violation and the K-harmonic F-test}
 \label{sec:cosinor_violation}
 
 The cosinor model \eqref{eq:cosinor_model} assumes a pure sinusoidal
 waveform. Real circadian gene expression profiles are frequently asymmetric
 or sharply peaked, and the cosinor projection then misses harmonic content
 that a flexible detector could in principle recover. This section quantifies
-the loss, introduces the K-harmonic likelihood-ratio test (LRT) that
+the loss, introduces the K-harmonic F-test that
 recovers it, and reports a sensitivity sweep over the waveform-shape and
 phase-dispersion parameters of the data-generating process.
 
@@ -696,7 +696,7 @@ invariant in $\sigma_\alpha$ at fixed waveform shape.
 \label{sec:active_passive}
 
 The two preceding sections motivate two detectors, the cosinor $F$-test
-(DCP, $K = 1$) and the K-harmonic LRT (\texttt{detect\_FMM}, default
+(DCP, $K = 1$) and the K-harmonic F-test (\texttt{detect\_FMM}, default
 $K = 2$), and the question of which design is preferable interacts with
 which detector is in use. We resolve this interaction in two steps: first
 a brief noncentrality calculation under cosinor and FMM truth, then an
@@ -718,7 +718,7 @@ truth, by \eqref{eq:fmm_attenuated_power},
 which is still $(B, m)$-invariant in design but attenuated by
 $c(\omega) < 1$ per gene. The variance lost relative to the cosinor benchmark
 is $1 - c(\omega)^2$, and that variance lives in harmonics $k \geq 2$. The
-K-harmonic LRT recovers it whenever $B \geq 2K + 1$:
+K-harmonic F-test recovers it whenever $B \geq 2K + 1$:
 \begin{equation}
 \mathrm{NCP}_{\mathrm{K}}^{\mathrm{FMM}}(N) \approx \frac{N}{2\sigma^2} \sum_{k=1}^{K} |c_k|^2,
 \label{eq:ncp_K_fmm}
@@ -727,11 +727,11 @@ with $|c_k|^2 = A^2(1 - \rho^2)^2 \rho^{2(k-1)}$ from \eqref{eq:fmm_fourier};
 when $B < 2K + 1$ the regression \eqref{eq:Kharmonic_model} is rank-deficient
 and \eqref{eq:ncp_K_fmm} is not realised. \eqref{eq:ncp_dcp_cos}--\eqref{eq:ncp_K_fmm}
 make two predictions: DCP power should be approximately $B$-invariant under
-both truths, and the K-harmonic LRT should dominate DCP when
+both truths, and the K-harmonic F-test should dominate DCP when
 $c(\omega) < 1$ and the Nyquist condition is met.
 
 Figure~\ref{fig:active_vs_passive} arranges the empirical comparison as a
-$2 \times 2$ grid: detector (DCP top row, K-harmonic LRT with $K = 2$
+$2 \times 2$ grid: detector (DCP top row, K-harmonic F-test with $K = 2$
 bottom row) crossed with design (active KIM, $\hat{\eta} = 2.62$ under
 the \textsc{LimoRhyde} pre-screen, left column; passive Seney ACC,
 $n_{\mathrm{pilot}} = 60$, right column). Each active panel sweeps
@@ -746,14 +746,14 @@ panel (bottom left), the four $B$ curves overlap within Monte Carlo
 noise (spread at most $4$\,pp across $B \in \{6, 8, 12, 24\}$ at every
 $N$), confirming that $K = 2$ is also approximately $B$-invariant above
 the identifiability threshold, not only the cosinor-truth $K = 1$ case.
-The K-harmonic LRT picks up $15.3$\,pp at $N = 24$, $10.2$\,pp at
+The K-harmonic F-test picks up $15.3$\,pp at $N = 24$, $10.2$\,pp at
 $N = 48$, and $5.0$\,pp at $N = 72$ relative to DCP, converging within
 $1$\,pp at $N \geq 120$ as both detectors saturate.
 
 The passive panels tell the opposite story. In the passive--DCP panel
 (top right), the single empirical Seney curve reaches 80\% at $N \approx 100$.
 In the passive--$K{=}2$ panel (bottom right), DCP visibly dominates the
-K-harmonic LRT by 10--15 percentage points across $N \leq 120$
+K-harmonic F-test by 10--15 percentage points across $N \leq 120$
 (DCP $0.67$ vs.\ $K{=}2$ $0.50$ at $N = 80$; DCP $0.91$ vs.\ $K{=}2$ $0.83$
 at $N = 120$). The reason is that Seney is approximately cosinor-truth
 (typical human PFC $\omega \approx 0.7$--$0.9$, far above the
@@ -768,7 +768,7 @@ identifiability threshold, so the $B$-versus-$m$ trade-off classically
 emphasised in design guidance \citep{Hughes2017guidelines} reduces to a
 single choice: pick any $B \geq 3$ (DCP) or $B \geq 5$ ($K = 2$), then
 allocate $N = B \times m$ subjects in whatever way is logistically
-convenient. The K-harmonic LRT is the right default when the pilot
+convenient. The K-harmonic F-test is the right default when the pilot
 shows cosinor violation ($\hat{\omega}$ median $< 1$) and the design
 satisfies $B \geq 2K + 1$, both of which are typical of high-resolution
 active animal studies; the cosinor $F$-test is the right default when the
@@ -936,7 +936,7 @@ simulation indispensable.
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
   FIGURE 5 PLACEHOLDER\\[6pt]
   Active vs passive design: $2 \times 2$ grid, detector
-  (DCP / K-harmonic LRT, $K=2$) crossed with design (Active Baboon KIM,
+  (DCP / K-harmonic F-test, $K=2$) crossed with design (Active Baboon KIM,
   Passive Seney ACC). Source: Fig5\_active\_vs\_passive.pdf.
   \vspace{3cm}}}
 \caption{Detector $\times$ design interaction. \textbf{Top row, DCP.}
@@ -945,11 +945,11 @@ DCP power curves overlap within ${\sim}1$\,pp across all $B$, empirically
 confirming the $B$-invariance prediction of
 \eqref{eq:ncp_dcp_cos}--\eqref{eq:ncp_dcp_fmm}. \textbf{(B)} Passive Seney
 ACC ($n_{\mathrm{pilot}} = 60$): single empirical TOD distribution, with
-$N_{80} \approx 100$. \textbf{Bottom row, K-harmonic LRT ($K = 2$).}
+$N_{80} \approx 100$. \textbf{Bottom row, K-harmonic F-test ($K = 2$).}
 \textbf{(C)} Active Baboon KIM, same $B$ grid: $K = 2$ power curves also
 overlap within Monte Carlo noise ($\leq 4$\,pp across $B$ at every $N$),
 mirroring the DCP $B$-invariance above the identifiability threshold
-$B \geq 2K + 1 = 5$. The K-harmonic LRT gains $15.3$\,pp at $N = 24$,
+$B \geq 2K + 1 = 5$. The K-harmonic F-test gains $15.3$\,pp at $N = 24$,
 $10.2$\,pp at $N = 48$, and $5.0$\,pp at $N = 72$ relative to DCP, and
 converges within $1$\,pp at $N \geq 120$ as both detectors saturate.
 \textbf{(D)} Passive Seney ACC: DCP visibly dominates $K = 2$ by
@@ -964,7 +964,7 @@ gain.}
 The active KIM panels (left column) confirm $B$-invariance under FMM truth
 empirically: the four $B$ curves overlap within $\leq 4$\,pp for both
 detectors, matching equations~\eqref{eq:ncp_dcp_cos}--\eqref{eq:ncp_dcp_fmm}.
-The K-harmonic LRT recovers $15.3$\,pp at $N = 24$ and $10.2$\,pp at
+The K-harmonic F-test recovers $15.3$\,pp at $N = 24$ and $10.2$\,pp at
 $N = 48$ relative to DCP on the same active pilot, with the gap closing
 to $1$\,pp at $N \geq 120$ as both detectors saturate. The passive Seney panels (right column) reverse
 the comparison: because the pilot is approximately cosinor-truth, DCP is
@@ -975,7 +975,7 @@ should be driven by the pilot evidence on $\omega$ rather than by the
 active versus passive distinction \emph{per se}.
 
 % =====================================================================
-\subsection{K-harmonic LRT sensitivity: $\omega$ and $\alpha$ sweeps}
+\subsection{K-harmonic F-test sensitivity: $\omega$ and $\alpha$ sweeps}
 \label{sec:fmm_results}
 
 % --- FIGURE 4 ---
@@ -986,7 +986,7 @@ active versus passive distinction \emph{per se}.
 \centering
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
   FIGURE 4 PLACEHOLDER\\[6pt]
-  K-harmonic LRT ($K = 2$) sensitivity sweeps on Baboon LUN active pilot
+  K-harmonic F-test ($K = 2$) sensitivity sweeps on Baboon LUN active pilot
   ($\hat{\eta} = 1.60$, $B = 12$). Panel A: $\omega$ sweep
   ($\omega_g \sim \mathrm{Beta}(1, \eta)$, $\eta \in \{0.5, 1, 2, 5, 20\}$).
   Panel B: $\alpha$ sweep
@@ -994,7 +994,7 @@ active versus passive distinction \emph{per se}.
   $\sigma_\alpha \in \{0, 0.5, 1, 2, 4\}$\,h).
   Source: Fig4\_sensitivity.pdf.
   \vspace{3cm}}}
-\caption{K-harmonic LRT (\texttt{detect\_FMM}, $K = 2$) sensitivity to
+\caption{K-harmonic F-test (\texttt{detect\_FMM}, $K = 2$) sensitivity to
 waveform shape and peak dispersion on the Baboon LUN active pilot
 ($\hat{\eta} = 1.60$, median FMM $R^2 \approx 0.88$, $B = 12$).
 \textbf{(A)} $\omega$ sweep: $\omega_g \sim \mathrm{Beta}(1, \eta)$ with
@@ -1084,7 +1084,7 @@ check for $n_{\mathrm{pilot}} \approx 60$, and unnecessary for
 $n_{\mathrm{pilot}} \gtrsim 250$ at this inner-simulation budget. The
 figure uses \textsc{DCP} throughout; the uncertainty story is in the
 pilot summary $\hat{\Psi}$ and therefore extends in principle to the
-K-harmonic LRT with the same qualitative behaviour.
+K-harmonic F-test with the same qualitative behaviour.
 
 % (Archived pre-pivot prose moved to _archive/SCP_pre_pivot.tex on 2026-05-09)
 
@@ -1122,13 +1122,13 @@ supports both modes with the same parameter-estimation and inference
 machinery.
 
 Within active designs, detector choice and time-sampling allocation
-decouple cleanly. The K-harmonic LRT (default $K = 2$) is the right
+decouple cleanly. The K-harmonic F-test (default $K = 2$) is the right
 detector when the pilot shows non-cosinor waveforms, operationalised
 through the pilot $\hat{\omega}$-median: empirically, the baboon active
 tissues have $\hat{\omega}$-median in $[0.3, 0.5]$ and the human passive
 cohorts (Seney) have $\hat{\omega}$-median in $[0.7, 0.9]$. We recommend
 $K = 2$ when the pilot $\hat{\omega}$-median is $\leq 0.6$ and the design
-satisfies $B \geq 2K + 1 = 5$, and DCP (which is the K-harmonic LRT at
+satisfies $B \geq 2K + 1 = 5$, and DCP (which is the K-harmonic F-test at
 $K = 1$) otherwise. The general harmonic-regression identifiability rule
 is $B \geq 2K + 1$ distinct sampling phases per period: $B \geq 3$ for
 DCP, $B \geq 5$ for $K = 2$, $B \geq 7$ for $K = 3$. Above this
@@ -1141,7 +1141,7 @@ identifiability bound is met, to a single choice of total $N$. The
 \textsc{SCP} detector slot is generic and accepts any
 $p$-value-emitting rhythmicity test, so the framework extends to
 \textsc{JTK}, \textsc{RAIN}, and other published methods by drop-in
-replacement; this paper focuses on DCP and the K-harmonic LRT because
+replacement; this paper focuses on DCP and the K-harmonic F-test because
 they have closed-form noncentralities that make planning recommendations
 analytically tractable.
 
@@ -1183,7 +1183,7 @@ We close with a four-step rule for using \textsc{SCP} prospectively.
 From a pilot dataset, estimate $\hat{\omega}$-median over the rhythmic
 gene set (Section~\ref{sec:cosinor_violation}). If $\hat{\omega}$-median
 is $\leq 0.6$ and the planned design will satisfy $B \geq 5$, use the
-K-harmonic LRT (\texttt{detect\_FMM}, $K = 2$); otherwise use the
+K-harmonic F-test (\texttt{detect\_FMM}, $K = 2$); otherwise use the
 cosinor F-test (DCP). The choice between the two is governed by
 waveform shape, not by active vs.\ passive design \emph{per se}.
 
@@ -1220,7 +1220,7 @@ $n_{\mathrm{pilot}} \gtrsim 250$, the plug-in curve is a faithful
 summary and the bootstrap is optional.
 
 The cosinor model assumes a single sinusoidal harmonic and the
-K-harmonic LRT assumes Gaussian residuals; both are robust to mild
+K-harmonic F-test assumes Gaussian residuals; both are robust to mild
 violations but degrade for heavily sharp-peaked, near-arrhythmic, or
 heteroskedastic genes. Gene types in the differential simulator are
 modelled as mutually exclusive, so compound DR+DP changes are not

@@ -518,7 +518,7 @@ estCircadianParamFMM <- function(data, times, period = 24,
   # for screening; the detect_FMM screen below replaces it. This keeps the noise
   # estimate consistent with previous pipelines while letting detect_FMM define
   # which genes count as "rhythmic", internally consistent with the
-  # K-harmonic LRT (detect_FMM) detector that downstream Fig 4/5 use.
+  # K-harmonic F-test (detect_FMM) detector that downstream Fig 4/5 use.
   if (verbose) cat("Step 1a: cosinor fit (for sigma estimates)...\n")
   pdf_ <- fitCosinorAll(data, times, period = period,
                         min_rhythm_pval = 1.0)   # no cosinor screen here
@@ -557,7 +557,7 @@ estCircadianParamFMM <- function(data, times, period = 24,
   # The simulator (simCircadianFMM, see simulation.R cts_rad and FMM::generateFMM
   # with to=2*pi) expects omega/alpha in radians, so radians is correct here.
   #
-  # Note: the pre-screen uses detect_FMM (linear K-harmonic LRT) which is
+  # Note: the pre-screen uses detect_FMM (linear K-harmonic F-test) which is
   # scale-invariant in time. The FMM model fit below uses radian timepoints
   # to match the simulator's convention. Cross-pipeline consistency holds
   # because alpha/omega from the FMM fit are propagated only as simulation

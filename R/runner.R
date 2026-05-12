@@ -786,7 +786,7 @@ summaryRunPower <- function(powerOutput, verbose = TRUE) {
 #' @param analysis.opts \code{CircadianAnalysisOptions} -- alpha, p.adjust.method.
 #' @param method        Detection method: \code{"DCP"} (1-harmonic cosinor F-test),
 #'   \code{"JTK"}, \code{"RAIN"}, \code{"MH"} (multi-harmonic), or \code{"FMM"}
-#'   (K-harmonic LRT motivated by the FMM Fourier expansion; default detector
+#'   (K-harmonic F-test motivated by the FMM Fourier expansion; default detector
 #'   for non-cosinor signals).
 #' @param K             Integer. Number of harmonics for \code{method = "FMM"}
 #'   (default 2). K=1 is equivalent to DCP; K=2 captures the 1st and 2nd
@@ -907,7 +907,7 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
     JTK   = function(e, t) detect_JTK(e, t, period = period),
     RAIN  = function(e, t) detect_RAIN(e, t, period = period),
     MH    = function(e, t) detect_MH(e, t, period = period),
-    # FMM (K-harmonic LRT) — exact F(2K, n-2K-1), no calibration needed.
+    # FMM (K-harmonic F-test) — exact F(2K, n-2K-1), no calibration needed.
     # Returns full data frame; we extract the raw p-value vector here for
     # consistency with the other detectors.
     FMM   = function(e, t) detect_FMM(e, t, period = period, K = K,
