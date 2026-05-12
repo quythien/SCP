@@ -430,7 +430,7 @@ order-of-magnitude in $n_{\mathrm{pilot}}$
 ($n_{\mathrm{pilot}} = 28$, passive), Seney ACC controls
 ($n_{\mathrm{pilot}} = 60$, passive), GTEx Pancreas ($n_{\mathrm{pilot}} = 249$,
 passive), and GTEx Thyroid ($n_{\mathrm{pilot}} = 416$, passive). All four
-panels use $B_{\mathrm{out}} = 50$ outer draws, $N_{\mathrm{sim}}^{\mathrm{in}} = 20$
+panels use $B_{\mathrm{out}} = 50$ outer draws, $N_{\mathrm{sim}}^{\mathrm{in}} = 25$
 inner simulations, and $G = 5{,}000$ simulated genes. The 95\% CI width is
 largest on Putamen-SCZ (max 20.5\,pp at $N = 40$), narrows to
 ${\sim}10$\,pp on Seney ($N = 60$), 6.8\,pp on GTEx Pancreas ($N = 160$),
@@ -439,9 +439,12 @@ projected power at $N = 40$ is 28\%, whereas the bootstrap mean is 43\%;
 different draws of a 28-subject pilot from this population would therefore
 support different design recommendations, a gap that the plug-in curve
 hides. The Putamen, Seney, Pancreas, Thyroid ordering shows that CI width
-contracts roughly as $1/\sqrt{n_{\mathrm{pilot}}}$, as expected for a
-nonparametric bootstrap whose variance scales with the pilot's effective
-sample size.
+contracts monotonically with $n_{\mathrm{pilot}}$, with the largest
+reduction occurring between the smallest pilots ($n_{\mathrm{pilot}}: 28
+\to 60$ shrinks the maximum CI width from $20.5$ to $9.5$\,pp); for
+$n_{\mathrm{pilot}} \gtrsim 250$ the bootstrap CI is dominated by the
+inner-Monte-Carlo noise rather than pilot variability, and further
+increases in $n_{\mathrm{pilot}}$ yield diminishing returns.
 
 Practically, the bootstrap is essential whenever $n_{\mathrm{pilot}}$ is small
 ($\lesssim 40$) or the pilot signal-to-noise ratio is weak; for large,
