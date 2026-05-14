@@ -189,7 +189,7 @@ plotDiffPower <- function(res_list,
                          r_display_max  = NULL,
                          out_pdf        = NULL,
                          width          = 15,
-                         height         = 30) {
+                         height         = 22) {
 
   n_comps <- length(res_list)
   if (n_comps < 1) stop("res_list must have at least 1 element.")
@@ -218,15 +218,20 @@ plotDiffPower <- function(res_list,
   }
 
   # ------------------------------------------------------------------
-  # Precompute n80_max per comparison: max n across endpoints to reach 80% at n80_fdr
+  # Precompute per-comparison, per-endpoint n80 (n needed to reach
+  # target power at vline_fdr). Each endpoint's row gets its own
+  # vertical line; previously we collapsed to the max across endpoints
+  # which made all rows show the same n80, hiding the easy-endpoint
+  # advantage.
   # ------------------------------------------------------------------
   n80_by_comp <- lapply(seq_along(res_list), function(ci) {
     res_ci <- res_list[[ci]]
-    n80_ep <- vapply(endpoints, function(ep) {
+    out <- vapply(endpoints, function(ep) {
       np <- npower(res_ci, target_power = vline_power, fdr = vline_fdr, endpoint = ep)
       if (is.na(np$n)) NA_real_ else np$n
     }, numeric(1))
-    suppressWarnings(max(n80_ep, na.rm = TRUE))
+    names(out) <- endpoints
+    out
   })
 
   # ------------------------------------------------------------------
@@ -234,9 +239,9 @@ plotDiffPower <- function(res_list,
   # ------------------------------------------------------------------
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
   par(mfrow = c(n_ep * n_comps, 3),
-      mai   = c(1.35, 1.0, 0.6, 0.15),
+      mai   = c(1.1, 1.0, 0.45, 0.15),
       mgp   = c(3.2, 0.65, 0),
-      oma   = c(0, 0, 2.2, 0),
+      oma   = c(0, 0, 1.8, 0),
       cex.axis = 1.05, cex.lab = 1.2, font.main = 2, cex.main = 1.05)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
@@ -321,16 +326,19 @@ plotDiffPower <- function(res_list,
         add_se_bars(ss_disp, 100 * marginal_mean[disp_idx, t],
                     100 * marginal_se[disp_idx, t], col = thresh_cols[t])
       }
-      vline_n <- n80_by_comp[[ci]]
+      vline_n <- n80_by_comp[[ci]][ep]
       abline(h = 80, lty = 2, col = "grey50", lwd = 1.3)
       if (!is.na(vline_n) && is.finite(vline_n)) {
         abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.8)
-        text(vline_n, 15, sprintf("n=%d", vline_n),
-             col = "steelblue", cex = 0.85, adj = -0.1, font = 2)
+        # Place the "n = ..." annotation just left of the line, high
+        # on the y-axis, well clear of the bottom-right FDR legend.
+        text(vline_n, 95, sprintf("n = %d", vline_n),
+             col = "steelblue", cex = 0.85, adj = c(1.05, 0.5), font = 2)
       }
       grid()
-      legend("bottomright", thresh_labels,
-             col = thresh_cols, lty = 1, pch = 19, lwd = 2.2, cex = 0.82)
+      legend("right", thresh_labels,
+             col = thresh_cols, lty = 1, pch = 19, lwd = 2.2, cex = 0.82,
+             inset = 0.02, bg = "white")
 
       # ---- Panel B: power by r-stratum — bold() needed for bquote titles ----
       par(mgp = c(5.0, 0.65, 0))

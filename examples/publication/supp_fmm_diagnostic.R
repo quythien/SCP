@@ -159,20 +159,23 @@ for (out_pdf in fig_paths) {
     sa_hat    <- d$sigma_alpha_hat
 
     # --- omega panel ---
+    # Histogram of empirical omega-hat with median marker only. The
+    # one-parameter Beta(1, eta) sweep family used in s2.4 is monotonic
+    # on (0, 1) and does not capture the interior peak of the empirical
+    # distribution, so we omit the parametric overlay here to avoid
+    # implying a goodness-of-fit summary.
     om_med <- median(omega_emp)
     hist(omega_emp, breaks = seq(0, 1, by = 0.05), freq = FALSE,
          main = bquote(.(t) * ", " * omega),
          xlab = expression(hat(omega)),
          col = col_omega, border = "white", xlim = c(0, 1))
     panel_label(letters_seq[2L * ti - 1L])
-    curve(dbeta(x, 1, beta_hat), add = TRUE, col = col_fit, lwd = 1.8)
     abline(v = 1, lty = 3, col = "grey60")
     abline(v = om_med, lty = 2, col = col_median, lwd = 1.2)
     pub_legend("topright",
-               legend = pub_exprs(bquote(median == .(format(round(om_med, 2), nsmall = 2))),
-                                   bquote(Beta(1, hat(beta)))),
-               col = c(col_median, col_fit),
-               lty = c(2, 1), lwd = c(1.2, 1.8))
+               legend = pub_exprs(bquote(median == .(format(round(om_med, 2), nsmall = 2)))),
+               col = col_median,
+               lty = 2, lwd = 1.2)
 
     # --- alpha panel ---
     sd_rad <- sa_hat * (2 * pi / 24)

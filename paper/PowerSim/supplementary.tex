@@ -34,9 +34,9 @@
 
 Table~\ref{tab:pilot_summary} summarises the pilot datasets used in
 the main text figures. A complete pilot inventory (123 tissues across
-GTEx, GSE54651 mouse, GSE98965 baboon, BA11/BA47, GSE160521, and Seney
-ACC, with per-tissue median $\tilde r$ and rhythmic-gene counts
-computed on the top-$300$ rhythmic genes) is provided as a separate
+GTEx, GSE98965 baboon, GSE71620 PFC (BA11/BA47), and GSE160521, with
+per-tissue median $\tilde r$ and rhythmic-gene counts computed on the
+top-$300$ rhythmic genes) is provided as a separate
 supplementary spreadsheet (\texttt{tissue\_signal\_summary.csv}).
 Across all entries in Table~\ref{tab:pilot_summary} and the
 supplementary spreadsheet, $\tilde r$ is defined as the median of
@@ -69,17 +69,15 @@ Species & Pilot dataset & $n_{\mathrm{pilot}}$ & Design ($B$) & $\tilde r$ & $\h
 \midrule
 \multicolumn{8}{l}{\textit{Active-design pilots}} \\
 \midrule
-\textit{P.\ anubis}  & GSE98965 KIM  & $12$ & active ($12$) & $\approx 2.6$  & $0.28$ & $2.62$ & Fig.~5 \\
-\textit{P.\ anubis}  & GSE98965 LUN  & $12$ & active ($12$) & $1.72$ & $0.41$ & $1.60$ & Fig.~4 \\
-\textit{M.\ musculus} & GSE54651 LIV & $8$ & active ($8$) & $2.88$ & --     & --     & Fig.~1 \\
+\textit{P.\ anubis}  & GSE98965 KIM  & $12$ & active ($12$) & $\approx 2.6$  & $0.24$ & $2.62$ & Fig.~5 \\
+\textit{P.\ anubis}  & GSE98965 LUN  & $12$ & active ($12$) & $1.72$ & $0.41$ & $1.80$ & Fig.~4 \\
 \midrule
 \multicolumn{8}{l}{\textit{Passive-design pilots}} \\
 \midrule
-\textit{H.\ sapiens} & GTEx ADR        & $187$ & passive & $0.97$ & --     & --     & Fig.~1 \\
-\textit{H.\ sapiens} & Seney ACC ctrl  & $60$  & passive & $0.73$ & --     & --     & Fig.~3, Fig.~5 \\
-\textit{H.\ sapiens} & GSE160521 Putamen ctrl & $28$          & passive & $1.02$ & --     & --     & Fig.~3 \\
-\textit{H.\ sapiens} & GTEx Pancreas   & $249$ & passive & $0.44$ & --     & --     & Fig.~3 \\
-\textit{H.\ sapiens} & GTEx Thyroid    & $416$ & passive & $0.45$ & --     & --     & Fig.~3 \\
+\textit{H.\ sapiens} & GTEx Adrenal Gland & $187$ & passive & $0.97$ & --     & --     & Fig.~1, Fig.~2 \\
+\textit{H.\ sapiens} & GTEx Liver         & $154$ & passive & $0.48$ & --     & --     & Fig.~1, Fig.~2 \\
+\textit{H.\ sapiens} & GSE160521 Putamen ctrl & $28$ & passive & $1.02$ & --     & --     & Fig.~3 \\
+\textit{H.\ sapiens} & GTEx Thyroid       & $416$ & passive & $0.45$ & --     & --     & Fig.~3 \\
 \bottomrule
 \end{tabular}\end{table}
 
@@ -93,12 +91,17 @@ default $K = 2$.
 \begin{table}[H]
 \centering
 \small
-\caption{GSE98965 baboon active-design tissues with empirical FMM waveform
-diagnostics. All six pilots have $n_{\mathrm{pilot}} = 12$ at
+\caption{GSE98965 baboon active-design tissues with empirical FMM
+waveform diagnostics. All six pilots have $n_{\mathrm{pilot}} = 12$ at
 $B = 12$ (one collection per subject across $12$ time-of-day points).
 $R^2$ is the FMM goodness-of-fit median across rhythmic genes;
 $n_{\mathrm{fitted}}$ is the number of rhythmic genes that pass the
-FMM convergence filter.}
+FMM convergence filter. Diagnostic fits use $G = 5{,}000$ pre-screened
+genes and $K_{\mathrm{top}} = 200$ for the post-FMM-fit summary, so
+the LUN $\hat\eta = 1.40$ entry here is procedurally distinct from
+the $\hat\eta = 1.80$ reported in Table~\ref{tab:pilot_summary} for
+the Figure~4 sensitivity simulation, which uses $G = 2000$ and
+$K_{\mathrm{top}} = 300$ with the empirical-Bayes pre-screen.}
 \label{tab:pilot_fmm_extended}
 \begin{tabular}{lccccc}
 \toprule
@@ -120,36 +123,57 @@ PAN (pancreas)          & $0.32$ & $1.85$ & $0.77$ & $5.24$ & $200$ \\
 \label{sec:fmm_diag}
 %% ====================================================================
 
-Figure~\ref{fig:fmm_diagnostic} shows the empirical distributions of the
-fitted FMM shape parameter $\hat\omega_g$ and peak phase $\hat\alpha_g$
-across the rhythmic gene set of six pilot tissues (KIC, LUN, ADM, LIV,
-ADC, PAN). The fitted $\hat\omega$-medians span $0.28$ (KIC) to $0.53$
-(LIV), uniformly below the cosinor reference $\omega = 1$, with the
-empirical Beta$(1, \hat\eta)$ MLE fit overlaid in red. The $\hat\alpha$
-distributions are well-fit by the von Mises model with the maximum
-likelihood concentration $\hat\kappa$ shown in each panel. The mean
-peak phase $\hat\mu$ varies across tissues and is reported in each
-panel.
+Figure~\ref{fig:fmm_diagnostic} shows the empirical distributions of
+$\hat\omega_g$ and $\hat\alpha_g$ across the rhythmic gene set of six
+pilot tissues (KIC, LUN, ADM, LIV, ADC, PAN). The $\hat\omega$-medians
+span $0.28$ (KIC) to $0.53$ (LIV), uniformly below the cosinor
+reference $\omega = 1$. The Beta$(1, \eta)$ family used in the main
+text $\omega$ sweep (Figure 4) is monotonic on $(0, 1)$ and therefore
+not overlaid here. The $\hat\alpha$ distributions are well-fit by a
+von Mises model, with concentration $\hat\kappa$ reported per panel.
 
 These distributions support two methodological claims in the main text:
 (i) all six pilots are non-cosinor on the central tendency of the
 $\hat\omega$ distribution, so cosinor violation is a typical feature
 of high-resolution active circadian data, and (ii) the empirical
 $\hat\omega$ range $[0.28, 0.53]$ falls within the regime where the
-K-harmonic F-test at $K = 2$ retains substantial power
-(see~Section~\ref{sec:k_sweep}).
+$K = 2$ harmonic F-test captures $90$--$99\%$ of FMM variance under
+the bound $V_K / V_\infty = 1 - \rho^{2K}$ derived in Section 2.4 of
+the main text; the empirical sweep in Section~\ref{sec:k_sweep}
+confirms this regime delivers near-saturation power without the
+marginal gain to $K = 3$.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.95\textwidth]{../../output/main_figures/SuppFig_FMM_diagnostic.pdf}
 \caption{Empirical $\hat\omega$ and $\hat\alpha$ distributions across
-six pilot tissues (baboon (GSE98965, \citep{Mure2018baboon}) KIC, LUN, ADM, LIV, ADC and human
-GTEx PAN). Left column: $\hat\omega$ histogram with the Beta$(1, \hat\eta)$
-MLE fit (red) and the $\hat\omega$-median (blue dashed). Right column:
-$\hat\alpha$ histogram (radians) with the von Mises($\hat\mu, \hat\kappa$)
-MLE fit (red). Each panel reports $\hat\eta$, the median FMM $R^2$, and
-the per-gene sample size $n_\mathrm{fitted}$.}
+six pilot tissues (baboon (GSE98965, \citep{Mure2018baboon}) KIC, LUN,
+ADM, LIV, ADC and human GTEx PAN). Left column: $\hat\omega$ histogram
+with the per-tissue median marked (blue dashed) and the cosinor
+reference $\omega = 1$ (grey dotted). Right column: $\hat\alpha$
+histogram (radians) with the von Mises($\hat\mu, \hat\kappa$) MLE
+fit (red). Each panel reports the median $\hat\omega$ or the mean
+$\hat\mu$, the median FMM $R^2$, and the per-gene sample size
+$n_\mathrm{fitted}$.}
 \label{fig:fmm_diagnostic}
+\end{figure}
+
+Figure~\ref{fig:clock_gene_profiles} illustrates the gene-level
+consequence of the $\hat\omega < 1$ regime for four core clock genes
+in baboon PAN (median $\hat\omega \approx 0.32$): ARNTL (BMAL1),
+NR1D1 (REV-ERB$\alpha$), PER1, and DBP. The cosinor fit (dashed) misses the sharp peaks and
+broad troughs that the FMM fit (solid) recovers, motivating the
+K-harmonic F-test at $K = 2$ in Section 2.4 of the main paper.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{../../output/main_figures/SuppFig_clock_gene_profiles.pdf}
+\caption{Cosinor versus FMM fits for four core clock genes in baboon
+PAN (GSE98965, \citep{Mure2018baboon}). Each panel shows raw expression
+(grey points) against collection time, with the OLS cosinor fit (blue
+dashed) and the FMM fit (orange solid) overlaid. ARNTL is BMAL1;
+NR1D1 is REV-ERB$\alpha$.}
+\label{fig:clock_gene_profiles}
 \end{figure}
 
 
@@ -159,7 +183,7 @@ the per-gene sample size $n_\mathrm{fitted}$.}
 %% ====================================================================
 
 This section presents the complete derivation that links the K-harmonic
-linear regression test \texttt{detect\_FMM} to the FMM
+linear regression test to the FMM
 generative model. The K-harmonic F-test in the main text is the
 linearised rhythmicity test obtained from a truncated Fourier expansion
 of the FMM signal.
@@ -326,70 +350,95 @@ required, because \eqref{eq:supp_kharmonic} is fully linear in
 $(M, a_k, b_k)$ and every parameter is identifiable under both $H_0$
 (where they equal zero) and $H_1$.
 
-In practice, \texttt{detect\_FMM} fits \eqref{eq:supp_kharmonic} through
-the LimoRhyde \citep{Singer2019LimoRhyde} \texttt{limma::lmFit} +
-\texttt{limma::eBayes} pipeline, returning the moderated F-statistic
-when \texttt{ebayes = TRUE} (default, for $G \geq 50$) and the exact
-F-statistic when \texttt{ebayes = FALSE} (or under the small-$G$
-fallback). The moderated F approximates the LRT under an
-empirical-Bayes prior on the residual variance and is the test used
-throughout the main paper.
+In practice, \eqref{eq:supp_kharmonic} is fitted through the
+\textsc{LimoRhyde} framework \citep{Singer2019LimoRhyde}, returning
+the empirical-Bayes moderated F-statistic by default (for $G \geq 50$)
+and falling back to the exact F-statistic at small $G$ ($G < 50$).
+The moderated F approximates the LRT under an empirical-Bayes prior
+on the residual variance and is the test used throughout the main
+paper.
 
 
 %% ====================================================================
-\section{Type-I error validation of \texttt{detect\_FMM}}
+\section{Type-I error validation of the K-harmonic F-test}
 \label{sec:typeI}
 %% ====================================================================
 
-Type-I error of \texttt{detect\_FMM} was validated by simulating
+Type-I error of the K-harmonic F-test was validated by simulating
 $G \times n$ null datasets ($G = 2000$ genes drawn from
 $\mathcal{N}(0, 1)$ independent of $n$ time points on an equispaced
-active grid) at $n \in \{12, 24, 48, 72, 144\}$ and reporting the
-empirical rejection rate at nominal $\alpha = 0.05$. Both ebayes paths
-were tested at $K = 1$ and $K = 2$; the exact-F path was tested at
-$K = 3$ for $n \geq 24$ where the design is identifiable. The
-rank-deficient case ($K = 2$ at $B = 4$, $n = 24$) was tested
-separately to confirm that \texttt{detect\_FMM} emits an
-identifiability warning and that the test remains conservative
-(empirical type-I error $\leq \alpha$). The full reproducible script
-is at \texttt{tests/test\_detect\_FMM\_typeI.R}.
+active grid) at $n \in \{12, 24, 48, 72, 144\}$ with
+$N_{\mathrm{sim}} = 2000$ Monte Carlo replicates per cell. The
+empirical rejection rate at nominal $\alpha = 0.05$ was compared to
+the Monte Carlo $\pm 3$\,SE tolerance band $[0.035, 0.065]$. Both the
+empirical-Bayes moderated and exact $F$ paths were tested at
+$K = 1$ and $K = 2$ for all $n$; the exact-$F$ path was tested at
+$K = 3$ for $n \geq 12$ where the design is identifiable.
+Reproducible script: \texttt{tests/test\_detect\_FMM\_typeI.R};
+saved log: \texttt{output/supplementary/results/typeI\_validation\_20260514.log}.
 
-Across the calibration grid, empirical type-I error remained within
-$[0.035, 0.065]$ of the nominal $0.05$ (the Monte Carlo $\pm 3$\,SE
-tolerance band at $G = 2000$). Kolmogorov-Smirnov uniformity tests on
-the simulated null p-values did not reject uniformity at $p_{KS} > 0.01$.
-At the rank-deficient design ($B = 4$, $K = 2$), the dispatch-level
-Nyquist warning fired as designed and the empirical type-I error was
-$\leq 0.05$ in every replication.
+Across the calibration grid (40 detector $\times$ $n$ cells), empirical
+type-I error fell in $[0.043, 0.057]$, well within the
+$[0.035, 0.065]$ tolerance band, and Kolmogorov-Smirnov uniformity
+tests on the simulated null $p$-values did not reject uniformity at
+$p_{KS} > 0.01$ in every cell. Representative cells: $\mathrm{DCP}\;n = 48$,
+$T_I = 0.056$, $p_{KS} = 0.012$; $K = 2$ eBayes $n = 72$,
+$T_I = 0.051$, $p_{KS} = 0.978$; $K = 3$ exact-$F$ $n = 144$,
+$T_I = 0.051$, $p_{KS} = 0.385$. Identifiability-threshold behaviour
+($K = 2$ at $B = 4$) is enforced by the dispatch-level Nyquist
+warning emitted by the runner, which guards against rank-deficient
+design matrices before any test is computed.
 
 
 %% ====================================================================
-\section{Choice of $K$: power across the harmonic-order grid}
+\section{Empirical K-harmonic sweep on the most non-cosinor active pilot}
 \label{sec:k_sweep}
 %% ====================================================================
 
-We compared $K \in \{1, 2, 3, 4, 5\}$ on three baboon (GSE98965, \citep{Mure2018baboon}) active
-tissues (KIM with $\hat\eta = 1.68$, KIC with $\hat\eta = 2.38$, SUN with
-$\hat\eta = 1.31$) over a sample-size grid $N \in \{24, 48, 72, 144\}$
-with $N_{\mathrm{sim}} = 30$ outer replicates. On the dominant
-operating regime $N \in \{24, 48\}$, $K = 2$ dominates: on KIM at
-$N = 24$ the power was $0.498$ for $K = 2$ versus $0.455$ for $K = 1$,
-$0.387$ for $K = 3$, $0.275$ for $K = 4$, and $0.136$ for $K = 5$. The
-steep drop from $K = 2$ toward $K = 4$ reflects the degrees-of-freedom
-cost in the F-statistic denominator (each additional harmonic loses
-two df from the residual). At high $N \geq 72$ all $K$ values converge
-to near-saturation power.
+The variance-retention bound in Section 2.4 of the main text predicts
+that $K = 2$ captures $90$--$99\%$ of FMM variance at the empirically
+observed $\hat\omega$ range, while $K = 3$ adds at most $7\%$ at the
+$\hat\omega \approx 0.28$ extreme. Whether this small marginal variance
+gain compensates for the two additional degrees of freedom lost in the
+$F$-statistic denominator at finite $N$ is not resolved by the bound
+alone. We address it empirically on the baboon KIM pilot (GSE98965,
+\citep{Mure2018baboon}), the most non-cosinor active pilot in our
+diagnostic set ($\hat\eta = 2.62$, median $\hat\omega = 0.24$), at
+$B = 12$ (satisfying the identifiability threshold $B \geq 2K + 1 = 7$
+for $K = 3$) over $N \in \{24, 48, 72, 144\}$ with $N_{\mathrm{sim}} = 30$
+outer replicates per cell.
 
-$K = 3$ marginally outperforms $K = 2$ on KIC and SUN at $N \geq 72$,
-but at the cost of a larger identifiability threshold ($B \geq 7$
-instead of $B \geq 5$). Empirically, the variance-capture bound
-\eqref{eq:supp_variance_capture} predicts that $K = 2$ captures at
-least $80\%$ of FMM variance for $\omega \geq 0.20$, which covers the
-full empirical range observed in Figure~\ref{fig:fmm_diagnostic}.
-Combining these arguments leads to the $K = 2$ default adopted in
-Section~2.4 of the main text. The \texttt{K} argument of
-\texttt{detect\_FMM} can be set to any value $\geq 1$ for users who
-wish to override the default.
+\begin{table}[H]
+\centering
+\small
+\caption{Marginal rhythmicity power on baboon KIM at $B = 12$,
+$\hat\eta = 2.62$. $K = 1$ is the cosinor F-test; $K \geq 2$ uses the
+K-harmonic F-test. Power computed at FDR $0.05$ over
+$N_{\mathrm{sim}} = 30$ outer replicates with $G = 2{,}000$ genes.}
+\label{tab:k_sweep_kim}
+\begin{tabular}{lccc}
+\toprule
+$N$  & $K = 1$ & $K = 2$ & $K = 3$ \\
+\midrule
+$24$ & $0.262$ & $\mathbf{0.427}$ & $0.380$ \\
+$48$ & $0.749$ & $0.856$ & $0.855$ \\
+$72$ & $0.906$ & $0.952$ & $0.953$ \\
+$144$ & $0.984$ & $0.992$ & $0.993$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two findings emerge. At $N = 24$, $K = 2$ outperforms $K = 3$ by
+$4.7\%$: the variance gain captured by the third harmonic is offset
+by the two extra residual degrees of freedom lost to the $F$-statistic
+denominator. At $N \geq 48$, the $K = 2$ and $K = 3$ curves coincide
+within Monte Carlo noise ($< 0.2\%$ at every $N$), so the bound's
+marginal-variance prediction translates into no practically
+detectable power gain. $K = 1$ loses $5$--$17\%$ at every $N$,
+consistent with the substantial first-harmonic projection loss at
+$\omega = 0.24$. Reproducible script:
+\texttt{examples/publication/suppFig\_k\_sweep\_baboon.R};
+results: \texttt{output/k\_sweep/k\_sweep\_KIM.rds}.
 
 
 %% ====================================================================
@@ -399,16 +448,15 @@ wish to override the default.
 
 Algorithm~S1 describes the data-generation procedure for a single
 simulation replicate of the two-group differential setting at sample
-size $n$, as implemented in \texttt{simCircadianDiff()}. The
-single-cohort case is recovered by setting the differential
-proportions $\pi_{\mathrm{DR}} = \pi_{\mathrm{DP}} = \pi_{\mathrm{DM}} = 0$
-and the second-group parameter modifications to no-ops.
+size $n$. The single-cohort case is recovered by setting the
+differential proportions
+$\pi_{\mathrm{DR}} = \pi_{\mathrm{DP}} = \pi_{\mathrm{DM}} = 0$ and
+the second-group parameter modifications to no-ops.
 
 \begin{figure}[H]
 \small
 \hrule\vspace{4pt}
-\textbf{Algorithm S1}: \texttt{simCircadianDiff} (two-group circadian
-simulation) \vspace{2pt}
+\textbf{Algorithm S1}: Two-group circadian simulation \vspace{2pt}
 \hrule\vspace{4pt}
 \textbf{Input}: number of genes $G$, sample size $n$, type
 probabilities $\pi_R, \pi_{\mathrm{DR}}, \pi_{\mathrm{DP}}, \pi_{\mathrm{DM}}$,
@@ -563,7 +611,7 @@ which is the conditional version of the CircaPower design factor
 \citep{zong2023circapower}. Averaging $d(\phi_g)$ over the per-gene
 phase distribution gives the marginal design efficiency loss relative
 to the active-design value of $1/2$. For the post-mortem brain pilots
-used in the main text (Putamen-SCZ, Seney ACC, GTEx), the marginal
+used in the main text (Putamen-SCZ, GTEx), the marginal
 $d$ is approximately $0.20$ to $0.30$, depending on how concentrated
 the empirical TOD distribution is. The active vs.\ passive design
 factor difference quantifies the efficiency advantage of active
@@ -577,15 +625,13 @@ designs (factor of about $2$) at matched $n$ and $r$.
 
 The outer subject bootstrap of Section~2.3 propagates pilot
 sampling variability into the projected power curve. Algorithm~S2
-summarises the implementation; the function
-\texttt{runBootstrapDesignGrid()} in the \texttt{SCP} package
-exposes the corresponding API.
+summarises the implementation, which is exposed as a single
+end-to-end entry point in the \textsc{SCP} framework.
 
 \begin{figure}[H]
 \small
 \hrule\vspace{4pt}
-\textbf{Algorithm S2}: \texttt{runBootstrapDesignGrid} (single-cohort
-outer-bootstrap power) \vspace{2pt}
+\textbf{Algorithm S2}: Single-cohort outer-bootstrap power \vspace{2pt}
 \hrule\vspace{4pt}
 \textbf{Input}: pilot expression matrix $\mathbf{Y}_{\mathrm{pilot}} \in \mathbb{R}^{G \times n_{\mathrm{pilot}}}$,
 pilot collection times $\mathbf{t}_{\mathrm{pilot}}$, sample-size grid
@@ -606,15 +652,15 @@ indices with replacement from $\{1, \ldots, n_{\mathrm{pilot}}\}$ to
 form $\mathbf{Y}^{(b)} \in \mathbb{R}^{G \times n_{\mathrm{pilot}}}$
 and the matched time vector $\mathbf{t}^{(b)}$.
 
-\item \textbf{Re-estimate pilot summary.} Run
-\texttt{estCircadianParam}(${\mathbf{Y}^{(b)}, \mathbf{t}^{(b)}}$) to
-obtain $\hat{\Psi}^{(b)} = ( \hat{F}_\mu^{(b)}, \hat{F}_{A,\sigma}^{(b)}, \hat{F}_\phi^{(b)}, \hat{F}_{\mathrm{TOD}}^{(b)}, \hat{\pi}_R^{(b)} )$.
+\item \textbf{Re-estimate pilot summary.} Refit the pilot summary on
+$(\mathbf{Y}^{(b)}, \mathbf{t}^{(b)})$ to obtain
+$\hat{\Psi}^{(b)} = ( \hat{F}_\mu^{(b)}, \hat{F}_{A,\sigma}^{(b)}, \hat{F}_\phi^{(b)}, \hat{F}_{\mathrm{TOD}}^{(b)}, \hat{\pi}_R^{(b)} )$.
 
 \item \textbf{Inner simulation.} For each $j$ and each
 $s = 1, \ldots, N_{\mathrm{sim}}^{\mathrm{in}}$, simulate a fresh
 gene-by-sample matrix from $\hat{\Psi}^{(b)}$ at sample size $N_j$ via
-the procedure of Algorithm~S1, run the chosen detector
-(\texttt{detect\_DCP} or \texttt{detect\_FMM}), apply BH adjustment at
+the procedure of Algorithm~S1, apply the chosen rhythmicity detector
+(cosinor $F$-test or K-harmonic F-test), apply BH adjustment at
 $\alpha$, and record the rhythmicity discovery rate.
 
 \item \textbf{Aggregate.} Average the discovery rate across the

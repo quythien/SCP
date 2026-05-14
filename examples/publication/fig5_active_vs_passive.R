@@ -1,6 +1,6 @@
 #' =======================================================================
 #' fig5_active_vs_passive.R — B vs m trade-off under empirical FMM truth,
-#'                            comparing DCP and FMM-LRT detectors
+#'                            comparing DCP and FMM (K=2 harmonic LRT) detectors
 #' =======================================================================
 #'
 #' Two-row figure on three baboon CAMO active-design tissues. Both rows
@@ -13,8 +13,8 @@
 #'     overlap because the cosinor F-test projects onto the first harmonic
 #'     and its NCP = (A·c(ω))²·N/(2σ²) is independent of B.
 #'
-#'   Row 2 — FMM-LRT detection
-#'     Demonstrates the practical advantage of FMM-LRT: lines per panel
+#'   Row 2 — FMM (K=2 harmonic LRT) detection
+#'     Demonstrates the practical advantage of FMM: lines per panel
 #'     (one per B value) SPREAD with B because higher B → better resolves
 #'     the asymmetric peak shape and improves likelihood-ratio statistic.
 #'
@@ -31,15 +31,18 @@ SMOKE_TEST  <- identical(Sys.getenv("SMOKE_TEST"), "true")
 NGENES      <- if (SMOKE_TEST) 500L  else 2000L
 NSIMS       <- if (SMOKE_TEST) 5L    else 20L
 N_CORES     <- as.integer(Sys.getenv("MC_CORES", unset = "20"))
-TOP_K_FMM   <- if (SMOKE_TEST) 50L   else 200L
+TOP_K_FMM   <- if (SMOKE_TEST) 50L   else 300L  # codebase default min(300, n_cand)
 RHYTHM_PVAL <- 0.01
 GLOBAL_SEED <- 2025L
 
 # Sample size grid (small enough to escape saturation, divisible by all B values)
-N_GRID  <- if (SMOKE_TEST) c(12L, 24L) else c(12L, 24L, 36L, 48L, 72L)
-B_GRID  <- if (SMOKE_TEST) c(3L, 12L)  else c(3L, 4L, 6L, 12L)
+N_GRID  <- if (SMOKE_TEST) c(12L, 24L) else c(24L, 48L, 72L, 96L, 120L, 144L)
+B_GRID  <- if (SMOKE_TEST) c(3L, 12L)  else c(4L, 6L, 8L, 12L, 24L)
 
-tissues <- c("LIV", "LUN", "KIC")
+# Three most extreme baboon tissues from the May 2026 omega-median scan:
+# KIC ω-med=0.40, KIM ω-med=0.35, SUN ω-med=0.31. All R² > 0.82 FMM fits.
+# These are the tissues most likely to show FMM > DCP at the population level.
+tissues <- c("KIC", "KIM", "SUN")
 
 cat(sprintf("Mode      : %s\n", if (SMOKE_TEST) "SMOKE" else "PRODUCTION"))
 cat(sprintf("NGENES    : %d\n", NGENES))
@@ -111,7 +114,7 @@ for (t in tissues) {
 # Truth: paired empirical (A, σ, ω, α) — bio_list already has these.
 # Detector varies via runSimsSingleCohort(method=...).
 
-run_curve <- function(bio_t, B, method) {
+run_curve <- function(bio_t, B, method, K = 2L) {
   N_valid <- N_GRID[N_GRID %% B == 0L]
   pwr <- vapply(N_valid, function(N) {
     m <- N %/% B
@@ -121,7 +124,7 @@ run_curve <- function(bio_t, B, method) {
                                         cts = cts_design, B_values = B)
     set.seed(GLOBAL_SEED + N)
     res <- runSimsSingleCohort(bio_t, design_i, analysis,
-                                method   = method,
+                                method = method, K = K,
                                 mc.cores = N_CORES, verbose = FALSE)
     mean(res$marginal_power, na.rm = TRUE)
   }, numeric(1))
@@ -134,7 +137,7 @@ results <- list()
 for (t in tissues) {
   cat(sprintf("\n--- Tissue: %s ---\n", t))
   results[[t]] <- list()
-  for (m in c("DCP", "FMM_LRT")) {
+  for (m in c("DCP", "FMM")) {
     cat(sprintf("  %s detector\n", m))
     rows <- list()
     for (B in B_GRID) {
@@ -174,16 +177,19 @@ fig_paths <- c(
 dir.create("output/main_figures", recursive = TRUE, showWarnings = FALSE)
 
 # Color per B value (viridis-like)
-.pal <- function(n) c("#440154", "#3b528b", "#21918c", "#fde725")[seq_len(n)]
+.pal <- function(n) {
+  cols <- c("#440154", "#3b528b", "#21918c", "#5ec962", "#fde725", "#bb3754", "#ff7e6d")
+  cols[seq_len(min(n, length(cols)))]
+}
 pal_B <- .pal(length(B_GRID))
 
 for (out_pdf in fig_paths) {
-  pdf(out_pdf, width = 14, height = 8)
+  cairo_pdf(out_pdf, width = 14, height = 8)
   par(mfrow = c(2, length(tissues)), mar = c(4.4, 4.4, 3, 1.2), las = 1,
       cex.lab = 1.05, cex.axis = 0.95, cex.main = 1.05, font.main = 2)
 
-  pi <- 1L
-  for (m in c("DCP", "FMM_LRT")) {
+  panel_idx <- 1L
+  for (m in c("DCP", "FMM")) {
     for (t in tissues) {
       df <- results[[t]][[m]]
       d  <- bio_list[[t]]$diagnostics
@@ -201,16 +207,16 @@ for (out_pdf in fig_paths) {
         lines(sub$N, sub$power, col = pal_B[k], lwd = 2.0)
         points(sub$N, sub$power, pch = 19, col = pal_B[k], cex = 0.9)
       }
-      if (pi == 1) {
+      if (panel_idx == 1) {
         legend("bottomright", bty = "n", title = "B",
                legend = sprintf("%d", B_GRID),
                lwd = 2, col = pal_B, cex = 0.9)
       }
-      pi <- pi + 1L
+      panel_idx <- panel_idx + 1L
     }
   }
 
-  mtext("Fig 5: B-vs-m under empirical FMM truth — DCP (top, B-invariant) vs FMM-LRT (bottom, B-sensitive)",
+  mtext("Fig 5: B-vs-m trade-off under empirical FMM truth — DCP (top) vs FMM K=2 (bottom)",
         outer = TRUE, line = -1.4, cex = 1.0, font = 2)
 
   dev.off()

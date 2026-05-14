@@ -2102,6 +2102,32 @@ detect_FMM <- function(expr,
   }
   X <- cbind(intercept = 1, do.call(cbind, basis_list))   # n x (2K+1)
 
+  # Identifiability guard: if the design matrix is rank-deficient (fewer than
+  # 2K+1 distinct sampling phases per period), at least one harmonic
+  # coefficient is non-estimable and limma::topTable() fails when asked to
+  # subset to that coefficient. Rather than propagating that failure, emit
+  # the same Nyquist warning as above (it is the operational signal that
+  # the test is undefined on this design) and return a conservative null
+  # result: F=0, p=1, R^2=NA. This keeps the function safe to call directly,
+  # outside the runner that performs an earlier dispatch-level check.
+  # TODO: once limma exposes a `coef` argument that tolerates non-estimable
+  # columns, prefer that path over the conservative fallback.
+  rank_X <- qr(X)$rank
+  if (rank_X < ncol(X)) {
+    warning(sprintf(
+      "detect_FMM: design matrix is rank-deficient (rank %d of %d columns); the K=%d test is not identifiable on this design. Returning conservative null (F=0, p=1, R^2=NA).",
+      rank_X, ncol(X), K))
+    return(list(
+      F.stat = rep(0, G),
+      p.value = rep(1, G),
+      adj.p.value = rep(1, G),
+      R2 = rep(NA_real_, G),
+      df1 = length(setdiff(colnames(X), "intercept")),
+      df2 = max(0, n - rank_X),
+      detected = rep(FALSE, G)
+    ))
+  }
+
   # eBayes variance shrinkage borrows information across genes. With too
   # few genes the prior degenerates; fall back to unshrunk in that case.
   if (isTRUE(ebayes) && G < 50L) {
