@@ -212,7 +212,7 @@ for (out_pdf in fig_paths) {
   # --- Panel a (left half): omega illustration ---
   plot(NA, xlim = c(0, 24), ylim = c(-1.2, 1.2),
        xlab = "Time (h)", ylab = "FMM signal y(t)",
-       main = expression(omega ~ "shape (alpha = 12 h, beta = 0)"),
+       main = expression(omega ~ "shape (alpha = 12 h)"),
        xaxs = "i")
   panel_label("a")
   abline(h = 0, col = "grey85", lwd = 0.6)
@@ -229,7 +229,7 @@ for (out_pdf in fig_paths) {
   # --- Panel a (right half): alpha illustration ---
   plot(NA, xlim = c(0, 24), ylim = c(-1.2, 1.2),
        xlab = "Time (h)", ylab = "FMM signal y(t)",
-       main = expression(alpha ~ "peak shift (omega = 0.4, beta = 0)"),
+       main = expression(alpha ~ "peak shift (omega = 0.4)"),
        xaxs = "i")
   abline(h = 0, col = "grey85", lwd = 0.6)
   for (k in seq_along(ALPHA_DEMO)) {
