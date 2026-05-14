@@ -48,7 +48,7 @@ ensures that reported $\tilde r$ values are directly comparable across
 pilots and align with the effect-size strength that the simulation
 machinery actually uses.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \small
 \caption{Pilot datasets used in the main-text figures. For active
@@ -69,8 +69,8 @@ Species & Pilot dataset & $n_{\mathrm{pilot}}$ & Design ($B$) & $\tilde r$ & $\h
 \midrule
 \multicolumn{8}{l}{\textit{Active-design pilots}} \\
 \midrule
-\textit{P.\ anubis}  & GSE98965 KIM  & $12$ & active ($12$) & $\approx 2.6$  & $0.24$ & $2.62$ & Fig.~5 \\
-\textit{P.\ anubis}  & GSE98965 LUN  & $12$ & active ($12$) & $1.72$ & $0.41$ & $1.80$ & Fig.~4 \\
+\textit{P.\ anubis}  & GSE98965 KIM (kidney medulla)  & $12$ & active ($12$) & $\approx 2.6$  & $0.24$ & $2.62$ & Fig.~5 \\
+\textit{P.\ anubis}  & GSE98965 LUN (lung)  & $12$ & active ($12$) & $1.72$ & $0.41$ & $1.80$ & Fig.~4 \\
 \midrule
 \multicolumn{8}{l}{\textit{Passive-design pilots}} \\
 \midrule
@@ -88,7 +88,7 @@ $0.28$ (KIC) to $0.53$ (LIV), bracketing the empirically observed
 non-cosinor regime that motivates the K-harmonic F-test
 default $K = 2$.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \small
 \caption{GSE98965 baboon active-design tissues with empirical FMM
@@ -143,7 +143,7 @@ the main text; the empirical sweep in Section~\ref{sec:k_sweep}
 confirms this regime delivers near-saturation power without the
 marginal gain to $K = 3$.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{../../output/main_figures/SuppFig_FMM_diagnostic.pdf}
 \caption{Empirical $\hat\omega$ and $\hat\alpha$ distributions across
@@ -165,7 +165,7 @@ NR1D1 (REV-ERB$\alpha$), PER1, and DBP. The cosinor fit (dashed) misses the shar
 broad troughs that the FMM fit (solid) recovers, motivating the
 K-harmonic F-test at $K = 2$ in Section 2.4 of the main paper.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.85\textwidth]{../../output/main_figures/SuppFig_clock_gene_profiles.pdf}
 \caption{Cosinor versus FMM fits for four core clock genes in baboon
@@ -193,7 +193,7 @@ of the FMM signal.
 The Frequency Modulated M\"{o}bius model \citep{rueda2019fmm} represents
 a single rhythmic gene's expression profile as
 \begin{equation}
-y(t) = M + A \cos\!\big\{ \beta + u(t) \big\} + \varepsilon,
+y(t) = \mu + A \cos\!\big\{ \beta + u(t) \big\} + \varepsilon,
 \qquad \varepsilon \sim \mathcal{N}(0, \sigma^2),
 \label{eq:supp_fmm}
 \end{equation}
@@ -203,7 +203,7 @@ u(t) = 2 \arctan\!\left( \omega \tan\!\frac{t - \alpha}{2} \right),
 \qquad \omega \in (0, 1].
 \label{eq:supp_phase_xform}
 \end{equation}
-Here $M$ is the mesor, $A \geq 0$ the amplitude, $\alpha \in [0, 2\pi)$
+Here $\mu$ is the mesor, $A \geq 0$ the amplitude, $\alpha \in [0, 2\pi)$
 the peak location, $\beta \in [0, 2\pi)$ the orientation, and $\omega$
 the shape parameter; $\omega = 1$ recovers a pure sinusoid (cosinor).
 
@@ -244,10 +244,10 @@ e^{i u(t)} = -\rho \;+\; (1 - \rho^2) \sum_{k=1}^{\infty} \rho^{k-1} e^{iks}.
 Taking real parts and incorporating $\beta$ yields the FMM signal as an
 exact infinite Fourier series:
 \begin{equation}
-y(t) = M' + A(1 - \rho^2)
+y(t) = \mu' + A(1 - \rho^2)
 \sum_{k=1}^{\infty} \rho^{k-1} \cos\!\big\{ k(t - \alpha) + \beta \big\}
 + \varepsilon,
-\qquad M' = M - A \rho \cos\beta.
+\qquad \mu' = \mu - A \rho \cos\beta.
 \label{eq:supp_fmm_fourier}
 \end{equation}
 The $k$th-harmonic amplitude is
@@ -271,7 +271,7 @@ by truncation at $K$ is therefore
 Table~\ref{tab:variance_capture} reports
 \eqref{eq:supp_variance_capture} across $\omega \in [0.1, 0.5]$.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Variance fraction $V_K / V_\infty$ captured by truncating the
 FMM Fourier series at $K$ harmonics, as a function of the FMM shape
@@ -302,7 +302,7 @@ $\cos(k \alpha - \beta) \cos(k \omega_0 t) + \sin(k \alpha - \beta) \sin(k \omeg
 (with $\omega_0 = 2\pi / T$ the fundamental angular frequency) gives
 the truncated signal
 \begin{equation}
-y(t) \approx M + \sum_{k=1}^{K} \big[ a_k \cos(k \omega_0 t) + b_k \sin(k \omega_0 t) \big] + \varepsilon
+y(t) \approx \mu + \sum_{k=1}^{K} \big[ a_k \cos(k \omega_0 t) + b_k \sin(k \omega_0 t) \big] + \varepsilon
 \label{eq:supp_truncated}
 \end{equation}
 with $a_k = A (1 - \rho^2) \rho^{k-1} \cos(\beta - k\alpha)$ and
@@ -312,7 +312,7 @@ $\sqrt{a_k^2 + b_k^2} = A (1 - \rho^2) |\rho|^{k-1}$. Releasing this
 constraint and treating each $(a_k, b_k)$ as a free parameter yields
 the K-harmonic linear regression
 \begin{equation}
-y(t) = M + \sum_{k=1}^{K} \big[ a_k \cos(k \omega_0 t) + b_k \sin(k \omega_0 t) \big] + \varepsilon,
+y(t) = \mu + \sum_{k=1}^{K} \big[ a_k \cos(k \omega_0 t) + b_k \sin(k \omega_0 t) \big] + \varepsilon,
 \label{eq:supp_kharmonic}
 \end{equation}
 with $2K + 1$ free parameters: an intercept and $2K$ harmonic
@@ -325,7 +325,7 @@ We test the null hypothesis of no rhythm,
 H_0:\; a_1 = b_1 = a_2 = b_2 = \cdots = a_K = b_K = 0,
 \end{equation}
 against the alternative that at least one $(a_k, b_k) \neq (0, 0)$.
-Stacking the $n$ observations into $\mathbf{y} \in \mathbb{R}^n$ and
+Stacking the $N$ observations into $\mathbf{y} \in \mathbb{R}^n$ and
 building the design matrix
 \begin{equation}
 \mathbf{X}_K = \big[ \mathbf{1},\; \cos(\omega_0 \mathbf{t}),\; \sin(\omega_0 \mathbf{t}),\; \ldots,\; \cos(K \omega_0 \mathbf{t}),\; \sin(K \omega_0 \mathbf{t}) \big]
@@ -334,7 +334,7 @@ building the design matrix
 the nested-model F-statistic is
 \begin{equation}
 F = \frac{( \mathrm{SSE}_0 - \mathrm{SSE}_K ) / (2K)}
-        {\mathrm{SSE}_K / (n - 2K - 1)},
+        {\mathrm{SSE}_K / (N - 2K - 1)},
 \label{eq:supp_f_stat}
 \end{equation}
 where $\mathrm{SSE}_0 = \sum_i (y_i - \bar y)^2$ and
@@ -347,7 +347,7 @@ F \mid H_0 \sim F(2K,\; n - 2K - 1) \quad \text{(exact, finite-sample)}.
 \end{equation}
 No asymptotics, boundary correction, or empirical calibration is
 required, because \eqref{eq:supp_kharmonic} is fully linear in
-$(M, a_k, b_k)$ and every parameter is identifiable under both $H_0$
+$(\mu, a_k, b_k)$ and every parameter is identifiable under both $H_0$
 (where they equal zero) and $H_1$.
 
 In practice, \eqref{eq:supp_kharmonic} is fitted through the
@@ -366,18 +366,18 @@ paper.
 
 Type-I error of the K-harmonic F-test was validated by simulating
 $G \times n$ null datasets ($G = 2000$ genes drawn from
-$\mathcal{N}(0, 1)$ independent of $n$ time points on an equispaced
+$\mathcal{N}(0, 1)$ independent of $N$ time points on an equispaced
 active grid) at $n \in \{12, 24, 48, 72, 144\}$ with
 $N_{\mathrm{sim}} = 2000$ Monte Carlo replicates per cell. The
 empirical rejection rate at nominal $\alpha = 0.05$ was compared to
 the Monte Carlo $\pm 3$\,SE tolerance band $[0.035, 0.065]$. Both the
 empirical-Bayes moderated and exact $F$ paths were tested at
-$K = 1$ and $K = 2$ for all $n$; the exact-$F$ path was tested at
+$K = 1$ and $K = 2$ for all $N$; the exact-$F$ path was tested at
 $K = 3$ for $n \geq 12$ where the design is identifiable.
 Reproducible script: \texttt{tests/test\_detect\_FMM\_typeI.R};
 saved log: \texttt{output/supplementary/results/typeI\_validation\_20260514.log}.
 
-Across the calibration grid (40 detector $\times$ $n$ cells), empirical
+Across the calibration grid (40 detector $\times$ $N$ cells), empirical
 type-I error fell in $[0.043, 0.057]$, well within the
 $[0.035, 0.065]$ tolerance band, and Kolmogorov-Smirnov uniformity
 tests on the simulated null $p$-values did not reject uniformity at
@@ -408,7 +408,7 @@ $B = 12$ (satisfying the identifiability threshold $B \geq 2K + 1 = 7$
 for $K = 3$) over $N \in \{24, 48, 72, 144\}$ with $N_{\mathrm{sim}} = 30$
 outer replicates per cell.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \small
 \caption{Marginal rhythmicity power on baboon KIM at $B = 12$,
@@ -448,17 +448,17 @@ results: \texttt{output/k\_sweep/k\_sweep\_KIM.rds}.
 
 Algorithm~S1 describes the data-generation procedure for a single
 simulation replicate of the two-group differential setting at sample
-size $n$. The single-cohort case is recovered by setting the
+size $N$. The single-cohort case is recovered by setting the
 differential proportions
 $\pi_{\mathrm{DR}} = \pi_{\mathrm{DP}} = \pi_{\mathrm{DM}} = 0$ and
 the second-group parameter modifications to no-ops.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \small
 \hrule\vspace{4pt}
 \textbf{Algorithm S1}: Two-group circadian simulation \vspace{2pt}
 \hrule\vspace{4pt}
-\textbf{Input}: number of genes $G$, sample size $n$, type
+\textbf{Input}: number of genes $G$, sample size $N$, type
 probabilities $\pi_R, \pi_{\mathrm{DR}}, \pi_{\mathrm{DP}}, \pi_{\mathrm{DM}}$,
 empirical pilot distributions $\hat{F}_\mu, \hat{F}_{A,\sigma}, \hat{F}_\phi$
 and empirical TOD distribution $\hat{F}_{\mathrm{TOD}}$, design type
@@ -499,7 +499,7 @@ $i = 1, \ldots, n$, draw collection times $t_{k,i}$: from
 $\hat{F}_{\mathrm{TOD}}$ for passive designs, or from the equispaced
 active grid otherwise. This second seeding step makes time-of-day
 draws sample-size-specific while preserving the per-gene biological
-parameters across $n$.
+parameters across $N$.
 
 \item \textbf{Generate expression}. For each gene $g$, group $k$, and
 sample $i$,
@@ -519,8 +519,8 @@ phase differences, and mesor differences.
 
 The two-stage seeding (steps 1 and 4) holds the gene-type assignment
 and baseline parameters fixed across sample sizes within a simulation
-replicate while reseeding only the $n$-dependent quantities (collection
-times and residual noise). This isolates the effect of $n$ on power
+replicate while reseeding only the $N$-dependent quantities (collection
+times and residual noise). This isolates the effect of $N$ on power
 from incidental variation in the gene-level biological configuration.
 
 
@@ -533,7 +533,7 @@ This section provides the mathematical derivation underlying the
 $B$-invariance result stated in the main text Section~2.5. Under
 balanced equally spaced sampling with $B \geq 3$ distinct time points
 and $m$ replicates per time point ($n = B m$), the harmonic-coefficient
-block of the cosinor design matrix is diagonal and proportional to $n$,
+block of the cosinor design matrix is diagonal and proportional to $N$,
 which removes any dependence of the noncentrality on $B$.
 
 \subsection{Setup}
@@ -581,7 +581,7 @@ parameter of the F-test for $H_0: A_g = 0$ is therefore
 \qquad r_g = A_g / \sigma_g,
 \label{eq:supp_ncp_cosinor}
 \end{equation}
-which depends on $n$ and the per-gene effect size $r_g$ but not on $B$.
+which depends on $N$ and the per-gene effect size $r_g$ but not on $B$.
 This is the design factor $d(\phi) = 1 / 2$ uniformly in $\phi$ used in
 the main text. Identical reasoning at each harmonic block of the
 K-harmonic regression \eqref{eq:supp_kharmonic} extends the result to
@@ -599,7 +599,7 @@ For passive designs, the per-gene design factor depends on the
 empirical TOD distribution rather than on a chosen grid. Let
 $\hat{F}_{\mathrm{TOD}}$ denote the empirical distribution of collection
 times across the planned cohort (or its bootstrap-resampled equivalent
-in Section~\ref{sec:bootstrap_impl}). For a planned sample size $n$,
+in Section~\ref{sec:bootstrap_impl}). For a planned sample size $N$,
 draw $t_{i} \sim \hat{F}_{\mathrm{TOD}}$ independently for
 $i = 1, \ldots, n$; the conditional design factor is then
 \begin{equation}
@@ -615,7 +615,7 @@ used in the main text (Putamen-SCZ, GTEx), the marginal
 $d$ is approximately $0.20$ to $0.30$, depending on how concentrated
 the empirical TOD distribution is. The active vs.\ passive design
 factor difference quantifies the efficiency advantage of active
-designs (factor of about $2$) at matched $n$ and $r$.
+designs (factor of about $2$) at matched $N$ and $r$.
 
 
 %% ====================================================================
@@ -628,7 +628,7 @@ sampling variability into the projected power curve. Algorithm~S2
 summarises the implementation, which is exposed as a single
 end-to-end entry point in the \textsc{SCP} framework.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \small
 \hrule\vspace{4pt}
 \textbf{Algorithm S2}: Single-cohort outer-bootstrap power \vspace{2pt}
@@ -689,7 +689,7 @@ $n_{\mathrm{pilot}}$.
 
 
 %% ====================================================================
-\bibliographystyle{plain}
+\bibliographystyle{plainnat}
 \bibliography{references}
 
 \end{document}

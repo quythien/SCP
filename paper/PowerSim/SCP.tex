@@ -55,8 +55,8 @@ These gaps motivate the development of \textbf{SCP} (Simulation-based Circadian 
 \subsection{Power calculation for circadian biomarker detection in a single cohort}
 \label{sec:single_cohort}
 
-For a single cohort of $n$ subjects with sample collection time-of-day (TOD)
-$t_1,\ldots,t_n\in[0,24)$, the expression of gene $g$ follows the cosinor
+For a single cohort of $N$ subjects with sample collection time-of-day (TOD)
+$t_1,\ldots,t_N\in[0,24)$, the expression of gene $g$ follows the cosinor
 model \citep{cornelissen2014cosinor}
 \begin{equation}
 y_{gi}
@@ -75,8 +75,8 @@ $\phi_g\in[0,24)$ is the acrophase, and $\sigma_g$ is the noise level. \citet{zo
 \begin{equation}
 F_g
 =
-\frac{(\mathrm{TSS}_g - \mathrm{RSS}_g)/2}{\mathrm{RSS}_g/(n-3)}
-\sim F(2,\, n-3),
+\frac{(\mathrm{TSS}_g - \mathrm{RSS}_g)/2}{\mathrm{RSS}_g/(N-3)}
+\sim F(2,, N-3),
 \label{eq:rhythm_f_test}
 \end{equation}
 where $\mathrm{RSS}_g$ and $\mathrm{TSS}_g$ are the residual and total sums of
@@ -85,28 +85,28 @@ correction \citep{benjamini1995controlling} at nominal FDR level $\alpha$
 controls FDR for rhythmicity detection.
 
 For power calculation, under the alternative hypothesis $H_A$, the $F$-statistic follows a noncentral $F$-distribution:
-$F_g\sim  F\bigl( 2,\, n-3, \, \lambda_g\bigr)$ with degrees of freedom $2$ and $n-3$ and noncentrality parameter $\lambda_g$. The per-gene statistical power at sample size $n$ is then
+$F_g\sim  F\bigl( 2,, N-3, \, \lambda_g\bigr)$ with degrees of freedom $2$ and $N-3$ and noncentrality parameter $\lambda_g$. The per-gene statistical power at sample size $N$ is then
 \begin{equation}
 \mathrm{Power}_g(n)
 =
-1 - F\bigl(q_{\alpha}; 2,\, n-3, \, \lambda_g\bigr),
+1 - F\bigl(q_{\alpha}; 2,, N-3, \, \lambda_g\bigr),
 \label{eq:circapower_formula}
 \end{equation}
 
-\noindent where $q_{\alpha} = F^{-1}(1 - \alpha;\, 2,\, n - 3)$ is the null rejection threshold at level $\alpha$, $F(\cdot;\, a, b)$ denotes the CDF of a central $F(a, b)$, and $F(\cdot;\, a, b, \lambda)$ denotes the CDF of a noncentral $F(a, b, \lambda)$.
+\noindent where $q_{\alpha} = F^{-1}(1 - \alpha;, 2,, N - 3)$ is the null rejection threshold at level $\alpha$, $F(\cdot;\, a, b)$ denotes the CDF of a central $F(a, b)$, and $F(\cdot;\, a, b, \lambda)$ denotes the CDF of a noncentral $F(a, b, \lambda)$.
 
 \citet{zong2023circapower} showed that
 \begin{equation}
-\lambda_g = r_g^2 \cdot n \cdot d(\phi_g),
+\lambda_g = r_g^2 \cdot N \cdot d(\phi_g),
 \label{eq:ncp}
 \end{equation}
 where $r_g = A_g/\sigma_g$ is the intrinsic effect size of gene $g$, and the design factor $d(\phi_g)$ captures how well the sample collection TOD $(t_1,\cdots, t_n)$ spread on time domain:
 \begin{equation}
 d(\phi_g)
 =
-\frac{1}{n}\sum_{i=1}^n \cos^2\bigl(\omega_0 (t_i - \phi_g)\bigr)
+\frac{1}{N}\sum_{i=1}^N \cos^2\bigl(\omega_0 (t_i - \phi_g)\bigr)
 -
-\left(\frac{1}{n}\sum_{i=1}^n \cos\bigl(\omega_0 (t_i - \phi_g)\bigr)\right)^{\!2}.
+\left(\frac{1}{N}\sum_{i=1}^N \cos\bigl(\omega_0 (t_i - \phi_g)\bigr)\right)^{\!2}.
 \label{eq:design_factor_circapower}
 \end{equation}
 
@@ -114,7 +114,7 @@ d(\phi_g)
 % is reserved for Section~\ref{sec:active_passive} and Supplementary~S6.
 For balanced equally spaced active designs with $B\geq 3$ time points,
 $d(\phi_g)=1/2$ for all phases, so \eqref{eq:ncp} reduces to
-$\lambda_g = r_g^2 n / 2$ and power depends only on $r_g$ and $n$; see
+$\lambda_g = r_g^2 N / 2$ and power depends only on $r_g$ and $N$; see
 Section~\ref{sec:active_passive} and Supplementary~S6.
 
 In transcriptome-wide studies, however, $r_g$ varies substantially across
@@ -183,7 +183,7 @@ power curve, which Section~\ref{sec:bootstrap} quantifies through a
 nonparametric bootstrap.
 
 \emph{Step 2: Data generation.}
-For each simulation replicate $s=1,\ldots,S$ and candidate sample size $n$,
+For each simulation replicate $s=1,\ldots,S$ and candidate sample size $N$,
 draw rhythmicity indicators $Z_{g,s}^R \sim \mathrm{Bernoulli}(\hat{\pi}_R)$
 independently for $g=1,\ldots,G$. Conditional on $Z_{g,s}^R$, observations are
 generated from a two-component mixture model
@@ -217,7 +217,7 @@ from the empirical marginal distribution of $\sigma$ implied by $\hat{F}_{A,\sig
 An \emph{active} design specifies $B$ distinct time points with $m_b$ replicates
 each and total $n=\sum_b m_b$; a \emph{passive} design draws collection times
 from $\hat{F}_{\mathrm{TOD}}$. For balanced equally spaced active designs with
-$B\geq 3$, $d(\phi)=1/2$ for all phases, so power depends only on total $n$;
+$B\geq 3$, $d(\phi)=1/2$ for all phases, so power depends only on total $N$;
 for passive designs the realized $d(\phi_g)$ is computed from the observed
 collection times via \eqref{eq:design_factor_circapower}, varies by gene and
 replicate, and \textsc{SCP} reports design-factor diagnostics. 
@@ -235,7 +235,7 @@ replicate $s$).
 With $Z_{g,s}^R\in\{0,1\}$ the true rhythmicity status assigned in Step~2,
 empirical power is
 \[
-\widehat{\mathrm{Power}}(n)
+\widehat{\mathrm{Power}}(N)
 =
 \frac{1}{S}\sum_{s=1}^S
 \frac{\sum_g D_{g,s}Z_{g,s}^R}{\sum_g Z_{g,s}^R},
@@ -261,7 +261,7 @@ A computationally efficient alternative to the full simulation pipeline is also 
 is evaluated gene-by-gene at each pilot gene's estimated
 $\hat{r}_g = \hat{A}_g/\hat{\sigma}_g$ and design factor
 $\hat{d}(\hat{\phi}_g)$, and the results are averaged to yield
-$\widehat{\mathrm{Power}}_{\mathrm{CF}}(n)$.
+$\widehat{\mathrm{Power}}_{\mathrm{CF}}(N)$.
 This approximation is computationally efficient, but it does not propagate
 genome-wide FDR or the joint $(A_g,\sigma_g)$ heterogeneity. The full
 simulation-based pipeline is therefore recommended when transcriptome-wide
@@ -409,7 +409,7 @@ averaging across simulation replicates.
 
 The pipeline of Section~\ref{sec:single_cohort} is a two-stage plug-in
 procedure: the pilot summary $\hat{\Psi}$ is estimated once and the projected
-power $\widehat{\mathrm{Power}}(n)$ is computed conditional on $\hat{\Psi}$.
+power $\widehat{\mathrm{Power}}(N)$ is computed conditional on $\hat{\Psi}$.
 This treats the pilot as if its parameters were known, and therefore
 underrepresents uncertainty in the design recommendation when the pilot
 itself is small or weakly informative. In small clinical cohorts the
@@ -424,11 +424,11 @@ different pilot been drawn from the same population.
 pilot; \emph{(ii)} re-fit the cosinor model and recompute the pilot summary
 $\hat{\Psi}^{(b)}$ on the bootstrap pilot; \emph{(iii)} run $N_{\mathrm{sim}}^{\mathrm{in}}$
 inner simulations through the Step~2--Step~4 pipeline to obtain
-$\widehat{\mathrm{Power}}^{(b)}(n)$. The bootstrap mean and pointwise quantiles
+$\widehat{\mathrm{Power}}^{(b)}(N)$. The bootstrap mean and pointwise quantiles
 \[
-\bar{\mathrm{Power}}(n) = \frac{1}{B_{\mathrm{out}}} \sum_{b=1}^{B_{\mathrm{out}}} \widehat{\mathrm{Power}}^{(b)}(n),
+\bar{\mathrm{Power}}(N) = \frac{1}{B_{\mathrm{out}}} \sum_{b=1}^{B_{\mathrm{out}}} \widehat{\mathrm{Power}}^{(b)}(N),
 \qquad
-\big[\widehat{\mathrm{Power}}^{(b)}(n)\big]_{(b)\,2.5\%}^{(b)\,97.5\%},
+\big[\widehat{\mathrm{Power}}^{(b)}(N)\big]_{(b)\,2.5\%}^{(b)\,97.5\%},
 \]
 furnish a bootstrap-corrected projected power curve and a 95\% confidence
 band that reflects the joint variability of $(\hat{F}_{A,\sigma},
@@ -466,8 +466,9 @@ phase-dispersion parameters of the data-generating process.
 
 Across the six baboon (GSE98965, \citep{Mure2018baboon}) active-design tissues, FMM
 \citep{rueda2019fmm} pilot fits yield $\hat{\omega}$ medians from $0.32$
-(KIC) to $0.57$ (LIV), far below the cosinor reference $\omega = 1$
-(Supplementary Figure~S1). The FMM goodness-of-fit median $R^2$ is
+(KIC, kidney cortex) to $0.57$ (LIV, baboon liver, distinct from the
+human GTEx Liver used in Figures~\ref{fig:sc_adrliv}--\ref{fig:diff_adrliv}),
+far below the cosinor reference $\omega = 1$ (Supplementary Figure~S1). The FMM goodness-of-fit median $R^2$ is
 $0.82$--$0.93$ on these tissues, while cosinor $R^2$ on the same genes
 is typically lower. Cosinor violation is therefore a typical feature of
 high-resolution active-design data, not a hypothetical concern.
@@ -541,18 +542,13 @@ amplitude, is invariant in $\beta$.
 The natural likelihood-ratio test of $H_0: A = 0$ in the nonlinear
 parameterization \eqref{eq:fmm_model} runs into the Davies boundary
 problem \citep{Davies1977,Davies1987}: under $H_0$ the parameters
-$\{\beta, \alpha, \omega\}$ are unidentifiable (they multiply zero), and
-the LRT statistic does not converge to a $\chi^2$ distribution; instead it
-converges to the supremum of a Gaussian process over the unidentifiable
-nuisance space. The null has no closed form and requires empirical
-calibration; in our hands the calibrated test was about $50\times$ slower
-than the cosinor $F$-test and inflated critical values relative to nominal
-$F$-thresholds (the ``Davies tax''). The K-harmonic linearisation introduced
-below avoids the boundary problem entirely.
+$\{\beta, \alpha, \omega\}$ are unidentifiable, so the null
+distribution is not $\chi^2$ and requires empirical calibration,
+making the approach less convenient for routine power analysis. The
+K-harmonic linearisation introduced below avoids this boundary
+problem entirely.
 
-Truncating \eqref{eq:fmm_fourier} at $K$ harmonics and \emph{releasing} the
-geometric-decay constraint, that is, letting the harmonic coefficients
-$(a_k, b_k)$ be free, yields the linear regression
+We approximate the FMM waveform by truncating \eqref{eq:fmm_fourier} at $K$ harmonics. We then release the geometric-decay constraint and treat the harmonic coefficients $(a_k, b_k)$ as free parameters, which yields the linear regression
 \begin{equation}
 y(t) = \mu + \sum_{k=1}^{K} \big[ a_k \cos(k\omega_0 t) + b_k \sin(k\omega_0 t) \big] + \varepsilon,
 \qquad \omega_0 = \frac{2\pi}{24},
@@ -566,9 +562,9 @@ H_0: a_1 = b_1 = \cdots = a_K = b_K = 0,
 and is tested by the standard nested $F$-statistic
 \begin{equation}
 F_K =
-\frac{(\mathrm{SSE}_0 - \mathrm{SSE}_K)/(2K)}{\mathrm{SSE}_K / (n - 2K - 1)},
+\frac{(\mathrm{SSE}_0 - \mathrm{SSE}_K)/(2K)}{\mathrm{SSE}_K / (N - 2K - 1)},
 \qquad
-F_K \mid H_0 \;\sim\; F(2K,\, n - 2K - 1)
+F_K \mid H_0 \;\sim\; F(2K,\, N - 2K - 1)
 \quad\text{(exact, finite-sample)},
 \label{eq:Kharmonic_F}
 \end{equation}
@@ -576,7 +572,7 @@ where $\mathrm{SSE}_0$ and $\mathrm{SSE}_K$ are the residual sums of squares
 under the intercept-only and full $K$-harmonic fits. Because
 \eqref{eq:Kharmonic_model} is linear in $(\mu, a_k, b_k)$ and all parameters
 are identifiable under both $H_0$ and $H_1$, the F-distribution applies
-exactly under Gaussianity, with no Davies tax and no empirical calibration.
+exactly under Gaussianity, with no boundary problem and no empirical calibration.
 At $K = 1$ the test reduces to the cosinor $F$-test
 \eqref{eq:rhythm_f_test} (DCP). The full derivation, including the
 M\"{o}bius reparameterisation, geometric Fourier expansion, and
@@ -670,12 +666,7 @@ invariant in $\sigma_\alpha$ at fixed waveform shape.
 \subsection{Active vs passive design}
 \label{sec:active_passive}
 
-The two preceding sections motivate two detectors, the cosinor $F$-test
-(DCP, $K = 1$) and the K-harmonic F-test (default $K = 2$), and the
-question of which design is preferable interacts with
-which detector is in use. We resolve this interaction in two steps: first
-a brief noncentrality calculation under cosinor and FMM truth, then an
-empirical comparison on one active and one passive pilot.
+We next consider how sampling design interacts with the choice between DCP ($K = 1$) and the K-harmonic F-test (default $K = 2$). We do so in two steps: first through noncentrality calculations under cosinor and FMM truth, and then through an empirical comparison on the active baboon KIM pilot.
 
 Under cosinor truth and a balanced equally spaced active design with
 $B \geq 3$, the design factor $d(\phi) = 1/2$ uniformly in $\phi$
@@ -774,13 +765,13 @@ available circadian transcriptomic datasets, illustrating the 5--10$\times$
 gap between human brain tissue and mouse active studies that motivates
 dataset-specific power calculations.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{ll|lrcc}
 \toprule
-Organism & Study & Tissue & $n$ & \multicolumn{1}{c}{Median $r$} & \multicolumn{1}{c}{Median $r$} \\
+Organism & Study & Tissue & $N$ & \multicolumn{1}{c}{Median $r$} & \multicolumn{1}{c}{Median $r$} \\
  & & & & \multicolumn{1}{c}{(7 core)} & \multicolumn{1}{c}{(top 100)} \\
 \midrule
 \multirow{7}{*}{\textit{H.\ sapiens}} & \multirow{2}{*}{Chen et al.\ (GSE71620) \citep{chen2016aging}} & PFC (BA11) & 147 & 0.91 & 0.46 \\
@@ -823,7 +814,7 @@ $r \approx 0.6$--$1.0$; mouse active studies show $r \approx 2$--$6$.}
 %   output/single_cohort/figures/single_cohort_power_GTEx_Liver_v3.pdf
 %   output/single_cohort/figures/single_cohort_power_GSE160521_NAc_Control_v3.pdf
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \centering
 % \includegraphics[width=\textwidth]{../../output/single_cohort/figures/single_cohort_power_GTEx_AdrenalGland_v3.pdf}
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
@@ -868,7 +859,7 @@ planning.
 %   output/differential/figures/diff_power_fig2_final.pdf
 %   output/differential/figures/diff_power_fig_ADR_vs_LIV_20260420_152822.pdf
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \centering
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
   FIGURE 2 PLACEHOLDER\\[6pt]
@@ -878,15 +869,15 @@ planning.
 \caption{Differential circadian power for DR, DP, and DM on the GTEx
 Adrenal Gland vs.\ Liver passive-design comparison. Rows correspond to
 the three endpoints (DR, DP, DM, top to bottom). \textbf{Column A:}
-genome-wide power as a function of per-group sample size $n$ at four
+genome-wide power as a function of per-group sample size $N$ at four
 FDR levels ($1\%, 5\%, 10\%, 20\%$); a dashed vertical line marks the
-endpoint-specific $n$ at which genome-wide power reaches $80\%$ at FDR
+endpoint-specific $N$ at which genome-wide power reaches $80\%$ at FDR
 $20\%$. \textbf{Column B:} stratified power by intrinsic effect size
 $r = A / \sigma$ at FDR $5\%$, with one curve per
 $n \in \{20, 40, 60, 80, 100, 120, 150, 200\}$. \textbf{Column C:}
 expected number of true endpoint-specific discoveries per simulation
 replicate as a function of $r$, with target counts overlaid. DR is the
-hardest endpoint at matched $n$; DP is intermediate; DM tracks
+hardest endpoint at matched $N$; DP is intermediate; DM tracks
 mesor-shift signal-to-noise.}
 \label{fig:diff_adrliv}
 \end{figure}
@@ -898,7 +889,7 @@ Adrenal Gland and Liver are both passive-design human cohorts, the
 comparison illustrates the differential pipeline in a setting
 typical of human observational studies. The per-group $N_{80}$ at
 FDR $20\%$ is approximately $188$ for DR; DP and DM reach $80\%$ at
-smaller per-group $n$. DR is the hardest endpoint in this comparison;
+smaller per-group $N$. DR is the hardest endpoint in this comparison;
 DP is intermediate; DM tracks the mesor-shift signal-to-noise ratio. DM power estimates carry larger uncertainty at high $\tilde{r}$
 strata because only $0$ to $1$ target genes per replicate fall in those
 bins. Achieving $80\%$ differential power generally requires $2$ to $5
@@ -917,7 +908,7 @@ simulation indispensable.
 % Panels: (a) Putamen SCZ n=28 (smallest pilot)
 %         (b) GTEx Thyroid n=416 (largest pilot)
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \centering
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
   FIGURE 3 PLACEHOLDER\\[6pt]
@@ -974,7 +965,7 @@ behaviour.
 % Source script: examples/publication/fig4_sensitivity.R
 % Generated figure: output/main_figures/Fig4_sensitivity.pdf
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \centering
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
   FIGURE 4 PLACEHOLDER\\[6pt]
@@ -1021,7 +1012,7 @@ $\sigma_\alpha \in [0, 4]$\,h range.
 % Generated figure: output/main_figures/Fig5_active_vs_passive.pdf
 % Layout: 2 panels (DCP top, K=2 bottom), both on Active KIM at B = {6, 8, 12, 24}
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \centering
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
   FIGURE 5 PLACEHOLDER\\[6pt]
@@ -1210,16 +1201,24 @@ above flags pilot uncertainty as material.
 
 This work builds on \textsc{CircaPower} \citep{zong2023circapower}, \textsc{PROPER} \citep{wu2015proper}, \textsc{DiffCircaPipeline} \citep{xue2023diffcircapipeline}, and \textsc{CircaCompare} \citep{parsons2020circacompare}.
 
-\bibliographystyle{plain}
+\bibliographystyle{plainnat}
 \bibliography{references}
 
 
 
 %% ====================================================================
+%% Table 2 (type_mapping) and the trailing Tables/Figures section
+%% headers are commented out for the current submission. The same
+%% information appears in S2.2 prose and Algorithm S1, and Table 2 was
+%% not cited from the body. Re-enable by removing the surrounding
+%% \iffalse / \fi if a tabular reference is desired again.
+%% ====================================================================
+\iffalse
+%% ====================================================================
 \section*{Tables}
 %% ====================================================================
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \small
 \begin{tabular}{c|cccccc}
@@ -1247,5 +1246,6 @@ component of the gain group when the baseline group is arrhythmic
 %% ====================================================================
 
 % (Stale figure environments moved to _archive/SCP_pre_pivot.tex on 2026-05-09)
+\fi
 
 \end{document}

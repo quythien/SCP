@@ -336,7 +336,7 @@ plotDiffPower <- function(res_list,
              col = "steelblue", cex = 0.85, adj = c(1.05, 0.5), font = 2)
       }
       grid()
-      legend("right", thresh_labels,
+      legend("bottomright", thresh_labels,
              col = thresh_cols, lty = 1, pch = 19, lwd = 2.2, cex = 0.82,
              inset = 0.02, bg = "white")
 
