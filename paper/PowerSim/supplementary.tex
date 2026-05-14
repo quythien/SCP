@@ -69,27 +69,21 @@ Species & Pilot dataset & $n_{\mathrm{pilot}}$ & Design ($B$) & $\tilde r$ & $\h
 \midrule
 \multicolumn{8}{l}{\textit{Active-design pilots}} \\
 \midrule
-\textit{P.\ anubis}  & CAMO KIM  & $12$ & active ($12$) & $\approx 2.6$  & $0.28$ & $2.62$ & Fig.~5 \\
-\textit{P.\ anubis}  & CAMO LUN  & $12$ & active ($12$) & $1.72$ & $0.41$ & $1.60$ & Fig.~4 \\
+\textit{P.\ anubis}  & GSE98965 KIM  & $12$ & active ($12$) & $\approx 2.6$  & $0.28$ & $2.62$ & Fig.~5 \\
+\textit{P.\ anubis}  & GSE98965 LUN  & $12$ & active ($12$) & $1.72$ & $0.41$ & $1.60$ & Fig.~4 \\
 \textit{M.\ musculus} & GSE54651 LIV & $8$ & active ($8$) & $2.88$ & --     & --     & Fig.~1 \\
 \midrule
 \multicolumn{8}{l}{\textit{Passive-design pilots}} \\
 \midrule
 \textit{H.\ sapiens} & GTEx ADR        & $187$ & passive & $0.97$ & --     & --     & Fig.~1 \\
 \textit{H.\ sapiens} & Seney ACC ctrl  & $60$  & passive & $0.73$ & --     & --     & Fig.~3, Fig.~5 \\
-\textit{H.\ sapiens} & GSE160521 Putamen ctrl & $28^{\dagger}$ & passive & $1.02$ & --     & --     & Fig.~3 \\
+\textit{H.\ sapiens} & GSE160521 Putamen ctrl & $28$          & passive & $1.02$ & --     & --     & Fig.~3 \\
 \textit{H.\ sapiens} & GTEx Pancreas   & $249$ & passive & $0.44$ & --     & --     & Fig.~3 \\
 \textit{H.\ sapiens} & GTEx Thyroid    & $416$ & passive & $0.45$ & --     & --     & Fig.~3 \\
 \bottomrule
-\end{tabular}\\[2pt]
-{\footnotesize $^{\dagger}$ The Putamen control panel in
-Figure~\ref{fig:bootstrap_sc} uses a stratified subset
-($n = 28$) of the GSE160521 Putamen control cohort ($n = 59$, median
-$\tilde r = 1.08$ on the full set), filtered to match a downstream
-analysis covariate-balance design.}
-\end{table}
+\end{tabular}\end{table}
 
-Table~\ref{tab:pilot_fmm_extended} lists the six CAMO baboon tissues
+Table~\ref{tab:pilot_fmm_extended} lists the six GSE98965 baboon tissues
 whose empirical FMM waveform diagnostics are shown in
 Figure~\ref{fig:fmm_diagnostic}. The fitted $\hat\omega$ medians span
 $0.28$ (KIC) to $0.53$ (LIV), bracketing the empirically observed
@@ -99,7 +93,7 @@ default $K = 2$.
 \begin{table}[H]
 \centering
 \small
-\caption{CAMO baboon active-design tissues with empirical FMM waveform
+\caption{GSE98965 baboon active-design tissues with empirical FMM waveform
 diagnostics. All six pilots have $n_{\mathrm{pilot}} = 12$ at
 $B = 12$ (one collection per subject across $12$ time-of-day points).
 $R^2$ is the FMM goodness-of-fit median across rhythmic genes;
@@ -149,7 +143,7 @@ K-harmonic F-test at $K = 2$ retains substantial power
 \centering
 \includegraphics[width=0.95\textwidth]{../../output/main_figures/SuppFig_FMM_diagnostic.pdf}
 \caption{Empirical $\hat\omega$ and $\hat\alpha$ distributions across
-six pilot tissues (baboon CAMO KIC, LUN, ADM, LIV, ADC and human
+six pilot tissues (baboon (GSE98965, \citep{Mure2018baboon}) KIC, LUN, ADM, LIV, ADC and human
 GTEx PAN). Left column: $\hat\omega$ histogram with the Beta$(1, \hat\eta)$
 MLE fit (red) and the $\hat\omega$-median (blue dashed). Right column:
 $\hat\alpha$ histogram (radians) with the von Mises($\hat\mu, \hat\kappa$)
@@ -374,7 +368,7 @@ $\leq 0.05$ in every replication.
 \label{sec:k_sweep}
 %% ====================================================================
 
-We compared $K \in \{1, 2, 3, 4, 5\}$ on three baboon CAMO active
+We compared $K \in \{1, 2, 3, 4, 5\}$ on three baboon (GSE98965, \citep{Mure2018baboon}) active
 tissues (KIM with $\hat\eta = 1.68$, KIC with $\hat\eta = 2.38$, SUN with
 $\hat\eta = 1.31$) over a sample-size grid $N \in \{24, 48, 72, 144\}$
 with $N_{\mathrm{sim}} = 30$ outer replicates. On the dominant
@@ -646,64 +640,6 @@ roughly $1$ to $4$ CPU-hours on a 60-core node depending on
 $n_{\mathrm{pilot}}$.
 
 
-%% ====================================================================
-\section{Extended limitations}
-\label{sec:limitations}
-%% ====================================================================
-
-This section expands on the limitations paragraph of the main text
-Discussion.
-
-\textbf{Sinusoidal and K-harmonic assumptions.} The cosinor model
-assumes a single sinusoidal harmonic and the K-harmonic F-test assumes
-Gaussian residuals. Both are stable under mild violations: at typical
-empirical $\omega \in [0.28, 0.53]$ and $K = 2$, the variance-capture
-bound \eqref{eq:supp_variance_capture} retains $80\%$ to $98\%$ of the
-underlying signal variance. The remaining residual is absorbed into the
-noise estimate, slightly inflating $\hat\sigma_g$ but preserving the
-nominal type-I rate of the F-test
-(Section~\ref{sec:typeI}). For genes with very sharp peaks or
-near-arrhythmic profiles ($\omega \leq 0.1$), the K-harmonic F-test at
-$K = 2$ retains only about $33\%$ to $55\%$ of the underlying variance
-and substantially under-detects; users with such pilots should consider
-$K = 3$ or a non-parametric detector.
-
-\textbf{Mutually exclusive gene types in the differential simulator.}
-Algorithm~S1 assigns each gene to exactly one of the six types
-$T_g \in \{0, \ldots, 5\}$; compound multi-parameter changes
-(simultaneous DR and DP, for example) are not directly simulated. In
-practice, compound effects are rare for true biology in healthy vs.\
-disease comparisons because the underlying mechanisms typically
-disrupt one of rhythmicity, phase, or mesor at a time. Users who
-specifically need to test compound-change detection can extend the
-type assignment in step~2 of Algorithm~S1.
-
-\textbf{Passive-design dependency on $\hat{F}_{\mathrm{TOD}}$.}
-Passive-design power calculations are sensitive to the empirical TOD
-distribution of the pilot. If the planned cohort has a different
-recruitment time profile, the pilot's $\hat{F}_{\mathrm{TOD}}$ will not
-generalise. We recommend computing a sensitivity analysis by
-re-running the power calculation under several plausible passive TOD
-distributions: a uniform TOD as the upper bound on passive efficiency,
-the empirical TOD of the pilot, and a more concentrated TOD as the
-lower bound.
-
-\textbf{Bootstrap compute cost.} The outer-bootstrap of
-Section~\ref{sec:bootstrap_impl} costs roughly
-$B_{\mathrm{out}} \times N_{\mathrm{sim}}^{\mathrm{in}}$ inner
-simulations per pilot and per sample-size point, which is computationally
-heavy for large pilot sizes. The main text recommends running the
-bootstrap only when $n_{\mathrm{pilot}} \lesssim 40$, where it most
-affects the recommendation; for $n_{\mathrm{pilot}} \gtrsim 250$ the
-plug-in projection is a faithful summary and bootstrap is optional.
-
-\textbf{Cross-tissue or cross-species generalisation.} The pilot
-calibration is tissue- and species-specific. Power projections for a
-study in tissue $A$ using a pilot from tissue $B$ assume that the
-amplitude-noise distribution $\hat{F}_{A,\sigma}$ and the rhythmic
-proportion $\hat{\pi}_R$ transfer; this is a non-trivial assumption.
-In practice, we recommend pilots that share tissue, condition, and
-assay platform with the planned study.
 
 
 %% ====================================================================
