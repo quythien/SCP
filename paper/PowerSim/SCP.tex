@@ -52,7 +52,7 @@ These gaps motivate the development of \textbf{SCP} (Simulation-based Circadian 
 
 
 % =====================================================================
-\subsection{Power calculation for circadian biomarker detection in single cohort}
+\subsection{Power calculation for circadian biomarker detection in a single cohort}
 \label{sec:single_cohort}
 
 For a single cohort of $n$ subjects with sample collection time-of-day (TOD)
@@ -71,7 +71,7 @@ A_g\cos \bigl(\omega_0 (t_i - \phi_g)\bigr)
 \label{eq:cosinor_model}
 \end{equation}
 where $\omega_0 = 2\pi/24$ is the angular frequency of the $24$-hour cycle (the cosinor subscript distinguishes it from the FMM shape parameter $\omega \in (0, 1]$ introduced in Section~\ref{sec:cosinor_violation}), $\mu_g$ is the MESOR (Midline Estimating Statistic Of Rhythm; i.e., rhythm-adjusted mean expression), $A_g\geq 0$ is the amplitude,
-$\phi_g\in[0,24)$ is the acrophase, and $\sigma_g$ is the noise level. The CircaPower paper by Zong et al. \cite{zong2023circapower} established the theoretical foundations of power calculation of circadian biomarker detection below under the cosinor model with Gaussian errors. To test for rhythmicity of gene $g$, $F$-statistic for $H_0: A_g = 0$ versus $H_A: A_g > 0$ was considered: 
+$\phi_g\in[0,24)$ is the acrophase, and $\sigma_g$ is the noise level. \citet{zong2023circapower} established the theoretical foundations of cosinor-based power calculation under Gaussian errors. To test rhythmicity for gene $g$, we use the $F$-statistic for $H_0: A_g = 0$ versus $H_A: A_g > 0$:
 \begin{equation}
 F_g
 =
@@ -93,9 +93,9 @@ $F_g\sim  F\bigl( 2,\, n-3, \, \lambda_g\bigr)$ with degrees of freedom $2$ and 
 \label{eq:circapower_formula}
 \end{equation}
 
-\noindent where $q_{\alpha}=F(1-\alpha;\,2,\,n-3)$ is the rejection threshold under $H_0$ at level $\alpha$ and $F(x; a,b)$ is the CDF of F-distribution $F(2, n-3)$; $F(x; a,b,\lambda)$ is the CDF of noncentral F-distribution $F(a,b,\lambda)$. 
+\noindent where $q_{\alpha} = F^{-1}(1 - \alpha;\, 2,\, n - 3)$ is the null rejection threshold at level $\alpha$, $F(\cdot;\, a, b)$ denotes the CDF of a central $F(a, b)$, and $F(\cdot;\, a, b, \lambda)$ denotes the CDF of a noncentral $F(a, b, \lambda)$.
 
-Zong et al.(2024) showed that 
+\citet{zong2023circapower} showed that
 \begin{equation}
 \lambda_g = r_g^2 \cdot n \cdot d(\phi_g),
 \label{eq:ncp}
@@ -270,9 +270,15 @@ operating characteristics are the primary design target.
 \subsection{Power calculation for case-control differential circadian analysis}
 \label{sec:differential}
 
-The single-group indicators $D_{g,s}$ and $Z_{g,s}^R$ from
-Section~\ref{sec:single_cohort} generalize to the two-group setting as follows.
-For each endpoint $E\in\{\mathrm{DR},\mathrm{DP},\mathrm{DM}\}$,
+The two-group setting evaluates three biological endpoints: a gene
+gains or loses 24-hour rhythmicity between conditions (DR), keeps
+rhythmicity but shifts its peak in time (DP), or maintains its
+rhythm shape but shifts its mean expression level (DM). Each
+endpoint is tested separately within a TOJR-based two-stage
+procedure, so the single-group indicators $D_{g,s}$ and $Z_{g,s}^R$
+from Section~\ref{sec:single_cohort} generalize to endpoint-indexed
+quantities. For each endpoint
+$E\in\{\mathrm{DR},\mathrm{DP},\mathrm{DM}\}$,
 $D_{g,s}^E\in\{0,1\}$ denotes the endpoint-specific discovery indicator and
 $Z_{g,s}^E\in\{0,1\}$ denotes the true differential status. A targeted indicator $Z_{g,s}^{*,E} = Z_{g,s}^E \cdot \mathbf{1}\{\delta_{g,s}^E \geq \Delta_E\}$ restricts attention to genes whose effect size exceeds a user-specified threshold $\Delta_E$, where
 $\delta_{g,s}^{\mathrm{DR}} = |R_{g,1,s}^2 - R_{g,2,s}^2|$ is the absolute difference in cosinor goodness-of-fit between groups,
@@ -293,7 +299,7 @@ expressions for power and FDR, these quantities are evaluated via simulation
 following the full analysis pipeline.
 
 \textsc{SCP} evaluates three endpoints: differential rhythmicity (DR), differential
-phase (DP), and differential mesor (DM). DR captures gain or loss of rhythmicity
+phase (DP), and differential MESOR (DM). DR captures gain or loss of rhythmicity
 (e.g., clock genes that cycle in healthy tissue but lose rhythmicity in disease);
 DP captures a shift in peak-expression timing; and DM captures a change in
 baseline expression level while rhythmic structure is preserved.
@@ -353,7 +359,7 @@ and $T_g=3$ sets $A_{g,1}=0$, so that one group follows $M_1$ and the other
 $M_0$. For differential phase ($T_g=4$), both groups follow $M_1$ with
 $\phi_{g,2} = (\phi_{g,1} + \Delta \phi_g)\bmod 24$ and
 $\Delta \phi_g \sim \mathrm{Unif}(\Delta \phi_{\min}, \Delta \phi_{\max})$;
-for differential mesor ($T_g=5$), both groups follow $M_1$ with
+for differential MESOR ($T_g=5$), both groups follow $M_1$ with
 $\mu_{g,2} = \mu_{g,1} + \Delta \mu_g$ and
 $\Delta \mu_g \sim \mathrm{Unif}(\Delta \mu_{\min}, \Delta \mu_{\max})$.
 
@@ -431,43 +437,16 @@ draws resample subjects, inner draws resample genes from the pilot-conditional
 parameter distributions, and the two layers are kept distinct so the
 gene-level Monte Carlo error is not confounded with pilot variability.
 
-We illustrate the procedure on two pilots that span more than an
-order-of-magnitude in $n_{\mathrm{pilot}}$
-(Figure~\ref{fig:bootstrap_sc}): Putamen schizophrenia controls
-(GSE160521; $n_{\mathrm{pilot}} = 28$, passive) and \textsc{GTEx}
-Thyroid ($n_{\mathrm{pilot}} = 416$, passive). Both panels use
-$B_{\mathrm{out}} = 50$ outer draws,
-$N_{\mathrm{sim}}^{\mathrm{in}} = 25$ inner simulations, and
-$G = 5{,}000$ simulated genes. The widest $95\%$ bootstrap CI is on
-Putamen-SCZ at $N = 40$, spanning $[33.5\%, 54.0\%]$; on \textsc{GTEx}
-Thyroid the widest $95\%$ CI at $N = 120$ is $[51.4\%, 57.8\%]$,
-narrower by roughly four-fold despite the higher elbow power. On
-Putamen-SCZ the plug-in projected power at $N = 40$ is $28\%$,
-whereas the bootstrap mean is $43\%$; different draws of a
-$28$-subject pilot from this population would therefore support
-different design recommendations, a gap that the plug-in curve hides.
-The contrast between the two pilots shows that the bootstrap CI
-tightens with $n_{\mathrm{pilot}}$ until it saturates against the
-inner-Monte-Carlo noise floor at large pilots; for
-$n_{\mathrm{pilot}} \gtrsim 250$ the bootstrap CI is dominated by the
-inner-Monte-Carlo noise rather than pilot variability, and further
-increases in $n_{\mathrm{pilot}}$ yield diminishing returns.
-
 A word on interpretation is in order. The bootstrap quantifies
 pilot-induced sampling variability of the design recommendation but
-does not by itself correct plug-in bias: at $n_{\mathrm{pilot}} = 28$
-the cosinor pre-screen at $\alpha_{\mathrm{pilot}} = 0.01$ retains only
-the highest-$R^2$ rhythmic genes (a finite-sample winner's-curse effect
-on $\hat{F}_{A,\sigma}$), so neither the plug-in
-$\widehat{\mathrm{Power}}$ nor the bootstrap mean
+does not by itself correct plug-in bias: at small $n_{\mathrm{pilot}}$
+the cosinor pre-screen at $\alpha_{\mathrm{pilot}} = 0.01$ retains
+only the highest-$R^2$ rhythmic genes (a finite-sample
+winner's-curse effect on $\hat{F}_{A,\sigma}$), so neither the
+plug-in $\widehat{\mathrm{Power}}$ nor the bootstrap mean
 $\bar{\mathrm{Power}}$ is unbiased for the true population power.
-What the bootstrap does provide, and what the plug-in alone hides, is
-the magnitude of that uncertainty: at Putamen-SCZ $N = 40$ the $95\%$
-bootstrap CI of $33$ to $54\%$ would lead a researcher to question
-whether $N = 40$ is adequate, a conclusion the $28\%$ plug-in point
-estimate alone could not support either way. The bootstrap is
-therefore essential whenever $n_{\mathrm{pilot}}$ is small
-($\lesssim 40$); for large, well-rhythmic pilots
+The bootstrap is therefore essential whenever $n_{\mathrm{pilot}}$
+is small ($\lesssim 40$); for large, well-rhythmic pilots
 ($n_{\mathrm{pilot}} \gtrsim 250$) the plug-in recommendation is a
 faithful summary.
 
@@ -1023,7 +1002,7 @@ $N = 144$, power is approximately flat at $0.90$ to $0.99$.}
 \end{figure}
 
 The $\omega$ sweep (Figure~\ref{fig:fmm_sensitivity}A) traces the
-cosinor-to-arrhythmic spectrum: power degrades smoothly as the
+cosinor-to-sharp-peaked spectrum: power degrades smoothly as the
 $\mathrm{Beta}(1, \eta)$ distribution of $\omega$ concentrates mass away
 from one, with the steepest drop between $\eta = 5$ and $\eta = 20$.
 The empirical Baboon LUN anchor at $\hat{\eta} = 1.80$ sits in the upper
@@ -1190,9 +1169,10 @@ so that they can be applied outside the power-analysis pipeline, with
 the same identifiability requirement on the supplied design.
 
 \textbf{Step 3, sample size.}
-Read $N_{80}$ off the closed-form power curve at your pilot
-$\tilde{r}$-median (Sections~\ref{sec:single_cohort}
-and~\ref{sec:differential}); typical single-cohort operating points
+Read $N_{80}$ off the projected power curve at your pilot
+$\tilde{r}$-median (closed-form for the single-cohort setting in
+Section~\ref{sec:single_cohort}; simulation-based for the
+differential setting in Section~\ref{sec:differential}); typical single-cohort operating points
 observed in our pilots are $N_{80} \lesssim 50$ for active
 moderate- to high-$\tilde{r}$ tissue (e.g., baboon active pilots,
 $\tilde{r} \geq 1.5$), $N_{80} \approx 50$ for passive
