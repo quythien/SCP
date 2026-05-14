@@ -144,6 +144,7 @@ plotDiffPower(
   display_sizes = c(20, 40, 60, 80, 100, 120, 150, 200),
   vline_fdr     = 0.20,
   vline_power   = 0.80,
+  r_display_max = 3,
   out_pdf       = fig_path,
   width         = 15,
   height        = 18
