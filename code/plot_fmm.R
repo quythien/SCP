@@ -81,6 +81,16 @@ plotFMMViolation <- function(x,
   beta_denom  <- c("0","pi/4","pi/2","3*pi/4","pi","5*pi/4","3*pi/2")
   beta_labels <- stats::setNames(beta_denom[seq_len(n_beta)], beta_levels)
 
+  # Alpha sweep color scheme (green palette: 0h dark → 20h light)
+  has_alpha    <- "alpha" %in% full_df$sweep_param
+  alpha_levels <- if (has_alpha)
+    as.character(sort(unique(full_df$sweep_val[full_df$sweep_param=="alpha"]))) else character(0)
+  n_alpha      <- length(alpha_levels)
+  alpha_colors <- stats::setNames(
+    grDevices::colorRampPalette(c("#004529","#41AB5D","#C7E9C0"))(max(n_alpha,1)),
+    alpha_levels)
+  alpha_labels <- stats::setNames(paste0("alpha==", alpha_levels, "*'h'"), alpha_levels)
+
   N_all    <- sort(unique(full_df$N))
   x_breaks <- N_all   # show all N values on x-axis
 
@@ -107,7 +117,7 @@ plotFMMViolation <- function(x,
   }
 
   make_panel <- function(sub_df, fac_levels, colors, labels, legend_name,
-                          x_lab, title_str, legend_ncol = 1) {
+                          x_lab, title_str, legend_ncol = 1, jitter_x = 0) {
     sub_df$sweep_fac   <- factor(as.character(round(sub_df$sweep_val, 4L)),
                                   levels = fac_levels)
     sub_df$design_type <- ifelse(grepl("^Active", sub_df$design_row),
@@ -115,9 +125,20 @@ plotFMMViolation <- function(x,
     sub_df$design_type <- factor(sub_df$design_type,
                                   levels = c("Active (B=12, 2h)","Passive"))
     sub_df$snr_col     <- factor(sub_df$snr_col, levels = c("Strong","Moderate","Weak"))
+
+    # Apply x-jitter by offsetting N per sweep level (helps when lines overlap)
+    if (jitter_x > 0) {
+      lev_idx <- as.integer(sub_df$sweep_fac)
+      n_lev   <- length(fac_levels)
+      offsets <- seq(-(n_lev-1)/2, (n_lev-1)/2, length.out = n_lev) * jitter_x
+      sub_df$N_jit <- sub_df$N + offsets[lev_idx]
+    } else {
+      sub_df$N_jit <- sub_df$N
+    }
+
     # Build facet_grid plot with legend inside the empty panel
     p <- ggplot2::ggplot(sub_df, ggplot2::aes(
-        x = N, y = 100 * power, colour = sweep_fac,
+        x = N_jit, y = 100 * power, colour = sweep_fac,
         group = interaction(sweep_fac, dataset))) +
       ggplot2::geom_line(linewidth = 0.8) +
       ggplot2::geom_errorbar(
@@ -206,19 +227,39 @@ plotFMMViolation <- function(x,
     full_df[full_df$sweep_param=="beta",],
     beta_levels, beta_colors, beta_labels,
     legend_name = expression(beta),
-    x_lab       = "Total sample size N",
+    x_lab       = if (has_alpha) "" else "Total sample size N",
     title_str   = bquote("(B) Waveform orientation: varying" ~ beta ~
                           "  (fixed" ~ omega ~ "=" ~ .(omega_fixed) ~ ")"),
-    legend_ncol = 3L   # horizontal: 6 beta values → 2 rows of 3+3
+    legend_ncol = 3L
   )
 
-  combined <- p_omega / p_beta +
-    patchwork::plot_layout(heights = c(1,1)) +
-    patchwork::plot_annotation(
-      title = "DCP power under cosinor violation: waveform robustness for single-cohort biomarker detection",
-      theme = ggplot2::theme(
-        plot.title = ggplot2::element_text(hjust = 0.5, face = "bold", size = 13))
+  if (has_alpha && n_alpha > 0) {
+    p_alpha <- make_panel(
+      full_df[full_df$sweep_param=="alpha",],
+      alpha_levels, alpha_colors, alpha_labels,
+      legend_name = expression(alpha ~ "(hours)"),
+      x_lab       = "Total sample size N",
+      title_str   = expression("(C) Location parameter " * alpha *
+                                ":  active = flat  |  passive = varies with TOD"),
+      legend_ncol = 3L,
+      jitter_x    = 2.5   # separate overlapping lines in passive panels
     )
+    combined <- p_omega / p_beta / p_alpha +
+      patchwork::plot_layout(heights = c(1,1,1)) +
+      patchwork::plot_annotation(
+        title = "FMM K-harmonic LRT waveform robustness: shape, orientation, and acrophase",
+        theme = ggplot2::theme(
+          plot.title = ggplot2::element_text(hjust=0.5, face="bold", size=13))
+      )
+  } else {
+    combined <- p_omega / p_beta +
+      patchwork::plot_layout(heights = c(1,1)) +
+      patchwork::plot_annotation(
+        title = "FMM K-harmonic LRT waveform robustness",
+        theme = ggplot2::theme(
+          plot.title = ggplot2::element_text(hjust=0.5, face="bold", size=13))
+      )
+  }
 
   if (!is.null(output_file)) {
     ggplot2::ggsave(output_file, combined, width = width, height = height)

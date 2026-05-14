@@ -39,7 +39,7 @@ To our knowledge, \textsc{CircaPower} \citep{zong2023circapower} is currently th
 
 For power calculation of differential circadian biomarker detection, closed-form analytical solutions analogous to those in CircaPower are generally infeasible. As established in DiffCircaPipeline \citep{xue2023diffcircapipeline}, circadian rhythm disruptions are complex and multi-faceted, encompassing differential rhythmicity (DR), differential phase (DP), and differential MESOR (DM). Detection of these features requires a two-stage workflow contingent on the rhythmicity status inferred for each condition. From a statistical standpoint, this biological complexity involves multiple endpoints coupled with genome-wide multiple testing, and therefore cannot be reduced to a single test statistic or a tractable closed-form solution.
 
-These gaps motivate the development of \textbf{SCP} (Simulation-based Circadian Power), a simulation-based framework for power calculation and study design that supports practical decision-making in planning circadian transcriptomic studies. The framework is organised in five methodological pieces. Section~\ref{sec:single_cohort} develops per-gene power for circadian biomarker detection in a single cohort, with parameter distributions calibrated to pilot data and BH control of the genome-wide false discovery rate. Section~\ref{sec:differential} extends the construction to multi-faceted differential rhythm analysis in a two-group setting, covering differential rhythmicity (DR), differential phase (DP), and differential MESOR (DM). Section~\ref{sec:bootstrap} introduces an outer bootstrap that propagates pilot-estimation uncertainty into the projected power curves, a source of variability that plug-in power calculations omit. Section~\ref{sec:cosinor_violation} addresses cosinor violation: we derive the K-harmonic linearisation of the frequency-modulated M\"{o}bius (FMM) model \citep{rueda2019fmm} and implement the resulting test (\texttt{detect\_FMM}) as a K-harmonic F-test with empirical-Bayes variance shrinkage at moderate gene counts. Section~\ref{sec:active_passive} contrasts active and passive designs under the two detectors and identifies when each is preferable. Section~\ref{sec:results} reports simulations and real-data illustrations that benchmark the framework end-to-end.
+These gaps motivate the development of \textbf{SCP} (Simulation-based Circadian Power), a simulation-based framework for power calculation and study design that supports practical decision-making in planning circadian transcriptomic studies. The framework is organised in five methodological pieces. Section~\ref{sec:single_cohort} develops per-gene power for circadian biomarker detection in a single cohort, with parameter distributions calibrated to pilot data and BH control of the genome-wide false discovery rate. Section~\ref{sec:differential} extends the construction to multi-faceted differential rhythm analysis in a two-group setting, covering differential rhythmicity (DR), differential phase (DP), and differential MESOR (DM). Section~\ref{sec:bootstrap} introduces an outer bootstrap that propagates pilot-estimation uncertainty into the projected power curves, a source of variability that plug-in power calculations omit. Section~\ref{sec:cosinor_violation} addresses cosinor violation: we derive the K-harmonic linearisation of the frequency-modulated M\"{o}bius (FMM) model \citep{rueda2019fmm} and implement the resulting test as a K-harmonic F-test with empirical-Bayes variance shrinkage at moderate gene counts. Section~\ref{sec:active_passive} contrasts active and passive designs under the two detectors and identifies when each is preferable. Section~\ref{sec:results} reports simulations and real-data illustrations that benchmark the framework end-to-end.
 
 %% ====================================================================
 % =====================================================================
@@ -56,7 +56,8 @@ These gaps motivate the development of \textbf{SCP} (Simulation-based Circadian 
 \label{sec:single_cohort}
 
 For a single cohort of $n$ subjects with sample collection time-of-day (TOD)
-$t_1,\ldots,t_n\in[0,24)$, the expression of gene $g$ follows the cosinor model
+$t_1,\ldots,t_n\in[0,24)$, the expression of gene $g$ follows the cosinor
+model \citep{cornelissen2014cosinor}
 \begin{equation}
 y_{gi}
 =
@@ -80,7 +81,8 @@ F_g
 \end{equation}
 where $\mathrm{RSS}_g$ and $\mathrm{TSS}_g$ are the residual and total sums of
 squares from the cosinor fit and $F(a,\, b)$ is F-distribution with degrees of freedom $a$ and $b$. Across $G$ genes, Benjamini--Hochberg (BH)
-correction at nominal FDR level $\alpha$ controls FDR for rhythmicity detection.
+correction \citep{benjamini1995controlling} at nominal FDR level $\alpha$
+controls FDR for rhythmicity detection.
 
 For power calculation, under the alternative hypothesis $H_A$, the $F$-statistic follows a noncentral $F$-distribution:
 $F_g\sim  F\bigl( 2,\, n-3, \, \lambda_g\bigr)$ with degrees of freedom $2$ and $n-3$ and noncentrality parameter $\lambda_g$. The per-gene statistical power at sample size $n$ is then
@@ -108,13 +110,12 @@ d(\phi_g)
 \label{eq:design_factor_circapower}
 \end{equation}
 
-% CHANGE: Moved B-invariance note here as a brief statement with a forward
-% pointer, removing the mid-paragraph digression. Full derivation is reserved
-% for Section~\ref{sec:active_passive} and Supplementary~S8.
+% Brief B-invariance statement with a forward pointer; full derivation
+% is reserved for Section~\ref{sec:active_passive} and Supplementary~S6.
 For balanced equally spaced active designs with $B\geq 3$ time points,
 $d(\phi_g)=1/2$ for all phases, so \eqref{eq:ncp} reduces to
 $\lambda_g = r_g^2 n / 2$ and power depends only on $r_g$ and $n$; see
-Section~\ref{sec:active_passive} and Supplementary~S8.
+Section~\ref{sec:active_passive} and Supplementary~S6.
 
 In transcriptome-wide studies, however, $r_g$ varies substantially across
 genes: core clock genes in mouse liver typically have $r \approx 3$--$6$,
@@ -139,9 +140,9 @@ heterogeneous signal strength, we define a pilot-stage screening rule based on
 a fixed marginal threshold $\alpha_{\text{pilot}}$ (default $\alpha_{\text{pilot}}=0.01$),
 rather than using multiplicity-adjusted thresholds. Let
 $\mathcal{G}_R^{\mathrm{cand}} = \{g : p_g < \alpha_{\text{pilot}}\}$ and
-$K = \min\bigl(300,\ |\mathcal{G}_R^{\mathrm{cand}}|\bigr)$, and define the
-parameter-estimation set as the top-ranked genes
-$\mathcal{G}_R = \mathrm{Top}_K(\mathcal{G}_R^{\mathrm{cand}})$.
+$K_{\mathrm{top}} = \min\bigl(300,\ |\mathcal{G}_R^{\mathrm{cand}}|\bigr)$, and
+define the parameter-estimation set as the top-ranked genes
+$\mathcal{G}_R = \mathrm{Top}_{K_{\mathrm{top}}}(\mathcal{G}_R^{\mathrm{cand}})$.
 The estimated rhythmic proportion is given by
 $\hat{\pi}_R = |\mathcal{G}_R^{\mathrm{cand}}| / G_0$.
 Empirical distributions are then constructed over the fitted parameters:
@@ -359,7 +360,8 @@ $\Delta \mu_g \sim \mathrm{Unif}(\Delta \mu_{\min}, \Delta \mu_{\max})$.
 \emph{Step 3: DCP inference.}
 Inference proceeds via \textsc{DiffCircaPipeline}. For each group $k$,
 cosinor models are fit and $p$-values $p_{g,k}$ are obtained. Genes are
-assigned TOJR labels:
+assigned Test-of-Joint-Rhythmicity (TOJR) labels
+\citep{xue2023diffcircapipeline}:
 \[
 \hat{Z}_g =
 \begin{cases}
@@ -410,8 +412,8 @@ estimate $\hat{\pi}_R$ both carry substantial sampling variability, and the
 plug-in curve can be a poor representation of the achievable power had a
 different pilot been drawn from the same population.
 
-\textsc{SCP} addresses this through an outer nonparametric bootstrap over
-subjects. For each outer replicate $b = 1, \ldots, B_{\mathrm{out}}$:
+\textsc{SCP} addresses this through an outer nonparametric bootstrap
+\citep{efron1979bootstrap} over subjects. For each outer replicate $b = 1, \ldots, B_{\mathrm{out}}$:
 \emph{(i)} resample $n_{\mathrm{pilot}}$ subjects with replacement from the
 pilot; \emph{(ii)} re-fit the cosinor model and recompute the pilot summary
 $\hat{\Psi}^{(b)}$ on the bootstrap pilot; \emph{(iii)} run $N_{\mathrm{sim}}^{\mathrm{in}}$
@@ -429,27 +431,24 @@ draws resample subjects, inner draws resample genes from the pilot-conditional
 parameter distributions, and the two layers are kept distinct so the
 gene-level Monte Carlo error is not confounded with pilot variability.
 
-We illustrate the procedure on four pilots that span more than an
+We illustrate the procedure on two pilots that span more than an
 order-of-magnitude in $n_{\mathrm{pilot}}$
 (Figure~\ref{fig:bootstrap_sc}): Putamen schizophrenia controls
-($n_{\mathrm{pilot}} = 28$, passive), Seney ACC controls
-($n_{\mathrm{pilot}} = 60$, passive), GTEx Pancreas ($n_{\mathrm{pilot}} = 249$,
-passive), and GTEx Thyroid ($n_{\mathrm{pilot}} = 416$, passive). All four
-panels use $B_{\mathrm{out}} = 50$ outer draws, $N_{\mathrm{sim}}^{\mathrm{in}} = 25$
-inner simulations, and $G = 5{,}000$ simulated genes. The widest $95\%$
-bootstrap CI is on Putamen-SCZ at $N = 40$, spanning
-$[33.5\%, 54.0\%]$; the corresponding bands at the elbow of each
-pilot's power curve are $[37.3\%, 46.9\%]$ at Seney ($N = 60$),
-$[60.2\%, 66.9\%]$ at GTEx Pancreas ($N = 160$), and
-$[51.4\%, 57.8\%]$ at GTEx Thyroid ($N = 120$). On Putamen-SCZ the
-plug-in projected power at $N = 40$ is $28\%$, whereas the bootstrap
-mean is $43\%$; different draws of a $28$-subject pilot from this
-population would therefore support different design recommendations,
-a gap that the plug-in curve hides. The Putamen, Seney, Pancreas,
-Thyroid ordering shows that the bootstrap CI tightens monotonically
-with $n_{\mathrm{pilot}}$, with the largest reduction occurring
-between the smallest pilots ($n_{\mathrm{pilot}}: 28 \to 60$ tightens
-the widest CI from $[33.5\%, 54.0\%]$ to $[37.3\%, 46.9\%]$); for
+(GSE160521; $n_{\mathrm{pilot}} = 28$, passive) and \textsc{GTEx}
+Thyroid ($n_{\mathrm{pilot}} = 416$, passive). Both panels use
+$B_{\mathrm{out}} = 50$ outer draws,
+$N_{\mathrm{sim}}^{\mathrm{in}} = 25$ inner simulations, and
+$G = 5{,}000$ simulated genes. The widest $95\%$ bootstrap CI is on
+Putamen-SCZ at $N = 40$, spanning $[33.5\%, 54.0\%]$; on \textsc{GTEx}
+Thyroid the widest $95\%$ CI at $N = 120$ is $[51.4\%, 57.8\%]$,
+narrower by roughly four-fold despite the higher elbow power. On
+Putamen-SCZ the plug-in projected power at $N = 40$ is $28\%$,
+whereas the bootstrap mean is $43\%$; different draws of a
+$28$-subject pilot from this population would therefore support
+different design recommendations, a gap that the plug-in curve hides.
+The contrast between the two pilots shows that the bootstrap CI
+tightens with $n_{\mathrm{pilot}}$ until it saturates against the
+inner-Monte-Carlo noise floor at large pilots; for
 $n_{\mathrm{pilot}} \gtrsim 250$ the bootstrap CI is dominated by the
 inner-Monte-Carlo noise rather than pilot variability, and further
 increases in $n_{\mathrm{pilot}}$ yield diminishing returns.
@@ -466,11 +465,11 @@ What the bootstrap does provide, and what the plug-in alone hides, is
 the magnitude of that uncertainty: at Putamen-SCZ $N = 40$ the $95\%$
 bootstrap CI of $33$ to $54\%$ would lead a researcher to question
 whether $N = 40$ is adequate, a conclusion the $28\%$ plug-in point
-estimate alone could not support either way. The bootstrap is therefore
-essential whenever $n_{\mathrm{pilot}}$ is small ($\lesssim 40$),
-useful as a sanity check for moderate pilots
-($n_{\mathrm{pilot}} \approx 60$); for large, well-rhythmic pilots the
-plug-in recommendation is a faithful summary.
+estimate alone could not support either way. The bootstrap is
+therefore essential whenever $n_{\mathrm{pilot}}$ is small
+($\lesssim 40$); for large, well-rhythmic pilots
+($n_{\mathrm{pilot}} \gtrsim 250$) the plug-in recommendation is a
+faithful summary.
 
 % =====================================================================
 % NEW SECTION 2.4 --- Cosinor violation, K-harmonic F-test
@@ -599,30 +598,30 @@ under the intercept-only and full $K$-harmonic fits. Because
 \eqref{eq:Kharmonic_model} is linear in $(\mu, a_k, b_k)$ and all parameters
 are identifiable under both $H_0$ and $H_1$, the F-distribution applies
 exactly under Gaussianity, with no Davies tax and no empirical calibration.
-The test is implemented as \texttt{detect\_FMM(K)} in our codebase; at
-$K = 1$ it reduces to the cosinor $F$-test \eqref{eq:rhythm_f_test} (DCP).
-The full derivation, including the M\"{o}bius reparameterisation, geometric
-Fourier expansion, and variance-retention bound $V_K / V_\infty = 1 - \rho^{2K}$,
-is given in Supplementary Section~S2.
+At $K = 1$ the test reduces to the cosinor $F$-test
+\eqref{eq:rhythm_f_test} (DCP). The full derivation, including the
+M\"{o}bius reparameterisation, geometric Fourier expansion, and
+variance-retention bound $V_K / V_\infty = 1 - \rho^{2K}$, is given in
+Supplementary Section~S2.
 
 The K-harmonic regression \eqref{eq:Kharmonic_model} is fitted in
 practice using the \textsc{LimoRhyde} framework
-\citep{Singer2019LimoRhyde}, which introduced the
-\texttt{limma::lmFit}-based linear-modelling pipeline for circadian
-transcriptomics. \textsc{LimoRhyde} natively supports $K = 1$ via a
-cosinor basis with empirical-Bayes variance shrinkage
+\citep{Singer2019LimoRhyde}, which introduced a linear-modelling
+pipeline for circadian transcriptomics built on empirical-Bayes
+moderated linear regression. \textsc{LimoRhyde} natively supports
+$K = 1$ via a cosinor basis with empirical-Bayes variance shrinkage
 \citep{Smyth2004limma} and exact $F$-tests on the harmonic block. We
-extend this to user-tunable $K$ by stacking per-harmonic bases
-$\texttt{limorhyde::limorhyde}(\,\cdot\,,\, \mathrm{period} = T/k\,)$
-for $k = 1, \ldots, K$, fitting once with \texttt{limma::lmFit}, and
-testing $H_0: a_1 = b_1 = \cdots = a_K = b_K = 0$ via
-\texttt{limma::topTable}. Empirical-Bayes shrinkage pools residual
-variance across the $G$ genes in the design, which sharpens inference
-on rhythmicity at moderate $G$; when $G < 50$ \texttt{detect\_FMM} falls
-back to the unshrunk $F$-test of \eqref{eq:Kharmonic_F}. The
-noncentrality formula \eqref{eq:ncp_K_fmm} continues to apply, because
-eBayes shrinks the variance estimator but does not change the underlying
-linear model.
+extend this to user-tunable $K$ by stacking per-harmonic bases at
+period $T / k$ for $k = 1, \ldots, K$, fitting once via empirical-Bayes
+moderated regression, and testing
+$H_0: a_1 = b_1 = \cdots = a_K = b_K = 0$ on the joint harmonic block.
+Empirical-Bayes shrinkage pools residual variance across the $G$ genes
+in the design, which sharpens inference on rhythmicity at moderate
+$G$; at small $G$ ($G < 50$) the detector falls back to the unshrunk
+$F$-test of \eqref{eq:Kharmonic_F}. The noncentrality formula
+\eqref{eq:ncp_K_fmm} continues to apply, because the variance
+shrinkage modifies only the estimator and not the underlying linear
+model.
 
 The K-harmonic linear model \eqref{eq:Kharmonic_model} has $2K + 1$ free
 parameters (one intercept, $K$ cosine coefficients, $K$ sine
@@ -636,38 +635,32 @@ coincides with the Nyquist--Shannon sampling criterion
 \citep{Nyquist1928,Shannon1949} applied to trigonometric regression and
 has been advocated specifically for circadian transcriptomics
 \citep{Hughes2017guidelines}. For the default $K = 2$ the design must
-satisfy $B \geq 5$; \texttt{detect\_FMM} emits a warning at dispatch
-time when this condition is violated. In passive designs the
+satisfy $B \geq 5$; the K-harmonic detector emits a warning at
+dispatch time when this condition is violated. In passive designs the
 per-subject collection times are typically distinct, so the condition
 is satisfied automatically; in active designs it imposes an explicit
 constraint on the sampling grid.
 
 The variance fraction captured by truncation at $K$ is
-$V_K / V_\infty = 1 - \rho^{2K}$ where $\rho = (\omega - 1)/(\omega + 1)$. For
-empirically observed $\omega \in [0.3, 0.5]$ (Supplementary
-Fig.~\ref{fig:supp_fmm_diagnostic}), $K = 2$ captures $80$--$97\%$ of FMM
-variance, $K = 3$ captures $91$--$99\%$, and higher $K$ pays an
-increasing degrees-of-freedom cost in the denominator of
-\eqref{eq:Kharmonic_F}. We compared $K \in \{1, 2, 3, 4, 5\}$ on three
-baboon tissues (KIM, $\hat{\eta} = 1.68$; KIC, $\hat{\eta} = 2.38$;
-SUN, $\hat{\eta} = 1.31$; $N_{\mathrm{sim}} = 30$ outer replicates).
-At moderate $N$ ($24$--$48$) $K = 2$ dominated: on KIM at $N = 24$, the
-power was $0.498$ for $K = 2$ versus $0.455$ for $K = 1$, $0.387$ for
-$K = 3$, $0.275$ for $K = 4$, and $0.136$ for $K = 5$; the steep drop
-from $K = 2$ to $K = 4$ reflects the degrees-of-freedom cost rather than
-any deficiency of the alternative model. At high $N$ ($\geq 72$) all $K$
-values converged. $K = 3$ marginally outperformed $K = 2$ at high $N$ but
-at the price of a larger Nyquist threshold ($B \geq 7$). We therefore
-adopt $K = 2$ as the default: it captures the dominant non-cosinor
-harmonic, has a biological interpretation (12-hour ultradian rhythms are
-well documented in liver, gut and immune tissues), and is identifiable in
-any active design with $B \geq 5$. The $K = 2$ choice can be overridden
-via the \texttt{K} argument of \texttt{detect\_FMM}.
+$V_K / V_\infty = 1 - \rho^{2K}$ where $\rho = (\omega - 1)/(\omega + 1)$,
+so capturing more of the non-cosinor variance requires higher $K$.
+Each additional harmonic, however, raises the identifiability
+threshold to $B \geq 2K + 1$, so denser sampling is needed to support
+each step in $K$. At the empirically observed $\hat\omega \in
+[0.28, 0.53]$ (Supplementary Fig.~\ref{fig:supp_fmm_diagnostic}),
+$K = 2$ already captures $90$--$99\%$ of FMM variance, and the marginal
+gain at $K = 3$ is at most $7\%$ but requires $B \geq 7$, which most
+active circadian designs ($B = 6$ or $8$) do not satisfy. We therefore
+adopt $K = 2$ as the default: it covers the dominant non-cosinor
+harmonic, is identifiable on any active design with $B \geq 5$, and
+has a biological interpretation (12-hour ultradian rhythms are well
+documented in liver, gut, and immune tissues). The harmonic order
+$K$ is user-tunable.
 
-To characterise the operating region of \texttt{detect\_FMM(K = 2)} on a
-cosinor-violating pilot we use a two-axis parametric sweep on the Baboon
-LUN pilot ($\hat{\eta} = 1.60$ under the new \texttt{detect\_FMM}
-pre-screen, $\hat{\sigma}_\alpha \approx 2.23$\,h, median FMM $R^2 = 0.88$,
+To characterise the operating region of the $K = 2$ detector on a
+cosinor-violating pilot we use a two-axis parametric sweep on the
+Baboon LUN pilot ($\hat{\eta} = 1.80$ under the empirical-Bayes
+pre-screen, $\hat{\sigma}_\alpha \approx 2.15$\,h, median FMM $R^2 = 0.84$,
 active $B = 12$). Per-gene shape and peak parameters are drawn from the
 one-parameter families
 \[
@@ -683,7 +676,7 @@ one (pure cosinor), $\eta = 1$ is uniform on $(0, 1)$, and $\eta \to
 power decreases monotonically with $\eta$:
 $\mathrm{Power}(\eta = 0.5) = 0.97$, $\mathrm{Power}(\eta = 1) = 0.95$,
 $\mathrm{Power}(\eta = 5) = 0.75$, $\mathrm{Power}(\eta = 20) = 0.35$
-(Figure~\ref{fig:fmm_sensitivity}A). The empirical anchor $\hat{\eta} = 1.60$
+(Figure~\ref{fig:fmm_sensitivity}A). The empirical anchor $\hat{\eta} = 1.80$
 sits in the high-power region of the curve. The $\alpha$ sweep
 ($\sigma_\alpha \in \{0, 0.5, 1, 2, 4\}$\,h) is essentially flat at $0.91$
 to $0.99$ across all values (Figure~\ref{fig:fmm_sensitivity}B), as
@@ -699,8 +692,8 @@ invariant in $\sigma_\alpha$ at fixed waveform shape.
 \label{sec:active_passive}
 
 The two preceding sections motivate two detectors, the cosinor $F$-test
-(DCP, $K = 1$) and the K-harmonic F-test (\texttt{detect\_FMM}, default
-$K = 2$), and the question of which design is preferable interacts with
+(DCP, $K = 1$) and the K-harmonic F-test (default $K = 2$), and the
+question of which design is preferable interacts with
 which detector is in use. We resolve this interaction in two steps: first
 a brief noncentrality calculation under cosinor and FMM truth, then an
 empirical comparison on one active and one passive pilot.
@@ -734,9 +727,8 @@ both truths, and the K-harmonic F-test should dominate DCP when
 $c(\omega) < 1$ and the Nyquist condition is met.
 
 We test these predictions empirically in
-Section~\ref{sec:active_passive_results} on one active pilot (baboon
-KIM) and one passive pilot (Seney ACC), using
-Figure~\ref{fig:active_vs_passive}.
+Section~\ref{sec:active_passive_results} on the active baboon KIM
+pilot, using Figure~\ref{fig:active_vs_passive}.
 
 The picture that emerges is not ``active wins'' or ``passive wins'' in
 any absolute sense. Within active designs, neither DCP nor the K-harmonic
@@ -761,37 +753,42 @@ so the choice does not affect the rest of the framework.
 
 % -----------------------------------------------------------------------
 % NOTE: Old results (single-pilot PFC passive design) archived below.
-% New results use the multi-dataset active-design framework (ADR/LIV for
-% Figs 1–2; three datasets for Figs 3–4; bootstrap figure for Fig 5).
+% New results use the multi-pilot framework (ADR/LIV for
+% Figs 1, 2; three datasets for Figs 3, 4; bootstrap figure for Fig 5).
 % -----------------------------------------------------------------------
 
 % =====================================================================
 \subsection{Pilot datasets and simulation setup}
 \label{sec:pilot_datasets}
 
-Pilot datasets spanning a ${\sim}5$-fold range in signal-to-noise ratio
-are used throughout. Single-cohort power (Figure~\ref{fig:sc_adrliv})
-uses the human adrenal gland (\textsc{GTEx} ADR; $n_\text{pilot} = 187$,
-passive; $\tilde{r} \approx 0.97$) and mouse liver (\textsc{GSE54651}
-LIV; $n_\text{pilot} = 8$, active $B = 8$; $\tilde{r} \approx 2.88$),
-giving a passive moderate-signal pilot and an active high-signal pilot.
-Here and throughout, $\tilde{r}$ denotes the median of the gene-level
-effect size $r_g = A_g / \sigma_g$ computed over the top-$K$ rhythmic
-genes used to calibrate $\hat{F}_{A,\sigma}$ in Step~1
-(Section~\ref{sec:single_cohort}), with $K = \min(300, |\mathcal{G}_R|)$
-and $\mathcal{G}_R$ the set of genes passing the cosinor pre-screen at
-$\alpha_{\mathrm{pilot}} = 0.01$. The K-harmonic
-sensitivity sweep (Figure~\ref{fig:fmm_sensitivity}) uses baboon lung
-(GSE98965 LUN; $n_\text{pilot} = 12$, active $B = 12$;
-$\tilde{r} \approx 1.72$). The active vs.\ passive comparison
-(Figure~\ref{fig:active_vs_passive}) contrasts baboon KIM (GSE98965 KIM;
-active, $\hat{\eta} = 2.62$) with the Seney ACC control cohort
-($n_\text{pilot} = 60$, passive; $\tilde{r} \approx 0.73$). The
-bootstrap (Figure~\ref{fig:bootstrap_sc}) spans four passive pilots
-ranging from $n_\text{pilot} = 28$ (Putamen-SCZ) to
-$n_\text{pilot} = 416$ (GTEx Thyroid).
-All simulations use $G = 5{,}000$ genes, $N_{\text{sim}} = 30$, and BH-adjusted
-FDR control at $\alpha = 0.05$.
+Pilot datasets spanning roughly a two-fold range in passive-design
+$\tilde{r}$ are used throughout. Single-cohort power
+(Figure~\ref{fig:sc_adrliv}) contrasts two human \textsc{GTEx} passive
+pilots: Adrenal Gland ($n_\text{pilot} = 187$;
+$\tilde{r} \approx 0.97$) and Liver ($n_\text{pilot} = 154$;
+$\tilde{r} \approx 0.48$), illustrating that within a single passive
+design type the intrinsic effect-size distribution alone drives an
+order-of-magnitude difference in required sample size. Here and
+throughout, $\tilde{r}$ denotes the median of the gene-level effect
+size $r_g = A_g / \sigma_g$ computed over the top-$K_{\mathrm{top}}$
+rhythmic genes used to calibrate $\hat{F}_{A,\sigma}$ in Step~1
+(Section~\ref{sec:single_cohort}), with
+$K_{\mathrm{top}} = \min(300, |\mathcal{G}_R|)$ and $\mathcal{G}_R$
+the set of genes passing the cosinor pre-screen at
+$\alpha_{\mathrm{pilot}} = 0.01$. The K-harmonic sensitivity sweep
+(Figure~\ref{fig:fmm_sensitivity}) uses baboon lung (GSE98965 LUN;
+$n_\text{pilot} = 12$, active $B = 12$; $\tilde{r} \approx 1.72$). The
+detector-choice comparison under cosinor violation
+(Figure~\ref{fig:active_vs_passive}) uses baboon KIM (GSE98965 KIM;
+active, $\hat{\eta} = 2.62$). The bootstrap
+(Figure~\ref{fig:bootstrap_sc}) contrasts the smallest and largest
+passive pilots in our test set: Putamen schizophrenia controls
+(GSE160521; $n_\text{pilot} = 28$) and \textsc{GTEx} Thyroid
+($n_\text{pilot} = 416$). Per-figure
+simulation parameters (number of genes $G$, number of simulation
+replicates $N_{\mathrm{sim}}$) are reported in the corresponding
+figure captions; all simulations use BH-adjusted FDR control at
+$\alpha = 0.05$.
 
 Table~\ref{tab:effect_sizes} summarises intrinsic effect sizes across publicly
 available circadian transcriptomic datasets, illustrating the 5--10$\times$
@@ -803,18 +800,19 @@ dataset-specific power calculations.
 \small
 \begin{tabular}{ll|lrcc}
 \toprule
-Organism & Study & Tissue & $n$ & \multicolumn{1}{c}{Median $r$} & \multicolumn{1}{c}{Min $r$} \\
+Organism & Study & Tissue & $n$ & \multicolumn{1}{c}{Median $r$} & \multicolumn{1}{c}{Median $r$} \\
  & & & & \multicolumn{1}{c}{(7 core)} & \multicolumn{1}{c}{(top 100)} \\
 \midrule
-\multirow{6}{*}{\textit{H.\ sapiens}} & \multirow{2}{*}{Chen et al.\ \citep{chen2016aging}} & PFC (BA11) & 147 & 0.91 & 0.46 \\
+\multirow{7}{*}{\textit{H.\ sapiens}} & \multirow{2}{*}{Chen et al.\ (GSE71620) \citep{chen2016aging}} & PFC (BA11) & 147 & 0.91 & 0.46 \\
  & & PFC (BA47) & 147 & 0.77 & 0.44 \\
- & \multirow{2}{*}{Ketchesin et al.\ \citep{ketchesin2021diurnal}} & Striatum (NAc) & 59 & 0.71 & 1.06 \\
+ & \multirow{3}{*}{Ketchesin et al.\ (GSE160521) \citep{ketchesin2021diurnal}} & Striatum (NAc) & 59 & 0.71 & 1.06 \\
  & & Striatum (caudate) & 59 & 1.04 & 0.82 \\
- & Seney et al.\ \citep{seney2019diurnal} & PFC & 104 & 0.79 & 0.55 \\
+ & & Striatum (Putamen) & 59 & 0.76 & 1.04 \\
+ & Seney et al.\ (CommonMind) \citep{seney2019diurnal} & PFC & 104 & 0.79 & 0.55 \\
 \midrule
-\multirow{6}{*}{\textit{M.\ musculus}} & Hughes et al.\ \citep{hughes2009harmonics} & Liver & 48 & 2.00 & 2.77 \\
- & Gerstner et al.\ \citep{gerstner2016removal} & Cerebral cortex & 34 & 2.46 & 2.18 \\
- & Na et al.\ \citep{na2009comprehensive} & Liver & 36 & 3.65 & 3.69 \\
+\multirow{6}{*}{\textit{M.\ musculus}} & Hughes et al.\ (GSE11923) \citep{hughes2009harmonics} & Liver & 48 & 2.00 & 2.77 \\
+ & Gerstner et al.\ (GSE78215) \citep{gerstner2016removal} & Cerebral cortex & 34 & 2.46 & 2.18 \\
+ & Na et al.\ (GSE11516) \citep{na2009comprehensive} & Liver & 36 & 3.65 & 3.69 \\
  & \multirow{3}{*}{Zhang et al.\ \citep{zhang2014comprehensive}} & Liver (GSE54650) & 24 & 3.51 & 3.67 \\
  & & Kidney & 24 & 6.33 & 3.65 \\
  & & Cerebellum & 24 & 3.52 & 2.01 \\
@@ -822,8 +820,14 @@ Organism & Study & Tissue & $n$ & \multicolumn{1}{c}{Median $r$} & \multicolumn{
 \end{tabular}
 \caption{Intrinsic effect sizes ($r = A/\sigma$) from public circadian
 transcriptomic datasets, adapted from \citep{zong2023circapower}.
-Human passive studies show $r \approx 0.6$--$1.0$; mouse active studies
-show $r \approx 2$--$6$.}
+Per-gene $r$ is summarised by the median over the seven canonical
+core clock genes (\textit{ARNTL}, \textit{CLOCK}, \textit{NR1D1},
+\textit{PER1}, \textit{PER2}, \textit{CRY1}, \textit{CRY2}) and over
+the top-$100$ rhythmic genes; this differs from the test-set summary
+$\tilde{r}$ used in Sections~\ref{sec:results}--\ref{sec:bootstrap}
+(median over the top-$K_{\mathrm{top}} = 300$ rhythmic genes
+calibrating $\hat{F}_{A,\sigma}$). Human passive studies show
+$r \approx 0.6$--$1.0$; mouse active studies show $r \approx 2$--$6$.}
 \label{tab:effect_sizes}
 \end{table}
 
@@ -844,31 +848,36 @@ show $r \approx 2$--$6$.}
 % \includegraphics[width=\textwidth]{../../output/single_cohort/figures/single_cohort_power_GTEx_AdrenalGland_v3.pdf}
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
   FIGURE 1 PLACEHOLDER\\[6pt]
-  Single-cohort power curves: ADR (passive, $\tilde{r}\approx 0.97$) and
-  LIV (active, $\tilde{r}\approx 2.88$). Power vs $N$, stratified by
-  $r$-stratum and FDR threshold.
+  Single-cohort power curves: \textsc{GTEx} ADR (passive,
+  $\tilde{r}\approx 0.97$) and \textsc{GTEx} Liver (passive,
+  $\tilde{r}\approx 0.48$). Power vs $N$, stratified by $r$-stratum
+  and FDR threshold.
   \vspace{3cm}}}
-\caption{Single-cohort rhythmicity detection power as a function of
-sample size. \textbf{(A)} GTEx Adrenal Gland (ADR;
-$\tilde{r}\approx 0.97$, passive design) and \textbf{(B)} mouse liver
-(LIV; $\tilde{r}\approx 2.88$, active design). Power is shown stratified
-by signal-to-noise stratum ($r < 0.5$ to $r > 2$) at FDR $0.05$. High-$r$
-strata reach $80\%$ power at $N \approx 20$ to $30$; low-$r$ strata
-remain substantially underpowered even at $N = 200$. An additional
-passive NAc panel (Ketchesin et al.) is provided in the supplementary
-material.}
+\caption{Single-cohort rhythmicity detection power on two human
+\textsc{GTEx} passive pilots. \textbf{(A)} Adrenal Gland
+($\tilde{r}\approx 0.97$, $n_\text{pilot}=187$) and
+\textbf{(B)} Liver ($\tilde{r}\approx 0.48$, $n_\text{pilot}=154$).
+Power is shown stratified by signal-to-noise stratum ($r < 0.5$ to
+$r > 2$) at FDR $0.05$. High-$r$ strata reach $80\%$ power at
+$N \approx 20$ to $30$; low-$r$ strata remain substantially
+underpowered even at $N = 200$. An additional passive NAc panel
+(Ketchesin et al.) is provided in the supplementary material.}
 \label{fig:sc_adrliv}
 \end{figure}
 
 Single-cohort power is driven by the $\tilde{r}$ distribution rather than any
-single summary statistic (Figure~\ref{fig:sc_adrliv}). For GTEx Adrenal Gland
-(ADR; passive design, $\tilde{r}\approx 0.97$), the interpolated $N_{80}$ is
-approximately 49; for mouse liver (LIV; active design, $\tilde{r}\approx 2.88$),
-$N_{80}\approx 19$. High-$\tilde{r}$ strata ($\tilde{r}>2$) saturate at
-$N\approx 20$--$30$, whereas genes with $\tilde{r}<0.5$ remain substantially
-underpowered even at $N=200$. The broad power range across strata within a single
-dataset shows why pilot-data-driven simulation, rather than a single effect size,
-is essential for realistic study planning.
+single summary statistic (Figure~\ref{fig:sc_adrliv}). For \textsc{GTEx}
+Adrenal Gland (passive, $\tilde{r}\approx 0.97$) the interpolated $N_{80}$ at
+FDR $0.05$ is approximately $49$; for \textsc{GTEx} Liver (passive,
+$\tilde{r}\approx 0.48$) $N_{80}$ exceeds the simulation grid ($N \leq 200$;
+observed power $0.73$ at $N = 200$). The same pipeline, detector, and FDR
+threshold thus give more than a four-fold difference in required sample size,
+driven solely by the intrinsic effect-size distribution. High-$\tilde{r}$
+strata ($\tilde{r}>2$) saturate at $N\approx 20$--$30$, whereas genes with
+$\tilde{r}<0.5$ remain substantially underpowered even at $N=200$. The broad
+power range across strata within a single dataset shows why pilot-data-driven
+simulation, rather than a single effect size, is essential for realistic study
+planning.
 
 % =====================================================================
 \subsection{Differential power: DR, DP, and DM in the GTEx Adrenal Gland vs.\ Liver comparison}
@@ -923,70 +932,60 @@ simulation indispensable.
 \subsection{Bootstrap uncertainty: pilot size and plug-in bias}
 \label{sec:bootstrap_results}
 
-% --- FIGURE 3 PLACEHOLDER ---
-% Source script: examples/publication/fig5_bootstrap_sc.R
+% --- FIGURE 3 ---
+% Source script: examples/publication/fig3_bootstrap_2panel.R
 % Generated figure: output/main_figures/Fig3_bootstrap_singlecohort.pdf
-% Panels (left to right, top to bottom):
-%   A=Putamen SCZ n=28, B=Seney ACC n=60,
-%   C=GTEx Pancreas n=249, D=GTEx Thyroid n=416
+% Panels: (a) Putamen SCZ n=28 (smallest pilot)
+%         (b) GTEx Thyroid n=416 (largest pilot)
 
 \begin{figure}[H]
 \centering
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
   FIGURE 3 PLACEHOLDER\\[6pt]
   Bootstrap vs plug-in, single-cohort \textsc{DCP}.\\
-  Panels: (A) Putamen SCZ $n_\text{pilot}=28$,
-          (B) Seney ACC $n_\text{pilot}=60$,
-          (C) GTEx Pancreas $n_\text{pilot}=249$,
-          (D) GTEx Thyroid $n_\text{pilot}=416$.\\
+  Panels: (a) Putamen SCZ $n_\text{pilot}=28$,
+          (b) GTEx Thyroid $n_\text{pilot}=416$.\\
   Source: Fig3\_bootstrap\_singlecohort.pdf.
   \vspace{3cm}}}
-\caption{Bootstrap uncertainty in single-cohort power estimates. Blue
-curve: plug-in power (parameters estimated once from pilot, treated as
-fixed). Red curve with error bars: bootstrap mean power and pointwise
-$95\%$ CI ($B_{\mathrm{out}} = 50$ outer resamples,
+\caption{Bootstrap uncertainty in single-cohort power estimates,
+contrasting the smallest and largest pilots in our test set. Blue
+curve: plug-in power (parameters estimated once from pilot, treated
+as fixed). Red curve with error bars: bootstrap mean power and
+pointwise $95\%$ CI ($B_{\mathrm{out}} = 50$ outer resamples,
 $N_{\mathrm{sim}}^{\mathrm{in}} = 25$ inner simulations, $G = 5{,}000$
 genes, \textsc{DCP} detector at the cosinor-screen FDR threshold
-$0.05$). All four pilots are passive. \textbf{(A)} Putamen
-schizophrenia controls ($n_{\mathrm{pilot}} = 28$): plug-in projects
+$0.05$). Both pilots are passive. \textbf{(a)} Putamen schizophrenia
+controls (GSE160521; $n_{\mathrm{pilot}} = 28$): plug-in projects
 $28\%$ power at $N = 40$ while the bootstrap mean is $43\%$, and the
-$95\%$ bootstrap CI at $N = 40$ is $[33.5\%, 54.0\%]$. This is the
-strongest pilot-induced-uncertainty signal across the four panels.
-\textbf{(B)} Seney ACC controls ($n_{\mathrm{pilot}} = 60$): widest
-$95\%$ CI at $N = 60$ is $[37.3\%, 46.9\%]$; plug-in and bootstrap
-mean agree to within $\sim 1\%$ throughout. \textbf{(C)} GTEx Pancreas
-($n_{\mathrm{pilot}} = 249$): widest $95\%$ CI at $N = 160$ is
-$[60.2\%, 66.9\%]$. \textbf{(D)} GTEx Thyroid
-($n_{\mathrm{pilot}} = 416$): widest $95\%$ CI at $N = 120$ is
-$[51.4\%, 57.8\%]$. The ordered sequence illustrates that bootstrap
-correction matters most when the pilot is small, and that the
-$95\%$ CI tightens monotonically with $n_{\mathrm{pilot}}$ until it
-saturates against the inner-Monte-Carlo noise floor at large pilots.}
+$95\%$ bootstrap CI at $N = 40$ is $[33.5\%, 54.0\%]$.
+\textbf{(b)} GTEx Thyroid ($n_{\mathrm{pilot}} = 416$): widest $95\%$
+CI at $N = 120$ is $[51.4\%, 57.8\%]$ and the plug-in mean tracks the
+bootstrap mean to within Monte Carlo noise across the full grid. The
+contrast shows that bootstrap correction matters most when the pilot
+is small, and that pilot-induced variability saturates against the
+inner-simulation noise floor for large pilots.}
 \label{fig:bootstrap_sc}
 \end{figure}
 
-Three features of Figure~\ref{fig:bootstrap_sc} carry the bootstrap
-message. First, the plug-in and bootstrap mean diverge most strongly at
-the smallest pilot: at Putamen-SCZ $N = 40$, plug-in is $27.7\%$ but
-the bootstrap mean is $42.6\%$, a $15$-point gap that the plug-in curve
-alone hides. The bootstrap CI at the same $N$ spans $33.5\%$ to
-$54.0\%$, so even averaging across $50$ resamples does not collapse the
-uncertainty in the recommendation. Second, for the moderate pilot
-(Seney, $n_{\mathrm{pilot}} = 60$) plug-in and bootstrap mean agree
-within Monte Carlo noise at every $N$, and the $95\%$ CI half-width
-is at most $\pm 5\%$ around the plug-in estimate; the plug-in curve
-here is a faithful summary. Third, for the two large GTEx pilots
-($n_{\mathrm{pilot}} \in \{249, 416\}$), the $95\%$ band tightens to
-within $\pm 3.5\%$ of the plug-in estimate at the elbow of the
-curve, dominated by inner-simulation Monte Carlo rather than
-pilot variability; further increases in $n_{\mathrm{pilot}}$ would not
-materially tighten the recommendation. The bootstrap is therefore
-essential for $n_{\mathrm{pilot}} \lesssim 40$, useful as a sanity
-check for $n_{\mathrm{pilot}} \approx 60$, and unnecessary for
-$n_{\mathrm{pilot}} \gtrsim 250$ at this inner-simulation budget. The
-figure uses \textsc{DCP} throughout; the uncertainty story is in the
-pilot summary $\hat{\Psi}$ and therefore extends in principle to the
-K-harmonic F-test with the same qualitative behaviour.
+Two features of Figure~\ref{fig:bootstrap_sc} carry the bootstrap
+message. First, the plug-in and bootstrap mean diverge most strongly
+at the small pilot: at Putamen-SCZ $N = 40$, plug-in is $27.7\%$ but
+the bootstrap mean is $42.6\%$, a $15$-point gap that the plug-in
+curve alone hides. The bootstrap CI at the same $N$ spans $33.5\%$ to
+$54.0\%$, so even averaging across $50$ resamples does not collapse
+the uncertainty in the recommendation. Second, for the largest pilot
+(\textsc{GTEx} Thyroid, $n_{\mathrm{pilot}} = 416$) the $95\%$ band
+tightens to within $\pm 3.5\%$ of the plug-in estimate at the elbow
+of the curve, dominated by inner-simulation Monte Carlo rather than
+pilot variability; further increases in $n_{\mathrm{pilot}}$ would
+not materially tighten the recommendation. The bootstrap is therefore
+essential for $n_{\mathrm{pilot}} \lesssim 40$ and unnecessary for
+$n_{\mathrm{pilot}} \gtrsim 250$ at this inner-simulation budget; the
+intermediate-pilot behaviour interpolates monotonically between these
+two regimes. The figure uses \textsc{DCP} throughout; the uncertainty
+story is in the pilot summary $\hat{\Psi}$ and therefore extends in
+principle to the K-harmonic F-test with the same qualitative
+behaviour.
 
 % =====================================================================
 \subsection{K-harmonic F-test sensitivity: $\omega$ and $\alpha$ sweeps}
@@ -1001,23 +1000,23 @@ K-harmonic F-test with the same qualitative behaviour.
 \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
   FIGURE 4 PLACEHOLDER\\[6pt]
   K-harmonic F-test ($K = 2$) sensitivity sweeps on Baboon LUN active pilot
-  ($\hat{\eta} = 1.60$, $B = 12$). Panel A: $\omega$ sweep
+  ($\hat{\eta} = 1.80$, $B = 12$). Panel A: $\omega$ sweep
   ($\omega_g \sim \mathrm{Beta}(1, \eta)$, $\eta \in \{0.5, 1, 2, 5, 20\}$).
   Panel B: $\alpha$ sweep
   ($\alpha_g \sim \mathrm{vonMises}(0, \kappa)$,
   $\sigma_\alpha \in \{0, 0.5, 1, 2, 4\}$\,h).
   Source: Fig4\_sensitivity.pdf.
   \vspace{3cm}}}
-\caption{K-harmonic F-test (\texttt{detect\_FMM}, $K = 2$) sensitivity to
+\caption{K-harmonic F-test ($K = 2$) sensitivity to
 waveform shape and peak dispersion on the Baboon LUN active pilot
-($\hat{\eta} = 1.60$, median FMM $R^2 \approx 0.88$, $B = 12$).
+($\hat{\eta} = 1.80$, median FMM $R^2 \approx 0.84$, $B = 12$).
 \textbf{(A)} $\omega$ sweep: $\omega_g \sim \mathrm{Beta}(1, \eta)$ with
 $\eta \in \{0.5, 1, 2, 5, 20\}$. At $N = 144$, power is $0.97$, $0.95$,
-$0.89$, $0.75$, $0.35$ respectively; the empirical anchor
-$\hat{\eta} = 1.60$ sits in the high-power region. \textbf{(B)} $\alpha$
+$0.90$, $0.77$, $0.37$ respectively; the empirical anchor
+$\hat{\eta} = 1.80$ sits in the high-power region. \textbf{(B)} $\alpha$
 sweep: $\alpha_g \sim \mathrm{vonMises}(0, \kappa)$ with
 $\sigma_\alpha \in \{0, 0.5, 1, 2, 4\}$\,h. At $N = 144$, power is
-approximately flat at $0.91$ to $0.99$, confirming approximate rotation
+approximately flat at $0.90$ to $0.99$, confirming approximate rotation
 invariance at the genome scale.}
 \label{fig:fmm_sensitivity}
 \end{figure}
@@ -1026,9 +1025,9 @@ The $\omega$ sweep (Figure~\ref{fig:fmm_sensitivity}A) traces the
 cosinor-to-arrhythmic spectrum: power degrades smoothly as the
 $\mathrm{Beta}(1, \eta)$ distribution of $\omega$ concentrates mass away
 from one, with the steepest drop between $\eta = 5$ and $\eta = 20$.
-The empirical Baboon LUN anchor at $\hat{\eta} = 1.60$ sits in the upper
-plateau of the curve, indicating that \texttt{detect\_FMM(K = 2)} retains
-substantial power on real cosinor-violating data. The $\alpha$ sweep
+The empirical Baboon LUN anchor at $\hat{\eta} = 1.80$ sits in the upper
+plateau of the curve, indicating that the $K = 2$ harmonic test
+retains substantial power on real cosinor-violating data. The $\alpha$ sweep
 (Figure~\ref{fig:fmm_sensitivity}B) shows that dispersing peak times across
 the cycle changes power by less than $8$\,\% across the
 $\sigma_\alpha \in [0, 4]$\,h range, consistent with the rotation
@@ -1081,11 +1080,11 @@ prediction of Section~\ref{sec:active_passive}: when the pilot
 $\hat\omega$-median falls into the cosinor-violating regime
 ($\hat\omega \leq 0.6$) and the design satisfies the identifiability
 threshold ($B \geq 2K + 1$), the K-harmonic F-test is the recommended
-detector. The corresponding passive-design analysis is provided in
-Section~\ref{sec:active_passive} of the Methods; we omit it from the
-Results because the passive Seney ACC pilot is cosinor-like
-($\hat\omega \approx 0.7$ to $0.9$) and the detector ranking is
-governed by waveform shape rather than design type.
+detector. When the pilot is cosinor-like ($\hat\omega \gtrsim 0.7$) the
+$K = 2$ harmonic test pays a degrees-of-freedom cost without a
+corresponding noncentrality gain and the cosinor $F$-test (DCP) is
+preferable; the detector ranking is therefore governed by waveform
+shape rather than active vs.\ passive design type.
 
 % (Archived pre-pivot prose moved to _archive/SCP_pre_pivot.tex on 2026-05-09)
 
@@ -1093,41 +1092,39 @@ governed by waveform shape rather than design type.
 \section{Discussion}
 %% ====================================================================
 
-% -----------------------------------------------------------------------
-% Skeleton — to be fleshed out once Figures 3–5 are finalised.
-% Six threads, one paragraph each.
-% -----------------------------------------------------------------------
-
-The five pilot datasets span a ${\sim}5$-fold range in $\tilde{r}$, and the
-resulting $n_{80}$ estimates differ by more than an order of magnitude. On
-the active mouse liver pilot ($\tilde{r} \approx 2.88$), $n_{80}$ for
-single-cohort detection is $\approx 19$; on the passive GTEx adrenal
-gland pilot ($\tilde{r} \approx 0.97$), $n_{80} \approx 49$; and on the
-passive Seney ACC pilot ($\tilde{r} \approx 0.73$), $n_{80} \approx 100$. This reproduces the core
-message of \textsc{PROPER} for RNA-seq \citep{wu2015proper} in the
-circadian setting and reinforces the need for effect-size-aware,
-dataset-specific planning rather than generic ``circadian sample size''
-recommendations.
+The pilot datasets in our test set span roughly a two-fold range in
+passive-design $\tilde{r}$ (from $0.45$ for \textsc{GTEx} Thyroid to
+$1.02$ for the Putamen control cohort), and the resulting $N_{80}$
+estimates differ by more than a factor of four. At \textsc{GTEx}
+Adrenal Gland ($\tilde{r}\approx 0.97$, passive),
+$N_{80} \approx 49$; at \textsc{GTEx} Liver
+($\tilde{r} \approx 0.48$, passive), $N_{80}$ exceeds the $N \leq 200$
+simulation grid. This reproduces the core message of \textsc{PROPER}
+for RNA-seq \citep{wu2015proper} in the circadian setting and
+reinforces the need for effect-size-aware, dataset-specific planning
+rather than generic ``circadian sample size'' recommendations.
 
 The equispaced active design achieves a noncentrality parameter
 $\lambda_g = N r_g^2 / 2$, twice the value of an unstructured passive
 design with the same $N$ (design factor $d = 1/2$ vs.\ $d \approx 0.24$
-for typical post-mortem TOD distributions). For matched single-cohort
-detection at $\tilde{r} \approx 2$ to $3$, this translates to $n_{80}
-\approx 19$ to $49$ in the active setting versus $\approx 100$ in the
-passive Seney regime. Passive designs sacrifice this efficiency but
+for typical post-mortem TOD distributions). The active baboon pilots
+in Figures~\ref{fig:fmm_sensitivity} and~\ref{fig:active_vs_passive}
+(LUN $\tilde{r} \approx 1.72$, KIM $\hat\eta = 2.62$) illustrate this
+regime empirically: on KIM the $K = 2$ harmonic test reaches $80\%$
+power at $N \approx 50$ across all sampling grids
+$B \in \{6, 8, 12, 24\}$. Passive designs sacrifice this efficiency but
 remain the only option for human post-mortem brain, clinical-cohort
 chronobiology, and any setting where collection time is determined by
 external scheduling rather than experimental protocol; \textsc{SCP}
 supports both modes with the same parameter-estimation and inference
 machinery.
 
-Within active designs, detector choice and time-sampling allocation
-decouple cleanly. The K-harmonic F-test (default $K = 2$) is the right
-detector when the pilot shows non-cosinor waveforms, operationalised
-through the pilot $\hat{\omega}$-median: empirically, the baboon active
-tissues have $\hat{\omega}$-median in $[0.3, 0.5]$ and the human passive
-cohorts (Seney) have $\hat{\omega}$-median in $[0.7, 0.9]$. We recommend
+Detector choice and time-sampling allocation decouple cleanly. The
+K-harmonic F-test (default $K = 2$) is the right detector when the
+pilot shows non-cosinor waveforms, operationalised through the pilot
+$\hat{\omega}$-median: empirically, the baboon active tissues have
+$\hat{\omega}$-median in $[0.28, 0.53]$ (Supplementary Figure~S1).
+We recommend
 $K = 2$ when the pilot $\hat{\omega}$-median is $\leq 0.6$ and the design
 satisfies $B \geq 2K + 1 = 5$, and DCP (which is the K-harmonic F-test at
 $K = 1$) otherwise. The general harmonic-regression identifiability rule
@@ -1148,33 +1145,36 @@ analytically tractable.
 
 The bootstrap of Section~\ref{sec:bootstrap} surfaces pilot-induced
 uncertainty in the design recommendation but does not by itself correct
-plug-in bias. The four panels of Figure~\ref{fig:bootstrap_sc} span
-$n_{\mathrm{pilot}} \in \{28, 60, 249, 416\}$ with widest $95\%$ CIs of
-$[33.5\%, 54.0\%]$, $[37.3\%, 46.9\%]$, $[60.2\%, 66.9\%]$, and
-$[51.4\%, 57.8\%]$ at the elbow of each curve; the largest tightening
-comes between the two smallest pilots, and the CI saturates against
-the inner-Monte-Carlo noise floor for $n_{\mathrm{pilot}} \gtrsim 250$.
-At Putamen-SCZ ($n_{\mathrm{pilot}} = 28$) the bootstrap is decisive:
+plug-in bias. The two panels of Figure~\ref{fig:bootstrap_sc} span
+$n_{\mathrm{pilot}} \in \{28, 416\}$ with widest $95\%$ CIs of
+$[33.5\%, 54.0\%]$ (Putamen-SCZ, $n_{\mathrm{pilot}} = 28$, at
+$N = 40$) and $[51.4\%, 57.8\%]$ (\textsc{GTEx} Thyroid,
+$n_{\mathrm{pilot}} = 416$, at $N = 120$); the CI saturates against
+the inner-Monte-Carlo noise floor at the large-pilot end. At
+Putamen-SCZ ($n_{\mathrm{pilot}} = 28$) the bootstrap is decisive:
 the plug-in projects $28\%$ power at $N = 40$ but the $95\%$ CI of
 $33$ to $54\%$ would lead a researcher to question whether $N = 40$ is
-adequate, a conclusion the plug-in point estimate cannot support either
-way. For moderate pilots ($n_{\mathrm{pilot}} \approx 60$) plug-in and
-bootstrap mean agree within Monte Carlo noise and the bootstrap serves
-as a sanity check; for large pilots ($n_{\mathrm{pilot}} \gtrsim 250$)
-the plug-in recommendation is faithful.
+adequate, a conclusion the plug-in point estimate cannot support
+either way. For intermediate pilots
+($40 < n_{\mathrm{pilot}} < 250$) the bootstrap serves as a useful
+sanity check on the plug-in projection; for large pilots
+($n_{\mathrm{pilot}} \gtrsim 250$) the plug-in recommendation is
+faithful.
 
 DR, DP, and DM tests are conditional on a data-derived TOJR
 classification, which breaks analytic tractability and increases the
-required sample size per group relative to single-cohort detection. For
-the active GTEx ADR vs.\ LIV comparison the per-group $N_{80}$ for DR
-is approximately $80$; for the passive NAc vs.\ Putamen comparison it
-is approximately $150$. The two-stage cost is roughly $2$ to $5\times$
-the matched single-cohort $n_{80}$, with the gap widest at low
-$\tilde{r}$ where TOJR classification is noisiest. DP power tracks
-phase-shift effect size and DM tracks mesor-shift signal-to-noise; both
-are easier than DR at matched effect size because they condition only
-on the presence of rhythmicity in at least one group, rather than on a
-difference in rhythmicity status between groups.
+required sample size per group relative to single-cohort detection.
+On the passive \textsc{GTEx} Adrenal Gland vs.\ Liver comparison
+(Figure~\ref{fig:diff_adrliv}), the per-group $N_{80}$ at FDR $0.20$
+is approximately $120$ for DP, $190$ for DR, and $190$ for DM. The
+endpoint ordering reflects effect-size structure rather than
+detector behaviour: DP benefits from the most concentrated
+phase-shift effect-size distribution in this comparison, while DR
+and DM are comparably hard, with DM marginally weaker because the
+mesor-shift signal is the smallest of the three. The two-stage cost
+is roughly $2$ to $5\times$ the matched single-cohort $N_{80}$, with
+the gap widest at low $\tilde{r}$ where TOJR classification is
+noisiest.
 
 \subsection{A decision tree for circadian study planning}
 \label{sec:decision_tree}
@@ -1185,7 +1185,7 @@ We close with a four-step rule for using \textsc{SCP} prospectively.
 From a pilot dataset, estimate $\hat{\omega}$-median over the rhythmic
 gene set (Section~\ref{sec:cosinor_violation}). If $\hat{\omega}$-median
 is $\leq 0.6$ and the planned design will satisfy $B \geq 5$, use the
-K-harmonic F-test (\texttt{detect\_FMM}, $K = 2$); otherwise use the
+$K = 2$ harmonic F-test; otherwise use the
 cosinor F-test (DCP). The choice between the two is governed by
 waveform shape, not by active vs.\ passive design \emph{per se}.
 
@@ -1195,29 +1195,31 @@ threshold $B \geq 2K + 1$: that is, $B \geq 3$ for DCP, $B \geq 5$ for
 $K = 2$, $B \geq 7$ for $K = 3$. Above the threshold, the $(B, m)$
 allocation does not affect power; the design choice reduces to a
 single decision on total $N$. The detection functions
-\texttt{detect\_DCP} and \texttt{detect\_FMM} can also be called
-stand-alone outside the power-analysis pipeline, with the same
-identifiability requirement on the supplied design.
+Both detectors are exposed as stand-alone functions in the framework
+so that they can be applied outside the power-analysis pipeline, with
+the same identifiability requirement on the supplied design.
 
 \textbf{Step 3, sample size.}
-Read $n_{80}$ off the closed-form power curve at your pilot
+Read $N_{80}$ off the closed-form power curve at your pilot
 $\tilde{r}$-median (Sections~\ref{sec:single_cohort}
-and~\ref{sec:differential}); the typical operating points are
-$n_{80} \approx 20$ for active high-$\tilde{r}$ tissue,
-$n_{80} \approx 50$ for active moderate-$\tilde{r}$, and
-$n_{80} \approx 100$ for passive moderate-$\tilde{r}$. For
-differential analyses, plan per group: roughly $80$ per group for
-the active ADR vs.\ LIV regime and $150$ per group for the passive
-NAc vs.\ Putamen regime, with DP and DM at comparable or smaller
-per-group $N$ than DR.
+and~\ref{sec:differential}); typical single-cohort operating points
+observed in our pilots are $N_{80} \lesssim 50$ for active
+moderate- to high-$\tilde{r}$ tissue (e.g., baboon active pilots,
+$\tilde{r} \geq 1.5$), $N_{80} \approx 50$ for passive
+moderately-rhythmic tissue ($\tilde{r} \approx 1.0$), and
+$N_{80} > 200$ for passive low-$\tilde{r}$ tissue
+($\tilde{r} \lesssim 0.5$). For differential
+analyses, plan per group: on the passive \textsc{GTEx} Adrenal Gland
+vs.\ Liver comparison, FDR-$0.20$ per-group $N_{80}$ is approximately
+$120$ for DP, $190$ for DR, and $190$ for DM.
 
 \textbf{Step 4, bootstrap.}
 If $n_{\mathrm{pilot}} \leq 40$, run the outer subject-bootstrap of
 Section~\ref{sec:bootstrap} and report the $95\%$ CI band alongside
 the plug-in curve; the bootstrap is essential at this pilot size to
-surface the uncertainty the plug-in alone hides. For
-$40 < n_{\mathrm{pilot}} \leq 100$, the bootstrap is a useful sanity
-check (typical CI widths $\leq 10$\,\%). For
+surface the uncertainty the plug-in alone hides. For intermediate
+pilots ($40 < n_{\mathrm{pilot}} < 250$) the bootstrap CI serves as
+a useful sanity check on the plug-in projection. For
 $n_{\mathrm{pilot}} \gtrsim 250$, the plug-in curve is a faithful
 summary and the bootstrap is optional.
 

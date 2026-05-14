@@ -669,6 +669,7 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
 
   amp_g   <- numeric(ngenes)
   phase_g <- numeric(ngenes)
+  ji      <- NULL                          # joint draw index, set below if paired
 
   if (n_rhythmic > 0) {
     if (has_joint) {
@@ -695,6 +696,16 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
   # All clipped/wrapped to safe ranges.
   if (n_rhythmic > 0) {
     .clip_omega <- function(x) pmin(pmax(x, 1e-4), 1 - 1e-4)
+    # Resample omega_rhythmic to length n_rhythmic.
+    # If paired with amplitude (same n_fitted) and we already drew `ji`,
+    # use the SAME ji index so (A, σ, ω) stay jointly paired per gene.
+    .resample_paired <- function(vec) {
+      if (!is.null(ji) && length(vec) == length(bio.opts$amplitude)) {
+        vec[ji]
+      } else {
+        vec[sample.int(length(vec), n_rhythmic, replace = TRUE)]
+      }
+    }
     omega_g <- if (!is.null(bio.opts$omega_dist)) {
       spec <- bio.opts$omega_dist
       raw  <- switch(spec$family,
@@ -703,8 +714,8 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
         stop("Unknown omega_dist$family: ", spec$family))
       .clip_omega(raw)
     } else if (!is.null(bio.opts$omega_rhythmic) &&
-               length(bio.opts$omega_rhythmic) == n_rhythmic) {
-      .clip_omega(bio.opts$omega_rhythmic)
+               length(bio.opts$omega_rhythmic) > 0L) {
+      .clip_omega(.resample_paired(bio.opts$omega_rhythmic))
     } else {
       rep(omega, n_rhythmic)  # backward-compat scalar (no clip — caller validated)
     }
@@ -755,8 +766,8 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
         .rvonmises(n_rhythmic, mu = mu, kappa = kappa)
       }
     } else if (!is.null(bio.opts$alpha_rhythmic) &&
-               length(bio.opts$alpha_rhythmic) == n_rhythmic) {
-      bio.opts$alpha_rhythmic
+               length(bio.opts$alpha_rhythmic) > 0L) {
+      .resample_paired(bio.opts$alpha_rhythmic)
     } else {
       alpha_base_rad
     }
