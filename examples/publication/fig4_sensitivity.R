@@ -257,13 +257,13 @@ for (out_pdf in fig_paths) {
   pub_legend("bottomright",
              legend = sprintf("%g", BETA_GRID),
              col = pal_A, lwd = 1.6,
-             title = expression(beta),
+             title = expression(eta),
              cex = 0.7)
 
-  # --- Panel c: alpha sweep (was current panel b) ---
+  # --- Panel c: alpha-dispersion sweep ---
   plot(NA, xlim = range(N_GRID), ylim = c(0, 1),
        xlab = "N (total samples)", ylab = "Power",
-       main = expression(alpha ~ "sweep"))
+       main = expression(sigma[alpha] ~ "(peak-phase dispersion) sweep"))
   panel_label("c")
   abline_80pct()
   for (k in seq_along(SDHR_GRID)) {

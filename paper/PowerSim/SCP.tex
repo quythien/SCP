@@ -35,7 +35,7 @@ Circadian rhythms, endogenous $\sim$24-hour oscillations, play a fundamental rol
 
 Prospective study design therefore remains a critical bottleneck. Investigators must determine the sample size required to achieve adequate statistical power, assess how sensitive those recommendations are to the limitations of pilot data, and, in active experimental designs, strike the right balance between sampling frequency and biological replicates. In passive observational settings, such as human post-mortem studies, sampling time cannot be controlled and sample acquisition is costly, making principled sample size calculation especially important. Without rigorous design guidance, circadian transcriptomic studies risk being substantially underpowered despite considerable experimental investment.
 
-To our knowledge, \textsc{CircaPower} \citep{zong2023circapower} is currently the only dedicated framework for power and sample size determination in circadian transcriptomic studies. However, it is restricted to single-condition rhythmicity detection and does not extend to differential rhythmicity analysis. CircaPower derives closed-form power calculations under a cosinor model using a fixed intrinsic effect size \( r = A/\sigma \), quantifying per-gene statistical power for detecting rhythmicity. While this provides an important statistical foundation for circadian biomarker discovery, the formulation assumes a uniform effect size across genes and does not account for genome-wide false discovery. In practice, however, the intrinsic effect size \( r \) varies substantially across tissues, species, and genes, with marked differences between core clock genes and the broader transcriptome \citep{zong2023circapower}. Consequently, the fixed-effect-size assumption fails to capture the heterogeneity in signal strength across the genome. Furthermore, because circadian studies operate at the transcriptome-wide scale, false discovery rate (FDR) control is essential. The fixed-\( r \) formulation does not naturally accommodate this requirement, as it lacks a mechanism to model cross-gene variability, a necessary ingredient for characterizing genome-wide error rates.
+To our knowledge, \textsc{CircaPower} \citep{zong2023circapower} is currently the only dedicated framework for power and sample size determination in circadian transcriptomic studies, but it is restricted to single-condition rhythmicity detection and does not extend to differential analyses. CircaPower derives closed-form power under a cosinor model using a fixed intrinsic effect size \( r = A/\sigma \). In practice, $r$ varies substantially across tissues, species, and genes, with marked differences between core clock genes and the broader transcriptome \citep{zong2023circapower}, so a fixed-$r$ assumption misrepresents transcriptome-wide signal strength. Because circadian studies operate at the transcriptome-wide scale, false discovery rate (FDR) control is also required, and the fixed-$r$ formulation provides no mechanism to model the cross-gene variability needed to characterize genome-wide error rates.
 
 For power calculation of differential circadian biomarker detection, closed-form analytical solutions analogous to those in CircaPower are generally infeasible. As established in DiffCircaPipeline \citep{xue2023diffcircapipeline}, circadian rhythm disruptions are complex and multi-faceted, encompassing differential rhythmicity (DR), differential phase (DP), and differential MESOR (DM). Detection of these features requires a two-stage workflow contingent on the rhythmicity status inferred for each condition. From a statistical standpoint, this biological complexity involves multiple endpoints coupled with genome-wide multiple testing, and therefore cannot be reduced to a single test statistic or a tractable closed-form solution.
 
@@ -797,7 +797,8 @@ dataset-specific power calculations.
 
 \begin{table}[H]
 \centering
-\small
+\footnotesize
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{ll|lrcc}
 \toprule
 Organism & Study & Tissue & $n$ & \multicolumn{1}{c}{Median $r$} & \multicolumn{1}{c}{Median $r$} \\
@@ -860,8 +861,7 @@ $r \approx 0.6$--$1.0$; mouse active studies show $r \approx 2$--$6$.}
 Power is shown stratified by signal-to-noise stratum ($r < 0.5$ to
 $r > 2$) at FDR $0.05$. High-$r$ strata reach $80\%$ power at
 $N \approx 20$ to $30$; low-$r$ strata remain substantially
-underpowered even at $N = 200$. An additional passive NAc panel
-(Ketchesin et al.) is provided in the supplementary material.}
+underpowered even at $N = 200$.}
 \label{fig:sc_adrliv}
 \end{figure}
 
@@ -960,7 +960,7 @@ $28\%$ power at $N = 40$ while the bootstrap mean is $43\%$, and the
 $95\%$ bootstrap CI at $N = 40$ is $[33.5\%, 54.0\%]$.
 \textbf{(b)} GTEx Thyroid ($n_{\mathrm{pilot}} = 416$): widest $95\%$
 CI at $N = 120$ is $[51.4\%, 57.8\%]$ and the plug-in mean tracks the
-bootstrap mean to within Monte Carlo noise across the full grid. The
+bootstrap mean within $\pm 3.5\%$ across the full grid. The
 contrast shows that bootstrap correction matters most when the pilot
 is small, and that pilot-induced variability saturates against the
 inner-simulation noise floor for large pilots.}
@@ -988,7 +988,7 @@ principle to the K-harmonic F-test with the same qualitative
 behaviour.
 
 % =====================================================================
-\subsection{K-harmonic F-test sensitivity: $\omega$ and $\alpha$ sweeps}
+\subsection{\texorpdfstring{K-harmonic F-test sensitivity: $\omega$ and $\alpha$ sweeps}{K-harmonic F-test sensitivity: omega and alpha sweeps}}
 \label{sec:fmm_results}
 
 % --- FIGURE 4 ---
@@ -1015,9 +1015,10 @@ $\eta \in \{0.5, 1, 2, 5, 20\}$. At $N = 144$, power is $0.97$, $0.95$,
 $0.90$, $0.77$, $0.37$ respectively; the empirical anchor
 $\hat{\eta} = 1.80$ sits in the high-power region. \textbf{(B)} $\alpha$
 sweep: $\alpha_g \sim \mathrm{vonMises}(0, \kappa)$ with
-$\sigma_\alpha \in \{0, 0.5, 1, 2, 4\}$\,h. At $N = 144$, power is
-approximately flat at $0.90$ to $0.99$, confirming approximate rotation
-invariance at the genome scale.}
+$\sigma_\alpha \in \{0, 0.5, 1, 2, 4\}$\,h, where $\sigma_\alpha$ is
+the across-gene standard deviation of $\alpha$ on the 24-hour clock
+and $\kappa = \bigl(24 / (2\pi\,\sigma_\alpha)\bigr)^2$. At
+$N = 144$, power is approximately flat at $0.90$ to $0.99$.}
 \label{fig:fmm_sensitivity}
 \end{figure}
 
@@ -1028,10 +1029,9 @@ from one, with the steepest drop between $\eta = 5$ and $\eta = 20$.
 The empirical Baboon LUN anchor at $\hat{\eta} = 1.80$ sits in the upper
 plateau of the curve, indicating that the $K = 2$ harmonic test
 retains substantial power on real cosinor-violating data. The $\alpha$ sweep
-(Figure~\ref{fig:fmm_sensitivity}B) shows that dispersing peak times across
-the cycle changes power by less than $8$\,\% across the
-$\sigma_\alpha \in [0, 4]$\,h range, consistent with the rotation
-invariance of the squared-amplitude noncentrality (Proposition~\ref{prop:beta_invariance}).
+(Figure~\ref{fig:fmm_sensitivity}B) shows that dispersing peak times
+across the cycle changes power by less than $8$\,\% across the
+$\sigma_\alpha \in [0, 4]$\,h range.
 
 % =====================================================================
 \subsection{Detector choice under cosinor violation in an active design}
@@ -1052,20 +1052,12 @@ invariance of the squared-amplitude noncentrality (Proposition~\ref{prop:beta_in
   (bottom). Source: Fig5\_active\_vs\_passive.pdf.
   \vspace{3cm}}}
 \caption{Detector comparison on the active Baboon KIM pilot
-($\hat\eta = 2.62$, $B \in \{6, 8, 12, 24\}$). \textbf{(A)} DCP power
-curves overlap within ${\sim}1\%$ across all $B$ values, empirically
-confirming the $B$-invariance prediction of
-\eqref{eq:ncp_dcp_cos}--\eqref{eq:ncp_dcp_fmm}. \textbf{(B)} K-harmonic
-F-test ($K = 2$) power curves also overlap within Monte Carlo noise
-($\leq 4\%$ across $B$ at every $N$), mirroring the DCP $B$-invariance
-above the identifiability threshold $B \geq 2K + 1 = 5$. The K-harmonic
-F-test gains $15.3\%$ at $N = 24$, $10.2\%$ at $N = 48$, and $5.0\%$ at
-$N = 72$ relative to DCP, and converges within $1\%$ at $N \geq 120$ as
-both detectors saturate. Under realistic non-cosinor truth (the KIM
-pilot has cosinor-violating $\hat\omega$-median below $0.5$), the
-K-harmonic F-test recovers the variance lost to the first-harmonic
-projection and improves moderate-$N$ power without sacrificing the
-$B$-invariance property of the cosinor design.}
+($\hat\eta = 2.62$, $B \in \{6, 8, 12, 24\}$). \textbf{(A)} DCP power curves overlap within ${\sim}1\%$ across all
+$B$ values. \textbf{(B)} K-harmonic F-test ($K = 2$) power curves also overlap
+within $\leq 4\%$ across $B$ at every $N$, above the identifiability
+threshold $B \geq 2K + 1 = 5$. The K-harmonic F-test gains $15.3\%$ at $N = 24$, $10.2\%$ at $N = 48$,
+and $5.0\%$ at $N = 72$ relative to DCP, and converges within $1\%$
+at $N \geq 120$ as both detectors saturate.}
 \label{fig:active_vs_passive}
 \end{figure}
 
@@ -1132,15 +1124,13 @@ is $B \geq 2K + 1$ distinct sampling phases per period: $B \geq 3$ for
 DCP, $B \geq 5$ for $K = 2$, $B \geq 7$ for $K = 3$. Above this
 threshold the $(B, m)$ allocation does not affect power at fixed $N$: on the
 active KIM pilot, the four sampling grids $B \in \{6, 8, 12, 24\}$
-overlap within Monte Carlo noise ($\leq 4$\,\%) for both detectors
-(Figure~\ref{fig:active_vs_passive}). The $B$-versus-$m$ trade-off
-classically emphasised in design guidance therefore reduces, once the
-identifiability bound is met, to a single choice of total $N$. The
-\textsc{SCP} detector slot is generic and accepts any
-$p$-value-emitting rhythmicity test, so the framework extends to
-\textsc{JTK}, \textsc{RAIN}, and other published methods by drop-in
-replacement; this paper focuses on DCP and the K-harmonic F-test because
-they have closed-form noncentralities that make planning recommendations
+overlap within $\leq 4$\,\% for both detectors
+(Figure~\ref{fig:active_vs_passive}). The $B$-versus-$m$ trade-off classically emphasised in design guidance
+therefore reduces, once the identifiability bound is met, to a single
+choice of total $N$. \textsc{SCP} is detector-agnostic and the
+framework is extensible to alternative rhythmicity tests; this paper
+focuses on DCP and the K-harmonic F-test because they have
+closed-form noncentralities that make planning recommendations
 analytically tractable.
 
 The bootstrap of Section~\ref{sec:bootstrap} surfaces pilot-induced
@@ -1223,18 +1213,15 @@ a useful sanity check on the plug-in projection. For
 $n_{\mathrm{pilot}} \gtrsim 250$, the plug-in curve is a faithful
 summary and the bootstrap is optional.
 
-The cosinor model assumes a single sinusoidal harmonic and the
-K-harmonic F-test assumes Gaussian residuals; both are robust to mild
-violations but degrade for heavily sharp-peaked, near-arrhythmic, or
-heteroskedastic genes. Gene types in the differential simulator are
-modelled as mutually exclusive, so compound DR+DP changes are not
-directly evaluated. Passive-design power depends on the empirical TOD
-distribution of the pilot, which may not generalise to a planned
-cohort with different recruitment logistics. The bootstrap is
-computationally intensive ($B_{\mathrm{out}} \times
-N_{\mathrm{sim}}^{\mathrm{in}}$ inner simulations) and is
-recommended only where the analysis above indicates pilot uncertainty
-is large enough to matter.
+Several limitations apply. The cosinor and K-harmonic F-tests assume
+Gaussian residuals and degrade on heavily sharp-peaked,
+near-arrhythmic, or heteroskedastic genes. The differential simulator
+treats gene types as mutually exclusive, so compound DR+DP changes
+are not directly evaluated. Passive-design power depends on the
+pilot's empirical TOD distribution, which may not generalise to a
+planned cohort with different recruitment logistics. The bootstrap is
+computationally intensive and is recommended only when the analysis
+above flags pilot uncertainty as material.
 
 \textsc{SCP} is available as an open-source R framework.
 
