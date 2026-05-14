@@ -185,7 +185,7 @@ saveRDS(out_data, file.path(out_dir_res, sprintf("fig5_v4_active_passive_%s.rds"
 # ====================================================================
 # 6. Plot — 2x2
 # ====================================================================
-cat("\n=== Step 5: render Fig 5 v4 (2x2) ===\n")
+cat("\n=== Step 5: render Fig 5 (active-only, 2 panels) ===\n")
 source("examples/publication/_pub_style.R")
 
 fig_paths <- c(
@@ -195,13 +195,10 @@ fig_paths <- c(
 dir.create("output/main_figures", recursive = TRUE, showWarnings = FALSE)
 
 pal_B  <- pub_palette_sequential(length(B_GRID_ACTIVE))
-pal_DT <- pub_palette_detector()
-col_DCP <- unname(pal_DT["DCP"])
-col_FMM <- unname(pal_DT["FMM"])
 
 for (out_pdf in fig_paths) {
-  cairo_pdf(out_pdf, width = 7.2, height = 6.4)
-  pub_par(mfrow = c(2, 2), mar = c(4.0, 4.2, 2.4, 1.0))
+  cairo_pdf(out_pdf, width = 7.2, height = 7.0)
+  pub_par(mfrow = c(2, 1), mar = c(4.0, 4.2, 2.4, 1.0))
 
   # --- Panel a: Active, DCP ---
   plot(NA, xlim = range(N_GRID_ACTIVE), ylim = c(0, 1),
@@ -217,42 +214,17 @@ for (out_pdf in fig_paths) {
   pub_legend("bottomright", legend = sprintf("%d", B_GRID_ACTIVE),
              col = pal_B, lwd = 1.6, title = "B (timepoints)")
 
-  # --- Panel b: Passive, DCP ---
-  pasD <- results_passive$DCP
-  plot(NA, xlim = range(N_GRID_PASSIVE), ylim = c(0, 1),
-       xlab = "N (total samples)", ylab = "Power",
-       main = "Passive, DCP")
-  panel_label("b")
-  abline_80pct()
-  lines(pasD$N, pasD$power, col = col_DCP, lwd = 2.0)
-  points(pasD$N, pasD$power, pch = 19, col = col_DCP, cex = 0.7)
-
-  # --- Panel c: Active, FMM K=2 ---
+  # --- Panel b: Active, FMM K=2 ---
   plot(NA, xlim = range(N_GRID_ACTIVE), ylim = c(0, 1),
        xlab = "N (total samples)", ylab = "Power",
        main = sprintf("Active, K = %d", K_HARM))
-  panel_label("c")
+  panel_label("b")
   abline_80pct()
   for (k in seq_along(B_GRID_ACTIVE)) {
     df <- results_active$FMM[[as.character(B_GRID_ACTIVE[k])]]
     lines(df$N, df$power, col = pal_B[k], lwd = 1.8)
     points(df$N, df$power, pch = 19, col = pal_B[k], cex = 0.7)
   }
-
-  # --- Panel d: Passive, FMM K=2 with DCP overlay ---
-  pasF <- results_passive$FMM
-  plot(NA, xlim = range(N_GRID_PASSIVE), ylim = c(0, 1),
-       xlab = "N (total samples)", ylab = "Power",
-       main = sprintf("Passive, K = %d", K_HARM))
-  panel_label("d")
-  abline_80pct()
-  lines(pasF$N, pasF$power, col = col_FMM, lwd = 2.0)
-  points(pasF$N, pasF$power, pch = 19, col = col_FMM, cex = 0.7)
-  lines(pasD$N, pasD$power, col = col_DCP, lwd = 1.4, lty = 2)
-  pub_legend("bottomright",
-             legend = c(sprintf("K = %d", K_HARM), "DCP (overlay)"),
-             col = c(col_FMM, col_DCP), lwd = c(2.0, 1.4),
-             lty = c(1, 2))
 
   dev.off()
   cat(sprintf("Saved: %s\n", out_pdf))
