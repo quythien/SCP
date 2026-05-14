@@ -26,7 +26,7 @@
 \maketitle
 
 \begin{abstract}
-Circadian disruption is a hallmark of numerous human diseases, yet detecting condition-specific changes in gene expression rhythms remains a significant challenge. Circadian transcriptomic studies aim to identify rhythmic biomarkers within a given condition or to characterize differential circadian biomarkers across conditions. Given the constraints of limited budgets and sample availability, rigorous power calculation and thoughtful study design are critical for planning such studies. Existing approaches, such as CircaPower, offer closed-form analytical solutions for circadian biomarker detection but do not account for gene-specific signal-to-noise ratios or genome-wide false discovery. To address these limitations, we present SCP (Simulation-based Circadian Power), a simulation-based framework for the study design of circadian transcriptomic analyses. Using gene-specific information from pilot or publicly available data, SCP enables pilot-calibrated, FDR-controlled power calculations across the transcriptome. The framework supports sample size determination for circadian biomarker detection and accommodates multi-faceted differential rhythm analyses, including differential rhythmicity, differential phase, and differential MESOR. For active experimental designs such as in animal studies, we further investigate the trade-off between sampling frequency and biological replicates and resolve it analytically: above the harmonic-regression identifiability threshold, power depends on total sample size alone. For pilots whose waveforms deviate from a pure cosinor, SCP also provides a K-harmonic F-test that builds on the LimoRhyde linear-modelling pipeline by stacking $K$ periodic bases and testing the joint harmonic null with the resulting nested F-statistic. Additionally, a bootstrap procedure is introduced to quantify uncertainty in power curves and sample size recommendations. SCP is evaluated on simulated and real circadian datasets across active and passive design regimes.
+Circadian disruption is a hallmark of numerous human diseases, yet detecting condition-specific changes in gene expression rhythms remains a significant challenge. Circadian transcriptomic studies aim to identify rhythmic biomarkers within a given condition or to characterize differential circadian biomarkers across conditions. Given the constraints of limited budgets and sample availability, rigorous power calculation and thoughtful study design are critical for planning such studies. Existing approaches, such as CircaPower, offer closed-form analytical solutions for circadian biomarker detection but do not account for gene-specific signal-to-noise ratios or genome-wide false discovery. To address these limitations, we present SCP (Simulation-based Circadian Power), a simulation-based framework for the study design of circadian transcriptomic analyses. Using gene-specific information from pilot or publicly available data, SCP enables pilot-calibrated, FDR-controlled power calculations across the transcriptome. The framework supports sample size determination for circadian biomarker detection and accommodates multi-faceted differential rhythm analyses, including differential rhythmicity, differential phase, and differential MESOR. For active experimental designs such as in animal studies, we further investigate the trade-off between sampling frequency and biological replicates and resolve it analytically: above the harmonic-regression identifiability threshold, power depends on total sample size alone. For pilots whose waveforms deviate from a pure cosinor, SCP also provides a K-harmonic F-test that generalises the cosinor test to user-tunable harmonic order, stacking $K$ periodic bases and testing the joint harmonic null with a nested F-statistic. Additionally, a bootstrap procedure is introduced to quantify uncertainty in power curves and sample size recommendations. SCP is evaluated on simulated and real circadian datasets across active and passive design regimes.
 \end{abstract}
 %% ====================================================================
 \section{Introduction}
@@ -39,7 +39,7 @@ To our knowledge, \textsc{CircaPower} \citep{zong2023circapower} is currently th
 
 For power calculation of differential circadian biomarker detection, closed-form analytical solutions analogous to those in CircaPower are generally infeasible. As established in DiffCircaPipeline \citep{xue2023diffcircapipeline}, circadian rhythm disruptions are complex and multi-faceted, encompassing differential rhythmicity (DR), differential phase (DP), and differential MESOR (DM). Detection of these features requires a two-stage workflow contingent on the rhythmicity status inferred for each condition. From a statistical standpoint, this biological complexity involves multiple endpoints coupled with genome-wide multiple testing, and therefore cannot be reduced to a single test statistic or a tractable closed-form solution.
 
-These gaps motivate the development of \textbf{SCP} (Simulation-based Circadian Power), a simulation-based framework for power calculation and study design that supports practical decision-making in planning circadian transcriptomic studies. The framework is organised in five methodological pieces. Section~\ref{sec:single_cohort} develops per-gene power for circadian biomarker detection in a single cohort, with parameter distributions calibrated to pilot data and BH control of the genome-wide false discovery rate. Section~\ref{sec:differential} extends the construction to multi-faceted differential rhythm analysis in a two-group setting, covering differential rhythmicity (DR), differential phase (DP), and differential MESOR (DM). Section~\ref{sec:bootstrap} introduces an outer bootstrap that propagates pilot-estimation uncertainty into the projected power curves, a source of variability that plug-in power calculations omit. Section~\ref{sec:cosinor_violation} addresses cosinor violation: we derive the K-harmonic linearisation of the frequency-modulated M\"{o}bius (FMM) model \citep{rueda2019fmm} and implement the resulting test (\texttt{detect\_FMM}) on the LimoRhyde framework \citep{Singer2019LimoRhyde} extended to user-tunable harmonic order $K$ with eBayes variance shrinkage. Section~\ref{sec:active_passive} contrasts active and passive designs under the two detectors and identifies when each is preferable. Section~\ref{sec:results} reports simulations and real-data illustrations that benchmark the framework end-to-end.
+These gaps motivate the development of \textbf{SCP} (Simulation-based Circadian Power), a simulation-based framework for power calculation and study design that supports practical decision-making in planning circadian transcriptomic studies. The framework is organised in five methodological pieces. Section~\ref{sec:single_cohort} develops per-gene power for circadian biomarker detection in a single cohort, with parameter distributions calibrated to pilot data and BH control of the genome-wide false discovery rate. Section~\ref{sec:differential} extends the construction to multi-faceted differential rhythm analysis in a two-group setting, covering differential rhythmicity (DR), differential phase (DP), and differential MESOR (DM). Section~\ref{sec:bootstrap} introduces an outer bootstrap that propagates pilot-estimation uncertainty into the projected power curves, a source of variability that plug-in power calculations omit. Section~\ref{sec:cosinor_violation} addresses cosinor violation: we derive the K-harmonic linearisation of the frequency-modulated M\"{o}bius (FMM) model \citep{rueda2019fmm} and implement the resulting test (\texttt{detect\_FMM}) as a K-harmonic F-test with empirical-Bayes variance shrinkage at moderate gene counts. Section~\ref{sec:active_passive} contrasts active and passive designs under the two detectors and identifies when each is preferable. Section~\ref{sec:results} reports simulations and real-data illustrations that benchmark the framework end-to-end.
 
 %% ====================================================================
 % =====================================================================
@@ -436,17 +436,20 @@ order-of-magnitude in $n_{\mathrm{pilot}}$
 ($n_{\mathrm{pilot}} = 60$, passive), GTEx Pancreas ($n_{\mathrm{pilot}} = 249$,
 passive), and GTEx Thyroid ($n_{\mathrm{pilot}} = 416$, passive). All four
 panels use $B_{\mathrm{out}} = 50$ outer draws, $N_{\mathrm{sim}}^{\mathrm{in}} = 25$
-inner simulations, and $G = 5{,}000$ simulated genes. The 95\% CI width is
-largest on Putamen-SCZ (max 20.5\,\% at $N = 40$), narrows to
-${\sim}10$\,\% on Seney ($N = 60$), 6.8\,\% on GTEx Pancreas ($N = 160$),
-and 6.4\,\% on GTEx Thyroid ($N = 120$). On Putamen-SCZ the plug-in
-projected power at $N = 40$ is 28\%, whereas the bootstrap mean is 43\%;
-different draws of a 28-subject pilot from this population would therefore
-support different design recommendations, a gap that the plug-in curve
-hides. The Putamen, Seney, Pancreas, Thyroid ordering shows that CI width
-contracts monotonically with $n_{\mathrm{pilot}}$, with the largest
-reduction occurring between the smallest pilots ($n_{\mathrm{pilot}}: 28
-\to 60$ shrinks the maximum CI width from $20.5$ to $9.5$\,\%); for
+inner simulations, and $G = 5{,}000$ simulated genes. The widest $95\%$
+bootstrap CI is on Putamen-SCZ at $N = 40$, spanning
+$[33.5\%, 54.0\%]$; the corresponding bands at the elbow of each
+pilot's power curve are $[37.3\%, 46.9\%]$ at Seney ($N = 60$),
+$[60.2\%, 66.9\%]$ at GTEx Pancreas ($N = 160$), and
+$[51.4\%, 57.8\%]$ at GTEx Thyroid ($N = 120$). On Putamen-SCZ the
+plug-in projected power at $N = 40$ is $28\%$, whereas the bootstrap
+mean is $43\%$; different draws of a $28$-subject pilot from this
+population would therefore support different design recommendations,
+a gap that the plug-in curve hides. The Putamen, Seney, Pancreas,
+Thyroid ordering shows that the bootstrap CI tightens monotonically
+with $n_{\mathrm{pilot}}$, with the largest reduction occurring
+between the smallest pilots ($n_{\mathrm{pilot}}: 28 \to 60$ tightens
+the widest CI from $[33.5\%, 54.0\%]$ to $[37.3\%, 46.9\%]$); for
 $n_{\mathrm{pilot}} \gtrsim 250$ the bootstrap CI is dominated by the
 inner-Monte-Carlo noise rather than pilot variability, and further
 increases in $n_{\mathrm{pilot}}$ yield diminishing returns.
@@ -947,16 +950,17 @@ genes, \textsc{DCP} detector at the cosinor-screen FDR threshold
 $0.05$). All four pilots are passive. \textbf{(A)} Putamen
 schizophrenia controls ($n_{\mathrm{pilot}} = 28$): plug-in projects
 $28\%$ power at $N = 40$ while the bootstrap mean is $43\%$, and the
-$95\%$ CI reaches a maximum width of $20.5$\,\% at $N = 40$. This is the
+$95\%$ bootstrap CI at $N = 40$ is $[33.5\%, 54.0\%]$. This is the
 strongest pilot-induced-uncertainty signal across the four panels.
-\textbf{(B)} Seney ACC controls ($n_{\mathrm{pilot}} = 60$): maximum
-CI width $9.5$\,\% at $N = 60$; plug-in and bootstrap mean agree within
-$\sim 1$\,\% throughout. \textbf{(C)} GTEx Pancreas
-($n_{\mathrm{pilot}} = 249$): maximum CI width $6.7$\,\% at $N = 160$.
-\textbf{(D)} GTEx Thyroid ($n_{\mathrm{pilot}} = 416$): maximum CI
-width $6.4$\,\% at $N = 120$. The ordered sequence illustrates that
-bootstrap correction matters most when the pilot is small, and that
-CI width contracts monotonically with $n_{\mathrm{pilot}}$ until it
+\textbf{(B)} Seney ACC controls ($n_{\mathrm{pilot}} = 60$): widest
+$95\%$ CI at $N = 60$ is $[37.3\%, 46.9\%]$; plug-in and bootstrap
+mean agree to within $\sim 1\%$ throughout. \textbf{(C)} GTEx Pancreas
+($n_{\mathrm{pilot}} = 249$): widest $95\%$ CI at $N = 160$ is
+$[60.2\%, 66.9\%]$. \textbf{(D)} GTEx Thyroid
+($n_{\mathrm{pilot}} = 416$): widest $95\%$ CI at $N = 120$ is
+$[51.4\%, 57.8\%]$. The ordered sequence illustrates that bootstrap
+correction matters most when the pilot is small, and that the
+$95\%$ CI tightens monotonically with $n_{\mathrm{pilot}}$ until it
 saturates against the inner-Monte-Carlo noise floor at large pilots.}
 \label{fig:bootstrap_sc}
 \end{figure}
@@ -969,10 +973,12 @@ alone hides. The bootstrap CI at the same $N$ spans $33.5\%$ to
 $54.0\%$, so even averaging across $50$ resamples does not collapse the
 uncertainty in the recommendation. Second, for the moderate pilot
 (Seney, $n_{\mathrm{pilot}} = 60$) plug-in and bootstrap mean agree
-within Monte Carlo noise at every $N$, and the CI is $\leq 10$\,\%;
-the plug-in curve here is a faithful summary. Third, for the two large
-GTEx pilots ($n_{\mathrm{pilot}} \in \{249, 416\}$), CI widths plateau
-at $6$--$7$\,\%, dominated by inner-simulation Monte Carlo rather than
+within Monte Carlo noise at every $N$, and the $95\%$ CI half-width
+is at most $\pm 5\%$ around the plug-in estimate; the plug-in curve
+here is a faithful summary. Third, for the two large GTEx pilots
+($n_{\mathrm{pilot}} \in \{249, 416\}$), the $95\%$ band tightens to
+within $\pm 3.5\%$ of the plug-in estimate at the elbow of the
+curve, dominated by inner-simulation Monte Carlo rather than
 pilot variability; further increases in $n_{\mathrm{pilot}}$ would not
 materially tighten the recommendation. The bootstrap is therefore
 essential for $n_{\mathrm{pilot}} \lesssim 40$, useful as a sanity
@@ -1143,9 +1149,10 @@ analytically tractable.
 The bootstrap of Section~\ref{sec:bootstrap} surfaces pilot-induced
 uncertainty in the design recommendation but does not by itself correct
 plug-in bias. The four panels of Figure~\ref{fig:bootstrap_sc} span
-$n_{\mathrm{pilot}} \in \{28, 60, 249, 416\}$ at maximum CI widths of
-$20.5$, $9.5$, $6.7$, and $6.4$\,\% respectively; the largest reduction
-comes between the two smallest pilots, and CI widths saturate against
+$n_{\mathrm{pilot}} \in \{28, 60, 249, 416\}$ with widest $95\%$ CIs of
+$[33.5\%, 54.0\%]$, $[37.3\%, 46.9\%]$, $[60.2\%, 66.9\%]$, and
+$[51.4\%, 57.8\%]$ at the elbow of each curve; the largest tightening
+comes between the two smallest pilots, and the CI saturates against
 the inner-Monte-Carlo noise floor for $n_{\mathrm{pilot}} \gtrsim 250$.
 At Putamen-SCZ ($n_{\mathrm{pilot}} = 28$) the bootstrap is decisive:
 the plug-in projects $28\%$ power at $N = 40$ but the $95\%$ CI of
