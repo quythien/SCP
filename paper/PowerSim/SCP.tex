@@ -41,7 +41,7 @@ To our knowledge, \textsc{CircaPower} \citep{zong2023circapower} is currently th
 
 Differential circadian analysis adds another layer of complexity. DR, DP, and DM are distinct biological endpoints, and workflows such as \textsc{DiffCircaPipeline} first classify joint rhythmicity status before applying endpoint-specific tests \citep{xue2023diffcircapipeline}. Power and FDR then depend on data-derived strata, effect-size thresholds, and genome-wide multiplicity. This multi-stage structure is not reducible to a single closed-form test statistic.
 
-These gaps motivate \textbf{\textsc{SCP}} (Simulation-based Circadian Power), a pilot-calibrated simulation framework for circadian transcriptomic study design. \textsc{SCP} estimates transcriptome-wide power under BH FDR control for single-cohort rhythmicity detection and extends the same simulation logic to DR, DP, and DM in two-group studies. It also propagates pilot-estimation uncertainty through an outer bootstrap and provides a K-harmonic F-test that generalizes the single-harmonic cosinor test while preserving a linear nested-model form. The Results evaluate these components on public human circadian transcriptomic pilots and balanced active-design simulations.
+These gaps motivate \textbf{\textsc{SCP}} (Simulation-based Circadian Power), a pilot-calibrated simulation framework for circadian transcriptomic study design. \textsc{SCP} estimates transcriptome-wide power under BH FDR control for single-cohort rhythmicity detection and extends the same simulation logic to DR, DP, and DM in two-group studies. It also propagates pilot-estimation uncertainty through an outer bootstrap and provides a two-harmonic F-test that generalizes the single-harmonic cosinor test while preserving a linear nested-model form. The Results evaluate these components on public human circadian transcriptomic pilots and balanced active-design simulations.
 
 \section{Methods}
 
@@ -169,7 +169,7 @@ distribution for passive designs. The choice of $\alpha_{\text{pilot}}$ can be
 adjusted by the user. In practice an adequate pilot shares tissue,
 condition, and assay platform with the planned study and meets the
 identifiability threshold for the intended detector ($B \geq 3$ for
-the single-harmonic cosinor F-test, $B \geq 2K + 1$ for the K-harmonic F-test). The pilot summary
+the single-harmonic cosinor F-test, $B \geq 5$ for the two-harmonic F-test). The pilot summary
 $\hat{\Psi}$ is itself a sample-based estimator: at small
 $n_{\mathrm{pilot}}$, residual variability in $\hat{F}_{A,\sigma}$ and
 $\hat{\pi}_R$ propagates to non-trivial uncertainty in the projected
@@ -434,72 +434,134 @@ estimated with limited information. In larger, well-powered pilots
 the bootstrap band mainly serves as a sensitivity diagnostic.
 
 % =====================================================================
-% SECTION 2.4 --- K-harmonic cosinor extension
+% SECTION 2.4 --- Two-harmonic cosinor extension
 % =====================================================================
-\subsection{A K-harmonic cosinor extension}
+\subsection{A two-harmonic cosinor extension}
 \label{sec:cosinor_violation}
 
-The single-harmonic model in \eqref{eq:cosinor_model} captures only the fundamental 24-hour component. A second 12-hour harmonic captures a substantial fraction of the remaining within-day variation in circadian transcriptomic profiles \citep{hughes2009harmonics,zhu201712hour}.
-
-A K-harmonic cosinor model is
+The single-harmonic model in \eqref{eq:cosinor_model} captures only the
+fundamental 24-hour component. However, circadian transcriptomic profiles
+can also contain substantial 12-hour structure
+\citep{hughes2009harmonics,zhu201712hour}. To accommodate this setting,
+we extend the cosinor model to include a second harmonic:
 \begin{equation}
 y_{gi}
 =
 \mu_g
 +
-\sum_{k=1}^{K}
-A_{g,k}\cos \bigl(k\omega_0 (t_i - \phi_{g,k})\bigr)
+A_{g,1}\cos \bigl(\omega_0 (t_i - \phi_{g,1})\bigr)
++
+A_{g,2}\cos \bigl(2\omega_0 (t_i - \phi_{g,2})\bigr)
 +
 \varepsilon_{gi},
 \qquad
 \varepsilon_{gi}\overset{\text{iid}}{\sim}N(0,\sigma_g^2),
-\label{eq:kharm_model}
+\label{eq:twoharm_model}
 \end{equation}
-The $K=2$ model contains the fundamental component $(A_{g,1},\phi_{g,1})$ and the second harmonic $(A_{g,2},\phi_{g,2})$. The restriction $A_{g,2}=0$ yields \eqref{eq:cosinor_model}. Estimation proceeds through the equivalent linear form
-\[
+where the first term represents the 24-hour component and the second
+term represents the 12-hour component. The restriction $A_{g,2}=0$
+recovers the single-harmonic model in \eqref{eq:cosinor_model}.
+
+Estimation is performed using the equivalent linear parameterisation
+\begin{equation}
 y_{gi}
 =
 \mu_g
 +
-\sum_{k=1}^{K}
-\bigl[
-a_{g,k}\cos(k\omega_0 t_i)
+a_{g,1}\cos(\omega_0 t_i)
 +
-b_{g,k}\sin(k\omega_0 t_i)
-\bigr]
+b_{g,1}\sin(\omega_0 t_i)
 +
-\varepsilon_{gi},
-\]
-where $A_{g,k} = \sqrt{a_{g,k}^2 + b_{g,k}^2}$.
+a_{g,2}\cos(2\omega_0 t_i)
++
+b_{g,2}\sin(2\omega_0 t_i)
++
+\varepsilon_{gi}.
+\label{eq:twoharm_linear}
+\end{equation}
+For $k\in\{1,2\}$,
+$
+A_{g,k}=\sqrt{a_{g,k}^2+b_{g,k}^2}
+$,
+so the nonlinear harmonic parameters
+$(A_{g,k},\phi_{g,k})$ are equivalently represented by the linear
+coefficient vector
+$
+\boldsymbol{\theta}_g
+=
+(a_{g,1},b_{g,1},a_{g,2},b_{g,2})^\top.
+$
+This linear representation also avoids phase non-identifiability under
+the null hypothesis of no rhythmicity.
 
-For the $K=2$ test used in the main examples, rhythmicity is tested by $H_0:A_{g,1}=A_{g,2}=0$, equivalently $a_{g,1}=b_{g,1}=a_{g,2}=b_{g,2}=0$. Relative to \eqref{eq:rhythm_f_test}, this increases the numerator degrees of freedom from $2$ to $4$:
+For the $K=2$ detector used in the main examples, rhythmicity is tested by
+\[
+H_0:
+a_{g,1}=b_{g,1}=a_{g,2}=b_{g,2}=0,
+\]
+equivalently $A_{g,1}=A_{g,2}=0$. Relative to the single-harmonic test in
+\eqref{eq:rhythm_f_test}, the numerator degrees of freedom increase from
+$2$ to $4$:
 \begin{equation}
 F_g
 =
-\frac{(\mathrm{TSS}_g - \mathrm{RSS}_g)/4}{\mathrm{RSS}_g/(N-5)}
-\sim F(4,\, N-5).
+\frac{(\mathrm{TSS}_g - \mathrm{RSS}_g)/4}
+{\mathrm{RSS}_g/(N-5)}
+\sim F(4,\,N-5)
+\qquad \text{under } H_0 .
 \label{eq:twoharm_f_test}
 \end{equation}
-BH correction is applied across genes as in Section~\ref{sec:single_cohort}; at $K=1$, \eqref{eq:twoharm_f_test} reduces to \eqref{eq:rhythm_f_test}.
+BH correction is then applied across genes as in
+Section~\ref{sec:single_cohort}. When $A_{g,2}=0$, the same nested-model
+construction reduces to the single-harmonic test.
 
-Under $H_A$, \eqref{eq:twoharm_f_test} is noncentral $F(4,\,N-5,\,\lambda_g)$, so power is given by \eqref{eq:circapower_formula} with $(2,N-3)$ replaced by $(4,N-5)$. For balanced designs, orthogonality of the harmonic basis yields additive signal contributions:
+Under $H_A$, \eqref{eq:twoharm_f_test} follows a noncentral
+$F(4,N-5,\lambda_g)$ distribution. For a balanced equally spaced active
+design with full rank, the intercept and harmonic columns are mutually
+orthogonal, and each sine or cosine column has sum of squares $N/2$.
+Therefore, the two harmonic components contribute additively to the
+noncentrality parameter:
 \begin{equation}
 \lambda_g
 =
-N d \bigl(r_{g,1}^2 + r_{g,2}^2\bigr)
+\frac{N}{2\sigma_g^2}
+\left(
+a_{g,1}^2+b_{g,1}^2+a_{g,2}^2+b_{g,2}^2
+\right)
 =
-\frac{N}{2} r_{g,\mathrm{eff}}^2,
-\qquad
-r_{g,k} = \frac{A_{g,k}}{\sigma_g},
-\qquad
-r_{g,\mathrm{eff}}^2 = r_{g,1}^2 + r_{g,2}^2,
+\frac{N}{2}
+\left(
+r_{g,1}^2+r_{g,2}^2
+\right)
+=
+\frac{N}{2}r_{g,\mathrm{eff}}^2,
 \label{eq:twoharm_ncp}
 \end{equation}
-with $d=1/2$ for balanced equally spaced active designs. Thus $\lambda_g$ depends on the standardized harmonic amplitudes through $r_{g,\mathrm{eff}}$ and, under the active balanced design, not on $(\phi_{g,1},\phi_{g,2})$. This parallels \eqref{eq:ncp}.
+where
+\[
+r_{g,k}=\frac{A_{g,k}}{\sigma_g},
+\qquad
+r_{g,\mathrm{eff}}^2=r_{g,1}^2+r_{g,2}^2.
+\]
+Thus, under a balanced active design, power depends on the effective
+standardized amplitude $r_{g,\mathrm{eff}}$ and is invariant to the
+harmonic phases. This parallels the single-harmonic result in
+\eqref{eq:ncp}.
 
-For $K=2$, the model has $2K+1=5$ free parameters. Full column rank therefore requires at least five distinct sampling phases per period; otherwise the regression is rank-deficient and the $F$-test is conservative or undefined. Hence an active design must satisfy $B\geq 5$. This corresponds to the Nyquist--Shannon identifiability condition for trigonometric regression \citep{Nyquist1928,Shannon1949}, consistent with recommendations for circadian transcriptomic designs \citep{Hughes2017guidelines}. In passive designs the condition is typically met because collection times are distinct; in active designs it constrains the sampling grid.
-
-In the empirical examples below, we focus on $K=2$ because it includes a 12-hour component while preserving identifiability whenever $B\geq 5$. Larger $K$ increases the identifiability bound to $B\geq 2K+1$ and may be useful when pilot profiles, sample size, and sampling density support more complex waveforms.
+For $K=2$, the regression design contains five columns: the intercept and
+four harmonic basis terms,
+$\cos(\omega_0 t)$, $\sin(\omega_0 t)$, $\cos(2\omega_0 t)$, and
+$\sin(2\omega_0 t)$. Because repeated samples at the same phase increase
+precision but do not add new design rows, full column rank requires at
+least five distinct sampling phases per period, giving the active-design
+condition $B \geq 5$. This rank condition motivates our focus on $K=2$:
+the model captures 12-hour harmonic structure while remaining parsimonious
+and identifiable. It is also consistent with genome-scale circadian design
+guidance recommending dense temporal sampling when subcircadian or
+ultradian structure is of interest \citep{Hughes2017guidelines}. Higher-order
+harmonic regression follows analogously by adding paired cosine and sine
+terms for $k=1,\ldots,K$, but is outside the scope of the current
+manuscript and software release.
 
 
 %% ====================================================================
@@ -508,7 +570,7 @@ In the empirical examples below, we focus on $K=2$ because it includes a 12-hour
 \subsection{Pilot datasets and simulation setup}
 \label{sec:pilot_datasets}
 
-Across all figures, simulations were calibrated from public human circadian transcriptomic pilots: postmortem \textsc{GTEx} tissues and the Ketchesin human striatum cohort (GSE160521). Passive-design analyses sampled collection times from each pilot's empirical time-of-day distribution; the balanced active-design analysis reused the pilot effect-size distribution under a planned equally spaced sampling grid. We summarised pilot signal strength by $\tilde{r}$, the median gene-level effect size $r_g = A_g/\sigma_g$ over the top-$K_{\mathrm{top}}$ rhythmic genes used to calibrate $\hat{F}_{A,\sigma}$ in Step 1 (Section~\ref{sec:single_cohort}), with $K_{\mathrm{top}} = \min(300, |\mathcal{G}_R|)$ and $\mathcal{G}_R$ the genes passing the cosinor pre-screen at $\alpha_{\mathrm{pilot}} = 0.01$. Single-cohort power in Figure~\ref{fig:sc_adrliv} used \textsc{GTEx} Adrenal Gland ($n_{\text{pilot}} = 187$, $\tilde{r} \approx 0.97$) and Liver ($n_{\text{pilot}} = 154$, $\tilde{r} \approx 0.48$). Differential power in Figure~\ref{fig:diff_adrliv} used the \textsc{GTEx} Adrenal Gland versus Liver comparison. The K-harmonic analyses in Figures~\ref{fig:twoharm_demo} and~\ref{fig:twoharm_power} used \textsc{GTEx} Liver. The balanced active-design comparison in Figure~\ref{fig:active_vs_passive} used the Ketchesin Putamen control cohort (GSE160521; $n_{\text{pilot}} = 59$, $\tilde{r} \approx 1.06$). The bootstrap analysis in Figure~\ref{fig:bootstrap_sc} contrasted Ketchesin Putamen schizophrenia controls (GSE160521; $n_{\text{pilot}} = 28$) and \textsc{GTEx} Thyroid ($n_{\text{pilot}} = 416$). All simulations used Benjamini-Hochberg FDR control at $\alpha = 0.05$; simulation replicate counts are given in the captions where relevant.
+Across all figures, simulations were calibrated from public human circadian transcriptomic pilots: postmortem \textsc{GTEx} tissues and the Ketchesin human striatum cohort (GSE160521). Passive-design analyses sampled collection times from each pilot's empirical time-of-day distribution; the balanced active-design analysis reused the pilot effect-size distribution under a planned equally spaced sampling grid. We summarised pilot signal strength by $\tilde{r}$, the median gene-level effect size $r_g = A_g/\sigma_g$ over the top-$K_{\mathrm{top}}$ rhythmic genes used to calibrate $\hat{F}_{A,\sigma}$ in Step 1 (Section~\ref{sec:single_cohort}), with $K_{\mathrm{top}} = \min(300, |\mathcal{G}_R|)$ and $\mathcal{G}_R$ the genes passing the cosinor pre-screen at $\alpha_{\mathrm{pilot}} = 0.01$. Single-cohort power in Figure~\ref{fig:sc_adrliv} used \textsc{GTEx} Adrenal Gland ($n_{\text{pilot}} = 187$, $\tilde{r} \approx 0.97$) and Liver ($n_{\text{pilot}} = 154$, $\tilde{r} \approx 0.48$). Differential power in Figure~\ref{fig:diff_adrliv} used the \textsc{GTEx} Adrenal Gland versus Liver comparison. The two-harmonic analyses in Figures~\ref{fig:twoharm_demo} and~\ref{fig:twoharm_power} used \textsc{GTEx} Liver. The balanced active-design comparison in Figure~\ref{fig:active_vs_passive} used the Ketchesin Putamen control cohort (GSE160521; $n_{\text{pilot}} = 59$, $\tilde{r} \approx 1.06$). The bootstrap analysis in Figure~\ref{fig:bootstrap_sc} contrasted Ketchesin Putamen schizophrenia controls (GSE160521; $n_{\text{pilot}} = 28$) and \textsc{GTEx} Thyroid ($n_{\text{pilot}} = 416$). All simulations used Benjamini-Hochberg FDR control at $\alpha = 0.05$; simulation replicate counts are given in the captions where relevant.
 
 Table~\ref{tab:effect_sizes} summarises intrinsic effect sizes across publicly
 available circadian transcriptomic datasets and illustrates the 5--10$\times$
@@ -667,16 +729,16 @@ most useful for $n_{\mathrm{pilot}} \lesssim 40$ and often optional for
 $n_{\mathrm{pilot}} \gtrsim 250$ at this inner-simulation budget; the
 intermediate-pilot behaviour interpolates monotonically between these
 two regimes. Because the uncertainty comes from the pilot summary
-$\hat{\Psi}$, the same bootstrap logic applies to K-harmonic analyses.
+$\hat{\Psi}$, the same bootstrap logic applies to two-harmonic analyses.
 
 % =====================================================================
-\subsection{K-harmonic testing improves recovery of non-sinusoidal rhythms}
+\subsection{Two-harmonic testing improves recovery of non-sinusoidal rhythms}
 \label{sec:twoharm_results}
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{figures/Fig4_twoharm_demo.pdf}
-\caption{K-harmonic rhythmicity detection on the \textsc{GTEx} Liver
+\caption{Two-harmonic rhythmicity detection on the \textsc{GTEx} Liver
 pilot ($8917$ genes, BH-FDR $0.05$). \textbf{(A)} Single-harmonic
 (dashed) and two-harmonic ($K=2$; solid) fits for four exemplar genes,
 annotated with the genome-wide BH $q$-values from each $F$-test
@@ -750,7 +812,7 @@ Differential circadian endpoints are harder to plan analytically because inferen
 
 The bootstrap component is best viewed as a diagnostic for pilot reliability. When the pilot is small, uncertainty in $\hat{F}_{A,\sigma}$ and $\hat{\pi}_R$ can be large enough to change a design recommendation; when the pilot is large, the plug-in power curve is usually sufficient. Thus the bootstrap should be reported when the confidence band would affect the planned sample size, not treated as a mandatory correction for every analysis.
 
-The K-harmonic extension adds a second design choice: the detector should match the waveform. The single-harmonic cosinor test is efficient for near-sinusoidal rhythms, whereas the two-harmonic test can recover structured 12-hour signal that the fundamental-only test misses. The price is the expected degrees-of-freedom penalty when the added harmonic contributes little signal, especially at small $N$. This trade-off argues for using $K=2$ when pilot profiles or prior biology support non-sinusoidal structure and the planned sampling design satisfies the identifiability threshold.
+The two-harmonic extension adds a second design choice: the detector should match the waveform. The single-harmonic cosinor test is efficient for near-sinusoidal rhythms, whereas the two-harmonic test can recover structured 12-hour signal that the fundamental-only test misses. The price is the expected degrees-of-freedom penalty when the added harmonic contributes little signal, especially at small $N$. This trade-off argues for using $K=2$ when pilot profiles or prior biology support non-sinusoidal structure and the planned sampling design satisfies the identifiability threshold.
 
 For balanced equally spaced active designs, the allocation question simplifies once the identifiability threshold is met. Above $B \geq 2K+1$, the harmonic-regression noncentrality depends on total sample size and effect size rather than on the number of sampling times alone. This does not mean that all active and passive designs are equivalent: passive designs still pay an efficiency cost when collection times are uneven. It means that, within balanced active designs, investigators should first ensure temporal identifiability and then plan around total sample size.
 
@@ -767,16 +829,15 @@ These results suggest a four-step rule for using \textsc{SCP} prospectively.
 
 \textbf{Step 4: bootstrap.} Use the bootstrap when pilot uncertainty is large enough to change the design decision. If $n_{\mathrm{pilot}} \leq 40$, run the outer subject-bootstrap of Section~\ref{sec:bootstrap} and report the $95\%$ confidence band alongside the plug-in curve; at this pilot size the bootstrap can surface uncertainty that the plug-in curve alone hides. For intermediate pilots ($40 < n_{\mathrm{pilot}} < 250$), the band is a useful sanity check. For $n_{\mathrm{pilot}} \gtrsim 250$, the plug-in curve is often a faithful summary.
 
-Several limitations apply. The current framework is built around parametric cosinor and K-harmonic regression models; it does not yet provide calibrated power calculations for nonparametric rhythmicity detectors such as rank- or shape-based tests. The single- and two-harmonic $F$-tests assume Gaussian residuals and may lose calibration for heavily sharp-peaked, near-arrhythmic, or heteroskedastic genes. The differential simulator treats endpoint types as mutually exclusive, so compound rhythmicity-plus-phase changes are not directly evaluated. Passive-design power depends on the pilot's empirical collection-time distribution, which may not generalize to a planned cohort with different recruitment logistics. The bootstrap is computationally intensive and is recommended only when pilot uncertainty is likely to affect the design decision.
+Several limitations apply. The current framework is built around parametric cosinor and two-harmonic regression models; it does not yet provide calibrated power calculations for nonparametric rhythmicity detectors such as rank- or shape-based tests. The single- and two-harmonic $F$-tests assume Gaussian residuals and may lose calibration for heavily sharp-peaked, near-arrhythmic, or heteroskedastic genes. The differential simulator treats endpoint types as mutually exclusive, so compound rhythmicity-plus-phase changes are not directly evaluated. Passive-design power depends on the pilot's empirical collection-time distribution, which may not generalize to a planned cohort with different recruitment logistics. The bootstrap is computationally intensive and is recommended only when pilot uncertainty is likely to affect the design decision.
 
 \textsc{SCP} is available as an open-source R framework at \url{https://github.com/quythien/SCP}. Documentation and example data are provided with the repository.
 
 
 \section*{Acknowledgments}
 
-This work builds on \textsc{CircaPower} \citep{zong2023circapower}, \textsc{PROPER} \citep{wu2015proper}, \textsc{DiffCircaPipeline} \citep{xue2023diffcircapipeline}, and \textsc{CircaCompare} \citep{parsons2020circacompare}.
-
 \bibliographystyle{plainnat}
 \bibliography{references}
 
 \end{document}
+
