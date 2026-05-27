@@ -1564,6 +1564,22 @@ plot.SCPRecommendResult <- function(x, output_file = NULL, ...) {
 # Not exported. Called by recommendDesign() to sweep N x B x method x alpha2.
 # Returns SCPSingleResult with $power_df (N, B, method, alpha2, power, power_se)
 # and $n80_df — the compact format needed for the recommendation table.
+#' Single-cohort B-versus-m power grid (active designs)
+#'
+#' Sweeps sample size, number of time points, and detection method to produce
+#' the power grid used by \code{\link{recommendDesign}}. Active (balanced)
+#' designs only.
+#'
+#' @param bio.opts Pilot summary (\code{CircadianBioOptions}).
+#' @param design.opts Design options (\code{CircadianDesignOptions}).
+#' @param analysis.opts Analysis options (\code{CircadianAnalysisOptions}).
+#' @param methods Detection method(s); default "DCP".
+#' @param alpha2,alpha3 Second- and third-harmonic generative coefficients (default 0).
+#' @param mc.cores Number of cores.
+#' @param plot Whether to draw the grid.
+#' @param output_file Optional output path for the plot.
+#' @param verbose Print progress.
+#' @return An \code{SCPSingleResult} with the power grid and N80 table.
 #' @export
 runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
                                 methods     = "DCP",

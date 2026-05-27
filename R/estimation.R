@@ -1027,6 +1027,25 @@ circular_difference <- function(phi1, phi2, period = 24) {
   ((diff + period/2) %% period) - period/2
 }
 
+#' Estimate a two-group circadian pilot for differential power
+#'
+#' Fits cosinor models to two groups of pilot data and assembles the two-group
+#' pilot summary used by the differential power simulator, encoding
+#' differential rhythmicity (DR), differential phase (DP), and differential
+#' MESOR (DM) structure.
+#'
+#' @param data_1,data_2 Gene-by-sample expression matrices for the two groups.
+#' @param times_1,times_2 Numeric collection times for each group.
+#' @param period Period in hours (default 24).
+#' @param min_rhythm_pval Marginal p-value screen defining the rhythmic pilot set.
+#' @param phase_shift_threshold Minimum phase difference (hours) for the DP class.
+#' @param prop_DM Optional target proportion of differential-MESOR genes.
+#' @param mesor_diff Optional MESOR difference for the DM component.
+#' @param dp_shift_mode Differential-phase shift model, "uniform" or "fixed".
+#' @param paired_sigma Preserve the paired (amplitude, noise) relationship across groups.
+#' @param sim.seed Random seed.
+#' @param verbose Print progress.
+#' @return A two-group \code{CircadianBioOptions} pilot summary.
 #' @export
 estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
                                       period = 24,
