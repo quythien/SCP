@@ -82,7 +82,7 @@ single-harmonic cosinor F-test, `K = 2` adds the 12-hour second harmonic.
 | Figure | Content | Script | Output PDF |
 |---|---|---|---|
 | Fig 1 | Single-cohort power (GTEx Adrenal, Liver) | `examples/publication/fig1_single_cohort_power.R` | `submission/figures/Fig1*.pdf` |
-| Fig 2 | Differential power (GTEx Adrenal vs Liver) | `examples/publication/two_harmonic/fig2_paired_sims.R` | `submission/figures/Fig2_*.pdf` |
+| Fig 2 | Differential power (GTEx Adrenal vs Liver) | `examples/publication/fig2_paired_sims.R` | `submission/figures/Fig2_*.pdf` |
 | Fig 3 | Bootstrap uncertainty (Putamen, GTEx Thyroid) | `examples/publication/fig3_bootstrap_2panel.R` | `submission/figures/Fig3_bootstrap_singlecohort.pdf` |
 | Fig 4 | Two-harmonic discoveries (GTEx Liver) | `examples/publication/two_harmonic/fig4_twoharm_demo.R` | `submission/figures/Fig4_twoharm_demo.pdf` |
 | Fig 5 | Two-harmonic operating characteristics (GTEx Liver) | `examples/publication/two_harmonic/fig5_twoharm_framework.R` | `submission/figures/Fig5_twoharm_framework.pdf` |
@@ -135,14 +135,14 @@ edge case (B < 2K+1 must be conservative).
 A `CITATION.cff` is provided. Until the manuscript has a DOI, please cite
 the software as:
 
-> Pham, T. (2026). SCP: Simulation-Based Circadian Power Analysis
+> Pham, T. Q. (2026). SCP: Simulation-Based Circadian Power Analysis
 > (v0.4.0). https://github.com/quythien/SCP
 
 BibTeX:
 
 ```bibtex
 @software{Pham_SCP_2026,
-  author  = {Pham, Thien},
+  author  = {Pham, Thien Quy},
   title   = {{SCP: Simulation-Based Circadian Power Analysis}},
   year    = {2026},
   version = {0.4.0},
@@ -156,4 +156,4 @@ MIT. See [`LICENSE.md`](LICENSE.md).
 
 ## Contact
 
-Thien Pham, University of Pittsburgh, <quythien14@gmail.com>.
+Thien Quy Pham, University of Pittsburgh, <quythien14@gmail.com>.

@@ -39,7 +39,7 @@
 #'   Rscript examples/exploratory/07_fourier_robustness.R
 #'   POWERSIM_SMOKE=1 Rscript examples/exploratory/07_fourier_robustness.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # -----------------------------------------------------------------------
 # 0. Path configuration

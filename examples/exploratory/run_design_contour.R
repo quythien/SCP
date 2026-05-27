@@ -17,7 +17,7 @@
 #' USAGE:
 #'   Rscript examples/run_design_contour.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # SECTION 1: SETUP

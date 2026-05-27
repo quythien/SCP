@@ -40,7 +40,7 @@
 #'   Rscript examples/publication/03c_power_core_mouse.R
 #'   POWERSIM_SMOKE=1 Rscript examples/publication/03c_power_core_mouse.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # SECTION 1: SETUP & CONFIGURATION

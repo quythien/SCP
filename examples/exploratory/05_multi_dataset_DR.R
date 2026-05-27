@@ -43,7 +43,7 @@
 #'   Rscript examples/exploratory/05_multi_dataset_DR.R
 #'   POWERSIM_SMOKE=1 Rscript examples/exploratory/05_multi_dataset_DR.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # SETTINGS

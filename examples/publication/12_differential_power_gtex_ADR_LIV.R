@@ -15,7 +15,7 @@
 #'   cd /path/to/PowerSim
 #'   Rscript examples/publication/12_differential_power_gtex_ADR_LIV.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # 0. Setup

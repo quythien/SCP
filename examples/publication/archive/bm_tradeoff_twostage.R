@@ -15,7 +15,7 @@
 #'   Rscript examples/publication/bm_tradeoff_twostage.R
 #'   SMOKE_TEST=true Rscript examples/publication/bm_tradeoff_twostage.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # 0. Setup

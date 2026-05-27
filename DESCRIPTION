@@ -3,11 +3,11 @@ Type: Package
 Title: Simulation-Based Circadian Power Analysis with K-harmonic LRT
 Version: 0.4.0
 Date: 2026-05-09
-Authors@R: person("Thien", "Pham",
+Authors@R: person("Thien Quy", "Pham",
     role = c("aut", "cre"),
     email = "quythien14@gmail.com",
     comment = c(affiliation = "University of Pittsburgh"))
-Maintainer: Thien Pham <quythien14@gmail.com>
+Maintainer: Thien Quy Pham <quythien14@gmail.com>
 Description: Provides simulation-based power analysis for circadian rhythm
     studies using a semiparametric framework. Empirical parameter distributions
     are estimated from pilot gene-expression data, and power is evaluated for

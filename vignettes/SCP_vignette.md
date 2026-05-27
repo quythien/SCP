@@ -10,7 +10,7 @@
 > current method.
 
 
-**Author:** Thien Pham  
+**Author:** Thien Quy Pham  
 **Package:** SCP (Simulation-based Circadian Power)  
 **Repository:** [SCP](https://github.com/quythien/SCP)
 

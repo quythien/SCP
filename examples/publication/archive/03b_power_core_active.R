@@ -35,7 +35,7 @@
 #'   Rscript examples/publication/03b_power_core_active.R
 #'   POWERSIM_SMOKE=1 Rscript examples/publication/03b_power_core_active.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # SECTION 1: SETUP & CONFIGURATION

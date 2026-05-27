@@ -31,7 +31,7 @@
 #'       fdr_comparison.pdf
 #'       dm_type1_comparison.pdf
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # SECTION 1: SETUP & CONFIGURATION

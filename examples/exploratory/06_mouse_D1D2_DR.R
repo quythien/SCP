@@ -38,7 +38,7 @@
 #'   Rscript examples/exploratory/06_mouse_D1D2_DR.R
 #'   POWERSIM_SMOKE=1 Rscript examples/exploratory/06_mouse_D1D2_DR.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # SETTINGS
