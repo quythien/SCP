@@ -1,5 +1,15 @@
 # SCP: Simulation-Based Power Analysis for Circadian Rhythm Studies
 
+> **Note (2026-05): cosinor-only framework.** SCP now centers on a single
+> detector entry point, `detect_cosinor(K)`: `K = 1` is the single-harmonic
+> cosinor F-test and `K = 2` adds the 12-hour second harmonic. The
+> frequency-modulated Mobius (FMM) model has been removed from the
+> recommended framework; JTK_CYCLE, RAIN, and the multi-harmonic detector
+> remain only for benchmarking. Any section below that describes FMM or
+> `omega`-based waveform switching is legacy and does not reflect the
+> current method.
+
+
 SCP (Simulation-based Circadian Power) is an R framework for sample size planning and study design in **circadian transcriptomic** experiments. Given a small pilot RNA-seq dataset, it answers: *How many samples do I need, and how should I space my time points?*
 
 It supports both a fast two-stage (plug-in) approach and a bootstrap approach that additionally quantifies how much uncertainty in the sample size estimate comes from having a noisy pilot.
@@ -20,7 +30,7 @@ SCP helps answer:
 | What N achieves 80% power? | Bootstrap median from `runBootstrapDesignGrid()` |
 | How uncertain is that estimate given my pilot size? | Bootstrap 95% CI on n80 |
 | Is denser time sampling (↑B) or more replicates per ZT (↑m) better? | Sweep `B_values` in one call |
-| Is the cosinor model robust if real waveforms are non-sinusoidal? | `simCircadianFMM()` + `plotFMMViolation()` |
+| Is the cosinor model robust if real waveforms are non-sinusoidal? | `simCircadianSingleCohort2H()` (two-harmonic generator) + `detect_cosinor(K = 2)` |
 
 ### Detectable difference types
 

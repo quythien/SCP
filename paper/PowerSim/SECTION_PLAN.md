@@ -1,3 +1,10 @@
+> **PARTLY SUPERSEDED (2026-05).** This planning note predates the
+> cosinor-only reframe. The manuscript (paper/PowerSim/SCP.tex) is the source
+> of truth: FMM, JTK_CYCLE, RAIN, and the baboon/mouse pilots have been
+> removed; Section 2.4 is a two-harmonic cosinor extension; the figures use
+> only GTEx and the Ketchesin Putamen cohort. Treat the figure and section
+> mapping below as historical.
+
 # SCP Manuscript — Section & Figure Plan
 
 **Status:** updated 2026-05-12 (LimoRhyde adoption; B=4 dropped from Fig 5; dispatch-level Nyquist warning).

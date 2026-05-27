@@ -11,12 +11,13 @@ The framework supports both active (controlled animal) and passive
 rhythmicity, two-group differential analysis (DR, DP, DM endpoints), and
 non-parametric bootstrap for pilot-driven uncertainty.
 
-For non-cosinor waveforms (sharp peaks, asymmetric rhythms common in real
-data), SCP provides the K-harmonic likelihood-ratio test `detect_FMM`, a
-linearised rhythmicity test motivated by truncating the Fourier expansion of
-the Frequency Modulated Mobius model. The test is calibrated by an exact
-F-distribution (no Davies-supremum approximation), so it sidesteps the
-boundary-identifiability problem of the nonlinear FMM-LRT.
+For non-sinusoidal waveforms (sharp peaks, asymmetric or 12-hour ultradian
+rhythms common in real data), SCP provides a two-harmonic cosinor test through
+the unified detector `detect_cosinor(K)`. With `K = 2` it adds the 12-hour
+second harmonic and tests the joint harmonic block by an exact nested
+F-test; with `K = 1` it reduces to the standard single-harmonic cosinor
+F-test. Identifiability requires `B >= 2K + 1` distinct sampling times per
+period.
 
 ## Status
 
@@ -38,9 +39,10 @@ library(SCP)
 old_wd <- setwd("code"); source("setup.R"); setwd(old_wd)
 ```
 
-Required: R >= 4.4. Imports: ggplot2, reshape2, limma, minpack.lm, nloptr,
-parallel. Optional: FMM, MetaCycle, rain, circacompare, limorhyde,
-patchwork, cowplot, gtable, Rcpp, RcppArmadillo, readxl.
+Required: R >= 4.4. Imports: ggplot2, reshape2, limma, limorhyde,
+minpack.lm, nloptr, parallel, grid, grDevices, Rcpp (with LinkingTo
+Rcpp, RcppArmadillo). Optional: MetaCycle, rain, circacompare, patchwork,
+cowplot, gtable, readxl, tidyr.
 
 ## Quick start
 
@@ -56,63 +58,60 @@ des  <- CircadianDesignOptions(sample_sizes = c(40, 80, 120, 160),
                                 design = "passive", cts = bio$cts)
 aopt <- CircadianAnalysisOptions(alpha = 0.05)
 
-# Run single-cohort power (DCP for cosinor truth, FMM for cosinor violation)
+# Run single-cohort power (K=1 single-harmonic; K=2 adds the 12-hour harmonic)
 res  <- runSingleCohortPower(bio, des, aopt, methods = "DCP", plot = FALSE)
 
 # Sample size for 80 percent genome-wide power
 npower(res, target_power = 0.80, fdr = 0.05)
 ```
 
-## When to use DCP vs detect_FMM
+## Choosing the harmonic order K
 
-| Pilot characteristic | Recommended detector |
+Both detectors are exposed through `detect_cosinor(K)`: `K = 1` is the
+single-harmonic cosinor F-test, `K = 2` adds the 12-hour second harmonic.
+
+| Pilot characteristic | Recommended order |
 |---|---|
-| Cosinor-like waveforms (estimated omega-median > 0.6) | `detect_DCP` |
-| Sharp or asymmetric peaks (omega-median < 0.5) AND design has B >= 5 distinct time points | `detect_FMM(K = 2)` |
-| Sharp peaks but design has B < 5 | `detect_DCP` (K=2 is not identifiable; Nyquist condition violated) |
-| Passive design with typical human cohorts (Seney-ACC-like) | `detect_DCP` (cosinor-truth is usually a good approximation; K=2 pays a df cost for no harmonic gain) |
-| Active animal cohorts with strong non-cosinor signal | `detect_FMM(K = 2)` |
-
-To diagnose your pilot's omega distribution, run
-`estCircadianParamFMM(expr, times)` and inspect
-`bio$diagnostics$omega_median`.
+| Approximately sinusoidal waveforms | `detect_cosinor(K = 1)` |
+| Non-sinusoidal or 12-hour ultradian structure AND design has B >= 5 distinct time points | `detect_cosinor(K = 2)` |
+| Non-sinusoidal but design has B < 5 | `detect_cosinor(K = 1)` (K = 2 is not identifiable; B >= 2K + 1 violated) |
+| Typical passive human cohorts (near-cosinor) | `detect_cosinor(K = 1)` (K = 2 pays a degrees-of-freedom cost for little gain) |
 
 ## Reproducing the paper figures
 
-| Figure | Section | Script | Output PDF |
+| Figure | Content | Script | Output PDF |
 |---|---|---|---|
-| Fig 1 | 2.1 single cohort | `examples/publication/fig1_single_cohort_power.R` | `output/main_figures/Fig1*.pdf` |
-| Fig 2 | 2.2 differential | `examples/publication/fig2_differential_power_adr_liv.R` | `output/main_figures/Fig2_*.pdf` |
-| Fig 3 | 2.3 bootstrap | `examples/publication/fig5_bootstrap_sc.R` | `output/main_figures/Fig3_bootstrap_singlecohort.pdf` |
-| Fig 4 | 2.4 sensitivity | `examples/publication/fig4_sensitivity.R` | `output/main_figures/Fig4_sensitivity.pdf` |
-| Fig 5 | 2.5 active vs passive | `examples/publication/fig5_active_vs_passive_v4.R` | `output/main_figures/Fig5_active_vs_passive.pdf` |
-| Supp | FMM diagnostic | `examples/publication/supp_fmm_diagnostic.R` | `output/main_figures/SuppFig_FMM_diagnostic.pdf` |
+| Fig 1 | Single-cohort power (GTEx Adrenal, Liver) | `examples/publication/fig1_single_cohort_power.R` | `submission/figures/Fig1*.pdf` |
+| Fig 2 | Differential power (GTEx Adrenal vs Liver) | `examples/publication/two_harmonic/fig2_paired_sims.R` | `submission/figures/Fig2_*.pdf` |
+| Fig 3 | Bootstrap uncertainty (Putamen, GTEx Thyroid) | `examples/publication/fig3_bootstrap_2panel.R` | `submission/figures/Fig3_bootstrap_singlecohort.pdf` |
+| Fig 4 | Two-harmonic discoveries (GTEx Liver) | `examples/publication/two_harmonic/fig4_twoharm_demo.R` | `submission/figures/Fig4_twoharm_demo.pdf` |
+| Fig 5 | Two-harmonic operating characteristics (GTEx Liver) | `examples/publication/two_harmonic/fig5_twoharm_framework.R` | `submission/figures/Fig5_twoharm_framework.pdf` |
+| Fig 6 | Active vs passive design (Putamen control) | `examples/publication/two_harmonic/fig6_v9_putamen_paired.R` | `submission/figures/Fig6_active_BvsM.pdf` |
 
 For details on the methodology and section structure, see
 [`paper/PowerSim/SECTION_PLAN.md`](paper/PowerSim/SECTION_PLAN.md).
-The Fourier-expansion derivation behind the K-harmonic LRT lives in
-[`paper/PowerSim/derivations/FMM_to_harmonic_LRT.md`](paper/PowerSim/derivations/FMM_to_harmonic_LRT.md).
 
 ## Key functions
 
 | Function | Purpose |
 |---|---|
-| `estCircadianParam()` | Cosinor-based pilot fit; returns `CircadianBioOptions` |
-| `estCircadianParamFMM()` | FMM-aware pilot fit (recommended for non-cosinor data) |
+| `estCircadianParam()` | Single-harmonic cosinor pilot fit; returns `CircadianBioOptions` |
+| `estCircadianParam2H()` | Two-harmonic pilot fit (amplitudes and phases of both harmonics) |
 | `estCircadianParamTwoGroup()` | Two-group pilot for differential power |
 | `prepCircadianData()` | Pre-normalisation helper (counts / CPM / log2) |
-| `runSingleCohortPower()` | Single-cohort rhythmicity power; methods: DCP, FMM, MH, JTK, RAIN |
+| `runSingleCohortPower()` | Single-cohort rhythmicity power |
 | `runDifferentialPower()` | Differential (DR / DP / DM) power |
 | `runSingleCohortGrid()` | B vs m grid sweep (active designs only) |
 | `runBootstrapDesignGrid()` | Outer bootstrap for pilot uncertainty |
-| `detect_FMM(K = 2)` | K-harmonic LRT (the recommended non-cosinor detector) |
-| `detect_DCP()` | Cosinor F-test (1-harmonic, the recommended cosinor detector) |
+| `detect_cosinor(K)` | Unified cosinor detector: K = 1 single-harmonic, K = 2 two-harmonic |
+| `simCircadianSingleCohort()` | Simulate single-cohort data (single harmonic) |
+| `simCircadianSingleCohort2H()` | Simulate single-cohort data with a 12-hour second harmonic |
 | `npower()` | Linear-interpolated sample size for a target power |
-| `simCircadianFMM()` | Simulate single-cohort data under FMM truth |
 
-JTK_CYCLE, RAIN, and the multi-harmonic detector remain in the package
-via `detect_JTK`, `detect_RAIN`, and `detect_MH` for benchmarking, but are
-not the primary recommended methods.
+`detect_DCP` and `detect_FMM` remain as the single- and multi-harmonic
+backends called by `detect_cosinor`. JTK_CYCLE, RAIN, and the
+multi-harmonic detector (`detect_JTK`, `detect_RAIN`, `detect_MH`) remain
+in the package for benchmarking but are not the primary recommended methods.
 
 ## Tests
 
@@ -129,7 +128,6 @@ edge case (B < 2K+1 must be conservative).
 - [`doc/TUTORIAL.md`](doc/TUTORIAL.md): scenario-based usage guide
 - [`vignettes/SCP_vignette.md`](vignettes/SCP_vignette.md): full user guide
 - [`paper/PowerSim/SECTION_PLAN.md`](paper/PowerSim/SECTION_PLAN.md): paper structure and figure plan
-- [`paper/PowerSim/derivations/FMM_to_harmonic_LRT.md`](paper/PowerSim/derivations/FMM_to_harmonic_LRT.md): derivation of K-harmonic LRT from FMM Fourier expansion
 - [`NEWS.md`](NEWS.md): release notes
 
 ## Citation
@@ -137,20 +135,18 @@ edge case (B < 2K+1 must be conservative).
 A `CITATION.cff` is provided. Until the manuscript has a DOI, please cite
 the software as:
 
-> Pham, T. (2026). SCP: Simulation-Based Circadian Power Analysis with
-> K-harmonic LRT (v0.4.0).
-> https://github.com/qtp/SCP
+> Pham, T. (2026). SCP: Simulation-Based Circadian Power Analysis
+> (v0.4.0). https://github.com/quythien/SCP
 
 BibTeX:
 
 ```bibtex
 @software{Pham_SCP_2026,
   author  = {Pham, Thien},
-  title   = {{SCP: Simulation-Based Circadian Power Analysis with
-              K-harmonic LRT}},
+  title   = {{SCP: Simulation-Based Circadian Power Analysis}},
   year    = {2026},
   version = {0.4.0},
-  url     = {https://github.com/qtp/SCP}
+  url     = {https://github.com/quythien/SCP}
 }
 ```
 

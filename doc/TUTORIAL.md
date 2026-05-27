@@ -1,4 +1,14 @@
 # SCP Framework — Usage Tutorial
+
+> **Note (2026-05): cosinor-only framework.** SCP now centers on a single
+> detector entry point, `detect_cosinor(K)`: `K = 1` is the single-harmonic
+> cosinor F-test and `K = 2` adds the 12-hour second harmonic. The
+> frequency-modulated Mobius (FMM) model has been removed from the
+> recommended framework; JTK_CYCLE, RAIN, and the multi-harmonic detector
+> remain only for benchmarking. Any section below that describes FMM or
+> `omega`-based waveform switching is legacy and does not reflect the
+> current method.
+
 ## Date: 2026-04-22
 
 This tutorial walks through the three main use cases with complete working R code.
