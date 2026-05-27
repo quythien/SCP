@@ -421,6 +421,8 @@ SeqModelSel = function(action = c(1, 2), pv = c(0.01, 0.02), alpha = 0.05, metho
       stop = stop.vda(1, action)
     }
   }else if(method == "AWFisher"){
+    if (!requireNamespace("AWFisher", quietly = TRUE))
+      stop("Package 'AWFisher' is required for method='AWFisher'; please install it.")
     p_combined = AWFisher::AWFisher_pvalue(as.numeric(pv))
     aw.wight = p_combined$weights
     p_combined = p_combined$pvalues

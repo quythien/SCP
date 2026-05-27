@@ -329,6 +329,8 @@ plotFMMDifferential <- function(x,
   df$SD_DM <- df$SE_DM * sqrt(nsims)
 
   # Reshape to long
+  if (!requireNamespace("tidyr", quietly = TRUE))
+    stop("Package 'tidyr' is required for plotFMMDifferential(); please install it.")
   long_df <- tidyr::pivot_longer(df, cols = c(DR, DP, DM),
                                   names_to = "endpoint", values_to = "power")
   # Match on both N and omega so each row gets the SD from its own (N, omega) cell,

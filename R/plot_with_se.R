@@ -36,6 +36,8 @@ add_se_bars <- function(x, y, se, col, bar_width = 0.3) {
 # =====================================================================
 # Plot DR/DP with SE bars (replaces plotDRPowerStratified)
 # =====================================================================
+#' @title Plot differential power with standard-error bands
+#' @noRd
 #' @param results_file Path to saved .rds results (from run_pipeline.R)
 #' @param output_file  Path for output PDF
 #' @param test_name    "DR" or "DP"
@@ -286,6 +288,8 @@ plotWithSE <- function(results_file, output_file, test_name = "DR",
 # =====================================================================
 # Plot Phase Shift with SE bars
 # =====================================================================
+#' @title Plot phase-shift power with standard-error bands
+#' @noRd
 #' @param results_file Path to saved phase shift .rds results
 #' @param output_file  Path for output PDF
 #' @return Invisible list with marginal_mean and marginal_se
