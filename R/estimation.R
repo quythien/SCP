@@ -438,6 +438,316 @@ estCircadianParam <- function(data, times, period = 24,
 }
 
 
+#' Estimate CircadianBioOptions Under the Two-Harmonic Cosinor Model
+#'
+#' @description Two-harmonic analog of \code{\link{estCircadianParam}}. Fits the
+#' regression
+#' \deqn{y = \mu + a_1 \cos(\omega_0 t) + b_1 \sin(\omega_0 t)
+#'             + a_2 \cos(2\omega_0 t) + b_2 \sin(2\omega_0 t) + \epsilon}
+#' to each gene by OLS, tests the joint rhythmicity null
+#' \eqn{H_0: a_1 = b_1 = a_2 = b_2 = 0} on 4 d.f., and returns a
+#' \code{CircadianBioOptions} object whose 5-way joint empirical distribution
+#' \eqn{F_{(\mu, A_1, \phi_1, A_2, \phi_2, \sigma)}} is preserved by gene-paired
+#' index draws downstream.
+#'
+#' The returned object carries the standard 1-harmonic fields
+#' (\code{amplitude}, \code{phase}, \code{sigma_rhythmic}) holding the 1st-harmonic
+#' \eqn{A_{g,1}}, \eqn{\phi_{g,1}}, and \eqn{\sigma_g} respectively, and three
+#' extra fields attached to the list after construction:
+#' \itemize{
+#'   \item \code{amplitude2}: 2nd-harmonic amplitudes \eqn{A_{g,2}}
+#'   \item \code{phase2}:     2nd-harmonic acrophases \eqn{\phi_{g,2}} in
+#'                            hours \eqn{[0, period/2)}
+#'   \item \code{paired_2h}:  \code{TRUE} flag (downstream simulators read this
+#'                            to switch on the 2-harmonic generative model).
+#' }
+#' These extras live alongside \code{$diagnostics}; the constructor is not
+#' modified.
+#'
+#' @section Methodological notes:
+#' \enumerate{
+#'   \item Pilot summary is a 5-way joint empirical distribution. When the
+#'         simulator draws a rhythmic gene, the same index \eqn{j} is used
+#'         across \eqn{(A_1, \phi_1, A_2, \phi_2, \sigma)}, preserving the
+#'         cross-parameter dependence observed in the pilot.
+#'   \item No 2nd-harmonic significance threshold is applied: ALL top-K genes
+#'         passing the joint 4-d.f. F-test contribute, even those whose
+#'         \eqn{A_2} is essentially noise. The empirical \eqn{F_{A_2}} will
+#'         have a noise spike near zero, which is fine.
+#'   \item K=2 extension is single-cohort only — the differential simulator
+#'         (\code{simCircadianDiff}) is not extended.
+#' }
+#'
+#' @param data Numeric matrix of pilot expression (genes x samples).
+#' @param times Numeric vector of sample collection times in hours,
+#'   length \code{ncol(data)}.
+#' @param period Period in the same units as \code{times} (default 24 hours).
+#' @param min_rhythm_pval P-value threshold for the joint 4-d.f. F-test
+#'   (default 0.01). Genes with p < this define the candidate set.
+#' @param top_k Cap on number of genes contributing to the joint
+#'   \eqn{(A_1, \phi_1, A_2, \phi_2, \sigma)} distribution (default 300),
+#'   ranked by F-test p-value.
+#' @param prop_DR,prop_DP,prop_DM Differential proportions (defaults 0.15,
+#'   0.10, 0.00). Forwarded unchanged to \code{CircadianBioOptions}; note the
+#'   K=2 extension itself is single-cohort only.
+#' @param mesor_diff,phase_diff,amp_diff Differential effect-size ranges.
+#' @param dp_shift_mode "fixed" or "uniform" (default "fixed").
+#' @param dr_amp_scale,dr_sigma_scale DR scale factors (default 1).
+#' @param paired_sigma Logical (default FALSE). Forwarded to
+#'   \code{CircadianBioOptions}.
+#' @param sim.seed Integer seed (default 12345).
+#' @param verbose Logical (default TRUE). Print diagnostic summary.
+#'
+#' @return A \code{CircadianBioOptions} object with extra fields
+#'   \code{$amplitude2}, \code{$phase2}, \code{$paired_2h}, and a
+#'   \code{$diagnostics} list summarising the 2H fit (median A2/A1 ratio,
+#'   fraction of genes with significant 2nd-harmonic block, etc.).
+#'
+#' @seealso \code{\link{estCircadianParam}} for the 1-harmonic case,
+#'   \code{\link{simCircadianSingleCohort2H}} for the matching simulator.
+#'
+#' @export
+estCircadianParam2H <- function(data, times, period = 24,
+                                 min_rhythm_pval = 0.01,
+                                 top_k = 500,
+                                 prop_DR = 0.15, prop_DP = 0.10, prop_DM = 0.00,
+                                 mesor_diff = c(0.5, 2.0),
+                                 phase_diff = c(-6, 6),
+                                 amp_diff = c(0.5, 2),
+                                 dp_shift_mode = c("fixed", "uniform"),
+                                 dr_amp_scale = 1.0,
+                                 dr_sigma_scale = 1.0,
+                                 paired_sigma = FALSE,
+                                 sim.seed = 12345,
+                                 verbose = TRUE) {
+
+  # Input validation mirrors estCircadianParam.
+  if (is.data.frame(data)) data <- as.matrix(data)
+  if (!is.matrix(data) || !is.numeric(data))
+    stop("'data' must be a numeric matrix (genes x samples). Got: ",
+         paste(class(data), collapse = "/"))
+  if (length(times) != ncol(data))
+    stop(sprintf(
+      "length(times) (%d) must equal ncol(data) (%d). Did you mean to transpose your matrix?",
+      length(times), ncol(data)))
+
+  dp_shift_mode <- match.arg(dp_shift_mode)
+
+  ngenes  <- nrow(data)
+  N       <- ncol(data)
+  omega_0 <- 2 * pi / period
+  top_k   <- as.integer(top_k)
+
+  if (verbose) {
+    cat("=== Estimating Two-Harmonic Cosinor Parameters from Pilot Data ===\n")
+    cat("Genes:", ngenes, "\n")
+    cat("Samples:", N, "\n")
+    cat("Time points:", length(unique(times)), "\n\n")
+  }
+
+  # Build the K=2 cosinor design matrix once: columns
+  #   1   cos(w t)   sin(w t)   cos(2w t)   sin(2w t)
+  X2 <- cbind(
+    1,
+    cos(omega_0 * times), sin(omega_0 * times),
+    cos(2 * omega_0 * times), sin(2 * omega_0 * times)
+  )
+  # Reduced (null) design: intercept only.
+  X0 <- matrix(1, nrow = N, ncol = 1)
+
+  # Fit per gene by OLS. For numerical robustness use lm.fit (QR).
+  # Vectors: M, a1, b1, a2, b2, sigma_hat, K=2 F-test pvalue, K=1 F-test pvalue.
+  Mhat  <- rep(NA_real_, ngenes)
+  a1hat <- rep(NA_real_, ngenes); b1hat <- rep(NA_real_, ngenes)
+  a2hat <- rep(NA_real_, ngenes); b2hat <- rep(NA_real_, ngenes)
+  sigma_hat <- rep(NA_real_, ngenes)
+  pvals     <- rep(NA_real_, ngenes)   # K=2 joint F-test (diagnostic)
+  p_K1      <- rep(NA_real_, ngenes)   # K=1 cosinor F-test (used for top-K ranking)
+  # Secondary p-value: test of 2nd-harmonic block alone (a2 = b2 = 0)
+  # conditioned on the 1st harmonic, used for diagnostics only.
+  p_2h_only <- rep(NA_real_, ngenes)
+
+  df_resid_full <- N - 5L
+  df_resid_null <- N - 1L
+  if (df_resid_full < 1L)
+    stop(sprintf("Two-harmonic cosinor needs N >= 6 samples; got N=%d.", N))
+
+  X1 <- cbind(1,
+              cos(omega_0 * times), sin(omega_0 * times))  # 1-harmonic design
+  df_resid_1h <- N - 3L
+
+  for (g in seq_len(ngenes)) {
+    y <- as.numeric(data[g, ])
+    fit2 <- tryCatch(stats::lm.fit(X2, y), error = function(e) NULL)
+    if (is.null(fit2) || any(is.na(fit2$coefficients))) next
+
+    coefs <- fit2$coefficients
+    res   <- fit2$residuals
+    RSS_full <- sum(res * res)
+    RSS_null <- sum((y - mean(y))^2)
+
+    # Joint K=2 F-test: H0: a1=b1=a2=b2=0 (4 d.f.); kept for diagnostics
+    if (RSS_full <= 0 || df_resid_full < 1L) next
+    Fstat <- ((RSS_null - RSS_full) / 4) / (RSS_full / df_resid_full)
+    pv    <- stats::pf(Fstat, 4, df_resid_full, lower.tail = FALSE)
+
+    # K=1 cosinor F-test (used for top-K ranking, matching Section 2.1)
+    fit1 <- tryCatch(stats::lm.fit(X1, y), error = function(e) NULL)
+    pv1  <- NA_real_; pv2 <- NA_real_
+    if (!is.null(fit1) && !any(is.na(fit1$coefficients))) {
+      RSS_1h <- sum(fit1$residuals^2)
+      if (RSS_1h > 0 && df_resid_1h >= 1L) {
+        F_1h <- ((RSS_null - RSS_1h) / 2) / (RSS_1h / df_resid_1h)
+        pv1  <- stats::pf(F_1h, 2, df_resid_1h, lower.tail = FALSE)
+      }
+      # Optional diagnostic: 2nd-harmonic-only F-test (2 d.f.)
+      if (RSS_full > 0 && df_resid_full >= 1L && RSS_1h >= RSS_full) {
+        F_2h <- ((RSS_1h - RSS_full) / 2) / (RSS_full / df_resid_full)
+        pv2  <- stats::pf(F_2h, 2, df_resid_full, lower.tail = FALSE)
+      }
+    }
+
+    Mhat[g]  <- coefs[1L]
+    a1hat[g] <- coefs[2L]; b1hat[g] <- coefs[3L]
+    a2hat[g] <- coefs[4L]; b2hat[g] <- coefs[5L]
+    sigma_hat[g] <- sqrt(RSS_full / df_resid_full)
+    pvals[g]     <- pv
+    p_K1[g]      <- pv1
+    p_2h_only[g] <- pv2
+  }
+
+  # (A_k, phi_k) conversion
+  A1_g  <- sqrt(a1hat^2 + b1hat^2)
+  A2_g  <- sqrt(a2hat^2 + b2hat^2)
+  # phi_1 wrapped to [0, period); phi_2 wrapped to [0, period/2)
+  phi1_g <- (atan2(b1hat, a1hat) / omega_0) %% period
+  phi2_g <- (atan2(b2hat, a2hat) / (2 * omega_0)) %% (period / 2)
+
+  # Candidate rhythmic set + top-K selection (Option B: K=1 F-test ranking).
+  # Pre-screen by K=1 cosinor F-test at p < min_rhythm_pval to match the
+  # rhythmic-gene definition used in Section 2.1; rank by K=1 F-test p-value
+  # (monotone with r1 = A1/sigma at fixed N) to take the strongest-cosinor
+  # genes. K=2 fits (A1, A2, phi1, phi2, sigma) are still stored for the
+  # joint 5-way pilot summary.
+  rhythmic_cand <- !is.na(p_K1) & p_K1 < min_rhythm_pval &
+                   !is.na(A1_g) & A1_g > 0 &
+                   !is.na(sigma_hat) & sigma_hat > 0
+  n_cand <- sum(rhythmic_cand, na.rm = TRUE)
+  prop_rhythmic_emp <- n_cand / ngenes
+
+  K_use <- min(top_k, n_cand)
+  if (K_use <= 0) {
+    stop("No rhythmic genes passed the K=1 cosinor F-test at p < ",
+         min_rhythm_pval)
+  }
+  cand_idx <- which(rhythmic_cand)
+  top_idx  <- cand_idx[order(p_K1[cand_idx])][seq_len(K_use)]
+
+  # Empirical distributions
+  lBaselineExpr_emp <- Mhat[!is.na(Mhat)]
+  sigma_valid       <- sigma_hat[!is.na(sigma_hat) & sigma_hat > 0]
+  lOD_emp           <- log(sigma_valid)
+
+  # JOINT 5-way tuples on top-K, paired by gene index
+  A1_emp     <- A1_g[top_idx]
+  phi1_emp   <- phi1_g[top_idx]
+  A2_emp     <- A2_g[top_idx]
+  phi2_emp   <- phi2_g[top_idx]
+  sigma_emp  <- sigma_hat[top_idx]
+
+  # Cap differential proportions at the rhythmic budget.
+  total_diff <- prop_DR + prop_DP + prop_DM
+  if (total_diff > prop_rhythmic_emp && total_diff > 0) {
+    scale_factor <- prop_rhythmic_emp / total_diff
+    if (verbose) {
+      message(sprintf(
+        paste0("estCircadianParam2H: prop_DR+prop_DP+prop_DM (%.3f) exceeds estimated ",
+               "prop_rhythmic (%.3f). Scaling differential props by %.3f to fit budget."),
+        total_diff, prop_rhythmic_emp, scale_factor))
+    }
+    prop_DR <- prop_DR * scale_factor
+    prop_DP <- prop_DP * scale_factor
+    prop_DM <- prop_DM * scale_factor
+  }
+
+  opts <- CircadianBioOptions(
+    ngenes         = ngenes,
+    prop_rhythmic  = prop_rhythmic_emp,
+    period         = period,
+    lBaselineExpr  = lBaselineExpr_emp,
+    lOD            = lOD_emp,
+    amplitude      = A1_emp,
+    sigma_rhythmic = sigma_emp,
+    paired_sigma   = paired_sigma,
+    cts            = times,
+    phase          = phi1_emp,
+    prop_DR        = prop_DR,
+    prop_DP        = prop_DP,
+    prop_DM        = prop_DM,
+    mesor_diff     = mesor_diff,
+    phase_diff     = phase_diff,
+    amp_diff       = amp_diff,
+    dp_shift_mode  = dp_shift_mode,
+    dr_amp_scale   = dr_amp_scale,
+    dr_sigma_scale = dr_sigma_scale,
+    sim.seed       = sim.seed
+  )
+  # Restore the joint 5-way pilot pairing.
+  # CircadianBioOptions() independently resamples amplitude/phase/sigma down
+  # to length n_rhythmic via setAmplitude/setPhase, which destroys the
+  # (A1, phi1, A2, phi2, sigma) tuple structure required by the K=2
+  # simulator. We overwrite the five paired fields with the raw length-K_use
+  # pilot vectors so that simCircadianSingleCohort2H draws a single shared
+  # ji index of length n_rhythmic and applies it to all five vectors.
+  opts$amplitude      <- A1_emp
+  opts$phase          <- phi1_emp
+  opts$sigma_rhythmic <- sigma_emp
+  opts$amplitude2     <- A2_emp
+  opts$phase2         <- phi2_emp
+  opts$paired_2h      <- TRUE
+
+  # Diagnostics
+  n_2h_signif <- sum(!is.na(p_2h_only[top_idx]) & p_2h_only[top_idx] < 0.05,
+                     na.rm = TRUE)
+  A2_A1_ratio <- A2_emp / pmax(A1_emp, 1e-12)
+  opts$diagnostics <- list(
+    n_pre_screen     = n_cand,
+    top_k_used       = K_use,
+    prop_rhythmic    = prop_rhythmic_emp,
+    A1_median        = stats::median(A1_emp, na.rm = TRUE),
+    A2_median        = stats::median(A2_emp, na.rm = TRUE),
+    A2_over_A1_med   = stats::median(A2_A1_ratio, na.rm = TRUE),
+    n_2h_signif_p05  = n_2h_signif,
+    prop_2h_signif   = n_2h_signif / max(K_use, 1L),
+    sigma_median     = stats::median(sigma_emp, na.rm = TRUE),
+    p_2h_only        = p_2h_only[top_idx],
+    A1_emp           = A1_emp, A2_emp = A2_emp,
+    phi1_emp         = phi1_emp, phi2_emp = phi2_emp,
+    sigma_emp        = sigma_emp,
+    screen_method    = "joint_2H_F4"
+  )
+
+  if (verbose) {
+    cat(sprintf("Joint 4-d.f. F-test screen: %d/%d genes pass p < %.2g\n",
+                n_cand, ngenes, min_rhythm_pval))
+    cat(sprintf("Top-K used for joint (A1, phi1, A2, phi2, sigma): %d\n",
+                K_use))
+    cat(sprintf("Median A1 = %.3f   Median A2 = %.3f   Median A2/A1 = %.3f\n",
+                opts$diagnostics$A1_median,
+                opts$diagnostics$A2_median,
+                opts$diagnostics$A2_over_A1_med))
+    cat(sprintf("Genes with 2nd-harmonic-block p < 0.05: %d/%d (%.1f%%)\n",
+                n_2h_signif, K_use,
+                100 * opts$diagnostics$prop_2h_signif))
+    cat(sprintf("Median residual sigma: %.3f\n", opts$diagnostics$sigma_median))
+    cat(sprintf("Proportion rhythmic (joint F-test): %.1f%%\n",
+                100 * prop_rhythmic_emp))
+  }
+
+  opts
+}
+
+
 #' Estimate CircadianBioOptions with FMM Per-Gene Parameters
 #'
 #' @description Like \code{\link{estCircadianParam}}, but additionally fits the

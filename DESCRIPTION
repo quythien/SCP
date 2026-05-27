@@ -22,7 +22,13 @@ Imports:
     limorhyde,
     minpack.lm,
     nloptr,
-    parallel
+    parallel,
+    grid,
+    grDevices,
+    Rcpp
+LinkingTo:
+    Rcpp,
+    RcppArmadillo
 Suggests:
     FMM,
     MetaCycle,
@@ -31,9 +37,10 @@ Suggests:
     patchwork,
     cowplot,
     gtable,
-    Rcpp,
-    RcppArmadillo,
     readxl,
+    tidyr,
+    AWFisher,
+    DODR,
     testthat (>= 3.0.0)
 License: MIT + file LICENSE
 Encoding: UTF-8

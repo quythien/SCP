@@ -1760,6 +1760,38 @@ detect_RAIN <- function(expr, times, gene_names = NULL, period = 24) {
 # All return numeric[G] of raw p-values (caller handles FDR adjustment).
 # ==============================================================================
 
+#' Unified cosinor rhythmicity detection (single- or multi-harmonic)
+#'
+#' Canonical entry point for rhythmicity detection by K-harmonic cosinor
+#' regression. \code{K = 1} is the single-harmonic cosinor F-test, identical
+#' to \code{\link{detect_DCP}}; \code{K = 2} adds the 12-hour second harmonic
+#' and tests the joint harmonic block. By default the unshrunk exact nested
+#' F-test is used (matching the power derivations in the paper). Returns raw
+#' p-values; the caller applies FDR control.
+#'
+#' @param expr   Gene x sample expression matrix
+#' @param times  Numeric time vector (length = ncol(expr))
+#' @param K      Harmonic order (default 1)
+#' @param period Period in hours (default 24)
+#' @param ebayes For \code{K >= 2}, moderate residual variance with
+#'   empirical-Bayes shrinkage (default \code{FALSE}, the unshrunk exact
+#'   F-test)
+#' @param mc.cores Cores for the \code{K >= 2} fit (default 1)
+#' @return Numeric vector of raw p-values, length \code{nrow(expr)}
+#' @seealso \code{\link{detect_DCP}}
+#' @export
+detect_cosinor <- function(expr, times, K = 1L, period = 24,
+                           ebayes = FALSE, mc.cores = 1L) {
+  K <- as.integer(K)
+  if (K < 1L) stop("K must be >= 1.")
+  if (K == 1L) {
+    return(detect_DCP(expr, times, period = period))
+  }
+  fit <- detect_FMM(expr, times, period = period, K = K,
+                    ebayes = ebayes, mc.cores = mc.cores)
+  fit$p.value
+}
+
 #' DCP single-cohort rhythmicity detection
 #' @param expr   Gene x sample expression matrix
 #' @param times  Numeric time vector (length = ncol(expr))
