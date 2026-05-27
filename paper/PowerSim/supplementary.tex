@@ -26,15 +26,15 @@
 
 \maketitle
 
+
 %% ====================================================================
-% Table S1: Pilot dataset summary (placed before Section S1 so the
-% S1, S2, ..., S9 section numbering and the corresponding main-text
-% cross-references remain unchanged).
+\section{Pilot datasets and signal summaries}
+\label{sec:pilot_summary}
 %% ====================================================================
 
 Table~\ref{tab:pilot_summary} summarises the pilot datasets used in
-the main text figures. A complete pilot inventory (123 tissues across
-GTEx, GSE98965 baboon, GSE71620 PFC (BA11/BA47), and GSE160521, with
+the main text figures. A complete pilot inventory (123 tissues across GTEx \citep{gtex2020atlas}, GSE98965 baboon \citep{Mure2018baboon}, GSE71620 PFC (BA11/BA47)
+\citep{chen2016aging}, and GSE160521 \citep{ketchesin2021diurnal}, with
 per-tissue median $\tilde r$ and rhythmic-gene counts computed on the
 top-$300$ rhythmic genes) is provided as a separate supplementary
 spreadsheet (\texttt{tissue\_signal\_summary.csv}). Across all entries,
@@ -60,137 +60,119 @@ Species & Pilot dataset & $n_{\mathrm{pilot}}$ & $\tilde r$ & Used in \\
 \textit{H.\ sapiens} & GTEx Adrenal Gland & $187$ & $0.97$ & Fig.~1, Fig.~2 \\
 \textit{H.\ sapiens} & GTEx Liver & $154$ & $0.48$ & Fig.~1, Fig.~4, Fig.~5 \\
 \textit{H.\ sapiens} & GSE160521 Putamen control & $59$ & $1.06$ & Fig.~6 \\
-\textit{H.\ sapiens} & GSE160521 Putamen schizophrenia controls & $28$ & $1.02$ & Fig.~3 \\
+\textit{H.\ sapiens} & GSE160521 Putamen schizophrenia  & $28$ & $1.02$ & Fig.~3 \\
 \textit{H.\ sapiens} & GTEx Thyroid & $416$ & $0.45$ & Fig.~3 \\
-\bottomrule
-\end{tabular}\end{table}
-
-%% ====================================================================
-\section{K-harmonic regression and F-test}
-\label{sec:kharmonic_test}
-%% ====================================================================
-
-The K-harmonic extension in the main text is a linear regression on
-periodic basis functions. For period $T=24$ and angular frequency
-$\omega_0 = 2\pi/T$, the model is
-\begin{equation}
-y(t) = \mu + \sum_{k=1}^{K} \big[ a_k \cos(k \omega_0 t) + b_k \sin(k \omega_0 t) \big] + \varepsilon,
-\label{eq:supp_kharmonic}
-\end{equation}
-with $2K + 1$ free parameters: an intercept and $2K$ harmonic
-coefficients. The single-harmonic cosinor test is recovered at $K=1$;
-the two-harmonic test used in the main text sets $K=2$.
-
-We test the null hypothesis of no rhythm,
-\begin{equation}
-H_0:\; a_1 = b_1 = a_2 = b_2 = \cdots = a_K = b_K = 0,
-\end{equation}
-against the alternative that at least one $(a_k, b_k) \neq (0, 0)$.
-Stacking the $N$ observations into $\mathbf{y} \in \mathbb{R}^N$ and
-building the design matrix
-\begin{equation}
-\mathbf{X}_K = \big[ \mathbf{1},\; \cos(\omega_0 \mathbf{t}),\; \sin(\omega_0 \mathbf{t}),\; \ldots,\; \cos(K \omega_0 \mathbf{t}),\; \sin(K \omega_0 \mathbf{t}) \big]
-\in \mathbb{R}^{N \times (2K+1)},
-\end{equation}
-the nested-model F-statistic is
-\begin{equation}
-F = \frac{( \mathrm{SSE}_0 - \mathrm{SSE}_K ) / (2K)}
-        {\mathrm{SSE}_K / (N - 2K - 1)},
-\label{eq:supp_f_stat}
-\end{equation}
-where $\mathrm{SSE}_0 = \sum_i (y_i - \bar y)^2$ and
-$\mathrm{SSE}_K = \mathbf{y}^\top (\mathbf{I} - \mathbf{H}_K) \mathbf{y}$
-with $\mathbf{H}_K = \mathbf{X}_K (\mathbf{X}_K^\top \mathbf{X}_K)^{-1} \mathbf{X}_K^\top$.
-Under Gaussian errors and the null,
-\begin{equation}
-F \mid H_0 \sim F(2K,\; N - 2K - 1) \quad \text{(exact, finite-sample)}.
-\label{eq:supp_null_dist}
-\end{equation}
-No asymptotics, boundary correction, or empirical calibration is
-required, because \eqref{eq:supp_kharmonic} is fully linear in
-$(\mu, a_k, b_k)$ and every parameter is identifiable under both $H_0$
-(where they equal zero) and $H_1$.
-
-In practice, \eqref{eq:supp_kharmonic} is fitted through the
-\textsc{LimoRhyde} framework \citep{Singer2019LimoRhyde}. The software returns
-the empirical-Bayes moderated F-statistic by default (for $G \geq 50$)
-and falls back to the exact F-statistic at small $G$ ($G < 50$).
-The moderated F-statistic is used throughout the main paper.
-
-
-%% ====================================================================
-\section{Type-I error validation of the K-harmonic F-test}
-\label{sec:typeI}
-%% ====================================================================
-
-Type-I error of the K-harmonic F-test was validated by simulating
-null expression matrices drawn from $\mathcal{N}(0, 1)$ independent of
-collection time on an equispaced active grid at
-$n \in \{12, 24, 48, 72, 144\}$ with
-$N_{\mathrm{sim}} = 2000$ Monte Carlo replicates per cell. The
-empirical rejection rate at nominal $\alpha = 0.05$ was compared to
-the Monte Carlo $\pm 3$\,SE tolerance band $[0.035, 0.065]$. Both the
-empirical-Bayes moderated and exact $F$ paths were tested at
-$K = 1$ and $K = 2$ for all $N$; the exact-$F$ path was tested at
-$K = 3$ for $n \geq 12$ where the design is identifiable.
-The reproducible validation script and saved log are included with the
-software release.
-
-Across the calibration grid (40 detector $\times$ $N$ cells), empirical
-type-I error fell in $[0.043, 0.057]$, well within the
-$[0.035, 0.065]$ tolerance band, and Kolmogorov-Smirnov uniformity
-tests on the simulated null $p$-values did not reject uniformity at
-$p_{KS} > 0.01$ in every cell. Representative cells: $K = 1$ exact-$F$ at $n = 48$,
-$T_I = 0.056$, $p_{KS} = 0.012$; $K = 2$ eBayes $n = 72$,
-$T_I = 0.051$, $p_{KS} = 0.978$; $K = 3$ exact-$F$ $n = 144$,
-$T_I = 0.051$, $p_{KS} = 0.385$. Identifiability-threshold behaviour
-($K = 2$ at $B = 4$) is enforced by the dispatch-level rank-check
-warning emitted by the runner, which guards against rank-deficient
-design matrices before any test is computed.
-
-
-%% ====================================================================
-\section{Empirical harmonic-order sensitivity}
-\label{sec:k_sweep}
-%% ====================================================================
-
-Increasing $K$ expands the signal space but also consumes two
-additional degrees of freedom per added harmonic. We evaluated this
-trade-off on the baboon KIM pilot (GSE98965, \citep{Mure2018baboon}),
-an active design with $B=12$ sampling times. This grid satisfies the
-identifiability threshold for $K=3$ ($B \geq 2K+1 = 7$). Power was
-estimated over $N \in \{24, 48, 72, 144\}$ with
-$N_{\mathrm{sim}} = 30$ outer replicates per cell.
-
-\begin{table}[!htbp]
-\centering
-\small
-\caption{Marginal rhythmicity power on baboon KIM at $B = 12$.
-$K = 1$ is the single-harmonic cosinor F-test; $K \geq 2$ uses the
-K-harmonic F-test. Power was computed at FDR $0.05$ over
-$N_{\mathrm{sim}} = 30$ outer replicates.}
-\label{tab:k_sweep_kim}
-\begin{tabular}{lccc}
-\toprule
-$N$  & $K = 1$ & $K = 2$ & $K = 3$ \\
-\midrule
-$24$ & $0.262$ & $\mathbf{0.427}$ & $0.380$ \\
-$48$ & $0.749$ & $0.856$ & $0.855$ \\
-$72$ & $0.906$ & $0.952$ & $0.953$ \\
-$144$ & $0.984$ & $0.992$ & $0.993$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-At $N = 24$, $K = 2$ outperforms $K = 3$ by $4.7\%$. This indicates that
-the third harmonic does not compensate for the additional degrees of
-freedom at small sample size. At $N \geq 48$, the $K = 2$ and $K = 3$
-curves coincide within Monte Carlo noise ($<0.2\%$ at every $N$), so
-the third harmonic provides no practical gain in this setting. The
-$K = 1$ test is consistently less powerful in this pilot. Together,
-these results support $K=2$ as a practical default for this analysis
-setting, while leaving the optimal harmonic order dependent on waveform
-shape, sample size, and the planned sampling grid.
+
+%% ====================================================================
+\section{Active-design identifiability and B-invariance}
+\label{sec:b_invariance}
+%% ====================================================================
+
+This section provides the algebraic derivation underlying the
+$B$-invariance result stated in Section~2.1 of the main text and used in
+the active-design analysis of Section~3.6. The argument extends the
+cosinor noncentrality framework of \citet{zong2023circapower} to balanced
+active grids and to the two-harmonic detector. Under balanced equally
+spaced sampling with $B$ distinct time points and $m$ replicates per time
+point ($N = Bm$), the harmonic-coefficient block of the design matrix is
+diagonal and proportional to $N$ once the sampling grid satisfies the
+harmonic-regression identifiability threshold.
+
+\subsection{Single-harmonic setup}
+
+Let $t_b = (b - 1) \cdot 24 / B$ for $b = 1, \ldots, B$ denote the
+distinct sampling times of a balanced equally spaced active design over
+one $24$-hour cycle, and let
+$\theta_b = \omega_0 t_b = 2\pi (b - 1)/B$ be the corresponding phase.
+For the single-harmonic cosinor model, the design vector is
+\[
+f(t)
+=
+\big[
+1,\; \cos(\omega_0 t),\; \sin(\omega_0 t)
+\big]^\top .
+\]
+
+\subsection{Orthogonality for $B \geq 3$}
+
+The off-diagonal sums
+\[
+\sum_b \cos(\theta_b),
+\qquad
+\sum_b \sin(\theta_b),
+\qquad
+\sum_b \sin(\theta_b)\cos(\theta_b)
+\]
+vanish for $B \geq 3$ by the standard finite-sum identity for roots of
+unity. At $B=2$, the sine column is identically zero, so the
+single-harmonic design is rank-deficient. Thus, the active-design
+identifiability threshold for the single-harmonic test is $B \geq 3$.
+
+Using
+\[
+\cos^2\theta = \frac{1+\cos(2\theta)}{2},
+\qquad
+\sin^2\theta = \frac{1-\cos(2\theta)}{2},
+\]
+and the same finite trigonometric sum identity, we obtain
+\[
+\sum_{b=1}^{B}\cos^2\theta_b
+=
+\sum_{b=1}^{B}\sin^2\theta_b
+=
+\frac{B}{2}.
+\]
+With balanced replication $m_b \equiv m$ and $N=Bm$, the single-harmonic
+design information matrix is
+\begin{equation}
+X^\top X
+=
+\mathrm{diag}
+\big(
+N,\; N/2,\; N/2
+\big),
+\qquad
+B \geq 3.
+\label{eq:supp_xtx_balanced}
+\end{equation}
+
+\subsection{Single-harmonic noncentrality and B-invariance}
+
+Under cosinor truth,
+\[
+y_{g,i}
+=
+\mu_g
++
+A_g\cos(\omega_0 t_i - \omega_0 \phi_g)
++
+\varepsilon_{g,i},
+\]
+the harmonic-coefficient block has information $(N/2)I_2$ by
+\eqref{eq:supp_xtx_balanced}. The noncentrality parameter for the
+single-harmonic F-test is therefore
+\begin{equation}
+\lambda_g
+=
+\frac{N}{2}
+\frac{A_g^2}{\sigma_g^2}
+=
+\frac{N r_g^2}{2},
+\qquad
+r_g = A_g/\sigma_g.
+\label{eq:supp_ncp_cosinor}
+\end{equation}
+Thus, under balanced equally spaced active sampling, the noncentrality
+depends on total sample size $N$ and effect size $r_g$, but not on the
+specific allocation of samples across $B$ and $m$ once $B \geq 3$. The
+same argument extends to the two-harmonic detector above its
+identifiability threshold $B \geq 5$, since the harmonic columns of
+\eqref{eq:supp_xtx_balanced} remain mutually orthogonal with sum of
+squares $N/2$ once $B \geq 2K + 1$.
 
 
 %% ====================================================================
@@ -200,173 +182,134 @@ shape, sample size, and the planned sampling grid.
 
 Algorithm~S1 describes the data-generation procedure for a single
 simulation replicate of the two-group differential setting at sample
-size $N$. The single-cohort case is recovered by setting the
-differential proportions
-$\pi_{\mathrm{DR}} = \pi_{\mathrm{DP}} = \pi_{\mathrm{DM}} = 0$ and
-the second-group parameter modifications to no-ops.
+size $N$. Expression is generated under the cosinor model
+\citep{cornelissen2014cosinor}, with gene-type assignments and
+endpoint-specific modifications mirroring the joint-rhythmicity strata
+used by \textsc{DiffCircaPipeline} \citep{xue2023diffcircapipeline}. The
+single-cohort case is recovered by setting the differential
+proportions
+\[
+\pi_{\mathrm{DR}}
+=
+\pi_{\mathrm{DP}}
+=
+\pi_{\mathrm{DM}}
+=
+0
+\]
+and the second-group parameter modifications to no-ops.
 
 \begin{figure}[!htbp]
 \small
 \hrule\vspace{4pt}
 \textbf{Algorithm S1}: Two-group circadian simulation \vspace{2pt}
 \hrule\vspace{4pt}
-\textbf{Input}: number of genes $G$, sample size $N$, type
-probabilities $\pi_R, \pi_{\mathrm{DR}}, \pi_{\mathrm{DP}}, \pi_{\mathrm{DM}}$,
-empirical pilot distributions $\hat{F}_\mu, \hat{F}_{A,\sigma}, \hat{F}_\phi$
-and empirical TOD distribution $\hat{F}_{\mathrm{TOD}}$, design type
-(active or passive), phase shift $\Delta\phi$, mesor shift $\Delta\mu$,
-seed $s$.\\
-\textbf{Output}: expression matrices $\mathbf{Y}_1, \mathbf{Y}_2 \in \mathbb{R}^{G \times N}$
-and the ground-truth type assignment $\mathbf{T}$.
+\textbf{Input}: number of genes $G$, sample size $N$, type probabilities
+$\pi_R, \pi_{\mathrm{DR}}, \pi_{\mathrm{DP}}, \pi_{\mathrm{DM}}$,
+empirical pilot distributions
+$\hat{F}_\mu, \hat{F}_{A,\sigma}, \hat{F}_\phi$ and empirical TOD
+distribution $\hat{F}_{\mathrm{TOD}}$, design type (active or passive),
+phase shift $\Delta\phi$, mesor shift $\Delta\mu$, seed $s$.\\
+\textbf{Output}: expression matrices
+$\mathbf{Y}_1, \mathbf{Y}_2 \in \mathbb{R}^{G \times N}$ and the
+ground-truth type assignment $\mathbf{T}$.
 \vspace{4pt}
 
 \begin{enumerate}
 \setlength{\itemsep}{2pt}
-\item \textbf{Seed} $s$. For $g = 1, \ldots, G$, draw baseline
-parameters: $\mu_g \sim \hat{F}_\mu$, $(A_g, \sigma_g) \sim \hat{F}_{A,\sigma}$
-(joint draw preserves the pilot's amplitude-noise dependence), and
-$\phi_g \sim \hat{F}_\phi$.
 
-\item \textbf{Assign gene types} $T_g \in \{0, 1, 2, 3, 4, 5\}$ by
-sampling from the categorical with probabilities
-$P(T_g = 0) = 1 - \pi_R - \pi_{\mathrm{DR}} - \pi_{\mathrm{DP}} - \pi_{\mathrm{DM}}$,
-$P(T_g = 1) = \pi_R$,
-$P(T_g = 2) = P(T_g = 3) = \pi_{\mathrm{DR}} / 2$,
-$P(T_g = 4) = \pi_{\mathrm{DP}}$,
-$P(T_g = 5) = \pi_{\mathrm{DM}}$.
+\item \textbf{Seed} $s$. For $g=1,\ldots,G$, draw baseline parameters:
+\[
+\mu_g \sim \hat{F}_\mu,
+\qquad
+(A_g,\sigma_g) \sim \hat{F}_{A,\sigma},
+\qquad
+\phi_g \sim \hat{F}_\phi.
+\]
+The joint draw of $(A_g,\sigma_g)$ preserves the pilot's
+amplitude-noise dependence.
 
-\item \textbf{Initialise group parameters} as
-$(\mu_{g,k}, A_{g,k}, \sigma_{g,k}, \phi_{g,k}) = (\mu_g, A_g, \sigma_g, \phi_g)$
-for $k \in \{1, 2\}$, then modify according to $T_g$:
-$T_g = 0$: $A_{g,1} = A_{g,2} = 0$ (arrhythmic);
-$T_g = 1$: no modification (rhythmic in both);
-$T_g = 2$: $A_{g,2} = 0$ (rhythmic in group 1 only);
-$T_g = 3$: $A_{g,1} = 0$ (rhythmic in group 2 only);
-$T_g = 4$: $\phi_{g,2} = (\phi_{g,1} + \Delta\phi) \bmod 24$;
-$T_g = 5$: $\mu_{g,2} = \mu_{g,1} + \Delta\mu$.
+\item \textbf{Assign gene types.} Draw
+$T_g \in \{0,1,2,3,4,5\}$ from the categorical distribution
+\[
+P(T_g=0)
+=
+1-\pi_R-\pi_{\mathrm{DR}}-\pi_{\mathrm{DP}}-\pi_{\mathrm{DM}},
+\]
+\[
+P(T_g=1)=\pi_R,
+\qquad
+P(T_g=2)=P(T_g=3)=\pi_{\mathrm{DR}}/2,
+\qquad
+P(T_g=4)=\pi_{\mathrm{DP}},
+\qquad
+P(T_g=5)=\pi_{\mathrm{DM}}.
+\]
 
-\item \textbf{Reseed} $s + 7919 N$. For each group $k$ and each
-$i = 1, \ldots, N$, draw collection times $t_{k,i}$: from
+\item \textbf{Initialise group parameters.} Set
+\[
+(\mu_{g,k},A_{g,k},\sigma_{g,k},\phi_{g,k})
+=
+(\mu_g,A_g,\sigma_g,\phi_g)
+\]
+for $k\in\{1,2\}$, then modify according to $T_g$:
+\[
+\begin{array}{ll}
+T_g=0: & A_{g,1}=A_{g,2}=0 \quad \text{(arrhythmic)},\\
+T_g=1: & \text{no modification} \quad \text{(rhythmic in both)},\\
+T_g=2: & A_{g,2}=0 \quad \text{(rhythmic in group 1 only)},\\
+T_g=3: & A_{g,1}=0 \quad \text{(rhythmic in group 2 only)},\\
+T_g=4: & \phi_{g,2}=(\phi_{g,1}+\Delta\phi)\bmod 24,\\
+T_g=5: & \mu_{g,2}=\mu_{g,1}+\Delta\mu.
+\end{array}
+\]
+
+\item \textbf{Reseed} $s + 7919N$. For each group $k$ and each
+$i=1,\ldots,N$, draw collection times $t_{k,i}$ from
 $\hat{F}_{\mathrm{TOD}}$ for passive designs, or from the equispaced
-active grid otherwise. This second seeding step makes time-of-day
-draws sample-size-specific while preserving the per-gene biological
-parameters across $N$.
+active grid otherwise. This second seeding step makes time-of-day draws
+sample-size-specific while preserving the per-gene biological parameters
+across $N$.
 
-\item \textbf{Generate expression}. For each gene $g$, group $k$, and
+\item \textbf{Generate expression.} For each gene $g$, group $k$, and
 sample $i$,
 \[
-y_{g,k,i} = \mu_{g,k} + A_{g,k} \cos\!\big( \omega_0 (t_{k,i} - \phi_{g,k}) \big)
-+ \varepsilon_{g,k,i},
-\qquad \varepsilon_{g,k,i} \sim \mathcal{N}\!\big(0, \sigma_{g,k}^2 \big),
+y_{g,k,i}
+=
+\mu_{g,k}
++
+A_{g,k}
+\cos\!\big(
+\omega_0(t_{k,i}-\phi_{g,k})
+\big)
++
+\varepsilon_{g,k,i},
+\qquad
+\varepsilon_{g,k,i}
+\sim
+\mathcal{N}(0,\sigma_{g,k}^2),
 \]
-with $\omega_0 = 2\pi / 24$.
+with $\omega_0=2\pi/24$.
 
-\item \textbf{Record ground truth} $\mathbf{T} = (T_1, \ldots, T_G)$
-along with per-gene effect sizes $r_{g,k} = A_{g,k} / \sigma_{g,k}$,
-phase differences, and mesor differences.
+\item \textbf{Record ground truth.} Store
+$\mathbf{T}=(T_1,\ldots,T_G)$ along with per-gene effect sizes
+$r_{g,k}=A_{g,k}/\sigma_{g,k}$, phase differences, and mesor
+differences.
+
 \end{enumerate}
 \vspace{2pt}\hrule
 \end{figure}
 
-The two-stage seeding (steps 1 and 4) holds the gene-type assignment
+The two-stage seeding in steps 1 and 4 holds the gene-type assignment
 and baseline parameters fixed across sample sizes within a simulation
-replicate while reseeding only the $N$-dependent quantities (collection
-times and residual noise). This isolates the effect of $N$ on power
-from incidental variation in the gene-level biological configuration.
+replicate while reseeding only the $N$-dependent quantities, including
+collection times and residual noise. This isolates the effect of $N$ on
+power from incidental variation in the gene-level biological
+configuration.
 
-
-%% ====================================================================
-\section{Design matrix properties and B-invariance under cosinor truth}
-\label{sec:b_invariance}
-%% ====================================================================
-
-This section provides the mathematical derivation underlying the
-$B$-invariance result used in the main text active-design analysis. Under
-balanced equally spaced sampling with $B \geq 3$ distinct time points
-and $m$ replicates per time point ($N = B m$), the harmonic-coefficient
-block of the cosinor design matrix is diagonal and proportional to $N$,
-which removes any dependence of the noncentrality on $B$.
-
-\subsection{Setup}
-
-Let $t_b = (b - 1) \cdot 24 / B$ for $b = 1, \ldots, B$ denote the
-distinct sampling times of a balanced equally spaced active design over
-one $24$-hour cycle, and $\theta_b = \omega_0 t_b = 2 \pi (b - 1) / B$
-the corresponding phases on the unit circle. The cosinor design matrix
-for one gene is $X_{ij} = f(t_i)_j$ with
-$f(t) = [1, \cos(\omega_0 t), \sin(\omega_0 t)]^\top$.
-
-\subsection{Off-diagonal terms vanish for $B \geq 3$}
-
-The off-diagonal sums
-$\sum_b \cos(\theta_b), \sum_b \sin(\theta_b),$ and
-$\sum_b \sin(\theta_b) \cos(\theta_b)$
-are finite geometric sums of complex exponentials and all vanish for
-$B \geq 3$ by the standard finite-sum identity (the denominators
-$\sin(\pi / B)$ and $\sin(2 \pi / B)$ are non-zero for $B \geq 3$). At
-$B = 2$ the sine column of $X$ is identically zero, so the cosinor
-design is rank-deficient; we therefore impose $B \geq 3$ throughout.
-
-\subsection{Diagonal terms equal $B / 2$}
-
-Using $\cos^2 \theta = (1 + \cos 2\theta) / 2$ and the same finite
-trigonometric sum identity to make $\sum_b \cos(4 \pi (b-1) / B) = 0$
-for $B \geq 3$, we obtain
-$\sum_b \cos^2 \theta_b = \sum_b \sin^2 \theta_b = B / 2$. With
-balanced replication $m_b \equiv m$ and $N = B m$, the design
-information matrix takes the diagonal form
-\begin{equation}
-X^\top X = \mathrm{diag}\!\big( N,\; N / 2,\; N / 2 \big),
-\qquad B \geq 3.
-\label{eq:supp_xtx_balanced}
-\end{equation}
-
-\subsection{Noncentrality and B-invariance}
-
-Under cosinor truth $y_{g,i} = \mu_g + A_g \cos(\omega_0 t_i - \omega_0 \phi_g) + \varepsilon_{g,i}$,
-the harmonic-coefficient OLS estimator has Fisher information block
-$(N / 2) I_2$ by~\eqref{eq:supp_xtx_balanced}. The noncentrality
-parameter of the F-test for $H_0: A_g = 0$ is therefore
-\begin{equation}
-\lambda_g = \frac{N}{2} \cdot \frac{A_g^2}{\sigma_g^2} = \frac{N\, r_g^2}{2},
-\qquad r_g = A_g / \sigma_g,
-\label{eq:supp_ncp_cosinor}
-\end{equation}
-which depends on $N$ and the per-gene effect size $r_g$ but not on $B$.
-This is the design factor $d(\phi) = 1 / 2$ uniformly in $\phi$ used in
-the main text. Identical reasoning at each harmonic block of the
-K-harmonic regression \eqref{eq:supp_kharmonic} extends the result to
-$K \geq 2$ above the identifiability threshold $B \geq 2K + 1$,
-yielding the $B$-invariance of the K-harmonic noncentrality used in
-the active-design results of the main text.
-
-
-%% ====================================================================
-\section{Design factor under passive sampling}
-\label{sec:design_factor}
-%% ====================================================================
-
-For passive designs, the per-gene design factor depends on the
-empirical TOD distribution rather than on a chosen grid. Let
-$\hat{F}_{\mathrm{TOD}}$ denote the empirical distribution of collection
-times across the planned cohort (or its bootstrap-resampled equivalent
-in Section~\ref{sec:bootstrap_impl}). For a planned sample size $N$,
-draw $t_{i} \sim \hat{F}_{\mathrm{TOD}}$ independently for
-$i = 1, \ldots, N$; the conditional design factor is then
-\begin{equation}
-d(\phi_g) = \frac{1}{N} \sum_{i=1}^{N} \cos^2\!\big( \omega_0 (t_i - \phi_g) \big)
-- \left[ \frac{1}{N} \sum_{i=1}^{N} \cos\!\big( \omega_0 (t_i - \phi_g) \big) \right]^2,
-\label{eq:supp_d_passive}
-\end{equation}
-which is the conditional version of the CircaPower design factor
-\citep{zong2023circapower}. Averaging $d(\phi_g)$ over the per-gene
-phase distribution gives the marginal design efficiency loss relative
-to the active-design value of $1/2$. For the post-mortem brain pilots
-used in the main text (Putamen-SCZ, GTEx), the marginal
-$d$ is approximately $0.20$ to $0.30$; the exact value depends on how
-concentrated the empirical TOD distribution is. The active vs.\ passive design
-factor difference quantifies the efficiency advantage of active
-designs (factor of about $2$) at matched $N$ and $r$.
+In practice, the two-harmonic regression test is fitted by ordinary
+least squares, and all reported analyses use the exact finite-sample
+F-test.
 
 
 %% ====================================================================
@@ -374,67 +317,88 @@ designs (factor of about $2$) at matched $N$ and $r$.
 \label{sec:bootstrap_impl}
 %% ====================================================================
 
-The outer subject bootstrap of Section~2.3 propagates pilot
-sampling variability into the projected power curve. Algorithm~S2
-summarises the implementation, which is exposed as a single
-end-to-end entry point in the \textsc{SCP} framework.
+The outer subject bootstrap of Section~2.3 propagates pilot sampling
+variability into the projected power curve using nonparametric resampling
+over pilot subjects \citep{efron1979bootstrap}. Algorithm~S2 summarises
+the implementation, which is exposed as a single end-to-end entry point
+in the \textsc{SCP} framework.
 
 \begin{figure}[!htbp]
 \small
 \hrule\vspace{4pt}
 \textbf{Algorithm S2}: Single-cohort outer-bootstrap power \vspace{2pt}
 \hrule\vspace{4pt}
-\textbf{Input}: pilot expression matrix $\mathbf{Y}_{\mathrm{pilot}} \in \mathbb{R}^{G \times n_{\mathrm{pilot}}}$,
+\textbf{Input}: pilot expression matrix
+$\mathbf{Y}_{\mathrm{pilot}} \in \mathbb{R}^{G \times n_{\mathrm{pilot}}}$,
 pilot collection times $\mathbf{t}_{\mathrm{pilot}}$, sample-size grid
-$\{N_1, \ldots, N_J\}$, outer-resample count $B_{\mathrm{out}}$,
-inner-simulation count $N_{\mathrm{sim}}^{\mathrm{in}}$, the screening
+$\{N_1,\ldots,N_J\}$, outer-resample count $B_{\mathrm{out}}$,
+inner-simulation count $N_{\mathrm{sim}}^{\mathrm{in}}$, screening
 threshold $\alpha_{\mathrm{pilot}}$, and FDR level $\alpha$.\\
 \textbf{Output}: $(B_{\mathrm{out}} \times J)$ matrix of bootstrap
-power replicates and pointwise $95\%$ CI bands.
+power replicates and pointwise $95\%$ confidence bands.
 \vspace{4pt}
 
 \begin{enumerate}
 \setlength{\itemsep}{2pt}
-\item For $b = 1, \ldots, B_{\mathrm{out}}$:
+
+\item For $b=1,\ldots,B_{\mathrm{out}}$:
 \begin{enumerate}
 \setlength{\itemsep}{1pt}
+
 \item \textbf{Resample subjects.} Draw $n_{\mathrm{pilot}}$ subject
-indices with replacement from $\{1, \ldots, n_{\mathrm{pilot}}\}$ to
-form $\mathbf{Y}^{(b)} \in \mathbb{R}^{G \times n_{\mathrm{pilot}}}$
-and the matched time vector $\mathbf{t}^{(b)}$.
+indices with replacement from $\{1,\ldots,n_{\mathrm{pilot}}\}$ to form
+$\mathbf{Y}^{(b)} \in \mathbb{R}^{G \times n_{\mathrm{pilot}}}$ and the
+matched time vector $\mathbf{t}^{(b)}$.
 
 \item \textbf{Re-estimate pilot summary.} Refit the pilot summary on
-$(\mathbf{Y}^{(b)}, \mathbf{t}^{(b)})$ to obtain
-$\hat{\Psi}^{(b)} = ( \hat{F}_\mu^{(b)}, \hat{F}_{A,\sigma}^{(b)}, \hat{F}_\phi^{(b)}, \hat{F}_{\mathrm{TOD}}^{(b)}, \hat{\pi}_R^{(b)} )$.
+$(\mathbf{Y}^{(b)},\mathbf{t}^{(b)})$ to obtain
+\[
+\hat{\Psi}^{(b)}
+=
+\big(
+\hat{F}_\mu^{(b)},
+\hat{F}_{A,\sigma}^{(b)},
+\hat{F}_\phi^{(b)},
+\hat{F}_{\mathrm{TOD}}^{(b)},
+\hat{\pi}_R^{(b)}
+\big).
+\]
 
 \item \textbf{Inner simulation.} For each $j$ and each
-$s = 1, \ldots, N_{\mathrm{sim}}^{\mathrm{in}}$, simulate a fresh
+$s=1,\ldots,N_{\mathrm{sim}}^{\mathrm{in}}$, simulate a fresh
 gene-by-sample matrix from $\hat{\Psi}^{(b)}$ at sample size $N_j$ via
-the procedure of Algorithm~S1, apply the chosen rhythmicity detector
-(cosinor $F$-test or K-harmonic F-test), apply BH adjustment at
-$\alpha$, and record the rhythmicity discovery rate.
+Algorithm~S1, apply the chosen rhythmicity detector, apply BH adjustment
+at $\alpha$, and record the rhythmicity discovery rate.
 
 \item \textbf{Aggregate.} Average the discovery rate across the
-$N_{\mathrm{sim}}^{\mathrm{in}}$ inner replicates to obtain the bootstrap
-power estimate $\widehat{\mathrm{Power}}^{(b)}(N_j)$.
+$N_{\mathrm{sim}}^{\mathrm{in}}$ inner replicates to obtain
+$\widehat{\mathrm{Power}}^{(b)}(N_j)$.
+
 \end{enumerate}
-\item \textbf{Summarise across outer resamples.} Compute the bootstrap
-mean
-$\bar{\mathrm{Power}}(N_j) = B_{\mathrm{out}}^{-1} \sum_b \widehat{\mathrm{Power}}^{(b)}(N_j)$
+
+\item \textbf{Summarise across outer resamples.} Compute
+\[
+\bar{\mathrm{Power}}(N_j)
+=
+B_{\mathrm{out}}^{-1}
+\sum_b
+\widehat{\mathrm{Power}}^{(b)}(N_j),
+\]
 and the pointwise $2.5$th and $97.5$th percentiles of
-$\widehat{\mathrm{Power}}^{(b)}(N_j)$ across $b$.
+$\widehat{\mathrm{Power}}^{(b)}(N_j)$ across outer bootstrap replicates.
+
 \end{enumerate}
 \vspace{2pt}\hrule
 \end{figure}
 
-Default production settings are $B_{\mathrm{out}} = 50$,
-$N_{\mathrm{sim}}^{\mathrm{in}} = 25$, and
-$\alpha_{\mathrm{pilot}} = 0.01$, used for the bootstrap panels in
-the main text.
+Default production settings are
+$B_{\mathrm{out}}=50$,
+$N_{\mathrm{sim}}^{\mathrm{in}}=25$, and
+$\alpha_{\mathrm{pilot}}=0.01$, used for the bootstrap panels in the
+main text.
 
 
-
-
+%% 
 %% ====================================================================
 \bibliographystyle{plainnat}
 \bibliography{references}
