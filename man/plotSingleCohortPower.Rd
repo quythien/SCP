@@ -8,6 +8,7 @@ plotSingleCohortPower(
   res,
   out_pdf = NULL,
   title = "",
+  panel_a_res = NULL,
   fdr_thresholds = c(0.01, 0.05, 0.1, 0.2),
   panel_fdr = 0.05,
   vline_power = 0.8,
@@ -26,6 +27,11 @@ plotSingleCohortPower(
 \item{out_pdf}{Path for PDF output. If NULL, plots to current device.}
 
 \item{title}{Overall figure title (default empty).}
+
+\item{panel_a_res}{Optional alternate result object used for the Panel A
+marginal-power computation only. If NULL (default), Panel A is computed
+from \code{res}. Useful when the marginal summary should reflect a
+different empirical assumption than the effect-size-stratified panels.}
 
 \item{fdr_thresholds}{FDR levels for panel A (default c(0.01,0.05,0.10,0.20)).}
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/runner.R
 \name{recommendDesign}
 \alias{recommendDesign}
-\title{B vs m design study — analytical + simulation}
+\title{B vs m design study -- analytical + simulation}
 \usage{
 recommendDesign(
   bio.opts,
@@ -57,10 +57,10 @@ instead of re-running simulation.}
 }
 \value{
 SCPRecommendResult with:
-  $guidance      — data.frame: method guidance table
-  $analytical_df — data.frame[method, N, power_analytical] (DCP only)
-  $simulation    — runSingleCohortGrid() or runDifferentialPower() result (NULL if not run)
-  $recommendation — data.frame[method, optimal_B, n_target, note]
+  $guidance      -- data.frame: method guidance table
+  $analytical_df -- data.frame[method, N, power_analytical] (DCP only)
+  $simulation    -- runSingleCohortGrid() or runDifferentialPower() result (NULL if not run)
+  $recommendation -- data.frame[method, optimal_B, n_target, note]
 }
 \description{
 Full B vs m study orchestrator. Three sequential steps:
@@ -68,7 +68,7 @@ Full B vs m study orchestrator. Three sequential steps:
 \details{
 1. Print method guidance table (printMethodGuidance)
 2. Analytical: CircaPower closed-form power at each N (DCP; B-invariant).
-   For JTK/RAIN/MH no closed form exists — simulation is required.
+   For JTK/RAIN/MH no closed form exists -- simulation is required.
 3. Simulation: run runSingleCohortPower() or runDifferentialPower(), or
    absorb a prior_result from a previous call to skip re-running.
 }

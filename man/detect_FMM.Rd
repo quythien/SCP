@@ -2,13 +2,14 @@
 % Please edit documentation in R/detection.R
 \name{detect_FMM}
 \alias{detect_FMM}
-\title{FMM-Harmonic LRT for Rhythmicity Detection}
+\title{FMM-Harmonic F-test for Rhythmicity Detection}
 \usage{
 detect_FMM(
   expr,
   times,
   period = 24,
   K = 2L,
+  ebayes = TRUE,
   adjust.method = "BH",
   fdr.threshold = 0.05,
   return.coefficients = FALSE,
@@ -25,7 +26,18 @@ detect_FMM(
 
 \item{K}{Number of harmonics to include (default 2). K=1 reduces to
 standard cosinor (DCP). K=2 is the recommended default for non-cosinor
-signals; K=3 may improve power for very sharp peaks (omega < 0.15).}
+signals; K=3 may improve power for very sharp peaks (omega < 0.15).
+Identifiability requires the design to have at least \code{2*K + 1}
+distinct sampling phases per period (B >= 3 for K=1, B >= 5 for K=2,
+B >= 7 for K=3). \code{detect_FMM} can be called stand-alone on any
+gene-by-sample expression matrix; the function emits a warning when
+the supplied design violates the identifiability bound.}
+
+\item{ebayes}{Logical. If \code{TRUE} (default), variance is moderated
+across genes via \code{limma::eBayes}. If \code{FALSE}, the unshrunk
+exact F-test is used (useful for null-calibration verification). The
+function automatically falls back to the unshrunk path when
+\code{nrow(expr) < 50}.}
 
 \item{adjust.method}{Multiple-testing adjustment for the BH-style
 discovery flag (default "BH"). Set to NULL or "none" to skip.}
@@ -36,8 +48,8 @@ discovery flag (default "BH"). Set to NULL or "none" to skip.}
 \item{return.coefficients}{If TRUE, the returned data frame includes
 per-gene harmonic coefficients \code{a_1, b_1, ..., a_K, b_K}.}
 
-\item{mc.cores}{Parallel cores. Currently unused — the linear-regression
-path is fully vectorised across genes; argument retained for API
+\item{mc.cores}{Parallel cores. Currently unused; the linear-regression
+path is fully vectorised across genes. Argument retained for API
 compatibility with other detectors.}
 }
 \value{
@@ -45,8 +57,10 @@ Data frame with one row per gene:
   \describe{
     \item{\code{F.stat}}{Numerator-over-denominator F statistic.}
     \item{\code{df1}, \code{df2}}{Numerator (\code{2K}) and denominator
-          (\code{n-2K-1}) degrees of freedom.}
-    \item{\code{p.value}}{Exact F-test p-value.}
+          (\code{n-2K-1}, or the moderated denominator df when
+          \code{ebayes = TRUE}) degrees of freedom.}
+    \item{\code{p.value}}{F-test p-value (moderated when
+          \code{ebayes = TRUE}).}
     \item{\code{p.adjust}}{Adjusted p-value (if \code{adjust.method}
           non-null).}
     \item{\code{R2}}{Coefficient of determination of the K-harmonic fit.}
@@ -57,21 +71,31 @@ Data frame with one row per gene:
 Tests for rhythmicity in time-course data using the K-harmonic Fourier
 decomposition of the FMM (Frequency Modulated Mobius) signal model.
 Equivalent to a 2K-parameter joint cosinor regression test under
-\eqn{H_0: a_1 = b_1 = \cdots = a_K = b_K = 0}.
+\eqn{H_0: a_1 = b_1 = \cdots = a_K = b_K = 0}. With \code{ebayes = TRUE}
+(default), variance estimates are moderated by \code{limma::eBayes}
+following the LimoRhyde framework (Singer & Hughey 2019), extended here
+to user-specified \eqn{K}.
 }
 \details{
 The test fits the linear model
 \deqn{y_t = M + \sum_{k=1}^K [a_k \cos(k\,2\pi t / T) + b_k \sin(k\,2\pi t / T)] + \varepsilon}
-and tests the joint null \eqn{H_0: a_1 = b_1 = \cdots = a_K = b_K = 0}
-via the standard nested F-test, with exact null distribution
-\eqn{F(2K, n - 2K - 1)} under Gaussianity.
+and tests the joint null \eqn{H_0: a_1 = b_1 = \cdots = a_K = b_K = 0}.
+With \code{ebayes = TRUE}, fitting and inference proceed via
+\code{limma::lmFit} on a basis assembled from per-harmonic calls to
+\code{limorhyde::limorhyde(times, period = T/k)} for \eqn{k = 1, \ldots, K},
+followed by \code{limma::eBayes} variance shrinkage and
+\code{limma::topTable} extraction of the joint harmonic F-test. With
+\code{ebayes = FALSE}, the same model is fit by a vectorised QR
+decomposition and tested by the exact nested F-statistic with null
+distribution \eqn{F(2K, n - 2K - 1)} under Gaussianity.
 
 This is motivated by the FMM model's closed-form Fourier expansion:
 the cosine of a Mobius-transformed angle has harmonic amplitudes that
 decay geometrically with \eqn{r = (1-\omega)/(1+\omega)}. Truncating
 at K and releasing the decay constraint trades a small bias (the
 truncation error \eqn{r^{2K}}) for exact identifiability under H0,
-eliminating the Davies-supremum calibration problem of nonlinear FMM-LRT.
+avoiding the Davies-supremum calibration problem of a direct
+nonlinear FMM fit.
 }
 \examples{
 set.seed(1)
@@ -88,6 +112,10 @@ detect_FMM(expr, tt, K = 2)
 \references{
 Rueda, C., Larriba, Y., Peddada, S. D. (2019). Frequency Modulated Mobius
   Model for the Estimation of Rhythmic Signals. Sci Rep 9, 18138.
+
+Singer, J. M., Hughey, J. J. (2019). LimoRhyde: a flexible approach for
+  differential analysis of rhythmic transcriptome data. J Biol Rhythms
+  34(1), 5-18.
 
 Hughes, M. E. et al. (2017). Guidelines for genome-scale analysis of
   biological rhythms. J Biol Rhythms 32(5), 380-393.

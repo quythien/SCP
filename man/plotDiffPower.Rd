@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_diff.R
 \name{plotDiffPower}
 \alias{plotDiffPower}
-\title{Plot differential circadian power (18 panels: 6 rows x 3 columns)}
+\title{Plot differential circadian power}
 \usage{
 plotDiffPower(
   res_list,
@@ -13,12 +13,14 @@ plotDiffPower(
   vline_power = 0.8,
   vline_fdr = 0.2,
   display_sizes = NULL,
+  stratified = FALSE,
   r_break_width = 0.25,
   r_max = 5,
   r_display_max = NULL,
+  main_title = "Differential Circadian Power Analysis",
   out_pdf = NULL,
-  width = 15,
-  height = 22
+  width = NULL,
+  height = NULL
 )
 }
 \arguments{
@@ -32,17 +34,26 @@ plotDiffPower(
 
 \item{display_sizes}{Sample sizes to show in all panels (NULL = all).}
 
-\item{r_break_width}{Width of r-strata bins (default 0.25).}
+\item{stratified}{Logical (default FALSE). If FALSE, draws only the
+marginal power-vs-sample-size panel per endpoint (1 x n_endpoints layout
+per comparison). If TRUE, also draws power-by-r̃ and true-discoveries-by-r̃
+strata panels in the original 3-column layout.}
+
+\item{r_break_width}{Width of r-strata bins (default 0.25). Ignored if
+stratified = FALSE.}
 
 \item{out_pdf}{Path for PDF. If NULL, plots to current device.}
 
-\item{width}{PDF width in inches (default 15).}
+\item{width}{PDF width in inches. Defaults adapt to stratified.}
 
-\item{height}{PDF height in inches (default 30).}
+\item{height}{PDF height in inches. Defaults adapt to stratified.}
 }
 \value{
 Invisibly, list of panel data per comparison/endpoint.
 }
 \description{
-Plot differential circadian power (18 panels: 6 rows x 3 columns)
+Default layout is marginal power vs sample size only (one column per
+endpoint, one row per comparison). The effect-size-stratified panels
+(power and true-discoveries by r̃) are opt-in via \code{stratified = TRUE},
+which restores the original 3-column-per-row layout.
 }
