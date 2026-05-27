@@ -29,9 +29,10 @@ col_plugin <- unname(pal_DT["DCP"])
 col_boot   <- unname(pal_DT["FMM"])
 
 for (out_pdf in c(fig_path_local, fig_path_main, fig_path_sub)) {
-  cairo_pdf(out_pdf, width = 7.2, height = 3.4)
-  pub_par(mfrow = c(1, 2), mar = c(4.0, 4.2, 2.4, 1.0))
-  letters_seq <- c("a", "b")
+  cairo_pdf(out_pdf, width = 7.2, height = 3.7)
+  pub_par(mfrow = c(1, 2), mar = c(4.0, 4.2, 2.4, 1.0),
+          oma = c(0, 0, 2.0, 0))
+  letters_seq <- c("A", "B")
 
   for (pi in seq_along(panels)) {
     p      <- panels[[pi]]
@@ -41,24 +42,32 @@ for (out_pdf in c(fig_path_local, fig_path_main, fig_path_sub)) {
     bt_lo  <- p$boot$power_ci_lo[, 1, 1]
     bt_hi  <- p$boot$power_ci_hi[, 1, 1]
 
-    plot(N_grid, tp, type = "l", lwd = 1.8, col = col_plugin,
-         ylim = c(0, 1), xlab = "N (total samples)", ylab = "Power",
+    plot(N_grid, 100 * tp, type = "l", lwd = 1.8, col = col_plugin,
+         ylim = c(0, 100), xlab = "Sample size (n)", ylab = "Power (%)",
          main = p$label)
     panel_label(letters_seq[pi])
-    abline_80pct()
-    lines(N_grid, bt_mn, lwd = 1.0, col = col_boot, lty = 2)
-    arrows(N_grid, bt_lo, N_grid, bt_hi,
+    abline(h = 80, lty = 2, col = "grey50", lwd = 1.2)
+    lines(N_grid, 100 * bt_mn, lwd = 1.0, col = col_boot, lty = 2)
+    arrows(N_grid, 100 * bt_lo, N_grid, 100 * bt_hi,
            code = 3, angle = 90, length = 0.04, lwd = 1.6, col = col_boot)
-    points(N_grid, bt_mn, pch = 19, col = col_boot, cex = 0.7)
-    if (pi == 1) {
-      pub_legend("bottomright",
-                 legend = c("Plug-in", "Bootstrap mean + 95% CI"),
-                 col = c(col_plugin, col_boot),
-                 lwd = c(1.8, 1.6), lty = c(1, NA),
-                 pch = c(NA, 19))
+    points(N_grid, 100 * bt_mn, pch = 19, col = col_boot, cex = 0.7)
+    if (pi == 2) {
+      legend("bottomright",
+             legend = c("Point estimate",
+                        "Bootstrap mean +/- 95% CI"),
+             col    = c(col_plugin, col_boot),
+             lwd    = c(1.8, 1.6),
+             lty    = c(1, 2),
+             pch    = c(NA, NA),
+             cex    = 0.55, bty = "o",
+             box.col = "grey70", box.lwd = 0.5,
+             inset = 0.01, y.intersp = 0.78, bg = "white",
+             seg.len = 1.4)
     }
   }
 
+  mtext("Bootstrap Uncertainty in Single-Cohort Power Estimates",
+        outer = TRUE, side = 3, line = 0.2, font = 2, cex = 1.15)
   dev.off()
   cat(sprintf("Saved: %s\n", out_pdf))
 }

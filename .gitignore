@@ -38,7 +38,6 @@
 !data/*pilot.rds
 !data/estimate_pilot_params.R
 !data/README.md
-!data/fmm_lrt_null_table.rds
 
 # Selected publication figures
 !output/
@@ -51,6 +50,16 @@
 !.github/**
 
 # Hard exclusions (override the allow rules above)
+# Compiled C/C++ build artefacts (override !src/** above)
+src/*.o
+src/*.so
+src/*.dll
+**/*.o
+**/*.so
+
+# Third-party reference PDFs (copyright; keep locally, do not redistribute)
+paper/PowerSim/reference/*.pdf
+
 # Raw counts and metadata that we cannot redistribute
 data/*.RData
 data/*.csv

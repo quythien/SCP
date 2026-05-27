@@ -49,8 +49,8 @@ draw_panel <- function(results_block, main_label, panel_letter,
 }
 
 for (out_pdf in fig_paths) {
-  cairo_pdf(out_pdf, width = 7.2, height = 7.0)
-  pub_par(mfrow = c(2, 1), mar = c(4.0, 4.2, 2.4, 1.0))
+  cairo_pdf(out_pdf, width = 8.4, height = 4.2)
+  pub_par(mfrow = c(1, 2), mar = c(4.0, 4.2, 2.4, 1.0))
   draw_panel(r$results_active$DCP, "Active, DCP",                 "a", TRUE)
   draw_panel(r$results_active$FMM, sprintf("Active, K = %d", K_HARM), "b", FALSE)
   dev.off()

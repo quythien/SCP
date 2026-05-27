@@ -889,6 +889,15 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
                         length(bio.opts$omega_rhythmic) > 0) ||
                        (!is.null(bio.opts$alpha_rhythmic) &&
                         length(bio.opts$alpha_rhythmic) > 0)
+  # Two-harmonic cosinor truth: bio.opts carries per-gene (A2, phi2) vectors
+  # paired with (amplitude, phase, sigma_rhythmic) by gene index. Set by
+  # estCircadianParam2H(). Takes precedence over the existing alpha2_dist /
+  # alpha3_dist scalar-harmonic mechanism (which we keep for Fig 4 sensitivity).
+  has_2h_per_gene <- isTRUE(bio.opts$paired_2h) &&
+                      !is.null(bio.opts$amplitude2) &&
+                      length(bio.opts$amplitude2) > 0L &&
+                      !is.null(bio.opts$phase2) &&
+                      length(bio.opts$phase2) > 0L
   alpha           <- analysis.opts$alpha
   p.adjust.method <- analysis.opts$p.adjust.method
   r_strata        <- analysis.opts$r_strata
@@ -993,18 +1002,95 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
       }
 
       # Simulate expression [ngenes x n]
-      # FMM path: non-sinusoidal waveform when fmm_omega < 1 OR when bio.opts
-      # carries per-gene FMM parameters (omega_dist / alpha_dist / *_rhythmic).
+      # Path selection (mutually exclusive, in priority order):
+      #   1. FMM:  fmm_omega < 1 OR per-gene FMM params on bio.opts
+      #   2. 2H:   bio.opts carries paired (A2, phi2) vectors (paired_2h = TRUE)
+      #   3. cosinor (Cpp or R fallback) with optional alpha2_dist / alpha3_dist
       if (fmm_omega < 1.0 || has_fmm_per_gene) {
         fmm_out     <- simCircadianFMM(bio.opts, times_i, omega = fmm_omega,
                                        beta = fmm_beta)
         expr        <- fmm_out$expr
         is_rhythmic <- fmm_out$is_rhythmic
         r_values    <- fmm_out$r_values
-      } else {
-        # Traditional cosinor path (alpha2/alpha3 Fourier harmonics)
+      } else if (has_2h_per_gene) {
+        # Two-harmonic cosinor truth.
+        # Re-draw per-replicate joint (A1, phi1, A2, phi2, sigma) tuples from
+        # the pilot using a SHARED index so the empirical cross-parameter
+        # dependence is preserved exactly as in the pilot.
         omega_circ <- 2 * pi / period
-        if (exists(".CPP_LOADED", inherits = TRUE) && isTRUE(get(".CPP_LOADED", inherits = TRUE)) &&
+        amp1_src   <- bio.opts$amplitude
+        amp2_src   <- bio.opts$amplitude2
+        phi1_src   <- bio.opts$phase
+        phi2_src   <- bio.opts$phase2
+        sig_src    <- bio.opts$sigma_rhythmic
+        L_pilot    <- length(amp1_src)
+
+        # Overwrite the rhythmic-gene slots with a paired draw. Non-rhythmic
+        # genes already have amp_g[g] = 0 from the assignment block above.
+        if (n_rhythmic > 0L) {
+          ji2 <- sample.int(L_pilot, n_rhythmic, replace = TRUE)
+          A1_r   <- pmax(amp1_src[ji2], 0.05)
+          A2_r   <- pmax(amp2_src[ji2], 0)          # A2 can be ~0 (noise spike)
+          phi1_r <- phi1_src[ji2]
+          phi2_r <- phi2_src[ji2]
+          sig_r  <- pmax(sig_src[ji2], 1e-6)
+
+          amp_g[rhythmic_id]   <- A1_r
+          phase_g[rhythmic_id] <- phi1_r
+          sigma_g[rhythmic_id] <- sig_r
+          # Update r_values with the refreshed (A1, sigma) pair.
+          r_values <- amp_g / sigma_g
+        }
+
+        # Per-gene 2nd-harmonic vectors (zero for non-rhythmic genes).
+        A2_g   <- numeric(ngenes)
+        phi2_g <- numeric(ngenes)
+        if (n_rhythmic > 0L) {
+          A2_g[rhythmic_id]   <- A2_r
+          phi2_g[rhythmic_id] <- phi2_r
+        }
+
+        expr <- matrix(NA_real_, nrow = ngenes, ncol = n)
+        for (g in seq_len(ngenes)) {
+          if (is_rhythmic[g]) {
+            mu <- mesor_g[g] +
+                  amp_g[g] * cos(omega_circ * (times_i - phase_g[g])) +
+                  A2_g[g]  * cos(2 * omega_circ * (times_i - phi2_g[g]))
+          } else {
+            mu <- rep(mesor_g[g], n)
+          }
+          expr[g, ] <- rnorm(n, mu, sigma_g[g])
+        }
+      } else {
+        # Traditional cosinor path (alpha2/alpha3 Fourier harmonics).
+        # Per-gene alpha2/alpha3 distributions (for MH sensitivity sweeps):
+        # bio.opts$alpha2_dist = list(family = "beta", a = 1, b = eta_a2) or
+        #                       list(family = "fixed", value = a2)
+        # When either is set, fall back to the R loop (per-gene math).
+        omega_circ <- 2 * pi / period
+        has_a2_dist <- !is.null(bio.opts$alpha2_dist)
+        has_a3_dist <- !is.null(bio.opts$alpha3_dist)
+        if (has_a2_dist) {
+          spec2 <- bio.opts$alpha2_dist
+          alpha2_g <- switch(spec2$family,
+            beta  = rbeta(ngenes, spec2$a, spec2$b),
+            fixed = rep(spec2$value, ngenes),
+            stop("Unknown alpha2_dist$family: ", spec2$family))
+        } else {
+          alpha2_g <- rep(harmonics[1], ngenes)
+        }
+        if (has_a3_dist) {
+          spec3 <- bio.opts$alpha3_dist
+          alpha3_g <- switch(spec3$family,
+            beta  = rbeta(ngenes, spec3$a, spec3$b),
+            fixed = rep(spec3$value, ngenes),
+            stop("Unknown alpha3_dist$family: ", spec3$family))
+        } else {
+          alpha3_g <- rep(harmonics[2], ngenes)
+        }
+        if (!has_a2_dist && !has_a3_dist &&
+            exists(".CPP_LOADED", inherits = TRUE) &&
+            isTRUE(get(".CPP_LOADED", inherits = TRUE)) &&
             exists("sim_cosinor_expr_fast", mode = "function")) {
           expr <- sim_cosinor_expr_fast(mesor_g, amp_g, phase_g, sigma_g, times_i,
                                         period, harmonics[1], harmonics[2])
@@ -1013,8 +1099,8 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
           for (g in seq_len(ngenes)) {
             mu <- mesor_g[g] + amp_g[g] * (
               cos(omega_circ * times_i - omega_circ * phase_g[g]) +
-              harmonics[1] * cos(2 * omega_circ * times_i - 2 * omega_circ * phase_g[g]) +
-              harmonics[2] * cos(3 * omega_circ * times_i - 3 * omega_circ * phase_g[g])
+              alpha2_g[g] * cos(2 * omega_circ * times_i - 2 * omega_circ * phase_g[g]) +
+              alpha3_g[g] * cos(3 * omega_circ * times_i - 3 * omega_circ * phase_g[g])
             )
             expr[g, ] <- rnorm(n, mu, sigma_g[g])
           }
