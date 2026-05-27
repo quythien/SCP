@@ -14,7 +14,7 @@
 #' COLUMNS (left to right):
 #'   species, dataset, tissue, design, condition, n, ngenes,
 #'   tod_min, tod_max, tod_sd,
-#'   r_median_top150, r_q25_top150, r_q75_top150,
+#'   r_median_top300, r_q25_top300, r_q75_top300,
 #'   phi_median_rhy, phi_q25_rhy, phi_q75_rhy,
 #'   rhy_FDR20, rhy_FDR10, rhy_FDR05, rhy_FDR01,
 #'   rhy_p05, rhy_p01, rhy_p001
@@ -83,7 +83,7 @@ make_row <- function(tag, p, times, species, dataset, tissue, design, condition)
 
   # r: top-150 by p-value
   ok  <- !is.na(r_all) & !is.na(pvals) & is.finite(r_all) & r_all > 0
-  idx <- order(pvals[ok])[seq_len(min(150L, sum(ok)))]
+  idx <- order(pvals[ok])[seq_len(min(300L, sum(ok)))]
   rv  <- r_all[ok][idx]
   rv  <- rv[is.finite(rv)]
 
@@ -104,9 +104,9 @@ make_row <- function(tag, p, times, species, dataset, tissue, design, condition)
     tod_min         = round(min(t_mod), 1),
     tod_max         = round(max(t_mod), 1),
     tod_sd          = round(sd(t_mod),  2),
-    r_median_top150 = round(if (length(rv) >= 3) median(rv)                        else NA_real_, 3),
-    r_q25_top150    = round(if (length(rv) >= 3) quantile(rv, 0.25, names = FALSE) else NA_real_, 3),
-    r_q75_top150    = round(if (length(rv) >= 3) quantile(rv, 0.75, names = FALSE) else NA_real_, 3),
+    r_median_top300 = round(if (length(rv) >= 3) median(rv)                        else NA_real_, 3),
+    r_q25_top300    = round(if (length(rv) >= 3) quantile(rv, 0.25, names = FALSE) else NA_real_, 3),
+    r_q75_top300    = round(if (length(rv) >= 3) quantile(rv, 0.75, names = FALSE) else NA_real_, 3),
     phi_median_rhy  = round(if (length(phi_rhy) >= 3) median(phi_rhy)                        else NA_real_, 2),
     phi_q25_rhy     = round(if (length(phi_rhy) >= 3) quantile(phi_rhy, 0.25, names = FALSE) else NA_real_, 2),
     phi_q75_rhy     = round(if (length(phi_rhy) >= 3) quantile(phi_rhy, 0.75, names = FALSE) else NA_real_, 2),

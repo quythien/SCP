@@ -1,3 +1,8 @@
+> **HISTORICAL (dated 2026-03-19).** The main manuscript now uses only GTEx
+> and the Ketchesin Putamen cohort (GSE160521); the baboon and mouse datasets
+> surveyed below are not used as main-paper pilots. Retained as a reference
+> inventory only.
+
 # Dataset Survey — Circadian DR Power Analysis
 ## Date: 2026-03-19
 

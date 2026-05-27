@@ -1,11 +1,29 @@
-# Ignore everything
+# Ignore everything by default
 *
 
-# Except code/, data/, examples/, doc/, paper/, vignettes/, tests/
+# Top-level files to track
+!.gitignore
+!README.md
+!LICENSE
+!LICENSE.md
+!DESCRIPTION
+!NAMESPACE
+!NEWS.md
+!CITATION.cff
+!CONTRIBUTING.md
+!CODE_OF_CONDUCT.md
+
+# Source directories to track
 !code/
 !code/**
-!data/
-!data/**
+!R/
+!R/**
+!man/
+!man/**
+!src/
+!src/**
+!tests/
+!tests/**
 !examples/
 !examples/**
 !doc/
@@ -14,18 +32,75 @@
 !paper/**
 !vignettes/
 !vignettes/**
-!tests/
-!tests/**
 
-# And this .gitignore itself
-!.gitignore
+# Bundled pilot data (small, derived, used by examples and vignettes)
+!data/
+!data/*pilot.rds
+!data/estimate_pilot_params.R
+!data/README.md
 
-# Root-level documentation
-!README.md
-!CLAUDE.md
+# Selected publication figures
+!output/
+!output/main_figures/
+!output/main_figures/Fig*.pdf
+!output/main_figures/SuppFig*.pdf
 
-# Common junk
-.DS_Store
-.Rhistory
+# CI workflows
+!.github/
+!.github/**
+
+# Hard exclusions (override the allow rules above)
+# Compiled C/C++ build artefacts (override !src/** above)
+src/*.o
+src/*.so
+src/*.dll
+**/*.o
+**/*.so
+
+# Third-party reference PDFs (copyright; keep locally, do not redistribute)
+paper/PowerSim/reference/*.pdf
+
+# Raw counts and metadata that we cannot redistribute
+data/*.RData
+data/*.csv
+data/*.csv.gz
+data/*.xlsx
+data/archive_*
+data/ACC_RNA_filtered_normalized.csv
+data/CAMO_PRC_hmb.RData
+data/mouse_*
+data/MD5_*
+data/TOD.xlsx
+data/GSE160521_*
+
+# Large intermediate output that should not enter the repo
+output/active_vs_passive/
+output/bootstrap_sc/
+output/sensitivity/
+output/single_cohort/
+output/differential/
+output/supplementary/
+output/archive_*/
+output/main_figures/archive_*/
+
+# Editor / OS / build junk
 **/.DS_Store
 **/.Rhistory
+**/Rplots.pdf
+**/.Rproj.user/
+**/.codex/
+.Rproj.user/
+
+# LaTeX build artefacts
+**/*.aux
+**/*.bbl
+**/*.blg
+**/*.fdb_latexmk
+**/*.fls
+**/*.log
+**/*.out
+**/*.synctex.gz
+**/*.toc
+
+# Old R scratch
+**/.Rapp.history
