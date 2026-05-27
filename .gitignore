@@ -104,3 +104,17 @@ output/main_figures/archive_*/
 
 # Old R scratch
 **/.Rapp.history
+
+# Reproducibility bundle: small derived inputs so the figures regenerate
+# without the access-controlled raw data (these override the exclusions above)
+!data/gse160521_nac_ctrl_pilot.rds
+!data/gse160521_caudate_ctrl_pilot.rds
+!data/gse160521_putamen_ctrl_pilot.rds
+!data/gtex_adr_vs_liv_pilot_paired.rds
+!output/two_harmonic/
+!output/two_harmonic/results/
+!output/two_harmonic/results/tissue_Liver_fits.rds
+!output/two_harmonic/results/tissue_Liver_venn.rds
+!output/two_harmonic/results/tissue_Liver_kegg.rds
+!output/two_harmonic/results/pilot_2h_GTExLiver_topK300.rds
+!output/two_harmonic/results/fig6_v9_data.rds
