@@ -1,0 +1,4 @@
+# Header locations are resolved through LinkingTo: Rcpp, RcppArmadillo in
+# DESCRIPTION; do not hardcode machine-specific include paths here.
+CXX_STD = CXX11
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)

@@ -91,7 +91,7 @@ for (tname in names(tissues)) {
   t <- extract_tissue(ti$gtex_name)
   cat(sprintf("n=%d samples, %d genes\n", t$n, nrow(t$expr)))
 
-  # Estimate or load pilot
+  # Estimate or load primary pilot (Panel B/C source)
   pilot_rds <- file.path("data", sprintf("gtex_%s_single_pilot.rds", tname))
   if (file.exists(pilot_rds)) {
     cat(sprintf("Loading cached pilot: %s\n", pilot_rds))
@@ -102,6 +102,20 @@ for (tname in names(tissues)) {
     bio <- estCircadianParam(t$expr, t$times, verbose = TRUE)
     saveRDS(bio, pilot_rds)
     cat(sprintf("Pilot saved: %s\n", pilot_rds))
+  }
+
+  # Alternate pilot (Panel A source)
+  pilot_rds_alt <- file.path("data", sprintf("gtex_%s_single_pilot_alt.rds", tname))
+  if (file.exists(pilot_rds_alt)) {
+    cat(sprintf("Loading cached alt pilot: %s\n", pilot_rds_alt))
+    bio_alt <- readRDS(pilot_rds_alt)
+  } else {
+    cat("Estimating alternate pilot...\n")
+    set.seed(GLOBAL_SEED)
+    bio_alt <- estCircadianParam(t$expr, t$times,
+                                  paired_sigma = TRUE, verbose = TRUE)
+    saveRDS(bio_alt, pilot_rds_alt)
+    cat(sprintf("Alt pilot saved: %s\n", pilot_rds_alt))
   }
 
   cat(sprintf("Pilot: n_genes=%d  prop_rhythmic=%.1f%%  n_pilot=%d\n",
@@ -120,10 +134,12 @@ for (tname in names(tissues)) {
     r_strata        = makeAdaptiveRStrata(bio, bin_width = 0.25)
   )
 
-  fig_path <- file.path(out_dir_fig,
+  fig_path     <- file.path(out_dir_fig,
     sprintf("single_cohort_power_GTEx_%s.pdf", tname))
-  rds_path <- file.path(out_dir_res,
+  rds_path     <- file.path(out_dir_res,
     sprintf("single_cohort_power_GTEx_%s_%s.rds", tname, timestamp))
+  rds_path_alt <- file.path(out_dir_res,
+    sprintf("single_cohort_power_GTEx_%s_paired_%s.rds", tname, timestamp))
 
   set.seed(GLOBAL_SEED)
   res <- runSingleCohortPower(bio, design, analysis,
@@ -131,14 +147,23 @@ for (tname in names(tissues)) {
                                plot     = FALSE,
                                verbose  = TRUE,
                                mc.cores = n_cores)
-
   saveRDS(res, rds_path)
-  cat(sprintf("Results saved -> %s\n", rds_path))
+  cat(sprintf("Primary results saved -> %s\n", rds_path))
+
+  set.seed(GLOBAL_SEED)
+  res_alt <- runSingleCohortPower(bio_alt, design, analysis,
+                                   methods  = "DCP",
+                                   plot     = FALSE,
+                                   verbose  = TRUE,
+                                   mc.cores = n_cores)
+  saveRDS(res_alt, rds_path_alt)
+  cat(sprintf("Panel A results saved -> %s\n", rds_path_alt))
 
   plotSingleCohortPower(
-    res     = res,
-    out_pdf = fig_path,
-    title   = sprintf("GTEx %s — Single-Cohort Power", ti$label)
+    res         = res,
+    panel_a_res = res_alt,
+    out_pdf     = fig_path,
+    title       = sprintf("GTEx %s - Single-Cohort Power", ti$label)
   )
   cat(sprintf("Figure  saved -> %s\n", fig_path))
 }

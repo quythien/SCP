@@ -1156,7 +1156,12 @@ DCP_DiffPar = function(x, Par = c("A"), TOJR=NULL, alpha = 0.05,
 #'
 #' @export
 DCP_Analyze <- function(expr1, expr2, times1, times2, alpha = 0.05,
-                        gene_names = NULL, parallel.ncores = 1){
+                        gene_names = NULL, parallel.ncores = 1,
+                        period = 24, n_cores = NULL, ...){
+  # Backward-compatible: accept n_cores as an alias for parallel.ncores,
+  # accept (and silently ignore) period for callers that pass it explicitly,
+  # and tolerate arbitrary further keyword arguments for forward compatibility.
+  if (!is.null(n_cores)) parallel.ncores <- as.integer(n_cores)
 
   ngenes <- nrow(expr1)
 
@@ -1205,12 +1210,16 @@ DCP_Analyze <- function(expr1, expr2, times1, times2, alpha = 0.05,
   }
 
   # For genes not DR, test DP
+  # Match by gene name: dp_results rows correspond to "both"-classified genes
+  # (a subset of ngenes), so positional indexing into dp_results by 1:ngenes
+  # would silently pick wrong rows. Always index by gname.
   non_dr <- setdiff(seq_len(ngenes), dr_idx)
-
-  # DP: differential phase (post-hoc); dp_results rows are 1:ngenes in order
-  dp_idx <- non_dr[dp_results$post.hoc.phase.By.q[non_dr]]
-  if(length(dp_idx) > 0){
-    classification[dp_idx] <- "DP"
+  if (length(non_dr) > 0L && nrow(dp_results) > 0L &&
+      "gname" %in% colnames(dp_results) &&
+      "post.hoc.phase.By.q" %in% colnames(dp_results)) {
+    dp_genes <- dp_results$gname[dp_results$post.hoc.phase.By.q]
+    dp_idx   <- which(gene_names %in% dp_genes & seq_len(ngenes) %in% non_dr)
+    if (length(dp_idx) > 0L) classification[dp_idx] <- "DP"
   }
 
   # Compile results
@@ -1751,6 +1760,38 @@ detect_RAIN <- function(expr, times, gene_names = NULL, period = 24) {
 # All return numeric[G] of raw p-values (caller handles FDR adjustment).
 # ==============================================================================
 
+#' Unified cosinor rhythmicity detection (single- or multi-harmonic)
+#'
+#' Canonical entry point for rhythmicity detection by K-harmonic cosinor
+#' regression. \code{K = 1} is the single-harmonic cosinor F-test, identical
+#' to \code{\link{detect_DCP}}; \code{K = 2} adds the 12-hour second harmonic
+#' and tests the joint harmonic block. By default the unshrunk exact nested
+#' F-test is used (matching the power derivations in the paper). Returns raw
+#' p-values; the caller applies FDR control.
+#'
+#' @param expr   Gene x sample expression matrix
+#' @param times  Numeric time vector (length = ncol(expr))
+#' @param K      Harmonic order (default 1)
+#' @param period Period in hours (default 24)
+#' @param ebayes For \code{K >= 2}, moderate residual variance with
+#'   empirical-Bayes shrinkage (default \code{FALSE}, the unshrunk exact
+#'   F-test)
+#' @param mc.cores Cores for the \code{K >= 2} fit (default 1)
+#' @return Numeric vector of raw p-values, length \code{nrow(expr)}
+#' @seealso \code{\link{detect_DCP}}
+#' @export
+detect_cosinor <- function(expr, times, K = 1L, period = 24,
+                           ebayes = FALSE, mc.cores = 1L) {
+  K <- as.integer(K)
+  if (K < 1L) stop("K must be >= 1.")
+  if (K == 1L) {
+    return(detect_DCP(expr, times, period = period))
+  }
+  fit <- detect_FMM(expr, times, period = period, K = K,
+                    ebayes = ebayes, mc.cores = mc.cores)
+  fit$p.value
+}
+
 #' DCP single-cohort rhythmicity detection
 #' @param expr   Gene x sample expression matrix
 #' @param times  Numeric time vector (length = ncol(expr))
@@ -1771,6 +1812,13 @@ detect_DCP <- function(expr, times, period = 24) {
 #'
 #' Fits K harmonics where B = number of unique time points.
 #' Tests all harmonic terms jointly via an F-test against intercept-only null.
+#'
+#' @note Superseded by \code{\link{detect_FMM}}, which supports explicit K,
+#'   the LimoRhyde-style \code{limma::lmFit} + \code{limma::eBayes} backend
+#'   with cross-gene variance shrinkage, and a richer return value
+#'   (per-gene F, df1, df2, R2, p.adjust, discovery). Retained for
+#'   backwards compatibility; new code should call
+#'   \code{detect_FMM(expr, times, K = <K>, ebayes = TRUE/FALSE)} instead.
 #'
 #' @param expr   Gene x sample expression matrix
 #' @param times  Numeric time vector (length = ncol(expr))
@@ -1920,159 +1968,259 @@ detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
 
 
 # ==============================================================================
-# FMM-LRT: H0 (flat) vs H2 (FMM) — single-cohort rhythmicity detection
+# detect_FMM: K-harmonic F-test for rhythmicity detection
 # ==============================================================================
+# Rather than fitting the nonlinear FMM model
+# y = M + A*cos(beta + 2*atan(omega*tan((t-alpha)/2))) directly, we use its
+# closed-form Fourier expansion
+#
+#   y(t) = M' + A(1-r^2) * sum_{k>=1} r^(k-1) cos(k(t-alpha) + beta),
+#   r = (1-omega)/(1+omega) in (0, 1)
+#
+# Truncating at K harmonics and releasing the geometric-decay constraint
+# yields a (2K+1)-parameter LINEAR regression in which all parameters are
+# identifiable under both H0 and H1, avoiding the boundary identifiability
+# problem of a direct nonlinear FMM fit (where {beta, alpha, omega} become
+# unidentified at A=0, the Davies-supremum problem).
+#
+# At K=1 this reduces to standard cosinor (DCP). K=2 captures >90% of FMM
+# variance for omega >= 0.3, K=3 captures >97% for omega >= 0.3.
 
-#' Build FMM-LRT null calibration table
+#' FMM-Harmonic F-test for Rhythmicity Detection
 #'
-#' Simulates flat Gaussian data and tabulates empirical quantiles of
-#' n*log(SSE0/SSE2) for each n.  The chi-squared(4) approximation is severely
-#' anti-conservative at small n due to the boundary problem (A=0 makes
-#' omega/beta/alpha unidentified), so calibration is mandatory.
+#' Tests for rhythmicity in time-course data using the K-harmonic Fourier
+#' decomposition of the FMM (Frequency Modulated Mobius) signal model.
+#' Equivalent to a 2K-parameter joint cosinor regression test under
+#' \eqn{H_0: a_1 = b_1 = \cdots = a_K = b_K = 0}.
 #'
-#' @param n_values  Integer vector of sample sizes to calibrate.
-#' @param n_sim     Null simulations per n (default 2000).
-#' @param seed      Random seed.
-#' @param period    Period in hours (default 24).
-#' @return Named list: \code{$n}, \code{$q95}, \code{$q99}.
+#' @param expr Numeric matrix (genes x samples) of expression values.
+#' @param times Numeric vector of sample collection times in hours
+#'   (length = ncol(expr)).
+#' @param period Period in hours (default 24).
+#' @param K Number of harmonics to include (default 2). K=1 reduces to
+#'   standard cosinor (DCP). K=2 is the recommended default for non-cosinor
+#'   signals; K=3 may improve power for very sharp peaks (omega < 0.15).
+#'   Identifiability requires the design to have at least \code{2*K + 1}
+#'   distinct sampling phases per period (B >= 3 for K=1, B >= 5 for K=2,
+#'   B >= 7 for K=3). \code{detect_FMM} can be called stand-alone on any
+#'   gene-by-sample expression matrix; the function emits a warning when
+#'   the supplied design violates the identifiability bound.
+#' @param adjust.method Multiple-testing adjustment for the BH-style
+#'   discovery flag (default "BH"). Set to NULL or "none" to skip.
+#' @param fdr.threshold FDR cutoff for the \code{discovery} column
+#'   (default 0.05). Ignored if \code{adjust.method} is NULL/"none".
+#' @param return.coefficients If TRUE, the returned data frame includes
+#'   per-gene harmonic coefficients \code{a_1, b_1, ..., a_K, b_K}.
+#' @param mc.cores Parallel cores. Currently unused — the linear-regression
+#'   path is fully vectorised across genes; argument retained for API
+#'   compatibility with other detectors.
+#'
+#' @return Data frame with one row per gene:
+#'   \describe{
+#'     \item{\code{F.stat}}{Numerator-over-denominator F statistic.}
+#'     \item{\code{df1}, \code{df2}}{Numerator (\code{2K}) and denominator
+#'           (\code{n-2K-1}) degrees of freedom.}
+#'     \item{\code{p.value}}{Exact F-test p-value.}
+#'     \item{\code{p.adjust}}{Adjusted p-value (if \code{adjust.method}
+#'           non-null).}
+#'     \item{\code{R2}}{Coefficient of determination of the K-harmonic fit.}
+#'     \item{\code{discovery}}{Logical: \code{p.adjust < fdr.threshold}.}
+#'   }
+#'
+#' @details
+#' The test fits the linear model
+#' \deqn{y_t = M + \sum_{k=1}^K [a_k \cos(k\,2\pi t / T) + b_k \sin(k\,2\pi t / T)] + \varepsilon}
+#' and tests the joint null \eqn{H_0: a_1 = b_1 = \cdots = a_K = b_K = 0}
+#' via the standard nested F-test, with exact null distribution
+#' \eqn{F(2K, n - 2K - 1)} under Gaussianity.
+#'
+#' This is motivated by the FMM model's closed-form Fourier expansion:
+#' the cosine of a Mobius-transformed angle has harmonic amplitudes that
+#' decay geometrically with \eqn{r = (1-\omega)/(1+\omega)}. Truncating
+#' at K and releasing the decay constraint trades a small bias (the
+#' truncation error \eqn{r^{2K}}) for exact identifiability under H0,
+#' avoiding the Davies-supremum calibration problem of a direct
+#' nonlinear FMM fit.
+#'
+#' @references
+#' Rueda, C., Larriba, Y., Peddada, S. D. (2019). Frequency Modulated Mobius
+#'   Model for the Estimation of Rhythmic Signals. Sci Rep 9, 18138.
+#'
+#' Hughes, M. E. et al. (2017). Guidelines for genome-scale analysis of
+#'   biological rhythms. J Biol Rhythms 32(5), 380-393.
+#'
+#' @examples
+#' set.seed(1)
+#' n  <- 48
+#' tt <- seq(0, 24*(1-1/n), length.out = n)
+#' rhy <- 2 * cos(2*pi*tt/24) + 0.6 * cos(4*pi*tt/24)   # 1st + 2nd harmonics
+#' expr <- rbind(
+#'   rhythmic    = rhy + rnorm(n, 0, 0.5),
+#'   arrhythmic  = rnorm(n, 0, 0.5)
+#' )
+#' detect_FMM(expr, tt, K = 2)
+#'
 #' @export
-build_FMM_LRT_null_table <- function(n_values, n_sim = 2000L,
-                                      seed = 42L, period = 24,
-                                      length_alpha_grid = 12L,
-                                      length_omega_grid = 6L) {
-  if (!requireNamespace("FMM", quietly = TRUE))
-    stop("Package 'FMM' required.")
-  set.seed(seed)
-  q95 <- numeric(length(n_values))
-  q99 <- numeric(length(n_values))
-  for (i in seq_along(n_values)) {
-    n      <- n_values[i]
-    t_norm <- seq(0, 1 - 1/n, length.out = n)
-    stats  <- numeric(n_sim)
-    for (s in seq_len(n_sim)) {
-      y    <- rnorm(n, 0, 1)
-      sse0 <- sum((y - mean(y))^2)
-      if (sse0 < 1e-10) { stats[s] <- 0; next }
-      fit <- tryCatch(
-        FMM::fitFMM(y, timePoints = t_norm, nback = 1,
-                    showProgress = FALSE, omegaMin = 1e-4, omegaMax = 0.9999,
-                    lengthAlphaGrid = length_alpha_grid,
-                    lengthOmegaGrid = length_omega_grid),
-        error = function(e) NULL)
-      if (is.null(fit)) { stats[s] <- 0; next }
-      r2       <- max(0, min(FMM::getR2(fit), 1 - 1e-10))
-      stats[s] <- n * log(1 / (1 - r2))
-    }
-    q95[i] <- quantile(stats, 0.95)
-    q99[i] <- quantile(stats, 0.99)
-    cat(sprintf("  n=%3d  q95=%.3f  q99=%.3f\n", n, q95[i], q99[i]))
-  }
-  list(n = n_values, q95 = q95, q99 = q99,
-       length_alpha_grid = length_alpha_grid,
-       length_omega_grid = length_omega_grid)
-}
+detect_FMM <- function(expr,
+                        times,
+                        period = 24,
+                        K = 2L,
+                        ebayes = TRUE,
+                        adjust.method = "BH",
+                        fdr.threshold = 0.05,
+                        return.coefficients = FALSE,
+                        mc.cores = 1L) {
+  # Rhythmicity detection by K-harmonic linear regression, adopting the
+  # LimoRhyde framework (Singer & Hughey 2019) extended to user-specified
+  # K. With ebayes=TRUE (default), variance estimates are moderated by
+  # limma::eBayes; this is the contribution we inherit from LimoRhyde. At
+  # K=1 this is exactly LimoRhyde's default; at K=2 it is the extension we
+  # recommend, motivated by realistic omega distributions in circadian
+  # transcriptomes. Set ebayes=FALSE for the unshrunk exact F-test
+  # (useful for null calibration verification).
+  if (!requireNamespace("limma", quietly = TRUE))
+    stop("Package 'limma' required for detect_FMM. ",
+         "Install with BiocManager::install('limma').")
 
+  if (!is.matrix(expr)) expr <- as.matrix(expr)
+  K <- as.integer(K)
+  if (K < 1L) stop("K must be >= 1.")
+  n <- ncol(expr)
+  G <- nrow(expr)
+  if (length(times) != n)
+    stop("length(times) must equal ncol(expr).")
+  if (n <= 2 * K + 1)
+    stop(sprintf("n=%d is too small for K=%d (need n > 2K+1 = %d).",
+                 n, K, 2 * K + 1))
 
-#' FMM-LRT: H0 (flat) vs H2 (FMM) single-cohort rhythmicity test
-#'
-#' Fits \code{FMM::fitFMM()} per gene.  LRT statistic is
-#' \eqn{\Lambda_g = n \log(SSE_{0,g}/SSE_{2,g})}.
-#' P-values are calibrated using the empirical null table from
-#' \code{build_FMM_LRT_null_table()} via linear interpolation between the
-#' 95th and 99th percentiles, with an exponential tail beyond q99.
-#' If no table is provided falls back to chi-squared(4) with a warning.
-#'
-#' @param expr       Gene x sample matrix.
-#' @param times      Time vector in hours (length = ncol(expr)).
-#' @param period     Period in hours (default 24).
-#' @param null_table Output of \code{build_FMM_LRT_null_table()}, or NULL.
-#' @return Numeric p-value vector, length nrow(expr).
-#' @export
-# Path to the bundled pre-computed null table (relative to code/)
-.FMM_LRT_NULL_TABLE_PATH <- file.path(
-  dirname(tryCatch(normalizePath(sys.frame(1)$ofile), error = function(e) "code")),
-  "..", "data", "fmm_lrt_null_table.rds"
-)
-
-#' @keywords internal
-.load_fmm_null_table <- function() {
-  path <- .FMM_LRT_NULL_TABLE_PATH
-  if (file.exists(path)) return(readRDS(path))
-  # fallback: look relative to working directory
-  alt <- file.path("data", "fmm_lrt_null_table.rds")
-  if (file.exists(alt)) return(readRDS(alt))
-  NULL
-}
-
-detect_FMM_LRT <- function(expr, times, period = 24, null_table = NULL,
-                            mc.cores = 1L,
-                            length_alpha_grid = 12L,
-                            length_omega_grid = 6L) {
-  if (!requireNamespace("FMM", quietly = TRUE))
-    stop("Package 'FMM' required.")
-
-  # Auto-load bundled null table if none supplied
-  if (is.null(null_table)) {
-    null_table <- .load_fmm_null_table()
-    if (is.null(null_table))
-      warning("FMM-LRT null table not found — using chi-squared(4) (anti-conservative).")
+  n_unique <- length(unique(times %% period))
+  if (n_unique < 2L * K + 1L) {
+    warning(sprintf(
+      "K=%d harmonic regression requires at least %d distinct timepoints per period (Nyquist condition); only %d unique observed. Test will be conservative; consider K = %d.",
+      K, 2L * K + 1L, n_unique, max(1L, (n_unique - 1L) %/% 2L)
+    ))
   }
 
-  ngenes <- nrow(expr)
-  n      <- ncol(expr)
-  t_norm <- (times %% period) / period
+  # Design matrix: intercept + (cos, sin) per harmonic, k = 1..K.
+  # The basis is adapted from LimoRhyde's helper limorhyde::limorhyde()
+  # (Singer & Hughey 2019), which constructs the k=1 cosinor basis at a
+  # given period via `cbind(cos(x/period * 2*pi), sin(x/period * 2*pi))`.
+  # We extend this to user-specified K by calling the helper once per
+  # harmonic with period = period/k, which yields the (cos, sin) pair at
+  # frequency k*omega_0. The result is column-for-column equivalent to
+  # what LimoRhyde would produce if called K times.
+  if (!requireNamespace("limorhyde", quietly = TRUE))
+    stop("Package 'limorhyde' required for the cosinor basis construction. ",
+         "Install with install.packages('limorhyde').")
 
-  # Interpolate empirical critical values at this n
-  if (!is.null(null_table)) {
-    crit95 <- approx(null_table$n, null_table$q95, xout = n, rule = 2)$y
-    crit99 <- approx(null_table$n, null_table$q99, xout = n, rule = 2)$y
-    gap    <- max(crit99 - crit95, 0.5)
-    use_table <- TRUE
+  basis_list <- list()
+  for (k in seq_len(K)) {
+    bk <- limorhyde::limorhyde(times,
+                                colnamePrefix = sprintf("h%d_", k),
+                                period   = period / k,
+                                sinusoid = TRUE,
+                                intercept = FALSE)
+    basis_list[[k]] <- bk
+  }
+  X <- cbind(intercept = 1, do.call(cbind, basis_list))   # n x (2K+1)
+
+  # Identifiability guard: if the design matrix is rank-deficient (fewer than
+  # 2K+1 distinct sampling phases per period), at least one harmonic
+  # coefficient is non-estimable and limma::topTable() fails when asked to
+  # subset to that coefficient. Rather than propagating that failure, emit
+  # the same Nyquist warning as above (it is the operational signal that
+  # the test is undefined on this design) and return a conservative null
+  # result: F=0, p=1, R^2=NA. This keeps the function safe to call directly,
+  # outside the runner that performs an earlier dispatch-level check.
+  # TODO: once limma exposes a `coef` argument that tolerates non-estimable
+  # columns, prefer that path over the conservative fallback.
+  rank_X <- qr(X)$rank
+  if (rank_X < ncol(X)) {
+    warning(sprintf(
+      "detect_FMM: design matrix is rank-deficient (rank %d of %d columns); the K=%d test is not identifiable on this design. Returning conservative null (F=0, p=1, R^2=NA).",
+      rank_X, ncol(X), K))
+    return(list(
+      F.stat = rep(0, G),
+      p.value = rep(1, G),
+      adj.p.value = rep(1, G),
+      R2 = rep(NA_real_, G),
+      df1 = length(setdiff(colnames(X), "intercept")),
+      df2 = max(0, n - rank_X),
+      detected = rep(FALSE, G)
+    ))
+  }
+
+  # eBayes variance shrinkage borrows information across genes. With too
+  # few genes the prior degenerates; fall back to unshrunk in that case.
+  if (isTRUE(ebayes) && G < 50L) {
+    warning(sprintf(
+      "detect_FMM: ebayes=TRUE requires sufficient genes for stable variance shrinkage; G=%d is below the threshold of 50. Falling back to unshrunk F-test.",
+      G))
+    ebayes <- FALSE
+  }
+
+  fit <- limma::lmFit(expr, design = X)
+  harmonic_cols <- setdiff(colnames(X), "intercept")
+  coef_idx      <- match(harmonic_cols, colnames(fit$coefficients))
+
+  if (isTRUE(ebayes)) {
+    fit_eb  <- limma::eBayes(fit)
+    tt      <- limma::topTable(fit_eb, coef = coef_idx,
+                                number = Inf, sort.by = "none",
+                                adjust.method = "none")
+    F.stat  <- tt$F
+    p.value <- tt$P.Value
+    df1_out <- length(coef_idx)
+    # Per-gene moderated denominator df: limma uses df.total = df.residual + df.prior
+    # to evaluate the moderated F. Store the per-gene vector so downstream
+    # reproduction of p.value via pf(F, df1, df2) gives gene-by-gene equality.
+    df2_out <- if (!is.null(fit_eb$df.total)) fit_eb$df.total
+               else fit_eb$df.residual + fit_eb$df.prior
+
+    # R^2 via fitted residuals from limma model
+    fitted_mat <- fit$coefficients %*% t(X)
+    resid_mat  <- expr - fitted_mat
+    SSE1       <- rowSums(resid_mat^2)
+    SSE0       <- rowSums((expr - rowMeans(expr))^2)
+    R2_vec     <- ifelse(SSE0 < 1e-12, NA_real_, 1 - SSE1 / SSE0)
   } else {
-    use_table <- FALSE
+    # Unshrunk exact F-test (multi-harmonic cosinor regression without
+    # variance shrinkage). Used for null calibration verification.
+    Y         <- t(expr)
+    qrX       <- qr(X)
+    resid_m   <- Y - qr.fitted(qrX, Y)
+    SSE1      <- colSums(resid_m^2)
+    SSE0      <- colSums((Y - rep(colMeans(Y), each = n))^2)
+    SSE0_safe <- pmax(SSE0, 1e-12)
+    SSE1_safe <- pmax(SSE1, 1e-12)
+    df1_out   <- 2L * K
+    df2_out   <- n - 2L * K - 1L
+    F.stat    <- ((SSE0_safe - SSE1_safe) / df1_out) / (SSE1_safe / df2_out)
+    F.stat[F.stat < 0] <- 0
+    p.value   <- pf(F.stat, df1_out, df2_out, lower.tail = FALSE)
+    R2_vec    <- ifelse(SSE0 < 1e-12, NA_real_, 1 - SSE1 / SSE0)
   }
 
-  # Per-gene FMM fit — parallelised over genes
-  fit_one <- function(g) {
-    y    <- expr[g, ]
-    sse0 <- sum((y - mean(y))^2)
-    if (sse0 < 1e-10) return(0)
-    fit <- tryCatch(
-      FMM::fitFMM(y, timePoints = t_norm, nback = 1,
-                  showProgress = FALSE,
-                  omegaMin = 1e-4, omegaMax = 0.9999,
-                  lengthAlphaGrid = length_alpha_grid,
-                  lengthOmegaGrid = length_omega_grid),
-      error = function(e) NULL)
-    if (is.null(fit)) return(0)
-    r2 <- max(0, min(FMM::getR2(fit), 1 - 1e-10))
-    n * log(1 / (1 - r2))
+  out <- data.frame(F.stat   = F.stat,
+                    df1      = df1_out,
+                    df2      = df2_out,
+                    p.value  = p.value,
+                    R2       = R2_vec)
+
+  if (!is.null(adjust.method) && adjust.method != "none") {
+    out$p.adjust  <- p.adjust(p.value, method = adjust.method)
+    out$discovery <- !is.na(out$p.adjust) & out$p.adjust < fdr.threshold
   }
 
-  lambdas <- if (mc.cores > 1L) {
-    unlist(parallel::mclapply(seq_len(ngenes), fit_one, mc.cores = mc.cores))
-  } else {
-    vapply(seq_len(ngenes), fit_one, numeric(1))
+  if (return.coefficients) {
+    coef_df <- as.data.frame(fit$coefficients)
+    colnames(coef_df) <- c("M", as.vector(rbind(paste0("a_", seq_len(K)),
+                                                paste0("b_", seq_len(K)))))
+    out <- cbind(out, coef_df)
   }
 
-  pvals <- numeric(ngenes)
-  for (g in seq_len(ngenes)) {
-    lambda <- lambdas[g]
-
-    if (use_table) {
-      if (lambda >= crit99) {
-        pvals[g] <- 0.01 * exp(-(lambda - crit99) / gap)
-      } else if (lambda >= crit95) {
-        frac <- (lambda - crit95) / gap
-        pvals[g] <- 0.05 - frac * 0.04   # linear 0.05 -> 0.01
-      } else {
-        # below q95: p > 0.05; exponential upper tail
-        pvals[g] <- min(1, 0.05 * exp((crit95 - lambda) / max(crit95 * 0.3, 1)))
-      }
-      pvals[g] <- max(1e-6, min(1, pvals[g]))
-    } else {
-      pvals[g] <- pchisq(lambda, df = 4, lower.tail = FALSE)
-    }
-  }
-  pvals
+  rownames(out) <- rownames(expr)
+  attr(out, "ebayes")    <- isTRUE(ebayes)
+  attr(out, "framework") <- "limorhyde-extended"
+  out
 }

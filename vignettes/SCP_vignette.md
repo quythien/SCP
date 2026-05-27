@@ -1,5 +1,15 @@
 # SCP: Simulation-Based Power Calculation for Circadian Rhythmic Analysis — User Guide
 
+> **Note (2026-05): cosinor-only framework.** SCP now centers on a single
+> detector entry point, `detect_cosinor(K)`: `K = 1` is the single-harmonic
+> cosinor F-test and `K = 2` adds the 12-hour second harmonic. The
+> frequency-modulated Mobius (FMM) model has been removed from the
+> recommended framework; JTK_CYCLE, RAIN, and the multi-harmonic detector
+> remain only for benchmarking. Any section below that describes FMM or
+> `omega`-based waveform switching is legacy and does not reflect the
+> current method.
+
+
 **Author:** Thien Pham  
 **Package:** SCP (Simulation-based Circadian Power)  
 **Repository:** [SCP](https://github.com/quythien/SCP)
@@ -32,7 +42,7 @@
 | Given fixed N, how to spread across time points vs replicates? | `recommendDesign()` |
 | How wide are power estimates when the pilot is small? | `runBootstrapDesignGrid()` |
 
-The framework is **semiparametric**: amplitude, noise, and proportion-rhythmic distributions are estimated from real pilot data. The default simulation uses the cosinor model (pure sinusoid), but users can switch to the FMM (Frequency Modulated Möbius) model for robustness testing under non-sinusoidal waveforms by setting `omega < 1` in `CircadianDesignOptions`.
+The framework is **semiparametric**: amplitude, noise, and proportion-rhythmic distributions are estimated from real pilot data. The default simulation uses the single-harmonic cosinor model. A two-harmonic generator is available for robustness testing under non-sinusoidal waveforms via `simCircadianSingleCohort2H()`, which adds a 12-hour second harmonic; detection then uses `detect_cosinor(K = 2)`.
 
 ### Detection endpoints
 
@@ -874,7 +884,12 @@ The bootstrap shows you how much the power estimate would shift if you had
 collected a slightly different pilot. Wide CIs (>15pp) at your target N suggest
 the pilot is insufficiently informative — consider collecting more pilot data.
 
-### FMM waveform robustness
+### FMM waveform robustness (legacy)
+
+> Legacy: the FMM model has been removed from the recommended framework. For
+> non-sinusoidal robustness, use the two-harmonic generator
+> `simCircadianSingleCohort2H()` with `detect_cosinor(K = 2)`. The FMM code
+> below is retained for reference only.
 
 Real gene expression peaks are not always symmetric sinusoids. SCP tests
 whether DCP power degrades when the truth is an asymmetric (FMM) waveform.

@@ -1,32 +1,37 @@
 #' =======================================================================
-#' 08f_bootstrap_sc.R — Single-Cohort Bootstrap: Plug-in vs Bootstrap CI
+#' fig5_bootstrap_sc.R — Single-Cohort Bootstrap: Plug-in vs Bootstrap CI
 #' =======================================================================
 #'
-#' Shows that the plug-in (two-stage) single-cohort power curve overpredicts
-#' when the pilot is small, and that bootstrap CIs widen as pilot size shrinks.
+#' Three passive-design panels showing how bootstrap CI width depends on
+#' pilot size and where the planned study sits on the power curve. All three
+#' panels use paired_sigma=TRUE so plug-in and bootstrap operate on a
+#' consistent (A, σ) sampling scheme.
 #'
-#' Three panels ordered by pilot size:
-#'   A. Baboon LUN          n_pilot = 12   active  B=4   r~1.72  (small pilot → wide CI)
-#'   B. Mouse D1 striatum   n_pilot = 45   active  B=6   r~0.65  (moderate pilot)
-#'   C. Seney CTL ACC       n_pilot = 60   passive B=4   r~0.79  (larger pilot → narrow CI)
+#'   A. Seney ACC ctrl       n_pilot=60   small  pilot, post-mortem brain
+#'      → CI peaks ~10pp at N=80 (elbow), collapses by N=120
 #'
-#' Story: overprediction gap (plug-in minus bootstrap mean) and CI width both
-#' shrink as n_pilot grows, validating that the bootstrap correction matters
-#' most when pilot data are scarce.
+#'   B. GTEx Pancreas        n_pilot=249  moderate pilot
+#'      → CI ~6-10pp across N=100-200; needs N~200 for 80% power
+#'
+#'   C. GTEx Thyroid         n_pilot=416  large  pilot
+#'      → CI persists ~6-7pp across N=80-160 (long elbow); needs N~200 for 80%
+#'
+#' Story: bootstrap quantifies genuine uncertainty wherever the power curve
+#' is in the elbow region (30-75%) — even with large pilots. Plug-in and
+#' bootstrap means agree (gap <2pp); the bootstrap value is the CI width.
 #'
 #' USAGE:
-#'   Rscript examples/publication/08f_bootstrap_sc.R
-#'   SMOKE_TEST=true Rscript examples/publication/08f_bootstrap_sc.R
+#'   Rscript examples/publication/fig5_bootstrap_sc.R
+#'   SMOKE_TEST=true Rscript examples/publication/fig5_bootstrap_sc.R
 
-SMOKE_TEST <- identical(Sys.getenv("SMOKE_TEST"), "true")
-
+SMOKE_TEST  <- identical(Sys.getenv("SMOKE_TEST"), "true")
 NGENES      <- if (SMOKE_TEST) 300L  else 5000L
 NBOOT       <- if (SMOKE_TEST) 5L    else 50L
 NSIMS       <- if (SMOKE_TEST) 5L    else 30L
 NSIMS_INNER <- if (SMOKE_TEST) 5L    else 25L
 N_CORES     <- as.integer(Sys.getenv("MC_CORES", unset = "6"))
-RHYTHM_PVAL <- 0.01  # alpha_pilot per paper (SCP.tex §2.1); must match bootstrap's fitCosinorAll threshold
-B_VAL       <- 4L
+RHYTHM_PVAL <- 0.01
+B_VAL       <- 1L                      # passive: B is not a power-relevant parameter; placeholder for API compatibility
 GLOBAL_SEED <- 2025L
 
 cat(sprintf("Mode        : %s\n", if (SMOKE_TEST) "SMOKE" else "PRODUCTION"))
@@ -40,49 +45,61 @@ old_wd <- setwd("code"); source("setup.R"); setwd(old_wd)
 suppressPackageStartupMessages(library(readxl))
 
 out_dir <- "output/bootstrap_sc"
-dir.create(file.path(out_dir, "results"),  recursive = TRUE, showWarnings = FALSE)
-dir.create(file.path(out_dir, "figures"),  recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(out_dir, "results"), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(out_dir, "figures"), recursive = TRUE, showWarnings = FALSE)
 
 analysis <- CircadianAnalysisOptions(
-  alpha           = 0.05,
-  p.adjust.method = "BH",
-  fdr_thresholds  = 0.05
+  alpha = 0.05, p.adjust.method = "BH", fdr_thresholds = 0.05
 )
 
 # -----------------------------------------------------------------------
-# Helper: run plug-in + bootstrap for one dataset and save
+# Helper: plug-in + bootstrap for one PASSIVE dataset
 # -----------------------------------------------------------------------
-.run_sc_comparison <- function(mat, tod, bio_sc, N_grid, B_val,
-                                label, out_prefix) {
+.run_passive_comparison <- function(mat, tod, N_grid, label, out_prefix) {
   cat(sprintf("\n--- %s ---\n", label))
-  cat(sprintf("    n_pilot=%d  ngenes=%d  B=%d\n",
-              ncol(mat), nrow(mat), B_val))
 
-  design_vec <- seq(0, 24 * (1 - 1/B_val), length.out = B_val)
-
-  # Plug-in
-  design_ts <- CircadianDesignOptions(
-    sample_sizes = N_grid, nsims = NSIMS, design = "active",
-    cts = design_vec, B_values = B_val
-  )
-  cat("  Running plug-in (runSingleCohortGrid)...\n")
+  # Estimate pilot fresh with paired_sigma=TRUE so plug-in matches bootstrap
+  # subsample only for cosinor fit speed; bootstrap gets the FULL gene matrix
+  # so prop_rhythmic and top-K pool match the plug-in estimate
   set.seed(GLOBAL_SEED)
-  ts_result <- tryCatch(
-    runSingleCohortGrid(bio_sc, design_ts, analysis, methods = "DCP",
-                        alpha2 = 0, mc.cores = N_CORES, verbose = FALSE),
+  if (nrow(mat) > NGENES) {
+    g_idx <- sample(nrow(mat), NGENES)
+    mat_s <- mat[g_idx, , drop = FALSE]
+  } else {
+    mat_s <- mat
+  }
+
+  bio_sc <- estCircadianParam(mat_s, tod,
+                               min_rhythm_pval = RHYTHM_PVAL,
+                               paired_sigma    = TRUE,
+                               verbose         = FALSE)
+  bio_sc$ngenes <- NGENES
+  cat(sprintf("    n_pilot=%d  prop_rhy=%.1f%%  n_rhythmic=%d\n",
+              ncol(mat), 100 * bio_sc$prop_rhythmic, length(bio_sc$amplitude)))
+
+  # Plug-in (passive)
+  design_plug <- CircadianDesignOptions(
+    sample_sizes = N_grid, nsims = NSIMS, design = "passive", cts = tod
+  )
+  cat("  Running plug-in (passive)...\n")
+  set.seed(GLOBAL_SEED)
+  plugin_res <- tryCatch(
+    runSimsSingleCohort(bio_sc, design_plug, analysis,
+                        mc.cores = N_CORES, verbose = FALSE),
     error = function(e) { warning(sprintf("Plug-in failed: %s", e$message)); NULL }
   )
 
-  # Bootstrap
+  # Bootstrap (passive) — B_VAL is a placeholder; passive power is N-only
   boot_opts <- CircadianBootstrapOptions(
-    design_vector = design_vec, B_values = B_val, N_values = N_grid,
-    nboot = NBOOT, nsims_inner = NSIMS_INNER, design = "active", seed = GLOBAL_SEED
+    design_vector = tod, B_values = B_VAL, N_values = N_grid,
+    nboot = NBOOT, nsims_inner = NSIMS_INNER,
+    design = "passive", seed = GLOBAL_SEED
   )
   cat(sprintf("  Running bootstrap (%d draws, mc.cores=%d)...\n", NBOOT, N_CORES))
   set.seed(GLOBAL_SEED)
-  bt_result <- tryCatch(
+  bt_res <- tryCatch(
     runBootstrapDesignGrid(
-      pilot_data      = mat,
+      pilot_data      = mat_s,
       pilot_times     = tod,
       bio_diff.opts   = bio_sc,
       boot.opts       = boot_opts,
@@ -95,23 +112,23 @@ analysis <- CircadianAnalysisOptions(
     error = function(e) { warning(sprintf("Bootstrap failed: %s", e$message)); NULL }
   )
 
-  if (is.null(ts_result) || is.null(bt_result)) {
+  if (is.null(plugin_res) || is.null(bt_res)) {
     cat("  FAILED — skipping\n"); return(NULL)
   }
 
-  # Summary table
-  cat(sprintf("  %-5s  plug-in  bootstrap  gap(pp)  CI-width\n", "N"))
+  plugin_mean <- apply(plugin_res$marginal_power, 1, mean, na.rm = TRUE)
+  cat(sprintf("  %-5s  plug-in  bt-mean  CI-width\n", "N"))
   for (i in seq_along(N_grid)) {
-    tp <- ts_result$power_df$power[ts_result$power_df$N == N_grid[i]][1L]
-    bp <- bt_result$power_mean[i, 1, 1]
-    lo <- bt_result$power_ci_lo[i, 1, 1]
-    hi <- bt_result$power_ci_hi[i, 1, 1]
-    cat(sprintf("  N=%-4d  %.1f%%     %.1f%%      %+.1fpp   %.1fpp\n",
-        N_grid[i], 100*tp, 100*bp, 100*(tp-bp), 100*(hi-lo)))
+    tp  <- plugin_mean[i]
+    bm  <- bt_res$power_mean[i, 1, 1]
+    lo  <- bt_res$power_ci_lo[i, 1, 1]
+    hi  <- bt_res$power_ci_hi[i, 1, 1]
+    cat(sprintf("  N=%-4d  %5.1f%%   %5.1f%%   %5.1fpp\n",
+        N_grid[i], 100*tp, 100*bm, 100*(hi-lo)))
   }
 
   out <- list(label = label, n_pilot = ncol(mat), N_grid = N_grid,
-              ts_result = ts_result, bt_result = bt_result)
+              plugin = plugin_res, boot = bt_res)
   saveRDS(out, paste0(out_prefix, ".rds"))
   cat(sprintf("  Saved: %s.rds\n", basename(out_prefix)))
   out
@@ -119,76 +136,46 @@ analysis <- CircadianAnalysisOptions(
 
 
 # =======================================================================
-# PANEL A: Baboon LUN (n=12, active pilot, r~1.72)
+# PANEL A: Putamen SCZ (n=28, passive) — Kyle GSE160521 multiBrain
 # =======================================================================
 cat("================================================================\n")
-cat("PANEL A: Baboon LUN (n=12, active, r~1.72)\n")
+cat("PANEL A: Putamen SCZ (n=28, passive)\n")
 cat("================================================================\n")
 
-N_GRID_BAB <- if (SMOKE_TEST) c(12L, 24L, 36L) else c(12L, 24L, 36L, 48L, 60L, 72L, 96L)
-# All divisible by B_VAL=4: 12%4=0, 24%4=0, ... ✓
+KYLE_DIR <- Sys.getenv("KYLE_MULTIBRAINREGION_DIR",
+                        unset = "/home/qtp1/Projects/Circadian/Kyle/Kyle_multiBrainRegion")
+N_GRID_SCZ <- if (SMOKE_TEST) c(20L, 40L, 60L) else
+              c(20L, 40L, 60L, 80L, 100L, 120L, 140L, 160L)
 
-load("data/CAMO_PRC_hmb.RData")
-prep_lun <- prepCircadianData(baboon_withTOD$baboon[["LUN"]],
-                               times = baboon_withTOD$tod[["LUN"]],
-                               input_type = "cpm")
-mat_bab  <- prep_lun$data[rowSums(prep_lun$data > 0) >= 6, , drop = FALSE]
-tod_bab  <- prep_lun$times
-set.seed(GLOBAL_SEED)
-g_bab    <- sample(nrow(mat_bab), min(NGENES, nrow(mat_bab)))
-mat_bab  <- mat_bab[g_bab, , drop = FALSE]
-rm(baboon_withTOD, gtex, mice, prep_lun)
+clin_scz <- read.csv(file.path(KYLE_DIR, "DS_clinical_1221_rm97_rm231_matchIndex34.csv"),
+                      row.names = 1)
+scz_meta <- clin_scz[clin_scz$Diagnostic.Category == "SCZ", ]
+expr_scz_raw <- as.matrix(read.csv(
+  file.path(KYLE_DIR, "Putamen_CPMfiltered_logCPM_1215_rm97_rm231.csv"),
+  row.names = 1, check.names = FALSE))
+scz_cols <- intersect(scz_meta$pair, colnames(expr_scz_raw))
+mat_scz  <- expr_scz_raw[, scz_cols, drop = FALSE]
+tod_scz  <- scz_meta$CorrectedTOD[match(scz_cols, scz_meta$pair)] %% 24
+prep_scz <- prepCircadianData(mat_scz, times = tod_scz, input_type = "log2")
+mat_scz  <- prep_scz$data; tod_scz <- prep_scz$times
+rm(clin_scz, expr_scz_raw, prep_scz)
+cat(sprintf("Loaded Putamen-SCZ: %d genes x %d samples; TOD [%.2f, %.2f]\n",
+            nrow(mat_scz), ncol(mat_scz), min(tod_scz), max(tod_scz)))
 
-bio_bab <- estCircadianParam(mat_bab, times = tod_bab, period = 24,
-                              min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE)
-bio_bab$ngenes <- NGENES
-
-pA <- .run_sc_comparison(mat_bab, tod_bab, bio_bab, N_GRID_BAB, B_VAL,
-                          sprintf("Baboon LUN (n=%d, r~1.72)", ncol(mat_bab)),
-                          file.path(out_dir, "results", "panelA_baboon"))
+pSCZ <- .run_passive_comparison(mat_scz, tod_scz, N_GRID_SCZ,
+                                 sprintf("Putamen SCZ (n=%d, passive)", ncol(mat_scz)),
+                                 file.path(out_dir, "results", "panelA_putamen_scz"))
 
 
 # =======================================================================
-# PANEL B: Mouse D1 striatum (n=45, active B=6, r~0.65)
+# PANEL B: Seney CTL ACC (n=60, passive)
 # =======================================================================
-cat("\n================================================================\n")
-cat("PANEL B: Mouse D1 striatum (n=45, active B=6, r~0.65)\n")
+cat("================================================================\n")
+cat("PANEL B: Seney ACC ctrl (n=60, passive)\n")
 cat("================================================================\n")
 
-N_GRID_D1 <- if (SMOKE_TEST) c(40L, 80L, 120L) else c(40L, 60L, 80L, 120L, 160L, 200L, 250L, 300L)
-
-pheno   <- read.csv("data/mouse_clinicalinfo_03082021_rmOutliers.csv", row.names = 1)
-prep_d1 <- prepCircadianData("data/mouse_D1D2_logCPMfiltered_counts.csv",
-                              times      = "time",
-                              input_type = "counts",
-                              pheno      = pheno,
-                              sample_col = "sample")
-d1_samp <- pheno$sample[pheno$cell == "D1"]
-mat_d1  <- prep_d1$data[, colnames(prep_d1$data) %in% d1_samp, drop = FALSE]
-tod_d1  <- pheno$time[match(colnames(mat_d1), pheno$sample)]
-mat_d1  <- mat_d1[rowSums(mat_d1 > 1) >= floor(ncol(mat_d1) / 2), , drop = FALSE]
-set.seed(GLOBAL_SEED)
-g_d1    <- sample(nrow(mat_d1), min(NGENES, nrow(mat_d1)))
-mat_d1  <- mat_d1[g_d1, , drop = FALSE]
-rm(pheno, prep_d1)
-
-bio_d1 <- estCircadianParam(mat_d1, times = tod_d1, period = 24,
-                              min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE)
-bio_d1$ngenes <- NGENES
-
-pB <- .run_sc_comparison(mat_d1, tod_d1, bio_d1, N_GRID_D1, B_VAL,
-                          sprintf("Mouse D1 (n=%d, active B=6, r̃ ≈0.65)", ncol(mat_d1)),
-                          file.path(out_dir, "results", "panelB_d1"))
-
-
-# =======================================================================
-# PANEL C: Seney CTL ACC (n=60, passive, r~0.79)
-# =======================================================================
-cat("\n================================================================\n")
-cat("PANEL C: Seney CTL ACC (n=60, passive, r~0.79)\n")
-cat("================================================================\n")
-
-N_GRID_SEN <- if (SMOKE_TEST) c(40L, 80L, 120L) else c(40L, 80L, 120L, 160L, 200L, 250L, 300L)
+N_GRID_SEN <- if (SMOKE_TEST) c(40L, 80L, 120L) else
+              c(40L, 60L, 80L, 100L, 120L, 140L, 160L, 200L, 240L, 280L)
 
 meta_s   <- read_excel("data/MD5_MetaData_1-15-25.xlsx")
 tod_s    <- read_excel("data/TOD.xlsx")
@@ -205,57 +192,120 @@ prep_sen <- prepCircadianData(expr_raw[, ok], times = tod_hour[ok], input_type =
 ctrl_idx <- disease[ok] == 1
 mat_sen  <- prep_sen$data[, ctrl_idx, drop = FALSE]
 tod_sen  <- prep_sen$times[ctrl_idx]
-set.seed(GLOBAL_SEED)
-g_sen    <- sample(nrow(mat_sen), min(NGENES, nrow(mat_sen)))
-mat_sen  <- mat_sen[g_sen, , drop = FALSE]
 rm(meta_s, tod_s, expr_raw, prep_sen)
 
-bio_sen <- estCircadianParam(mat_sen, times = tod_sen, period = 24,
-                              min_rhythm_pval = RHYTHM_PVAL, verbose = FALSE)
-bio_sen$ngenes <- NGENES
-
-pC <- .run_sc_comparison(mat_sen, tod_sen, bio_sen, N_GRID_SEN, B_VAL,
-                          sprintf("Human post-mortem ACC (n=%d, r̃ ≈0.79)", ncol(mat_sen)),
-                          file.path(out_dir, "results", "panelC_seney"))
+pA <- .run_passive_comparison(mat_sen, tod_sen, N_GRID_SEN,
+                               sprintf("Seney ACC ctrl (n=%d, passive)", ncol(mat_sen)),
+                               file.path(out_dir, "results", "panelA_seney"))
 
 
 # =======================================================================
-# Combined figure
+# PANEL B: GTEx Pancreas (n=249, passive)
+# =======================================================================
+cat("\n================================================================\n")
+cat("PANEL B: GTEx Pancreas (n=249, passive)\n")
+cat("================================================================\n")
+
+N_GRID_PAN <- if (SMOKE_TEST) c(40L, 80L, 120L) else
+              c(40L, 80L, 120L, 160L, 200L, 240L, 280L, 320L)
+
+GTEX_CPM_PATH <- Sys.getenv("GTEX_CPM_PATH",
+                  unset = "/home/qtp1/Projects/Collaborative/GTEXdata/TOD Xiangning/data/CPM/CPM.all.norm.RData")
+load(GTEX_CPM_PATH)
+.extract_gtex <- function(tissue) {
+  df   <- CPM.all.norm[[tissue]]
+  ids  <- as.character(colnames(df))
+  hhmm <- sapply(strsplit(ids, "\\."),
+                 function(x) if (length(x) >= 3) x[3] else NA)
+  hrs  <- suppressWarnings(as.numeric(substr(hhmm, 1, 2)) +
+                           as.numeric(substr(hhmm, 3, 4)) / 60)
+  ok   <- !is.na(hrs)
+  list(mat = as.matrix(df[, ok]), tod = hrs[ok])
+}
+pan_d <- .extract_gtex("Pancreas")
+mat_pan <- pan_d$mat; tod_pan <- pan_d$tod
+rm(pan_d)
+
+pB <- .run_passive_comparison(mat_pan, tod_pan, N_GRID_PAN,
+                               sprintf("GTEx Pancreas (n=%d, passive)", ncol(mat_pan)),
+                               file.path(out_dir, "results", "panelB_pancreas"))
+
+
+# =======================================================================
+# PANEL C: GTEx Thyroid (n=407, passive)
+# =======================================================================
+cat("\n================================================================\n")
+cat("PANEL C: GTEx Thyroid (n=407, passive)\n")
+cat("================================================================\n")
+
+N_GRID_THY <- if (SMOKE_TEST) c(80L, 160L, 240L) else
+              c(40L, 80L, 120L, 160L, 200L, 240L, 280L, 320L, 400L)
+
+thy_d <- .extract_gtex("Thyroid")
+mat_thy <- thy_d$mat; tod_thy <- thy_d$tod
+rm(thy_d, CPM.all.norm)
+
+pC <- .run_passive_comparison(mat_thy, tod_thy, N_GRID_THY,
+                               sprintf("GTEx Thyroid (n=%d, passive)", ncol(mat_thy)),
+                               file.path(out_dir, "results", "panelC_thyroid"))
+
+
+# =======================================================================
+# Combined figure (PDF only — no PNG)
 # =======================================================================
 cat("\n=== Generating combined figure ===\n")
-panels <- Filter(Negate(is.null), list(pA, pB, pC))
+panels <- Filter(Negate(is.null), list(pSCZ, pA, pB, pC))
 
 if (length(panels) > 0) {
-  pdf(file.path(out_dir, "figures", "fig_bootstrap_sc.pdf"),
-      width = 14, height = 5)
-  par(mfrow = c(1, length(panels)), mar = c(4, 4, 3, 1), las = 1)
+  source("examples/publication/_pub_style.R")
 
-  panel_letters <- LETTERS[seq_along(panels)]
-  for (pi in seq_along(panels)) {
-    p      <- panels[[pi]]
-    N_grid <- p$N_grid
-    pwr_df <- p$ts_result$power_df
-    ts_pwr <- pwr_df$power[match(N_grid, pwr_df$N)]
-    bt_mn  <- p$bt_result$power_mean[, 1, 1]
-    bt_lo  <- p$bt_result$power_ci_lo[, 1, 1]
-    bt_hi  <- p$bt_result$power_ci_hi[, 1, 1]
+  fig_path_local <- file.path(out_dir, "figures", "fig_bootstrap_sc.pdf")
+  fig_path_main  <- "output/main_figures/Fig3_bootstrap_singlecohort.pdf"
+  dir.create("output/main_figures", recursive = TRUE, showWarnings = FALSE)
 
-    plot(N_grid, ts_pwr, type = "l", lwd = 2, col = "steelblue",
-         ylim = c(0, 1), xlab = "N (total samples)", ylab = "Power",
-         main = sprintf("(%s) %s", panel_letters[pi], p$label))
-    polygon(c(N_grid, rev(N_grid)),
-            c(bt_lo, rev(bt_hi)),
-            col = adjustcolor("tomato", 0.25), border = NA)
-    lines(N_grid, bt_mn, lwd = 2, col = "tomato")
-    abline(h = 0.80, lty = 2, col = "grey50")
-    if (pi == 1) {
-      legend("bottomright", bty = "n", lwd = 2,
-             col = c("steelblue", "tomato"),
-             legend = c("Plug-in", "Bootstrap mean + 95% CI"))
+  pal_DT <- pub_palette_detector()
+  col_plugin <- unname(pal_DT["DCP"])   # teal/blue, Wong blue
+  col_boot   <- unname(pal_DT["FMM"])   # orange, Wong vermilion
+
+  for (out_pdf in c(fig_path_local, fig_path_main)) {
+    n_panels    <- length(panels)
+    layout_dims <- if (n_panels >= 4) c(2L, 2L)
+                    else if (n_panels == 3) c(1L, 3L)
+                    else c(1L, n_panels)
+    pdf_w <- if (layout_dims[2] == 2) 7.2 else 7.2
+    pdf_h <- if (layout_dims[1] == 2) 6.4 else 3.4
+    cairo_pdf(out_pdf, width = pdf_w, height = pdf_h)
+    pub_par(mfrow = layout_dims, mar = c(4.0, 4.2, 2.4, 1.0))
+
+    letters_seq <- letters[seq_along(panels)]
+    for (pi in seq_along(panels)) {
+      p      <- panels[[pi]]
+      N_grid <- p$N_grid
+      tp     <- apply(p$plugin$marginal_power, 1, mean, na.rm = TRUE)
+      bt_mn  <- p$boot$power_mean[, 1, 1]
+      bt_lo  <- p$boot$power_ci_lo[, 1, 1]
+      bt_hi  <- p$boot$power_ci_hi[, 1, 1]
+
+      plot(N_grid, tp, type = "l", lwd = 1.8, col = col_plugin,
+           ylim = c(0, 1), xlab = "N (total samples)", ylab = "Power",
+           main = p$label)
+      panel_label(letters_seq[pi])
+      abline_80pct()
+      lines(N_grid, bt_mn, lwd = 1.0, col = col_boot, lty = 2)
+      arrows(N_grid, bt_lo, N_grid, bt_hi,
+             code = 3, angle = 90, length = 0.04, lwd = 1.6, col = col_boot)
+      points(N_grid, bt_mn, pch = 19, col = col_boot, cex = 0.7)
+      if (pi == 1) {
+        pub_legend("bottomright",
+                   legend = c("Plug-in", "Bootstrap mean + 95% CI"),
+                   col = c(col_plugin, col_boot),
+                   lwd = c(1.8, 1.6), lty = c(1, NA),
+                   pch = c(NA, 19))
+      }
     }
+    dev.off()
+    cat(sprintf("Saved: %s\n", out_pdf))
   }
-  dev.off()
-  cat(sprintf("Saved: %s/figures/fig_bootstrap_sc.pdf\n", out_dir))
 }
 
 saveRDS(panels, file.path(out_dir, "results", "all_panels.rds"))

@@ -96,7 +96,7 @@ plotSingleCohortPower(
   vline_power     = 0.80,
   vline_fdr       = 0.05,
   reference_n     = NULL,
-  display_sizes   = NULL,
+  display_sizes   = c(20, 40, 60, 80, 100, 120, 150, 200),
   width           = 15,
   height          = 5.5
 )

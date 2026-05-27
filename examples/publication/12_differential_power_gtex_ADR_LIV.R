@@ -138,12 +138,16 @@ saveRDS(res, rds_path)
 cat(sprintf("Results saved -> %s\n", rds_path))
 
 plotDiffPower(
-  res_list    = list(res),
-  comp_labels = "GTEx Adrenal Gland vs Liver",
-  endpoints   = c("DR", "DP", "DM"),
-  out_pdf     = fig_path,
-  width       = 15,
-  height      = 18
+  res_list      = list(res),
+  comp_labels   = "GTEx Adrenal Gland vs Liver",
+  endpoints     = c("DR", "DP", "DM"),
+  display_sizes = c(20, 40, 60, 80, 100, 120, 150, 200),
+  vline_fdr     = 0.20,
+  vline_power   = 0.80,
+  r_display_max = 3,
+  out_pdf       = fig_path,
+  width         = 15,
+  height        = 18
 )
 cat(sprintf("Figure  saved -> %s\n", fig_path))
 
