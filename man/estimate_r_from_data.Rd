@@ -24,9 +24,11 @@ top circadian genes in a DCP (Differential Circadian Pipeline) analysis.
 Uses the relationship r = 1/sqrt(1/R² - 1) where R² is rhythm strength.
 }
 \examples{
+\dontrun{
 # dcp_results is the output from runDiffCircadian()
 r_estimate <- estimate_r_from_data(dcp_results, top_n = 100)
 # Use median r for power simulation
 target_r <- r_estimate$median_r
+}
 
 }

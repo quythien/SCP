@@ -441,10 +441,12 @@ generate_power_report = function(power_results, output_file = NULL) {
 #' @return List with median r, mean r, and individual r values
 #'
 #' @examples
+#' \dontrun{
 #' # dcp_results is the output from runDiffCircadian()
 #' r_estimate <- estimate_r_from_data(dcp_results, top_n = 100)
 #' # Use median r for power simulation
 #' target_r <- r_estimate$median_r
+#' }
 #'
 #' @export
 estimate_r_from_data = function(dcp_results, top_n = 100,
