@@ -1,3 +1,10 @@
+> **SUPERSEDED (2026-05).** The SCP manuscript no longer uses the FMM
+> (frequency-modulated Mobius) model. The two-harmonic cosinor extension
+> (manuscript Section 2.4) is now motivated directly as a 12-hour ultradian
+> harmonic, with detection by the exact nested cosinor F-test. This
+> derivation is retained for historical reference only and does not describe
+> the current method.
+
 # From the FMM Model to the K-Harmonic LRT
 
 **Purpose:** complete derivation showing that the K-harmonic LRT used in
