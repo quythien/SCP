@@ -40,7 +40,7 @@
 #'   Rscript examples/publication/08_two_stage_vs_bootstrap_realdata.R
 #'   POWERSIM_SMOKE=1 Rscript examples/publication/08_two_stage_vs_bootstrap_realdata.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # -----------------------------------------------------------------------
 # 0. Path configuration

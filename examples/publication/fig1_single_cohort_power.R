@@ -35,7 +35,7 @@
 #'   cd /path/to/PowerSim
 #'   Rscript examples/publication/10_single_cohort_power.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # 0. Setup

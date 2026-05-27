@@ -26,7 +26,7 @@
 #'   Rscript examples/exploratory/baboon_tissue_scan.R
 #'   POWERSIM_SMOKE=1 Rscript examples/exploratory/baboon_tissue_scan.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # SETTINGS

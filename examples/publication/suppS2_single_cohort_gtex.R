@@ -16,7 +16,7 @@
 #'   cd /path/to/PowerSim
 #'   Rscript examples/publication/14_single_cohort_gtex_ADR_LIV.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # 0. Setup

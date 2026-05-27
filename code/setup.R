@@ -9,7 +9,7 @@
 #' - Empirical Bayes variance estimation
 #' - No assumptions on amplitude, phase, or noise distributions
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 #' @date 2025-02-12
 
 

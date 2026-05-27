@@ -1,6 +1,6 @@
 ---
 title: "SCP: Semiparametric Circadian Power — User Guide"
-author: "Thien Pham"
+author: "Thien Quy Pham"
 date: "`r Sys.Date()`"
 output:
   rmarkdown::html_vignette:

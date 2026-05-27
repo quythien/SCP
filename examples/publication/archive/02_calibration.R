@@ -41,7 +41,7 @@
 #'   Reduce NSIMS/NBOOT for a quick check; results are noisier but structure
 #'   is preserved.
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # SETTINGS — edit here for quick checks vs production runs

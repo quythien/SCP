@@ -53,7 +53,7 @@
 #'   S3_NBOOT          <- 50L     # bootstrap draws (≥50 for production)
 #'   S3_NSIMS_INNER    <- 10L     # sims per bootstrap draw
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 
 # =====================================================================

@@ -13,7 +13,7 @@
 #'   cd PowerSim/
 #'   Rscript data/estimate_pilot_params.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # Setup

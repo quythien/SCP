@@ -25,7 +25,7 @@
 #'   Rscript examples/publication/13_supp_tissue_summary.R
 #'   SMOKE_TEST=true Rscript examples/publication/13_supp_tissue_summary.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # 0. Setup

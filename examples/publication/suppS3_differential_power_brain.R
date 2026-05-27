@@ -33,7 +33,7 @@
 #'   RESULTS_RDS_B=output/differential/results/diff_power_Putamen_Ctrl_vs_SCZ_<ts>.rds \
 #'   Rscript examples/publication/11_differential_power.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # 0. Setup

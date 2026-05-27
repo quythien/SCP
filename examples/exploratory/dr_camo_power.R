@@ -31,7 +31,7 @@
 #'   Rscript examples/exploratory/dr_camo_power.R
 #'   POWERSIM_SMOKE=1 Rscript examples/exploratory/dr_camo_power.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # SETTINGS

@@ -8,7 +8,7 @@
 #' USAGE:
 #'   Rscript examples/run_pipeline_panelC160.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 # =====================================================================
 # SECTION 1: SETUP & CONFIGURATION

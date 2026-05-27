@@ -37,7 +37,7 @@
 #' USAGE:
 #'   Rscript examples/run_pipeline.R
 #'
-#' @author Thien Pham
+#' @author Thien Quy Pham
 
 
 # =====================================================================
