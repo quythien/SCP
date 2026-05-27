@@ -27,23 +27,26 @@
 
 \begin{abstract}
 Circadian transcriptomic studies are often limited by sample availability,
-uncontrolled collection times, and genome-wide multiple testing. However, existing
-power tools do not support pilot-calibrated planning for circadian biomarker
+uncontrolled collection times, and genome-wide multiple testing. Existing power
+tools, however, do not support pilot-calibrated planning for circadian biomarker
 detection and differential circadian analysis. We present \textsc{SCP}, a
 simulation-based framework for sample-size planning in circadian transcriptomics.
-\textsc{SCP} uses pilot-derived gene-level amplitude, noise, phase, and
-time-of-day distributions to estimate FDR-controlled power for single-cohort
-circadian biomarker detection and two-group differential analyses of
-rhythmicity, phase, and MESOR. The framework also quantifies pilot-driven
-uncertainty by bootstrap and allows power analysis under both single-harmonic
-cosinor detection and a two-harmonic F-test for non-sinusoidal rhythmic
-biomarkers. Across public human pilots, variation in the pilot signal-to-noise
-distribution translated into large differences in the sample size required to
-achieve target power. In balanced equally spaced active designs above the
-harmonic identifiability threshold, power was driven mainly by total sample size
-rather than by the allocation between sampling times and replicates.
+\textsc{SCP} uses pilot-derived distributions of gene-level amplitude, noise,
+phase, and time-of-day sampling to capture transcriptome-wide signal
+heterogeneity and estimate FDR-controlled power for single-cohort circadian
+biomarker detection and two-group differential analyses of rhythmicity, phase,
+and MESOR. The framework also quantifies pilot-driven uncertainty by bootstrap
+and allows power analysis under both single-harmonic cosinor detection and a
+two-harmonic F-test for non-sinusoidal rhythmic biomarkers. Across public human
+pilots, variation in the pilot signal-to-noise distribution translated into
+large differences in the sample size required to achieve target power. In
+balanced equally spaced active designs above the harmonic identifiability
+threshold, power was driven mainly by total sample size rather than by the
+allocation between sampling times and replicates.
 
-\textbf{Availability and implementation:} \textsc{SCP} is implemented in R and available at \url{https://github.com/quythien/SCP}. Documentation and example data are provided with the repository.
+\textbf{Availability and implementation:} \textsc{SCP} is implemented in R and
+available at \url{https://github.com/quythien/SCP}. Documentation and example
+data are provided with the repository.
 \end{abstract}
 %% ====================================================================
 \section{Introduction}
