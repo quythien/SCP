@@ -24,36 +24,31 @@ dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
 cat(sprintf("=== Paired Fig 2 (ADR vs LIV) [%s] ===\n", timestamp))
 
-gtex_path <- "/home/qtp1/Projects/Collaborative/GTEXdata/TOD Xiangning/data/CPM/CPM.all.norm.RData"
-cat(sprintf("Loading GTEx: %s\n", gtex_path))
-load(gtex_path)
-
-extract_tissue <- function(tissue_name) {
-  df   <- CPM.all.norm[[tissue_name]]
-  ids  <- as.character(colnames(df))
-  hhmm <- sapply(strsplit(ids, "\\."), function(x) if (length(x) >= 3) x[3] else NA)
-  hrs  <- as.numeric(substr(hhmm, 1, 2)) + as.numeric(substr(hhmm, 3, 4)) / 60
-  ok   <- !is.na(hrs)
-  list(expr = as.matrix(df[, ok]), times = hrs[ok], n = sum(ok))
-}
-
-adr <- extract_tissue("Adrenal Gland")
-liv <- extract_tissue("Liver")
-common_genes <- intersect(rownames(adr$expr), rownames(liv$expr))
-cat(sprintf("Adrenal Gland : n=%d, %d genes\n", adr$n, nrow(adr$expr)))
-cat(sprintf("Liver         : n=%d, %d genes\n", liv$n, nrow(liv$expr)))
-cat(sprintf("Common genes  : %d\n", length(common_genes)))
-
-expr_adr <- adr$expr[common_genes, ]
-expr_liv <- liv$expr[common_genes, ]
-
-# Build paired two-group pilot (force rebuild even if unpaired cached pilot exists)
+# Build paired two-group pilot. The bundled pilot RDS lets this script
+# reproduce Figure 2 without the access-controlled raw GTEx matrix; the raw
+# rebuild below runs only if the cached pilot is absent.
 pilot_rds <- "data/gtex_adr_vs_liv_pilot_paired.rds"
 if (file.exists(pilot_rds)) {
   cat(sprintf("Loading cached paired pilot: %s\n", pilot_rds))
   bio <- readRDS(pilot_rds)
 } else {
-  cat("Estimating paired two-group pilot...\n")
+  cat("Cached pilot not found; rebuilding from raw GTEx\n")
+  cat("(requires the access-controlled CPM.all.norm.RData; see README data provenance).\n")
+  gtex_path <- "/home/qtp1/Projects/Collaborative/GTEXdata/TOD Xiangning/data/CPM/CPM.all.norm.RData"
+  load(gtex_path)
+  extract_tissue <- function(tissue_name) {
+    df   <- CPM.all.norm[[tissue_name]]
+    ids  <- as.character(colnames(df))
+    hhmm <- sapply(strsplit(ids, "\\."), function(x) if (length(x) >= 3) x[3] else NA)
+    hrs  <- as.numeric(substr(hhmm, 1, 2)) + as.numeric(substr(hhmm, 3, 4)) / 60
+    ok   <- !is.na(hrs)
+    list(expr = as.matrix(df[, ok]), times = hrs[ok], n = sum(ok))
+  }
+  adr <- extract_tissue("Adrenal Gland")
+  liv <- extract_tissue("Liver")
+  common_genes <- intersect(rownames(adr$expr), rownames(liv$expr))
+  expr_adr <- adr$expr[common_genes, ]
+  expr_liv <- liv$expr[common_genes, ]
   set.seed(GLOBAL_SEED)
   bio <- estCircadianParamTwoGroup(
     data_1  = expr_adr, data_2  = expr_liv,
