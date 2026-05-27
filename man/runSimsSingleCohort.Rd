@@ -16,16 +16,16 @@ runSimsSingleCohort(
 )
 }
 \arguments{
-\item{bio.opts}{\code{CircadianBioOptions} — pilot parameter distributions.
+\item{bio.opts}{\code{CircadianBioOptions} -- pilot parameter distributions.
 Build with \code{estCircadianParam()}.}
 
-\item{design.opts}{\code{CircadianDesignOptions} — sample sizes, nsims, design.}
+\item{design.opts}{\code{CircadianDesignOptions} -- sample sizes, nsims, design.}
 
-\item{analysis.opts}{\code{CircadianAnalysisOptions} — alpha, p.adjust.method.}
+\item{analysis.opts}{\code{CircadianAnalysisOptions} -- alpha, p.adjust.method.}
 
 \item{method}{Detection method: \code{"DCP"} (1-harmonic cosinor F-test),
 \code{"JTK"}, \code{"RAIN"}, \code{"MH"} (multi-harmonic), or \code{"FMM"}
-(K-harmonic LRT motivated by the FMM Fourier expansion; default detector
+(K-harmonic F-test motivated by the FMM Fourier expansion; default detector
 for non-cosinor signals).}
 
 \item{K}{Integer. Number of harmonics for \code{method = "FMM"}
@@ -44,9 +44,9 @@ List with:
   \item{marginal_FDR}{Matrix [sample_sizes x nsims]}
   \item{marginal_TD}{Matrix [sample_sizes x nsims]}
   \item{marginal_FD}{Matrix [sample_sizes x nsims]}
-  \item{marginal_alpha}{Matrix [sample_sizes x nsims] — empirical type-I error}
-  \item{pvalues}{Array [sample_sizes x ngenes x nsims] — raw p-values}
-  \item{r_values_list}{List[[sample_size]][[sim]] — per-gene A/sigma}
+  \item{marginal_alpha}{Matrix [sample_sizes x nsims] -- empirical type-I error}
+  \item{pvalues}{Array [sample_sizes x ngenes x nsims] -- raw p-values}
+  \item{r_values_list}{List[[sample_size]][[sim]] -- per-gene A/sigma}
   \item{strat_power}{Array [sample_sizes x n_strata x nsims]}
   \item{strat_TD}{Array [sample_sizes x n_strata x nsims]}
   \item{strat_FD}{Array [sample_sizes x n_strata x nsims]}

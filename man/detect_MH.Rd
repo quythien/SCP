@@ -20,3 +20,11 @@ Numeric vector of p-values, length nrow(expr)
 Fits K harmonics where B = number of unique time points.
 Tests all harmonic terms jointly via an F-test against intercept-only null.
 }
+\note{
+Superseded by \code{\link{detect_FMM}}, which supports explicit K,
+  the LimoRhyde-style \code{limma::lmFit} + \code{limma::eBayes} backend
+  with cross-gene variance shrinkage, and a richer return value
+  (per-gene F, df1, df2, R2, p.adjust, discovery). Retained for
+  backwards compatibility; new code should call
+  \code{detect_FMM(expr, times, K = <K>, ebayes = TRUE/FALSE)} instead.
+}

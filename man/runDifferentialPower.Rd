@@ -44,7 +44,7 @@ runDifferentialPower(
 \value{
 List (class \code{SCPDiffResult}) from \code{runSimsDiff()}:
   \code{pval_DR}, \code{fdr_DR}, \code{pval_DP}, \code{fdr_DP},
-  \code{pval_DM}, \code{fdr_DM} — 3-D arrays \code{[ngenes x n_sizes x nsims]};
+  \code{pval_DM}, \code{fdr_DM} -- 3-D arrays \code{[ngenes x n_sizes x nsims]};
   plus \code{diff_type}, \code{effectsize}, \code{sample_sizes}, \code{nsims}.
   Pass to \code{plotDiffPower()} or \code{npower(..., endpoint="DR")}.
 }
