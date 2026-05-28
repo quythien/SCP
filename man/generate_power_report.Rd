@@ -15,5 +15,5 @@ generate_power_report(power_results, output_file = NULL)
 Report text or NULL if written to file
 }
 \description{
-Generate comprehensive power analysis report
+Build a printable power analysis report covering overall and stratified metrics.
 }

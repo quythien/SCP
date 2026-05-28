@@ -1,4 +1,4 @@
-#' Summarize DCP pair results into a comprehensive table
+#' Summarize DCP pair results into a wide gene-level table
 #'
 #' Loads saved DCP_Analyze RDS files and computes a wide-format table with:
 #'   - Sample and gene counts per tissue
@@ -43,7 +43,7 @@ summarizeDCPPairs <- function(rds_paths,
     if (!file.exists(rds_path)) {
       message(sprintf("[%s] RDS not found, skipping.", tag)); return(NULL)
     }
-    cat(sprintf("[%s] Processing...\n", tag))
+    message(sprintf("[%s] Processing...", tag))
     res <- readRDS(rds_path)
 
     rhy   <- res$rhythm
@@ -268,7 +268,7 @@ summarizeDCPPairs <- function(rds_paths,
 
   if (!is.null(out_csv)) {
     write.csv(result, out_csv, row.names = FALSE)
-    cat(sprintf("Saved: %s\n", out_csv))
+    message(sprintf("Saved: %s", out_csv))
   }
   invisible(result)
 }

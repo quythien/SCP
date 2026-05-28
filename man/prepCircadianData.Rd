@@ -54,8 +54,8 @@ and \code{runBootstrapDesignGrid()}.
 
 The pipeline always expects:
   \itemize{
-    \item \code{data}  — numeric matrix, \strong{genes × samples}, log2-scale
-    \item \code{times} — numeric vector, hours in [0, 24), same length as \code{ncol(data)}
+    \item \code{data}, numeric matrix, \strong{genes × samples}, log2-scale
+    \item \code{times}, numeric vector, hours in [0, 24), same length as \code{ncol(data)}
   }
 
 This function handles the three most common raw formats:
@@ -69,6 +69,7 @@ This function handles the three most common raw formats:
 }
 }
 \examples{
+\dontrun{
 # From raw counts matrix
 prep <- prepCircadianData(counts_matrix, times = tod_vector, input_type = "counts")
 bio  <- estCircadianParam(prep$data, prep$times)
@@ -84,4 +85,5 @@ prep <- prepCircadianData(
 
 # Baboon raw CPM (load gives a data.frame)
 prep <- prepCircadianData(baboon_df, times = tod_vector, input_type = "cpm")
+}
 }

@@ -10,7 +10,7 @@
 #' (mesor, amplitude, phase, noise). It does NOT create subject-level variability
 #' within a single simulation; that is captured by sigma_g (residual SD from the
 #' cosinor fit), which represents pooled between-subject spread conditional on TOD.
-#' sigma_g does NOT model subject-specific random effects in M, A, or phi — the
+#' sigma_g does NOT model subject-specific random effects in M, A, or phi, the
 #' model is a population-average cosinor, which is a defensible first-order
 #' baseline for cross-sectional post-mortem studies.
 #'
@@ -222,7 +222,7 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 #'   Must set \code{B_values} to a single value for passive designs.
 #' @param analysis.opts \code{CircadianAnalysisOptions}.
 #' @param bio_diff.opts \code{CircadianBioOptions} from \code{estCircadianParam()}. Required
-#'   even in \code{mode = "single"} — differential proportion fields are read from here.
+#'   even in \code{mode = "single"}, differential proportion fields are read from here.
 #' @param pilot_data_2 Optional group-2 pilot matrix for \code{mode = "differential"}.
 #' @param pilot_times_2 Optional group-2 pilot times.
 #' @param mode \code{"single"} or \code{"differential"}.
@@ -323,12 +323,15 @@ runBootstrapDesignGrid <- function(pilot_data,
   }
 
   if (verbose) {
-    cat(sprintf("\n=== Bootstrap Design Grid ===\n"))
-    cat(sprintf("  Pilot data: %d genes x %d samples\n", nrow(pilot_data), ncol(pilot_data)))
-    cat(sprintf("  N_values:   %s\n", paste(N_values, collapse = ", ")))
-    cat(sprintf("  B_values:   %s\n", paste(B_values, collapse = ", ")))
-    cat(sprintf("  nboot:      %d\n", nboot))
-    cat(sprintf("  nsims_inner:%d\n", nsims_inner))
+    message(paste(
+      "",
+      "=== Bootstrap Design Grid ===",
+      sprintf("  Pilot data: %d genes x %d samples", nrow(pilot_data), ncol(pilot_data)),
+      sprintf("  N_values:   %s", paste(N_values, collapse = ", ")),
+      sprintf("  B_values:   %s", paste(B_values, collapse = ", ")),
+      sprintf("  nboot:      %d", nboot),
+      sprintf("  nsims_inner:%d", nsims_inner),
+      sep = "\n"))
   }
 
   # Step 1: Fit cosinor to pilot data
@@ -546,7 +549,7 @@ summaryBootstrapDesignGrid <- function(result,
   df <- do.call(rbind, rows)
 
   if (verbose) {
-    cat(sprintf("\nBootstrap Design Grid Summary — %s test at FDR %.0f%%\n",
+    cat(sprintf("\nBootstrap Design Grid Summary (%s test at FDR %.0f%%)\n",
                 test_type, 100 * fdr_thr))
     cat(sprintf("  nboot = %d, design = %s\n\n", result$nboot, result$design))
     print(df, row.names = FALSE)

@@ -16,8 +16,8 @@ power_assessment(pvals, ground_truth, effect_sizes, alpha = 0.05)
 \item{alpha}{Significance threshold}
 }
 \value{
-List with comprehensive power metrics
+List of overall, stratified, and targeted power metrics.
 }
 \description{
-Comprehensive power assessment with stratified and marginal metrics
+Power assessment combining marginal, stratified, and targeted metrics.
 }
