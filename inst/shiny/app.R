@@ -202,7 +202,7 @@ ui <- fluidPage(
                                "0.10" = 0.10, "0.05" = 0.05, "0.01" = 0.01,
                                "0.001" = 0.001, "0.0001" = 0.0001),
                   selected = 0.05),
-      helpText(em("Sanity-check lens on the bundled pilot's 'Prop. rhythmic' line; not used in the simulation (the sim uses the Target FDR slider below).")),
+      helpText(em("Defines which pilot genes count as 'rhythmic' for the simulation. The top-300 by p-value among genes passing this threshold drive the empirical effect-size distribution.")),
       hr(),
       h4("Pilot"),
       radioButtons(
@@ -254,13 +254,17 @@ ui <- fluidPage(
       ),
       hr(),
       h4("Sample size grid"),
-      sliderInput("n_min", "Minimum N", min = 10, max = 100,
-                  value = 20, step = 10),
-      sliderInput("n_max", "Maximum N", min = 40, max = 400,
-                  value = 120, step = 20),
-      sliderInput("n_step", "Step", min = 10, max = 60,
-                  value = 20, step = 10),
+      sliderInput("n_min", "Minimum N", min = 4, max = 100,
+                  value = 20, step = 2),
+      sliderInput("n_max", "Maximum N", min = 20, max = 500,
+                  value = 120, step = 10),
+      sliderInput("n_step", "Step", min = 2, max = 60,
+                  value = 20, step = 2),
       helpText(em("Grid: N_min, N_min + step, ..., up to N_max.")),
+      selectInput("nsims", "Simulations per N",
+                  choices  = c("25 (fast)" = 25, "50" = 50, "100 (paper)" = 100,
+                               "200" = 200),
+                  selected = 100),
       hr(),
       h4("Targets"),
       sliderInput("target_power", "Target power",
@@ -631,6 +635,26 @@ server <- function(input, output, session) {
       }
       if (!is.null(p$ngenes)) p$ngenes <- as.integer(.as_num(p$ngenes))
       if (!is.null(p$period)) p$period <- .as_num(p$period)
+      # Apply the user's pilot rhythmicity threshold to redefine the rhythmic
+      # gene set (top-K = 300 by p-value among genes passing the threshold).
+      # This means the sidebar threshold actually drives which genes' empirical
+      # (amplitude, sigma, phase) populate the simulation distribution.
+      if (!is.null(p$raw) && !is.null(p$raw$A) && !is.null(p$raw$pvalue)) {
+        thresh <- as.numeric(input$rhy_thresh)
+        stat <- if (isTRUE(input$rhy_stat == "q"))
+          p.adjust(p$raw$pvalue, "BH") else p$raw$pvalue
+        good <- !is.na(p$raw$A) & p$raw$A > 0 &
+                is.finite(p$raw$sigma) & p$raw$sigma > 0
+        cand <- which(good & !is.na(stat) & stat < thresh)
+        if (length(cand) == 0L) cand <- which(good)   # fallback
+        K <- min(300L, length(cand))
+        topK <- cand[order(p$raw$pvalue[cand])][seq_len(K)]
+        p$amplitude      <- p$raw$A[topK]
+        p$sigma_rhythmic <- p$raw$sigma[topK]
+        p$phase          <- p$raw$phi[topK]
+        p$lOD            <- log(p$raw$sigma[good])
+        p$lBaselineExpr  <- p$raw$M
+      }
       # Harmonize amplitude / phase to match sigma_rhythmic length when the
       # pilot was built with mismatched gene-sets (caught in some agent-
       # ingested GTEx pilots: amplitude length 1122 vs sigma 300).
@@ -685,7 +709,7 @@ server <- function(input, output, session) {
       if (length(cts_vec) == 0L) cts_vec <- seq(0, 22, by = 4)
       design <- SCP::CircadianDesignOptions(
         sample_sizes = n_grid,
-        nsims        = 100L,
+        nsims        = as.integer(as.numeric(input$nsims)),
         design       = design_type,
         cts          = cts_vec
       )
@@ -724,7 +748,13 @@ server <- function(input, output, session) {
     tryCatch({
       tfd <- as.numeric(input$target_fdr)
       tpw <- as.numeric(input$target_power)
-      .shiny_power_curve_3panel(res, fdr = tfd, target_power = tpw)
+      SCP::plotSingleCohortPower(res,
+                                  fdr            = tfd,
+                                  fdr_thresholds = tfd,
+                                  panel_fdr      = tfd,
+                                  vline_fdr      = tfd,
+                                  vline_power    = tpw,
+                                  r_max          = NULL)
       },
       error = function(e) {
         plot.new()
