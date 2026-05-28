@@ -161,3 +161,6 @@ examples/publication/archive/
 # Whitelist the Shiny app
 !inst/shiny/
 !inst/shiny/**
+
+# Build artifact — produced by scripts/build_shinyapps_demo.R
+inst/shiny_demo/

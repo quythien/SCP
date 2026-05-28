@@ -9,6 +9,34 @@ suppressPackageStartupMessages({
 
 `%||%` <- function(a, b) if (!is.null(a) && length(a) > 0L) a else b
 
+# When SCP_SHINY_DEMO=1, the app reads pilots from ./pilots/ next to app.R
+# instead of system.file("extdata","pilots", package = "SCP"). This is the
+# slim 86-pilot subset bundled for the shinyapps.io free-tier demo.
+.demo_mode    <- nzchar(Sys.getenv("SCP_SHINY_DEMO"))
+.demo_pilots  <- file.path(getwd(), "pilots")
+
+.read_manifest <- function() {
+  if (.demo_mode && file.exists(file.path(.demo_pilots, "manifest.csv"))) {
+    m <- utils::read.csv(file.path(.demo_pilots, "manifest.csv"),
+                         stringsAsFactors = FALSE)
+    m[m$status == "ingested", , drop = FALSE]
+  } else {
+    SCP::scp_pilots(status = "ingested")
+  }
+}
+
+.read_pilot <- function(species, dataset, tissue, condition) {
+  if (.demo_mode) {
+    m <- .read_manifest()
+    hit <- m$species == species & m$dataset == dataset &
+           m$tissue == tissue & m$condition == condition
+    if (!any(hit)) stop("Pilot not in demo bundle.")
+    readRDS(file.path(.demo_pilots, m$file[which(hit)[1]]))
+  } else {
+    SCP::scp_load_pilot(species, dataset, tissue, condition)
+  }
+}
+
 # ---------------------------------------------------------------------------
 # UI
 # ---------------------------------------------------------------------------
@@ -21,10 +49,30 @@ ui <- fluidPage(
     sidebarPanel(
       width = 4,
       h4("Pilot"),
-      selectInput("species",   "Species",   choices = NULL),
-      selectInput("dataset",   "Dataset",   choices = NULL),
-      selectInput("tissue",    "Tissue",    choices = NULL),
-      selectInput("condition", "Condition", choices = NULL),
+      radioButtons(
+        "pilot_source", NULL,
+        choices  = c("Use a bundled pilot" = "bundled",
+                     "Upload my own pilot" = "upload"),
+        selected = "bundled", inline = TRUE
+      ),
+      conditionalPanel(
+        condition = "input.pilot_source == 'bundled'",
+        selectInput("species",   "Species",   choices = NULL),
+        selectInput("dataset",   "Dataset",   choices = NULL),
+        selectInput("tissue",    "Tissue",    choices = NULL),
+        selectInput("condition", "Condition", choices = NULL)
+      ),
+      conditionalPanel(
+        condition = "input.pilot_source == 'upload'",
+        fileInput("upload_expr", "Expression CSV (genes x samples)",
+                  accept = c(".csv", ".tsv", ".txt")),
+        fileInput("upload_tod", "Times-of-day CSV (one value per sample, in hours)",
+                  accept = c(".csv", ".tsv", ".txt")),
+        helpText(em("The expression file's first column should be the gene name. ",
+                    "The TOD file should be a single column of numeric hours, length = number of samples. ",
+                    "Once both files load, the pilot is fit on the fly (5-15 sec).")),
+        verbatimTextOutput("upload_status")
+      ),
       hr(),
       h4("Detector"),
       radioButtons(
@@ -81,10 +129,11 @@ ui <- fluidPage(
 server <- function(input, output, session) {
 
   manifest <- reactive({
-    m <- tryCatch(SCP::scp_pilots(status = "ingested"),
-                  error = function(e) NULL)
+    m <- tryCatch(.read_manifest(), error = function(e) NULL)
     if (is.null(m) || nrow(m) == 0L) return(NULL)
-    m[m$sample_type %in% "in_vivo" | is.na(m$sample_type), , drop = FALSE]
+    if ("sample_type" %in% names(m))
+      m <- m[m$sample_type %in% "in_vivo" | is.na(m$sample_type), , drop = FALSE]
+    m
   })
 
   observe({
@@ -119,11 +168,60 @@ server <- function(input, output, session) {
     updateSelectInput(session, "condition", choices = cd, selected = cd[1])
   })
 
+  # ---- custom pilot upload ------------------------------------------------
+  uploaded_pilot_state <- reactiveValues(pilot = NULL, msg = "Awaiting upload.")
+
+  observe({
+    req(input$pilot_source == "upload")
+    req(input$upload_expr, input$upload_tod)
+    expr_file <- input$upload_expr$datapath
+    tod_file  <- input$upload_tod$datapath
+
+    res <- tryCatch({
+      sep <- if (grepl("\\.tsv$|\\.txt$", input$upload_expr$name, TRUE)) "\t" else ","
+      ex  <- utils::read.csv(expr_file, row.names = 1, check.names = FALSE,
+                             stringsAsFactors = FALSE, sep = sep)
+      tod <- as.numeric(utils::read.csv(tod_file, header = FALSE,
+                                         stringsAsFactors = FALSE)[, 1])
+      if (ncol(ex) != length(tod))
+        stop(sprintf("Sample-count mismatch: expression has %d columns, TOD has %d values.",
+                     ncol(ex), length(tod)))
+      mat <- as.matrix(ex)
+      mode(mat) <- "numeric"
+      withProgress(message = "Fitting pilot...", value = 0.3, {
+        bio <- SCP::estimate_circadian_params(mat, tod, verbose = FALSE)
+        incProgress(1)
+        bio$times <- tod
+        bio
+      })
+    }, error = function(e) e)
+
+    if (inherits(res, "error")) {
+      uploaded_pilot_state$pilot <- NULL
+      uploaded_pilot_state$msg <- sprintf("Upload error: %s", conditionMessage(res))
+    } else {
+      uploaded_pilot_state$pilot <- res
+      uploaded_pilot_state$msg <- sprintf(
+        "OK: %d genes x %d samples fit. Median r-tilde = %.2f.",
+        ncol(res$raw$pvalue %||% rep(NA, res$ngenes)),
+        length(input$upload_tod$datapath),
+        stats::median((res$amplitude %||% NA) / (res$sigma_rhythmic %||% NA),
+                      na.rm = TRUE)
+      )
+    }
+  })
+
+  uploaded_pilot <- reactive({ uploaded_pilot_state$pilot })
+
+  output$upload_status <- renderText({ uploaded_pilot_state$msg })
+
+  # ---- bundled pilot ------------------------------------------------------
   pilot <- reactive({
+    if (isTRUE(input$pilot_source == "upload")) return(uploaded_pilot())
     req(input$species, input$dataset, input$tissue, input$condition)
     tryCatch(
-      SCP::scp_load_pilot(input$species, input$dataset,
-                          input$tissue, input$condition),
+      .read_pilot(input$species, input$dataset,
+                  input$tissue, input$condition),
       error = function(e) NULL
     )
   })
