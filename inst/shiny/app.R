@@ -588,11 +588,15 @@ server <- function(input, output, session) {
   output$power_curve <- renderPlot({
     res <- sim_result()
     req(res)
-    tryCatch(
-      # r_max = NULL -> adaptive (panels B/C show only populated r-tilde strata).
-      # R API users get the static default (r_max = 5) for reproducibility.
-      SCP::plotSingleCohortPower(res, fdr = as.numeric(input$target_fdr),
-                                  r_max = NULL),
+    tryCatch({
+      tfd <- as.numeric(input$target_fdr)
+      # Pass the chosen FDR as both alias and panel_fdr; pass it as the ONLY
+      # threshold in panel A so the user sees a single labeled curve at their target.
+      SCP::plotSingleCohortPower(res, fdr = tfd,
+                                  panel_fdr = tfd, vline_fdr = tfd,
+                                  fdr_thresholds = tfd,
+                                  r_max = NULL)
+      },
       error = function(e) {
         plot.new()
         title(main = sprintf("Plot error: %s", conditionMessage(e)))
