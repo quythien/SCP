@@ -424,7 +424,8 @@ server <- function(input, output, session) {
 
   output$tod_plot <- renderPlot({
     p <- pilot()
-    par(mar = c(3.4, 3.4, 1.8, 0.6), mgp = c(2.2, 0.6, 0))
+    # balanced left/right margins so the title visually centers on the plot
+    par(mar = c(3.4, 3.4, 2.2, 3.0), mgp = c(2.2, 0.6, 0))
     if (is.null(p)) {
       plot(0, 0, type = "n", axes = FALSE, xlab = "", ylab = "")
       text(0, 0, "No pilot loaded", cex = 1.2, col = "grey40")
@@ -471,10 +472,10 @@ server <- function(input, output, session) {
          xlab = "Time of day (h, mod 24)", ylab = "Samples", main = "",
          xaxt = "n")
     axis(side = 1, at = seq(0, 24, by = 4))
-    title(main = sprintf("n = %s samples, %d distinct phase%s",
+    title(main = sprintf("n = %s samples, %d distinct time point%s",
                          ifelse(is.na(n_samp), "?", as.character(n_samp)),
                          n_u, if (n_u == 1L) "" else "s"),
-          cex.main = 1.0, line = 0.6, adj = 0.5)
+          cex.main = 1.0, line = 0.6, adj = 0.5, outer = FALSE)
   })
 
   sim_result <- eventReactive(input$run, {
