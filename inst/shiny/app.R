@@ -600,7 +600,10 @@ server <- function(input, output, session) {
     res <- sim_result()
     req(res)
     tryCatch(
-      SCP::plotSingleCohortPower(res, fdr = input$target_fdr),
+      # r_max = NULL -> adaptive (panels B/C show only populated r-tilde strata).
+      # R API users get the static default (r_max = 5) for reproducibility.
+      SCP::plotSingleCohortPower(res, fdr = as.numeric(input$target_fdr),
+                                  r_max = NULL),
       error = function(e) {
         plot.new()
         title(main = sprintf("Plot error: %s", conditionMessage(e)))
