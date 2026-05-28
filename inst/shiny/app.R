@@ -375,10 +375,10 @@ server <- function(input, output, session) {
     h <- hist(phases, breaks = seq(0, 24, by = 1), plot = FALSE)
     plot(h, col = "#a6cee3", border = "#1f78b4", xlim = c(0, 24),
          xlab = "Time of day (h, mod 24)", ylab = "Samples", main = "")
-    title(main = sprintf("n = %s samples, %d distinct phase%s (%s)",
+    title(main = sprintf("n = %s samples, %d distinct phase%s",
                          ifelse(is.na(n_samp), "?", as.character(n_samp)),
-                         n_u, if (n_u == 1L) "" else "s", design_label),
-          cex.main = 1.0, line = 0.6)
+                         n_u, if (n_u == 1L) "" else "s"),
+          cex.main = 1.0, line = 0.6, adj = 0.5)
     rug(unique(round(phases, 2)), side = 3, col = "#e31a1c", lwd = 2)
   })
 
