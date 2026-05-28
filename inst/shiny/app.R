@@ -128,7 +128,8 @@ ui <- fluidPage(
       fluidRow(
         column(7,
           h4("Pilot summary"),
-          verbatimTextOutput("pilot_summary")
+          verbatimTextOutput("pilot_summary"),
+          uiOutput("pilot_links")
         ),
         column(5,
           h4("Sampling design (TOD distribution)"),
@@ -175,27 +176,44 @@ server <- function(input, output, session) {
                       selected = if ("human" %in% sp) "human" else sp[1])
   })
 
+  # Use tissue_canonical for the user-facing tissue dropdown when available
+  .tissue_display <- function(m) {
+    if ("tissue_canonical" %in% names(m)) m$tissue_canonical else m$tissue
+  }
+
+  # Cascade: species -> design -> tissue (canonical) -> dataset -> condition
   observeEvent(input$species, {
     m <- manifest()
     req(m, input$species)
-    ds <- sort(unique(m$dataset[m$species == input$species]))
-    updateSelectInput(session, "dataset", choices = ds, selected = ds[1])
+    designs <- sort(unique(m$design[m$species == input$species]))
+    updateSelectInput(session, "design_filter", choices = designs,
+                      selected = if ("active" %in% designs) "active" else designs[1])
   })
 
-  observeEvent(list(input$species, input$dataset), {
+  observeEvent(list(input$species, input$design_filter), {
     m <- manifest()
-    req(m, input$species, input$dataset)
-    ts <- sort(unique(m$tissue[m$species == input$species &
-                               m$dataset == input$dataset]))
+    req(m, input$species, input$design_filter)
+    sub <- m[m$species == input$species & m$design == input$design_filter, , drop = FALSE]
+    ts <- sort(unique(.tissue_display(sub)))
     updateSelectInput(session, "tissue", choices = ts, selected = ts[1])
   })
 
-  observeEvent(list(input$species, input$dataset, input$tissue), {
+  observeEvent(list(input$species, input$design_filter, input$tissue), {
     m <- manifest()
-    req(m, input$species, input$dataset, input$tissue)
-    cd <- sort(unique(m$condition[m$species == input$species &
-                                  m$dataset == input$dataset &
-                                  m$tissue  == input$tissue]))
+    req(m, input$species, input$design_filter, input$tissue)
+    sub <- m[m$species == input$species & m$design == input$design_filter, , drop = FALSE]
+    sub <- sub[.tissue_display(sub) == input$tissue, , drop = FALSE]
+    ds <- sort(unique(sub$dataset))
+    updateSelectInput(session, "dataset", choices = ds, selected = ds[1])
+  })
+
+  observeEvent(list(input$species, input$design_filter, input$tissue, input$dataset), {
+    m <- manifest()
+    req(m, input$species, input$design_filter, input$tissue, input$dataset)
+    sub <- m[m$species == input$species & m$design == input$design_filter &
+             m$dataset == input$dataset, , drop = FALSE]
+    sub <- sub[.tissue_display(sub) == input$tissue, , drop = FALSE]
+    cd <- sort(unique(sub$condition))
     updateSelectInput(session, "condition", choices = cd, selected = cd[1])
   })
 
@@ -246,19 +264,58 @@ server <- function(input, output, session) {
 
   output$upload_status <- renderText({ uploaded_pilot_state$msg })
 
+  # Resolve canonical tissue back to the actual manifest tissue value
+  .resolve_actual_tissue <- function() {
+    m <- manifest()
+    sub <- m[m$species  == input$species  &
+             m$design   == input$design_filter &
+             m$dataset  == input$dataset  &
+             m$condition == input$condition, , drop = FALSE]
+    sub <- sub[.tissue_display(sub) == input$tissue, , drop = FALSE]
+    if (nrow(sub) > 0L) sub$tissue[1] else input$tissue
+  }
+
   # ---- bundled pilot ------------------------------------------------------
   pilot <- reactive({
     if (isTRUE(input$pilot_source == "upload")) return(uploaded_pilot())
     req(input$species, input$dataset, input$tissue, input$condition)
+    actual_tissue <- .resolve_actual_tissue()
     p <- tryCatch(
       .read_pilot(input$species, input$dataset,
-                  input$tissue, input$condition),
+                  actual_tissue, input$condition),
       error = function(e) NULL
     )
-    # ensure the class is present so runSimsSingleCohort accepts it
     if (!is.null(p) && !inherits(p, "CircadianBioOptions"))
       class(p) <- c("CircadianBioOptions", class(p))
     p
+  })
+
+  output$pilot_links <- renderUI({
+    req(input$species, input$dataset, input$tissue, input$condition)
+    m <- manifest()
+    sub <- m[m$species == input$species & m$design == input$design_filter &
+             m$dataset == input$dataset & m$condition == input$condition, , drop = FALSE]
+    sub <- sub[.tissue_display(sub) == input$tissue, , drop = FALSE]
+    if (nrow(sub) == 0L) return(NULL)
+    acc <- sub$accession[1] %||% ""
+    cit <- sub$citation[1] %||% ""
+    url <- ""
+    if (grepl("^GSE[0-9]+", acc)) {
+      gse <- regmatches(acc, regexpr("GSE[0-9]+", acc))
+      url <- sprintf("https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=%s", gse)
+    } else if (grepl("GTEx", acc, ignore.case = TRUE)) {
+      url <- "https://gtexportal.org/"
+    } else if (grepl("CMC|Seney", acc, ignore.case = TRUE)) {
+      url <- "https://www.synapse.org/#!Synapse:syn2759792"
+    } else if (grepl("E-MTAB", acc)) {
+      url <- sprintf("https://www.ebi.ac.uk/biostudies/arrayexpress/studies/%s", acc)
+    }
+    HTML(sprintf(
+      "<div style='margin-top:6px; font-size:0.9em;'><b>Accession:</b> %s%s<br/><b>Citation:</b> <i>%s</i></div>",
+      acc,
+      if (nzchar(url)) sprintf(" &nbsp;<a href='%s' target='_blank'>open page &rarr;</a>", url) else "",
+      cit
+    ))
   })
 
   output$pilot_summary <- renderText({
@@ -375,12 +432,13 @@ server <- function(input, output, session) {
     n_u <- length(unique(round(phases, 1)))
     h <- hist(phases, breaks = seq(0, 24, by = 1), plot = FALSE)
     plot(h, col = "#a6cee3", border = "#1f78b4", xlim = c(0, 24),
-         xlab = "Time of day (h, mod 24)", ylab = "Samples", main = "")
+         xlab = "Time of day (h, mod 24)", ylab = "Samples", main = "",
+         xaxt = "n")
+    axis(side = 1, at = seq(0, 24, by = 4))
     title(main = sprintf("n = %s samples, %d distinct phase%s",
                          ifelse(is.na(n_samp), "?", as.character(n_samp)),
                          n_u, if (n_u == 1L) "" else "s"),
           cex.main = 1.0, line = 0.6, adj = 0.5)
-    rug(unique(round(phases, 2)), side = 3, col = "#e31a1c", lwd = 2)
   })
 
   sim_result <- eventReactive(input$run, {
