@@ -144,7 +144,26 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL) {
   if (!file.exists(path)) {
     stop(sprintf("Manifest lists '%s' but the file is missing on disk.", m$file[1]))
   }
-  readRDS(path)
+  p <- readRDS(path)
+  # Harmonize amplitude / phase to match sigma_rhythmic length when the pilot
+  # was built with mismatched per-slot gene sets (caught in several agent-
+  # ingested GTEx pilots: amplitude held the full-threshold set while
+  # sigma_rhythmic was top-K). The simulation pipeline pairs amplitude[g] with
+  # sigma_rhythmic[g] per gene, so length mismatch produces NaN p-values.
+  if (!is.null(p$amplitude) && !is.null(p$sigma_rhythmic)) {
+    n_sigma <- length(p$sigma_rhythmic)
+    if (n_sigma > 0L) {
+      if (length(p$amplitude) != n_sigma)
+        p$amplitude <- if (length(p$amplitude) > n_sigma)
+          p$amplitude[seq_len(n_sigma)] else rep_len(p$amplitude, n_sigma)
+      if (!is.null(p$phase) && length(p$phase) != n_sigma)
+        p$phase <- if (length(p$phase) > n_sigma)
+          p$phase[seq_len(n_sigma)] else rep_len(p$phase, n_sigma)
+    }
+  }
+  if (!inherits(p, "CircadianBioOptions"))
+    class(p) <- c("CircadianBioOptions", class(p))
+  p
 }
 
 
