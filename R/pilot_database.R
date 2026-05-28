@@ -187,12 +187,56 @@ scp_pilot_search <- function(query = NULL,
   m <- scp_pilots(species = species, status = "ingested")
   if (!is.null(sample_type)) m <- m[m$sample_type %in% sample_type, , drop = FALSE]
   if (!is.null(tissue_pattern)) {
-    m <- m[grepl(tissue_pattern, m$tissue, ignore.case = TRUE), , drop = FALSE]
+    hit <- grepl(tissue_pattern, m$tissue, ignore.case = TRUE)
+    if ("tissue_canonical" %in% names(m))
+      hit <- hit | grepl(tissue_pattern, m$tissue_canonical, ignore.case = TRUE)
+    m <- m[hit, , drop = FALSE]
   }
   if (!is.null(query)) {
     hay <- paste(m$dataset, m$tissue, m$accession, m$citation, sep = " | ")
+    if ("tissue_canonical" %in% names(m))
+      hay <- paste(hay, m$tissue_canonical, sep = " | ")
     m <- m[grepl(query, hay, ignore.case = TRUE), , drop = FALSE]
   }
   rownames(m) <- NULL
   m
+}
+
+
+# -------------------------------------------------------------------------
+# scp_pilot_tod
+# -------------------------------------------------------------------------
+
+#' Get the time-of-day (TOD) vector for a bundled SCP pilot
+#'
+#' Returns the per-sample sampling times for a pilot, in hours mod 24.
+#' Prefers the raw \code{p$times} field when the pilot rds preserved it;
+#' otherwise parses the manifest \code{tod_phases} column and returns the
+#' unique sampling phases.
+#'
+#' @param species,dataset,tissue,condition manifest tuple identifying the
+#'   pilot.
+#' @return Numeric vector of times in hours (mod 24); \code{NULL} if no
+#'   TOD information is available for this pilot.
+#' @examples
+#' \dontrun{
+#'   tod <- scp_pilot_tod("baboon", "GSE98965", "SCN", "All")
+#'   hist(tod, breaks = seq(0, 24, by = 1))
+#' }
+#' @export
+scp_pilot_tod <- function(species, dataset, tissue, condition = NULL) {
+  p <- tryCatch(scp_load_pilot(species, dataset, tissue, condition),
+                error = function(e) NULL)
+  if (!is.null(p)) {
+    tt <- p$times %||% p$raw$times %||% NULL
+    if (!is.null(tt) && length(tt) > 0L) return(as.numeric(tt))
+  }
+  m <- scp_pilots(species = species, status = "ingested")
+  hit <- m$dataset == dataset & m$tissue == tissue
+  if (!is.null(condition)) hit <- hit & m$condition == condition
+  m <- m[hit, , drop = FALSE]
+  if (nrow(m) == 0L || !("tod_phases" %in% names(m))) return(NULL)
+  ph <- m$tod_phases[1]
+  if (is.na(ph) || !nzchar(ph) || grepl("phases\\)$", ph)) return(NULL)
+  suppressWarnings(as.numeric(strsplit(ph, ",")[[1]]))
 }
