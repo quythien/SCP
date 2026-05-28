@@ -32,8 +32,7 @@
                                prop_DR = 0, prop_DP = 0)
   des   <- CircadianDesignOptions(sample_sizes = n, nsims = nsims,
                                   design = "active")
-  aopt  <- CircadianAnalysisOptions(alpha = alpha,
-                                    test_types = c("DR", "DP"))
+  aopt  <- CircadianAnalysisOptions(alpha = alpha)
 
   out   <- runSimsDiff(bio, des, aopt)
 
@@ -115,7 +114,7 @@
                                  phase_diff = c(shift, shift))
     des   <- CircadianDesignOptions(sample_sizes = n_test, nsims = nsims,
                                     design = "active")
-    aopt  <- CircadianAnalysisOptions(alpha = alpha, test_types = "DP")
+    aopt  <- CircadianAnalysisOptions(alpha = alpha)
 
     sim   <- runSimsDiff(bio, des, aopt)
     powers[i] <- mean(sim$pval_DP[, 1, ] < alpha, na.rm = TRUE)
@@ -174,7 +173,7 @@
                                 phase_diff = c(phase_shift, phase_shift))
     des  <- CircadianDesignOptions(sample_sizes = n_test, nsims = nsims,
                                    design = "active")
-    aopt <- CircadianAnalysisOptions(alpha = alpha, test_types = "DP")
+    aopt <- CircadianAnalysisOptions(alpha = alpha)
     sim  <- runSimsDiff(bio, des, aopt)
     mean(sim$pval_DP[, 1, ] < alpha, na.rm = TRUE)
   }
@@ -187,7 +186,7 @@
                                 prop_DR = 0.5, prop_DP = 0)
     des  <- CircadianDesignOptions(sample_sizes = n_test, nsims = nsims,
                                    design = "active")
-    aopt <- CircadianAnalysisOptions(alpha = alpha, test_types = "DR")
+    aopt <- CircadianAnalysisOptions(alpha = alpha)
     sim  <- runSimsDiff(bio, des, aopt)
     mean(sim$pval_DR[, 1, ] < alpha, na.rm = TRUE)
   }
