@@ -103,7 +103,7 @@ We sweep total N = 24, 36, 48, 72, 96 (i.e. m = 4, 6, 8, 12, 16 per timepoint).
 ```{r design-options}
 design <- CircadianDesignOptions(
   sample_sizes = c(24, 36, 48, 72, 96),
-  nsims        = 50L,
+  nsims        = 50,
   design       = "active",
   cts          = seq(0, 20, by = 4)
 )
@@ -123,7 +123,7 @@ res_K1 <- runSimsSingleCohort(
   design.opts   = design,
   analysis.opts = analysis,
   method        = "DCP",
-  K             = 1L,
+  K             = 1,
   verbose       = FALSE
 )
 
@@ -161,7 +161,7 @@ res_K2 <- runSimsSingleCohort(
   design.opts   = design,
   analysis.opts = analysis,
   method        = "DCP",
-  K             = 2L,
+  K             = 2,
   verbose       = FALSE
 )
 
