@@ -264,7 +264,7 @@ plotWithSE <- function(results_file, output_file, test_name = "DR",
         outer = TRUE, font = 2, cex = 1.2)
   dev.off()
 
-  cat(sprintf("Figure saved: %s\n", output_file))
+  message(sprintf("Figure saved: %s", output_file))
 
   # Print summary
   cat(sprintf("\n%s MARGINAL POWER (mean +/- SE across %d simulations)\n", test_name, nsims))
@@ -537,7 +537,7 @@ plotPhaseShiftWithSE <- function(results_file, output_file,
         outer = TRUE, font = 2, cex = 1.2)
 
   dev.off()
-  cat(sprintf("Phase shift figure saved: %s\n", output_file))
+  message(sprintf("Phase shift figure saved: %s", output_file))
 
   invisible(list(marginal_mean = marginal_mean, marginal_se = marginal_se))
 }

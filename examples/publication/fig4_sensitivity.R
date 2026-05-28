@@ -14,9 +14,9 @@
 #'   α_g ~ vonMises(0, κ),  κ = 1/sd_rad²,  sd_rad = sd_hours · 2π/24
 #'   x-axis: N (total samples), one curve per σ_α (hours) value
 #'   σ̂_α from sd of empirical α̂_g marked as a curve label
-#'   Expected: curves overlap (rotation-invariance of cosinor / FMM (K=2))
+#'   Expected: curves overlap (rotation-invariance of cosinor / two-harmonic K=2)
 #'
-#' Detector: detect_FMM (K=2 harmonic LRT) only.  DCP behavior is closed-form
+#' Detector: detect_cosinor(K=2) (two-harmonic LRT) only. K=1 behavior is closed-form
 #' (NCP = (r·c(ω))²·N/2) and would just shift the whole sweep down with
 #' attenuation c(ω)² — uninformative. The interesting question is whether
 #' the K-harmonic LRT preserves power under non-cosinor truth.

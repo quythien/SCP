@@ -912,15 +912,12 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
                length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)
 
   detect_fn <- switch(method,
-    DCP   = function(e, t) detect_DCP(e, t, period = period),
+    DCP   = function(e, t) detect_cosinor(e, t, K = 1L, period = period),
     JTK   = function(e, t) detect_JTK(e, t, period = period),
     RAIN  = function(e, t) detect_RAIN(e, t, period = period),
     MH    = function(e, t) detect_MH(e, t, period = period),
-    # FMM (K-harmonic F-test) — exact F(2K, n-2K-1), no calibration needed.
-    # Returns full data frame; we extract the raw p-value vector here for
-    # consistency with the other detectors.
-    FMM   = function(e, t) detect_FMM(e, t, period = period, K = K,
-                                       adjust.method = NULL)$p.value
+    # K-harmonic F-test — exact F(2K, n-2K-1), no calibration needed.
+    FMM   = function(e, t) detect_cosinor(e, t, K = K, period = period)
   )
 
   # CircaPower n80 estimate from median r
@@ -1614,7 +1611,7 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
   GLOBAL_SEED <- bio.opts$sim.seed %||% 2025L
 
   detect_fn <- list(
-    DCP  = function(expr, cts) detect_DCP(expr,  cts, period = period),
+    DCP  = function(expr, cts) detect_cosinor(expr, cts, K = 1L, period = period),
     JTK  = function(expr, cts) detect_JTK(expr,  cts, period = period),
     RAIN = function(expr, cts) detect_RAIN(expr, cts, period = period),
     MH   = function(expr, cts) detect_MH(expr,   cts, period = period)
@@ -1886,8 +1883,8 @@ print.SCPDiffResult <- function(x, ...) {
   cat(sprintf("  DCmethod:   %s\n", x$sim_params$DCmethod %||% "DCP"))
   cat(sprintf("  test_types: %s\n",
               paste(intersect(c("DR","DP","DM"),
-                              names(x)[startsWith(names(x), "fdr_")],
-                              deparse.level = 0),
+                              sub("^fdr_", "",
+                                  names(x)[startsWith(names(x), "fdr_")])),
                     collapse = ", ")))
   cat(sprintf("  N range:    %d – %d\n",
               min(x$sample_sizes), max(x$sample_sizes)))

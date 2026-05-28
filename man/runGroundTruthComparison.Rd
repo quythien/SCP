@@ -18,10 +18,10 @@ runGroundTruthComparison(
 )
 }
 \arguments{
-\item{true_bio.opts}{CircadianBioOptions — the known ground truth biology
+\item{true_bio.opts}{CircadianBioOptions, the known ground truth biology
 (includes both base params AND differential params)}
 
-\item{design.opts}{CircadianDesignOptions — N values and design to evaluate}
+\item{design.opts}{CircadianDesignOptions, N values and design to evaluate}
 
 \item{analysis.opts}{CircadianAnalysisOptions}
 

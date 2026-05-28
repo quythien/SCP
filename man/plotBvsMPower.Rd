@@ -3,7 +3,7 @@
 \name{plotBvsMPower}
 \alias{plotBvsMPower}
 \title{=======================================================================
-plot_bvsm.R — B vs m Trade-off Plot (Figure 3)
+plot_bvsm.R, B vs m Trade-off Plot (Figure 3)
 =======================================================================}
 \usage{
 plotBvsMPower(

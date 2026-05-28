@@ -243,8 +243,8 @@ compareDesignApproaches <- function(two_stage_result,
 
 #' Plot design approach comparison
 #'
-#' Panel A: Power curves — two-stage (solid blue) vs bootstrap (dashed orange + CI band).
-#' Panel B: Recommended N at target_power — bar chart comparing methods.
+#' Panel A: Power curves, two-stage (solid blue) vs bootstrap (dashed orange + CI band).
+#' Panel B: Recommended N at target_power, bar chart comparing methods.
 #'
 #' @param comparison    Output from compareDesignApproaches()
 #' @param test_type     Test type label
@@ -491,9 +491,9 @@ generatePilotData <- function(true_bio.opts, n_pilot, pilot_times, seed = 42) {
 #' well two-stage (point estimate) and bootstrap (distribution) approaches
 #' recover the true power curve.
 #'
-#' @param true_bio.opts  CircadianBioOptions — the known ground truth biology
+#' @param true_bio.opts  CircadianBioOptions, the known ground truth biology
 #'                       (includes both base params AND differential params)
-#' @param design.opts    CircadianDesignOptions — N values and design to evaluate
+#' @param design.opts    CircadianDesignOptions, N values and design to evaluate
 #' @param analysis.opts  CircadianAnalysisOptions
 #' @param n_pilot        Number of synthetic pilot subjects
 #' @param pilot_times    TOD distribution for pilot time sampling
@@ -590,7 +590,7 @@ runGroundTruthComparison <- function(true_bio.opts,
 
   for (b in seq_len(nboot)) {
     if (verbose && b %% max(1L, floor(nboot / 5L)) == 0L) {
-      cat(sprintf("  Bootstrap draw %d / %d\n", b, nboot))
+      message(sprintf("  Bootstrap draw %d / %d", b, nboot))
     }
 
     bio_b <- .buildBioFromBoot(boot_list[[b]], true_bio.opts)
@@ -625,8 +625,8 @@ runGroundTruthComparison <- function(true_bio.opts,
   )
 
   if (verbose) {
-    cat(sprintf("\nCoverage (CI contains truth): %.0f%% of N values\n",
-                100 * coverage))
+    message(sprintf("\nCoverage (CI contains truth): %.0f%% of N values",
+                    100 * coverage))
   }
 
   list(
@@ -650,8 +650,8 @@ runGroundTruthComparison <- function(true_bio.opts,
 
 #' Plot ground truth calibration results
 #'
-#' Panel A: Power vs N — oracle (black), two-stage (blue), bootstrap mean ± CI (orange).
-#' Panel B: Per-N calibration — point estimates vs CI bars vs true value.
+#' Panel A: Power vs N, oracle (black), two-stage (blue), bootstrap mean ± CI (orange).
+#' Panel B: Per-N calibration, point estimates vs CI bars vs true value.
 #'
 #' @param gt_result    Output from runGroundTruthComparison()
 #' @param test_type    Test type label (uses gt_result$test_type if NULL)

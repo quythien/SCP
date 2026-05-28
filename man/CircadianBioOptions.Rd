@@ -49,18 +49,18 @@ proportion is used.}
 \item{lBaselineExpr}{Log baseline expression. Can be a numeric scalar (constant
 for all genes), a numeric vector (resampled to \code{ngenes}), a function
 \code{f(n)} returning \code{n} values, or a character string naming a built-in
-pilot dataset stored in \code{data/}. No default — must be supplied.}
+pilot dataset stored in \code{data/}. No default, must be supplied.}
 
 \item{lBaselineExpr2}{As \code{lBaselineExpr} but for group 2 (differential
 analyses only). \code{NULL} uses the same distribution as group 1.}
 
 \item{lOD}{Log over-dispersion (noise). Same forms accepted as
-\code{lBaselineExpr}. No default — must be supplied.}
+\code{lBaselineExpr}. No default, must be supplied.}
 
 \item{lOD2}{As \code{lOD} but for group 2. \code{NULL} shares group 1 values.}
 
 \item{amplitude}{Amplitude distribution for rhythmic genes. Same forms
-accepted as \code{lBaselineExpr}. No default — must be supplied.}
+accepted as \code{lBaselineExpr}. No default, must be supplied.}
 
 \item{amplitude2}{As \code{amplitude} but for group 2.}
 

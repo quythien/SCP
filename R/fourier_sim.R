@@ -62,13 +62,16 @@ runFourierDeviationPower <- function(bio.opts,
   fdr_threshold <- min(analysis.opts$fdr_thresholds)
 
   if (verbose) {
-    cat(sprintf("\n=== Fourier Deviation Power Analysis ===\n"))
-    cat(sprintf("  test_type:    %s\n", test_type))
-    cat(sprintf("  sample_sizes: %s\n", paste(sample_sizes, collapse = ", ")))
-    cat(sprintf("  harmonic combinations: %d\n", n_harm))
-    cat(sprintf("  nsims:        %d\n", nsims))
-    cat(sprintf("  FDR threshold: %.0f%%\n", 100 * fdr_threshold))
-    cat(sprintf("  mc.cores:     %d\n", mc.cores))
+    message(paste(
+      "",
+      "=== Fourier Deviation Power Analysis ===",
+      sprintf("  test_type:    %s", test_type),
+      sprintf("  sample_sizes: %s", paste(sample_sizes, collapse = ", ")),
+      sprintf("  harmonic combinations: %d", n_harm),
+      sprintf("  nsims:        %d", nsims),
+      sprintf("  FDR threshold: %.0f%%", 100 * fdr_threshold),
+      sprintf("  mc.cores:     %d", mc.cores),
+      sep = "\n"))
   }
 
   # Flatten (h_idx, s_idx) into a single combo grid for parallel dispatch

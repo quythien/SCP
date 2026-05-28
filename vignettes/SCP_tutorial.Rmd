@@ -1,0 +1,211 @@
+---
+title: "Getting started with SCP: a runnable tutorial"
+author: "SCP team"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Getting started with SCP: a runnable tutorial}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  fig.width  = 6,
+  fig.height = 4,
+  dpi = 72
+)
+set.seed(2026)
+```
+
+# What this tutorial covers
+
+`SCP` (Semiparametric Circadian Power) sizes circadian transcriptomics studies
+from a small pilot dataset. The workflow has four steps:
+
+1. **Load a pilot dataset** (a gene-by-sample expression matrix with
+   time-of-day per sample), or load one of the bundled pilots that already
+   ships with the package.
+2. **Estimate empirical parameter distributions** (amplitude A, noise sigma,
+   acrophase phi, proportion of rhythmic genes) with `estCircadianParam()`.
+3. **Simulate cohorts** at candidate sample sizes and run a detector with
+   `runSimsSingleCohort()` (cosinor F-test, K = 1 single harmonic or K = 2
+   two-harmonic).
+4. **Plot the power curve** and read off the smallest N that hits the target
+   power at the target FDR.
+
+This vignette walks the whole loop in under a minute using a bundled
+GTEx Liver pilot. It is intentionally small (NSIMS = 50, a coarse N grid)
+so it builds quickly. For publication-grade numbers use NSIMS >= 200 and
+a finer N grid.
+
+# 1. Install and load
+
+```{r install, eval = FALSE}
+# Install from a local tarball or a checkout of the repo:
+# install.packages("SCP_0.4.0.tar.gz", repos = NULL, type = "source")
+```
+
+```{r load-pkg}
+library(SCP)
+```
+
+# 2. Load a bundled pilot
+
+The repository bundles several pilots in `data/`. We use a single-cohort GTEx
+Liver pilot stored as a pre-built `CircadianBioOptions` object, so we can skip
+straight to simulation. (If you have your own raw expression matrix, you would
+run `estCircadianParam()` first; see Section 7.)
+
+```{r load-pilot}
+# Vignettes build with the source tree as the working dir, so data/ is one up.
+candidates <- c(
+  file.path("..", "data", "gtex_Liver_single_pilot.rds"),
+  system.file("extdata", "gtex_Liver_single_pilot.rds", package = "SCP")
+)
+pilot_path <- candidates[file.exists(candidates)][1]
+stopifnot(!is.na(pilot_path))
+
+bio <- readRDS(pilot_path)
+class(bio)
+cat(sprintf("Pilot: %d genes, %.1f%% rhythmic, period = %g h\n",
+            bio$ngenes, 100 * bio$prop_rhythmic, bio$period))
+```
+
+# 3. Inspect the effect-size distribution
+
+The key effect size is the per-gene signal-to-noise ratio
+`r_tilde = A / sigma`. Power scales monotonically with `r_tilde`.
+
+```{r r-dist}
+r_tilde <- bio$amplitude / bio$sigma_rhythmic
+summary(r_tilde)
+
+hist(r_tilde, breaks = 40, col = "steelblue", border = "white",
+     main = "Pilot r = A / sigma  (GTEx Liver)",
+     xlab = expression(tilde(r) == A / sigma))
+abline(v = median(r_tilde), col = "red", lwd = 2)
+```
+
+# 4. Run a single-cohort power simulation
+
+Goal: how many liver samples does an *active* design with q4h x 24h sampling
+need to reach 80% power at FDR 5%? An active q4h x 24h design has 6 distinct
+time points (B = 6); the total N is 6 x m where m is replicates per timepoint.
+
+We sweep total N = 24, 36, 48, 72, 96 (i.e. m = 4, 6, 8, 12, 16 per timepoint).
+
+```{r design-options}
+design <- CircadianDesignOptions(
+  sample_sizes = c(24, 36, 48, 72, 96),
+  nsims        = 50L,
+  design       = "active",
+  cts          = seq(0, 20, by = 4)
+)
+
+analysis <- CircadianAnalysisOptions(
+  alpha           = 0.05,
+  p.adjust.method = "BH",
+  fdr_thresholds  = c(0.05, 0.10, 0.20)
+)
+```
+
+Run the simulation with the single-harmonic cosinor detector (K = 1):
+
+```{r run-k1, message = FALSE}
+res_K1 <- runSimsSingleCohort(
+  bio.opts      = bio,
+  design.opts   = design,
+  analysis.opts = analysis,
+  method        = "DCP",
+  K             = 1L,
+  verbose       = FALSE
+)
+
+marg_power_K1 <- rowMeans(res_K1$marginal_power, na.rm = TRUE)
+data.frame(N = design$sample_sizes, power_K1 = round(marg_power_K1, 3))
+```
+
+# 5. Plot the power curve
+
+`plotSingleCohortPower()` returns a three-panel summary: marginal power vs N
+at several FDR levels (panel A), stratified power by `r_tilde` band
+(panel B), and the discovery count (panel C).
+
+```{r plot-power, fig.width = 11, fig.height = 4.2}
+plotSingleCohortPower(
+  res_K1,
+  title       = "GTEx Liver pilot, active q4h x 24h",
+  reference_n = 48
+)
+```
+
+Read the smallest N where the panel-A curve crosses 0.80 at the FDR you care
+about; that is your recommended sample size.
+
+# 6. Compare K = 1 vs K = 2
+
+The two-harmonic detector (K = 2) adds a 12 h harmonic and is more sensitive
+when the underlying waveform has a non-sinusoidal shape (asymmetric peaks,
+twin peaks). It costs two extra degrees of freedom, so it loses power on
+clean sinusoidal genes.
+
+```{r run-k2, message = FALSE}
+res_K2 <- runSimsSingleCohort(
+  bio.opts      = bio,
+  design.opts   = design,
+  analysis.opts = analysis,
+  method        = "DCP",
+  K             = 2L,
+  verbose       = FALSE
+)
+
+marg_power_K2 <- rowMeans(res_K2$marginal_power, na.rm = TRUE)
+data.frame(
+  N        = design$sample_sizes,
+  power_K1 = round(marg_power_K1, 3),
+  power_K2 = round(marg_power_K2, 3)
+)
+```
+
+On a sinusoidal pilot the two curves should be close, with K = 1 a touch
+higher. If your pilot has clear 12 h components, K = 2 wins.
+
+# 7. Starting from a raw expression matrix
+
+If you have your own pilot (a gene-by-sample log-CPM matrix `expr` and a
+vector of collection times `times` in hours), build the `bio` object yourself:
+
+```{r raw-pilot, eval = FALSE}
+bio <- estCircadianParam(
+  data    = expr,
+  times   = times,
+  period  = 24,
+  verbose = TRUE
+)
+```
+
+Then feed `bio` into the same `runSimsSingleCohort()` call as above.
+
+# Where to go next
+
+- **Differential rhythmicity** between two conditions:
+  `estCircadianParamTwoGroup()` + `runDifferentialPower()` +
+  `plotDiffPower()`.
+- **Bootstrap uncertainty** on the recommended N when the pilot is small:
+  `CircadianBootstrapOptions()` + `runBootstrapDesignGrid()`.
+- **B vs m design trade-off** at fixed total N: `plotBvsMPower()` and the
+  `recommendDesign()` wrapper.
+- **Approximate CircaPower n80** (closed-form sanity check):
+  `circaPowerApproxN80(bio, alpha = 0.05)`.
+
+# Session info
+
+```{r session}
+sessionInfo()
+```

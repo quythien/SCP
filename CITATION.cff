@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: >-
+  If you use SCP in your research, please cite the manuscript and the software.
+title: "SCP: Simulation-Based Circadian Power Analysis"
+version: 0.4.0
+date-released: 2026-05-28
+authors:
+  - family-names: Pham
+    given-names: Thien Quy
+    email: quythien14@gmail.com
+    affiliation: University of Pittsburgh
+license: MIT
+repository-code: "https://github.com/quythien/SCP"
+url: "https://github.com/quythien/SCP"
+type: software
+keywords:
+  - circadian
+  - power analysis
+  - transcriptomics
+  - simulation
+  - cosinor
+  - rhythmicity
+preferred-citation:
+  type: article
+  title: "Simulation-based circadian power analysis: a two-detector framework for rhythmicity and differential circadian gene detection"
+  authors:
+    - family-names: Pham
+      given-names: Thien Quy
+      affiliation: University of Pittsburgh
+  year: 2026
+  journal: "Bioinformatics"

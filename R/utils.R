@@ -178,14 +178,14 @@ targeted_power = function(pvals, ground_truth, effect_sizes,
 
 #' Power Assessment Summary
 #'
-#' @description Comprehensive power assessment with stratified and marginal metrics
+#' @description Power assessment combining marginal, stratified, and targeted metrics.
 #'
 #' @param pvals P-values
 #' @param ground_truth True positive indicator
 #' @param effect_sizes Effect sizes
 #' @param alpha Significance threshold
 #'
-#' @return List with comprehensive power metrics
+#' @return List of overall, stratified, and targeted power metrics.
 power_assessment = function(pvals, ground_truth, effect_sizes, alpha = 0.05) {
 
   qvals = p.adjust(pvals, method = "BH")
@@ -372,7 +372,7 @@ compare_methods = function(power_results_list) {
 
 #' Generate Power Report
 #'
-#' @description Generate comprehensive power analysis report
+#' @description Build a printable power analysis report covering overall and stratified metrics.
 #'
 #' @param power_results Results from power analysis
 #' @param output_file Output file path (NULL = return as text)
@@ -595,8 +595,8 @@ get_r_stratum = function(r_estimate, r_strata = c(0, 0.25, 0.5, 0.75, 1, 1.25, 1
 #'
 #' The pipeline always expects:
 #'   \itemize{
-#'     \item \code{data}  — numeric matrix, \strong{genes × samples}, log2-scale
-#'     \item \code{times} — numeric vector, hours in [0, 24), same length as \code{ncol(data)}
+#'     \item \code{data}, numeric matrix, \strong{genes × samples}, log2-scale
+#'     \item \code{times}, numeric vector, hours in [0, 24), same length as \code{ncol(data)}
 #'   }
 #'
 #' This function handles the three most common raw formats:
@@ -633,6 +633,7 @@ get_r_stratum = function(r_estimate, r_strata = c(0, 0.25, 0.5, 0.75, 1, 1.25, 1
 #'   \item{input_type}{The \code{input_type} used}
 #'
 #' @examples
+#' \dontrun{
 #' # From raw counts matrix
 #' prep <- prepCircadianData(counts_matrix, times = tod_vector, input_type = "counts")
 #' bio  <- estCircadianParam(prep$data, prep$times)
@@ -648,6 +649,7 @@ get_r_stratum = function(r_estimate, r_strata = c(0, 0.25, 0.5, 0.75, 1, 1.25, 1
 #'
 #' # Baboon raw CPM (load gives a data.frame)
 #' prep <- prepCircadianData(baboon_df, times = tod_vector, input_type = "cpm")
+#' }
 #' @export
 prepCircadianData <- function(expr,
                               times,
@@ -732,11 +734,11 @@ prepCircadianData <- function(expr,
 
   # --- 6. Summary ---
   if (verbose) {
-    cat(sprintf(
-      "prepCircadianData: %d genes x %d samples | input=%s | norm=%s\n",
+    message(sprintf(
+      "prepCircadianData: %d genes x %d samples | input=%s | norm=%s",
       nrow(mat), ncol(mat), input_type, norm_desc))
-    cat(sprintf("  TOD range: [%.1f, %.1f] h  |  unique times: %d\n",
-                min(times_vec), max(times_vec), length(unique(times_vec))))
+    message(sprintf("  TOD range: [%.1f, %.1f] h  |  unique times: %d",
+                    min(times_vec), max(times_vec), length(unique(times_vec))))
   }
 
   list(
