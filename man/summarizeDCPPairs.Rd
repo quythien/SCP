@@ -2,7 +2,7 @@
 % Please edit documentation in R/summarize_dcp_pairs.R
 \name{summarizeDCPPairs}
 \alias{summarizeDCPPairs}
-\title{Summarize DCP pair results into a comprehensive table}
+\title{Summarize DCP pair results into a wide gene-level table}
 \usage{
 summarizeDCPPairs(
   rds_paths,

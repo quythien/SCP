@@ -28,7 +28,7 @@ Only used when \code{omega = 1} (cosinor path). Ignored when \code{omega < 1}.}
 
 \item{omega}{FMM waveform shape parameter in \eqn{(0, 1]} (default \code{1.0}).
 \code{omega = 1} uses the traditional cosinor generator (with \code{alpha2}/\code{alpha3}).
-\code{omega < 1} uses \code{\link{simCircadianFMM}} — a non-sinusoidal Möbius waveform.
+\code{omega < 1} uses \code{\link{simCircadianFMM}}, a non-sinusoidal Möbius waveform.
 The two paths are mutually exclusive: FMM takes precedence when \code{omega < 1}.}
 
 \item{beta}{FMM orientation parameter (default \eqn{\pi}). Controls the phase of

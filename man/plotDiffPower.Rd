@@ -26,7 +26,7 @@ plotDiffPower(
 \arguments{
 \item{res_list}{Named list of length 2, each element output of runSimsDiff().}
 
-\item{comp_labels}{Character(2) — display labels for the two comparisons.}
+\item{comp_labels}{Character(2), display labels for the two comparisons.}
 
 \item{endpoints}{Which endpoints to include (default c("DR","DP","DM")).}
 

@@ -837,10 +837,9 @@ estCircadianParamFMM <- function(data, times, period = 24,
   # Tests H0: a_1=b_1=...=a_K=b_K=0 via exact F(2K, n-2K-1). screen_K is
   # exposed as a parameter so the pre-screen K can match the analysis K.
   screen_K <- as.integer(screen_K)
-  if (verbose) cat(sprintf("Step 1b: detect_FMM pre-screen (K=%d) on %d genes...\n",
+  if (verbose) cat(sprintf("Step 1b: K-harmonic pre-screen (K=%d) on %d genes...\n",
                             screen_K, nrow(data)))
-  fmm_pvals <- detect_FMM(data, times, period = period, K = screen_K,
-                           adjust.method = NULL)$p.value
+  fmm_pvals <- detect_cosinor(data, times, K = screen_K, period = period)
 
   rhy <- which(!is.na(fmm_pvals) & fmm_pvals < min_rhythm_pval &
                !is.na(pdf_$sigma) & pdf_$sigma > 0)

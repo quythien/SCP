@@ -33,7 +33,7 @@ Must set \code{B_values} to a single value for passive designs.}
 \item{analysis.opts}{\code{CircadianAnalysisOptions}.}
 
 \item{bio_diff.opts}{\code{CircadianBioOptions} from \code{estCircadianParam()}. Required
-even in \code{mode = "single"} — differential proportion fields are read from here.}
+even in \code{mode = "single"}, differential proportion fields are read from here.}
 
 \item{pilot_data_2}{Optional group-2 pilot matrix for \code{mode = "differential"}.}
 

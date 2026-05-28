@@ -15,8 +15,8 @@
 #' DESIGN:
 #'   - Active sampling grid: B in {4, 6, 8, 12, 24}; total N in {48, 96}.
 #'   - For each (B, N), simulate FMM-truth data on baboon KIM pilot,
-#'     run detect_DCP for cosinor phase estimate and detect_FMM(K=2) for
-#'     K-harmonic phase estimate.
+#'     run detect_cosinor(K=1) for single-harmonic phase estimate and
+#'     detect_cosinor(K=2) for two-harmonic phase estimate.
 #'   - Extract \hat\phi_g per rhythmic gene, compute circular MSE against
 #'     FMM truth \alpha_g (converted from radians to hours).
 #'   - Aggregate over NSIMS replicate simulations.

@@ -171,7 +171,7 @@ if (!exists("add_se_bars")) {
 #' which restores the original 3-column-per-row layout.
 #'
 #' @param res_list    Named list of length 2, each element output of runSimsDiff().
-#' @param comp_labels Character(2) — display labels for the two comparisons.
+#' @param comp_labels Character(2), display labels for the two comparisons.
 #' @param endpoints   Which endpoints to include (default c("DR","DP","DM")).
 #' @param fdr_thresholds FDR levels for panel A (default c(0.01,0.05,0.10,0.20)).
 #' @param display_sizes  Sample sizes to show in all panels (NULL = all).

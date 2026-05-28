@@ -2,18 +2,23 @@ Package: SCP
 Type: Package
 Title: Simulation-Based Circadian Power Analysis with K-harmonic LRT
 Version: 0.4.0
-Date: 2026-05-09
+Date: 2026-05-28
 Authors@R: person("Thien Quy", "Pham",
     role = c("aut", "cre"),
     email = "quythien14@gmail.com",
     comment = c(affiliation = "University of Pittsburgh"))
 Maintainer: Thien Quy Pham <quythien14@gmail.com>
-Description: Provides simulation-based power analysis for circadian rhythm
-    studies using a semiparametric framework. Empirical parameter distributions
-    are estimated from pilot gene-expression data, and power is evaluated for
-    rhythmicity detection and differential-rhythm tests (DR, DP, DM) across a
-    range of study designs. Includes the DCP pipeline, FMM waveform robustness
-    assessment, and a bootstrap design-grid optimizer.
+URL: https://github.com/quythien/SCP
+BugReports: https://github.com/quythien/SCP/issues
+Description: Simulation-based power analysis for circadian transcriptomics
+    studies. Empirical parameter distributions (amplitude, noise, phase,
+    proportion rhythmic) are estimated from a pilot dataset, and power is
+    evaluated for rhythmicity detection and differential-rhythm tests
+    (DR, DP, DM) across a range of study designs. Detection uses a unified
+    cosinor F-test detect_cosinor(K), with K = 1 for the single-harmonic
+    case and K = 2 for the two-harmonic (ultradian) extension. A bootstrap
+    design-grid optimiser is included for design comparison under pilot
+    uncertainty.
 Depends: R (>= 4.4.0)
 Imports:
     ggplot2,
@@ -30,6 +35,7 @@ LinkingTo:
     Rcpp,
     RcppArmadillo
 Suggests:
+    shiny,
     FMM,
     MetaCycle,
     rain,
@@ -46,3 +52,4 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: false
 RoxygenNote: 7.3.2
+VignetteBuilder: knitr

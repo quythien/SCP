@@ -5,7 +5,7 @@
 # 1x2 layout:
 #   A: K=2 marginal power vs N, multiple FDR-target lines
 #      (alpha in {0.01, 0.05, 0.10, 0.20})
-#   B: K=2 power stratified by combined effect size r_eff = sqrt(r1^2 + r2^2),
+#   B: K=2 power stratified by first-harmonic effect size r1 = A1 / sigma,
 #      one curve per N in DISPLAY_N, at BH-FDR <= 0.05
 #
 # Pilot: GTEx Liver via pilot_2h_GTExLiver.rds
@@ -51,7 +51,7 @@ cat(sprintf("Pilot: n=%d, top_k=%d, A2/A1 med=%.2f, prop_rhythmic=%.3f\n",
             psi$diagnostics$A2_over_A1_med,
             psi$prop_rhythmic))
 
-# ---- Simulator: one K=2 replicate -> p-values + r_eff per gene ----
+# ---- Simulator: one K=2 replicate -> p-values + r1 per gene ----
 sim_one_rep <- function(N, seed, psi, ngenes = NGENES_SIM,
                          paired_sigma = TRUE) {
   set.seed(seed)
@@ -153,7 +153,7 @@ for (j in seq_along(DISPLAY_N_A)) {
   pwr_se[j, ]   <- apply(per_rep, 1, sd, na.rm = TRUE) / sqrt(length(sims))
 }
 
-# ---- Compute Panel B: r_eff stratified power at alpha=0.05 (primary source) ----
+# ---- Compute Panel B: r1-stratified power at alpha=0.05 (primary source) ----
 pwr_strat_mean <- matrix(NA_real_, nrow = n_N_B, ncol = length(R_LABELS))
 pwr_strat_se   <- matrix(NA_real_, nrow = n_N_B, ncol = length(R_LABELS))
 
