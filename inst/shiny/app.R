@@ -358,11 +358,14 @@ server <- function(input, output, session) {
       n_cores <- max(1L, min(4L, parallel::detectCores(logical = FALSE) - 1L))
       incProgress(0.2, detail = "Setting up design")
 
+      # Cap genes at 2000 for snappier Shiny response (pilots can be up to 20k genes)
+      if (!is.null(p$ngenes) && is.finite(p$ngenes) && p$ngenes > 2000L) {
+        p$ngenes <- 2000L
+      }
       design <- SCP::CircadianDesignOptions(
         sample_sizes = c(20, 40, 60, 80),
         nsims        = 10L,
-        cts          = seq(0, 22, by = 4),
-        ngenes       = 2000L
+        cts          = seq(0, 22, by = 4)
       )
       analysis <- SCP::CircadianAnalysisOptions(
         alpha    = input$target_fdr,
