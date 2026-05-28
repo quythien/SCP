@@ -547,13 +547,11 @@ server <- function(input, output, session) {
 
       incProgress(0.3, detail = "Simulating")
       K_val <- as.integer(input$K)
-      method_arg <- if (K_val == 1L) "DCP" else "cosinor"
       res <- tryCatch(
         SCP::runSimsSingleCohort(
           bio.opts      = p,
           design.opts   = design,
           analysis.opts = analysis,
-          method        = method_arg,
           K             = K_val,
           mc.cores      = n_cores
         ),

@@ -122,8 +122,7 @@ res_K1 <- runSimsSingleCohort(
   bio.opts      = bio,
   design.opts   = design,
   analysis.opts = analysis,
-  method        = "DCP",
-  K             = 1,
+  K             = 1,            # single-harmonic cosinor (default)
   verbose       = FALSE
 )
 
@@ -174,8 +173,7 @@ res_K2 <- runSimsSingleCohort(
   bio.opts      = bio,
   design.opts   = design,
   analysis.opts = analysis,
-  method        = "cosinor",   # K >= 2 uses the K-harmonic dispatcher
-  K             = 2,
+  K             = 2,            # two-harmonic cosinor (12 h + 24 h)
   verbose       = FALSE
 )
 
