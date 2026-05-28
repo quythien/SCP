@@ -1197,7 +1197,7 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
 # =====================================================================
 # CircaPower grid initialisation helper
 # =====================================================================
-#' Estimate n for 80% power using CircaPower at median pilot r
+#' Estimate n for 80 percent power using CircaPower at median pilot r
 #'
 #' @param bio.opts \code{CircadianBioOptions} with amplitude and sigma_rhythmic.
 #' @param alpha    Significance level (default 0.05).

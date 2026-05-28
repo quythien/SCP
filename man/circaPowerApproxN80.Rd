@@ -2,7 +2,7 @@
 % Please edit documentation in R/runner.R
 \name{circaPowerApproxN80}
 \alias{circaPowerApproxN80}
-\title{Estimate n for 80% power using CircaPower at median pilot r}
+\title{Estimate n for 80 percent power using CircaPower at median pilot r}
 \usage{
 circaPowerApproxN80(
   bio.opts,
@@ -24,5 +24,5 @@ circaPowerApproxN80(
 Single integer -- smallest n achieving target_power, or NA if not found.
 }
 \description{
-Estimate n for 80% power using CircaPower at median pilot r
+Estimate n for 80 percent power using CircaPower at median pilot r
 }
