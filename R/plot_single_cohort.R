@@ -257,7 +257,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   grid()
   legend("bottomright", thresh_labels,
          col = thresh_cols, lty = 1, pch = 19, lwd = 2,
-         cex = 0.95, bty = "o", box.col = "grey70", box.lwd = 0.5,
+         cex = 1.15, bty = "o", bg = "white", box.col = "grey70", box.lwd = 0.5,
          inset = 0.01, y.intersp = 0.85)
   if (!is.na(vline_n)) {
     abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.5)
@@ -290,7 +290,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   grid()
   legend("bottomright", paste0("n=", sample_sizes[disp_idx]),
          col = size_colors[disp_idx], lty = 1, lwd = 2,
-         cex = 0.95, bty = "o", box.col = "grey70", box.lwd = 0.5,
+         cex = 1.15, bty = "o", bg = "white", box.col = "grey70", box.lwd = 0.5,
          inset = 0.01, y.intersp = 0.85)
 
   # ---- Panel C: TD by r-stratum, n lines + overlaid gene distribution ----
@@ -323,7 +323,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
          c(paste0("n=", sample_sizes[disp_idx]), "# Target Discoveries"),
          col = c(size_colors[disp_idx], "grey60"), lty = c(rep(1, length(disp_idx)), 2),
          lwd = c(rep(2, length(disp_idx)), 1.5),
-         cex = 0.95, bty = "o", box.col = "grey70", box.lwd = 0.5,
+         cex = 1.15, bty = "o", bg = "white", box.col = "grey70", box.lwd = 0.5,
          inset = 0.01, y.intersp = 0.85)
   par(mgp = c(3.0, 0.6, 0))   # restore
 
