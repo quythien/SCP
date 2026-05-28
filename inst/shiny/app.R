@@ -288,6 +288,7 @@ server <- function(input, output, session) {
       paste0(
         "Pilot     : %s / %s / %s / %s\n",
         "Design    : %s\n",
+        "Samples (n) : %s\n",
         "Genes     : %s\n",
         "Prop. rhythmic (FDR %.0f%%) : %s\n",
         "Median r-tilde (A / sigma) : %s   IQR [%s, %s]"
@@ -299,6 +300,14 @@ server <- function(input, output, session) {
                            manifest()$tissue  == input$tissue   &
                            manifest()$condition == input$condition, , drop = FALSE]
         if (nrow(mrow) > 0L) mrow$design[1] else "unknown"
+      },
+      {
+        mrow <- manifest()[manifest()$species == input$species &
+                           manifest()$dataset == input$dataset &
+                           manifest()$tissue  == input$tissue   &
+                           manifest()$condition == input$condition, , drop = FALSE]
+        nn <- if (nrow(mrow) > 0L && "n" %in% names(mrow)) mrow$n[1] else NA_integer_
+        if (is.null(nn) || is.na(nn)) "NA" else format(nn, big.mark = ",")
       },
       {
         ng <- p$ngenes
