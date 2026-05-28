@@ -48,7 +48,7 @@ ui <- fluidPage(
     }
   "))),
   div(class = "center-titles",
-      titlePanel("SCP: Circadian Study Sizer"),
+      titlePanel("Power Evaluation and Study Design for Circadian Biomarker Detection"),
       p(em("Pilot-calibrated power analysis for circadian transcriptomics studies."),
         br(),
         "Pick a bundled pilot, set the target power and FDR, and read off the recommended sample size.")
