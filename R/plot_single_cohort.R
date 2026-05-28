@@ -39,7 +39,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                                  p.adjust.method = "BH",
                                  reference_n = NULL,
                                  display_sizes = NULL,
-                                 r_max = NULL,
+                                 r_max = 5,
                                  width = 15, height = 5.5) {
   # `fdr` is a single-value alias for panel_fdr + vline_fdr (back-compat)
   if (!is.null(fdr) && is.numeric(fdr) && length(fdr) == 1L) {
