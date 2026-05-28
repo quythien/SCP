@@ -42,9 +42,17 @@ suppressPackageStartupMessages({
 # ---------------------------------------------------------------------------
 
 ui <- fluidPage(
-  titlePanel("SCP: Circadian Study Sizer"),
-  p(em("Pilot-calibrated power analysis for circadian transcriptomics studies."),
-    "Pick a bundled pilot, set the target power and FDR, and read off the recommended sample size."),
+  tags$head(tags$style(HTML("
+    .center-titles h1, .center-titles h2, .center-titles h3, .center-titles h4, .center-titles p {
+      text-align: center;
+    }
+  "))),
+  div(class = "center-titles",
+      titlePanel("Power Evaluation and Study Design for Circadian Biomarker Detection"),
+      p(em("Pilot-calibrated power analysis for circadian transcriptomics studies."),
+        br(),
+        "Pick a bundled pilot, set the target power and FDR, and read off the recommended sample size.")
+  ),
   sidebarLayout(
     sidebarPanel(
       width = 4,
@@ -231,9 +239,14 @@ server <- function(input, output, session) {
     if (is.null(p)) return("Pick a (species, dataset, tissue, condition) above.")
     amp <- p$amplitude   %||% NA_real_
     sig <- p$sigma_rhythmic %||% NA_real_
-    r   <- if (length(amp) && length(sig) && length(amp) == length(sig))
-             amp / sig else NA_real_
-    r   <- r[is.finite(r) & r > 0]
+    # amp may be top-K only while sig is full G; align by truncating to shorter
+    n_min <- min(length(amp), length(sig))
+    if (n_min > 0L) {
+      r <- amp[seq_len(n_min)] / sig[seq_len(n_min)]
+    } else {
+      r <- NA_real_
+    }
+    r <- r[is.finite(r) & r > 0]
     sprintf(
       paste0(
         "Pilot     : %s / %s / %s / %s\n",
@@ -243,11 +256,25 @@ server <- function(input, output, session) {
         "Median r-tilde (A / sigma) : %s   IQR [%s, %s]"
       ),
       input$species, input$dataset, input$tissue, input$condition,
-      manifest()[manifest()$species == input$species &
-                 manifest()$dataset == input$dataset &
-                 manifest()$tissue  == input$tissue   &
-                 manifest()$condition == input$condition, "design"][1] %||% "unknown",
-      format(p$ngenes %||% NA_integer_, big.mark = ","),
+      {
+        mrow <- manifest()[manifest()$species == input$species &
+                           manifest()$dataset == input$dataset &
+                           manifest()$tissue  == input$tissue   &
+                           manifest()$condition == input$condition, , drop = FALSE]
+        if (nrow(mrow) > 0L) mrow$design[1] else "unknown"
+      },
+      {
+        # Prefer pilot$ngenes; fall back to manifest's ngenes column
+        ng <- p$ngenes
+        if (is.null(ng) || is.na(ng)) {
+          mrow <- manifest()[manifest()$species == input$species &
+                             manifest()$dataset == input$dataset &
+                             manifest()$tissue  == input$tissue   &
+                             manifest()$condition == input$condition, , drop = FALSE]
+          ng <- if (nrow(mrow) > 0L && "ngenes" %in% names(mrow)) mrow$ngenes[1] else NA_integer_
+        }
+        if (is.null(ng) || is.na(ng)) "NA" else format(ng, big.mark = ",")
+      },
       if (is.null(p$prop_rhythmic)) "NA" else sprintf("%.1f%%", 100 * p$prop_rhythmic),
       if (length(r) == 0L) "NA" else sprintf("%.2f", stats::median(r)),
       if (length(r) == 0L) "NA" else sprintf("%.2f", stats::quantile(r, 0.25)),
@@ -257,24 +284,27 @@ server <- function(input, output, session) {
 
   output$tod_plot <- renderPlot({
     p <- pilot()
+    par(mar = c(3.4, 3.4, 1.8, 0.6), mgp = c(2.2, 0.6, 0))
     if (is.null(p)) {
-      plot.new(); title(main = "No pilot selected")
-      return(invisible())
+      plot(0, 0, type = "n", axes = FALSE, xlab = "", ylab = "")
+      text(0, 0, "No pilot loaded", cex = 1.2, col = "grey40")
+      return()
     }
     times <- p$times %||% p$raw$times %||% numeric(0)
     if (length(times) == 0L) {
-      plot.new(); title(main = "TOD metadata not available for this pilot")
-      return(invisible())
+      plot(0, 0, type = "n", axes = FALSE, xlab = "", ylab = "")
+      text(0, 0, "TOD metadata not preserved\nin this pilot's rds",
+           cex = 1.1, col = "grey40")
+      return()
     }
     t_mod <- times %% 24
-    opar <- par(mar = c(3.2, 3.2, 1.6, 0.6), mgp = c(2, 0.6, 0))
-    on.exit(par(opar))
-    hist(t_mod, breaks = seq(0, 24, by = 1), col = "#a6cee3",
-         border = "#1f78b4", xlim = c(0, 24),
-         xlab = "Time of day (h, mod 24)", ylab = "Samples",
-         main = sprintf("n = %d samples, %d distinct phase%s",
-                        length(times), length(unique(round(t_mod, 1))),
-                        if (length(unique(round(t_mod, 1))) == 1L) "" else "s"))
+    n_u <- length(unique(round(t_mod, 1)))
+    h <- hist(t_mod, breaks = seq(0, 24, by = 1), plot = FALSE)
+    plot(h, col = "#a6cee3", border = "#1f78b4", xlim = c(0, 24),
+         xlab = "Time of day (h, mod 24)", ylab = "Samples", main = "")
+    title(main = sprintf("n = %d samples, %d distinct phase%s",
+                          length(times), n_u, if (n_u == 1L) "" else "s"),
+          cex.main = 1.05, line = 0.6)
     rug(unique(round(t_mod, 2)), side = 3, col = "#e31a1c", lwd = 2)
   })
 
@@ -292,7 +322,6 @@ server <- function(input, output, session) {
       )
       analysis <- SCP::CircadianAnalysisOptions(
         alpha    = input$target_fdr,
-        K        = as.integer(input$K),
         DCmethod = if (as.integer(input$K) == 1L) "DCP" else "FMM"
       )
 
