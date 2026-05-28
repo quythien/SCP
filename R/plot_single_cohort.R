@@ -250,6 +250,10 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
       cex.axis = 1.45, cex.lab = 1.60, cex.main = 1.50, font.main = 2)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
+  sample_legend_n <- length(disp_idx)
+  sample_legend_cols <- if (sample_legend_n > 24L) 3L else if (sample_legend_n > 12L) 2L else 1L
+  sample_legend_cex <- if (sample_legend_n > 24L) 0.72 else if (sample_legend_n > 12L) 0.85 else 1.05
+
   # ---- Panel A: marginal power vs n, multiple FDR lines ----
   ss_disp_a <- sample_sizes_a[disp_idx_a]
   matplot(ss_disp_a, 100 * marginal_mean[disp_idx_a, , drop = FALSE],
@@ -269,10 +273,12 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   }
   abline(h = 80, lty = 2, col = "grey50", lwd = 1.2)
   grid()
-  legend("topleft", title = "FDR threshold", legend = thresh_labels,
+  legend("topleft", title = "FDR", legend = thresh_labels,
          col = thresh_cols, lty = 1, pch = 19, lwd = 2,
-         cex = 1.30, bty = "o", bg = "white", box.col = "grey50", box.lwd = 0.8,
-         inset = c(0.02, 0.02), y.intersp = 1.0, title.adj = 0)
+         cex = 1.05, bty = "o", bg = "white", box.col = "grey50", box.lwd = 0.8,
+         text.col = "black", title.col = "black",
+         inset = c(0.02, 0.02), y.intersp = 1.0, title.adj = 0,
+         seg.len = 1.4, x.intersp = 0.7)
   if (!is.na(vline_n)) {
     abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.5)
     # Place "n=NNN" to the RIGHT of the dashed line, low in the plot (y=35).
@@ -304,8 +310,11 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   grid()
   legend("topleft", title = "Sample size", legend = paste0("n = ", sample_sizes[disp_idx]),
          col = size_colors[disp_idx], lty = 1, lwd = 2,
-         cex = 1.20, bty = "o", bg = "white", box.col = "grey50", box.lwd = 0.8,
-         inset = c(0.02, 0.02), y.intersp = 1.0, title.adj = 0)
+         cex = sample_legend_cex, bty = "o", bg = "white",
+         box.col = "grey50", box.lwd = 0.8,
+         text.col = "black", title.col = "black",
+         inset = c(0.02, 0.02), y.intersp = 0.95, title.adj = 0,
+         seg.len = 1.2, x.intersp = 0.6, ncol = sample_legend_cols)
 
   # ---- Panel C: TD by r-stratum, n lines + overlaid gene distribution ----
   y_max_TD      <- max(gene_counts_plt) * 1.15
@@ -337,8 +346,11 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
          legend = c(paste0("n = ", sample_sizes[disp_idx]), "Target gene count"),
          col = c(size_colors[disp_idx], "grey60"), lty = c(rep(1, length(disp_idx)), 2),
          lwd = c(rep(2, length(disp_idx)), 1.5),
-         cex = 1.20, bty = "o", bg = "white", box.col = "grey50", box.lwd = 0.8,
-         inset = c(0.02, 0.02), y.intersp = 1.0, title.adj = 0)
+         cex = sample_legend_cex, bty = "o", bg = "white",
+         box.col = "grey50", box.lwd = 0.8,
+         text.col = "black", title.col = "black",
+         inset = c(0.02, 0.02), y.intersp = 0.95, title.adj = 0,
+         seg.len = 1.2, x.intersp = 0.6, ncol = sample_legend_cols)
   par(mgp = c(3.0, 0.6, 0))   # restore
 
   if (nchar(title) > 0)
