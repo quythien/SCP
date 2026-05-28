@@ -305,22 +305,50 @@ server <- function(input, output, session) {
       text(0, 0, "No pilot loaded", cex = 1.2, col = "grey40")
       return()
     }
-    times <- p$times %||% p$raw$times %||% numeric(0)
-    if (length(times) == 0L) {
+    # Prefer raw times when preserved; otherwise reconstruct from manifest
+    times  <- p$times %||% p$raw$times %||% numeric(0)
+    phases <- numeric(0)
+    n_samp <- NA_integer_
+    design_label <- NA_character_
+
+    if (length(times) > 0L) {
+      phases <- times %% 24
+      n_samp <- length(times)
+      design_label <- "raw TOD"
+    } else if (input$pilot_source == "bundled") {
+      mrow <- manifest()[manifest()$species == input$species &
+                         manifest()$dataset == input$dataset &
+                         manifest()$tissue  == input$tissue   &
+                         manifest()$condition == input$condition, , drop = FALSE]
+      if (nrow(mrow) > 0L && "tod_phases" %in% names(mrow) &&
+          !is.na(mrow$tod_phases[1]) && nzchar(mrow$tod_phases[1]) &&
+          !grepl("phases\\)$", mrow$tod_phases[1])) {
+        ph <- suppressWarnings(as.numeric(strsplit(mrow$tod_phases[1], ",")[[1]]))
+        ph <- ph[is.finite(ph)]
+        if (length(ph) > 0) {
+          phases <- ph
+          n_samp <- mrow$n[1] %||% length(ph)
+          design_label <- "design summary"
+        }
+      }
+    }
+
+    if (length(phases) == 0L) {
       plot(0, 0, type = "n", axes = FALSE, xlab = "", ylab = "")
-      text(0, 0, "TOD metadata not preserved\nin this pilot's rds",
-           cex = 1.1, col = "grey40")
+      text(0, 0, "TOD metadata not available\n(no raw times, no manifest summary)",
+           cex = 1.05, col = "grey40")
       return()
     }
-    t_mod <- times %% 24
-    n_u <- length(unique(round(t_mod, 1)))
-    h <- hist(t_mod, breaks = seq(0, 24, by = 1), plot = FALSE)
+
+    n_u <- length(unique(round(phases, 1)))
+    h <- hist(phases, breaks = seq(0, 24, by = 1), plot = FALSE)
     plot(h, col = "#a6cee3", border = "#1f78b4", xlim = c(0, 24),
          xlab = "Time of day (h, mod 24)", ylab = "Samples", main = "")
-    title(main = sprintf("n = %d samples, %d distinct phase%s",
-                          length(times), n_u, if (n_u == 1L) "" else "s"),
-          cex.main = 1.05, line = 0.6)
-    rug(unique(round(t_mod, 2)), side = 3, col = "#e31a1c", lwd = 2)
+    title(main = sprintf("n = %s samples, %d distinct phase%s (%s)",
+                         ifelse(is.na(n_samp), "?", as.character(n_samp)),
+                         n_u, if (n_u == 1L) "" else "s", design_label),
+          cex.main = 1.0, line = 0.6)
+    rug(unique(round(phases, 2)), side = 3, col = "#e31a1c", lwd = 2)
   })
 
   sim_result <- eventReactive(input$run, {
@@ -332,8 +360,9 @@ server <- function(input, output, session) {
 
       design <- SCP::CircadianDesignOptions(
         sample_sizes = c(20, 40, 60, 80),
-        nsims        = 20L,
-        cts          = seq(0, 22, by = 4)
+        nsims        = 10L,
+        cts          = seq(0, 22, by = 4),
+        ngenes       = 2000L
       )
       analysis <- SCP::CircadianAnalysisOptions(
         alpha    = input$target_fdr,
