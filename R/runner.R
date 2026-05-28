@@ -911,13 +911,17 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
   has_joint <- !is.null(bio.opts$sigma_rhythmic) &&
                length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)
 
+  # method labels: "cosinor" (canonical, K from K argument) is the recommended
+  # public name; "DCP" forces single-harmonic; "Kharmonic" is an alias of
+  # "cosinor"; "FMM" is retained for backward compatibility with figure scripts.
   detect_fn <- switch(method,
-    DCP   = function(e, t) detect_cosinor(e, t, K = 1L, period = period),
-    JTK   = function(e, t) detect_JTK(e, t, period = period),
-    RAIN  = function(e, t) detect_RAIN(e, t, period = period),
-    MH    = function(e, t) detect_MH(e, t, period = period),
-    # K-harmonic F-test — exact F(2K, n-2K-1), no calibration needed.
-    FMM   = function(e, t) detect_cosinor(e, t, K = K, period = period)
+    DCP       = function(e, t) detect_cosinor(e, t, K = 1L, period = period),
+    cosinor   = function(e, t) detect_cosinor(e, t, K = K,  period = period),
+    Kharmonic = function(e, t) detect_cosinor(e, t, K = K,  period = period),
+    FMM       = function(e, t) detect_cosinor(e, t, K = K,  period = period),
+    JTK       = function(e, t) detect_JTK(e, t, period = period),
+    RAIN      = function(e, t) detect_RAIN(e, t, period = period),
+    MH        = function(e, t) detect_MH(e, t, period = period)
   )
 
   # CircaPower n80 estimate from median r
