@@ -90,6 +90,19 @@ ui <- fluidPage(
         selected = "1"
       ),
       hr(),
+      h4("Sampling design"),
+      radioButtons(
+        "design", NULL,
+        choices  = c("Active (fixed q4h sampling grid)" = "active",
+                     "Passive (TOD-of-death)"           = "passive"),
+        selected = "active"
+      ),
+      hr(),
+      h4("Sample size grid"),
+      sliderInput("n_max", "Maximum N to simulate", min = 40, max = 300,
+                  value = 120, step = 20),
+      helpText(em("Grid: 20, 40, ..., up to your chosen max in steps of 20.")),
+      hr(),
       h4("Targets"),
       sliderInput("target_power", "Target power",
                   min = 0.50, max = 0.95, value = 0.80, step = 0.05),
@@ -98,7 +111,7 @@ ui <- fluidPage(
       hr(),
       actionButton("run", "Run simulation",
                    class = "btn-primary btn-block", width = "100%"),
-      helpText("A single run takes ~2-5 seconds.")
+      helpText("A single run takes ~3-8 seconds.")
     ),
     mainPanel(
       width = 8,
@@ -362,21 +375,36 @@ server <- function(input, output, session) {
       if (!is.null(p$ngenes) && is.finite(p$ngenes) && p$ngenes > 2000L) {
         p$ngenes <- 2000L
       }
+      # Build sample-size grid: 20, 40, ..., n_max in steps of 20
+      n_grid <- seq(20L, as.integer(input$n_max), by = 20L)
+      # cts: q4h grid for active; for passive use the pilot's empirical times
+      # if preserved, else fall back to the q4h grid as a placeholder
+      design_type <- input$design
+      cts_vec <- if (design_type == "passive") {
+        p$times %||% p$raw$times %||% seq(0, 22, by = 4)
+      } else {
+        seq(0, 22, by = 4)
+      }
       design <- SCP::CircadianDesignOptions(
-        sample_sizes = c(20, 40, 60, 80),
+        sample_sizes = n_grid,
         nsims        = 10L,
-        cts          = seq(0, 22, by = 4)
+        design       = design_type,
+        cts          = cts_vec
       )
       analysis <- SCP::CircadianAnalysisOptions(
         alpha    = input$target_fdr,
-        DCmethod = if (as.integer(input$K) == 1L) "DCP" else "FMM"
+        DCmethod = "DCP"
       )
 
       incProgress(0.3, detail = "Simulating")
+      K_val <- as.integer(input$K)
+      method_arg <- if (K_val == 1L) "DCP" else "cosinor"
       res <- SCP::runSimsSingleCohort(
         bio.opts      = p,
         design.opts   = design,
         analysis.opts = analysis,
+        method        = method_arg,
+        K             = K_val,
         mc.cores      = n_cores
       )
       incProgress(1, detail = "Done")
@@ -404,12 +432,29 @@ server <- function(input, output, session) {
                   fdr = input$target_fdr),
       error = function(e) list(n = NA_real_)
     )
-    if (is.na(np$n)) {
-      sprintf("Target %.0f%% power at FDR %.0f%% not reached in the simulated grid (N = 20-80). Try a larger N or stronger pilot.",
-              100 * input$target_power, 100 * input$target_fdr)
+    if (!is.na(np$n)) {
+      return(sprintf("Recommended N = %.0f for %.0f%% power at FDR %.0f%% (from simulation grid)",
+                     ceiling(np$n), 100 * input$target_power, 100 * input$target_fdr))
+    }
+    # Grid did not reach target -> fall back to the CircaPower closed-form
+    # estimate at the pilot's median r-tilde
+    p <- pilot()
+    n_cf <- tryCatch(
+      SCP::circaPowerApproxN80(
+        bio.opts     = p,
+        alpha        = input$target_fdr,
+        target_power = input$target_power,
+        n_search     = seq(20, 2000, by = 5)
+      ),
+      error = function(e) NA_real_
+    )
+    if (!is.na(n_cf) && is.finite(n_cf)) {
+      sprintf("Recommended N = %.0f for %.0f%% power at FDR %.0f%% (closed-form extrapolation; grid maxed at N = %d)",
+              ceiling(n_cf), 100 * input$target_power, 100 * input$target_fdr,
+              max(res$sample_sizes))
     } else {
-      sprintf("Recommended N = %.0f for %.0f%% power at FDR %.0f%%",
-              ceiling(np$n), 100 * input$target_power, 100 * input$target_fdr)
+      sprintf("Target %.0f%% power at FDR %.0f%% not reachable for this pilot. Pilot signal may be too weak; try a different pilot or relax targets.",
+              100 * input$target_power, 100 * input$target_fdr)
     }
   })
 }
