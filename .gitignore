@@ -164,3 +164,7 @@ examples/publication/archive/
 
 # Build artifact — produced by scripts/build_shinyapps_demo.R
 inst/shiny_demo/
+
+# Reproducibility scripts
+!scripts/
+!scripts/**
