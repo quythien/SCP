@@ -66,7 +66,7 @@ ui <- fluidPage(
                                "0.10" = 0.10, "0.05" = 0.05, "0.01" = 0.01,
                                "0.001" = 0.001, "0.0001" = 0.0001),
                   selected = 0.05),
-      helpText(em("Affects the 'Prop. rhythmic' line in the pilot summary, updates live as you pick pilots.")),
+      helpText(em("Sanity-check lens on the bundled pilot's 'Prop. rhythmic' line; not used in the simulation (the sim uses the Target FDR slider below).")),
       hr(),
       h4("Pilot"),
       radioButtons(
@@ -549,6 +549,8 @@ server <- function(input, output, session) {
       )
 
       incProgress(0.3, detail = "Simulating")
+      # Fixed seed so repeated clicks on the same pilot/grid give the same N80
+      set.seed(2026)
       K_val <- as.integer(input$K)
       res <- tryCatch(
         SCP::runSimsSingleCohort(
