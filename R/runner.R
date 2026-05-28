@@ -836,7 +836,7 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
   stopifnot(inherits(design.opts, "CircadianDesignOptions"))
   if (missing(analysis.opts)) analysis.opts <- CircadianAnalysisOptions()
 
-  method    <- match.arg(method, c("DCP", "JTK", "RAIN", "MH", "FMM"))
+  method    <- match.arg(method, c("DCP", "cosinor", "Kharmonic", "JTK", "RAIN", "MH", "FMM"))
   K         <- as.integer(K)
   harmonics <- rep_len(as.numeric(harmonics), 2L)
 
@@ -1595,7 +1595,7 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
   stopifnot(inherits(design.opts,   "CircadianDesignOptions"))
   stopifnot(inherits(analysis.opts, "CircadianAnalysisOptions"))
 
-  methods <- match.arg(methods, c("DCP", "JTK", "RAIN", "MH", "FMM"), several.ok = TRUE)
+  methods <- match.arg(methods, c("DCP", "cosinor", "Kharmonic", "JTK", "RAIN", "MH", "FMM"), several.ok = TRUE)
 
   # Passive designs cannot identify a B effect: cts is resampled from the
   # pilot TOD distribution regardless of B, so any cross-B variation is
@@ -1756,7 +1756,7 @@ runSingleCohortPower <- function(bio.opts,
   stopifnot(inherits(design.opts,   "CircadianDesignOptions"))
   stopifnot(inherits(analysis.opts, "CircadianAnalysisOptions"))
 
-  methods <- match.arg(methods, c("DCP", "JTK", "RAIN", "MH", "FMM"), several.ok = TRUE)
+  methods <- match.arg(methods, c("DCP", "cosinor", "Kharmonic", "JTK", "RAIN", "MH", "FMM"), several.ok = TRUE)
   if (length(methods) > 1L) {
     warning("runSingleCohortPower: multiple methods specified; using only '", methods[1L],
             "'. For multi-method B vs m comparison use recommendDesign().")
