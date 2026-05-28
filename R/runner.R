@@ -827,10 +827,13 @@ summaryRunPower <- function(powerOutput, verbose = TRUE) {
 #'
 #' @export
 runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
-                                method = "DCP",
-                                K = 2L,
+                                method = "cosinor",
+                                K = 1L,
                                 harmonics = c(0, 0),
                                 verbose = TRUE, mc.cores = 1L) {
+  # New default: method = "cosinor" + K = 1. Users wanting the two-harmonic
+  # test set K = 2 only; method = "DCP" / "FMM" / "Kharmonic" are retained
+  # as legacy aliases.
 
   stopifnot(inherits(bio.opts, "CircadianBioOptions"))
   stopifnot(inherits(design.opts, "CircadianDesignOptions"))
