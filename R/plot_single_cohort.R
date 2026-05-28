@@ -233,7 +233,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   # Outer top oma needs ~3 lines for the cex=1.5 title to clear the top edge.
   par(mfrow = c(1, 3), mai = c(0.85, 0.85, 0.55, 0.15),
       mgp = c(3.2, 0.65, 0), oma = c(0, 0, 2.4, 0),
-      cex.axis = 1.25, cex.lab = 1.45, cex.main = 1.30, font.main = 2)
+      cex.axis = 1.45, cex.lab = 1.60, cex.main = 1.50, font.main = 2)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
   # ---- Panel A: marginal power vs n, multiple FDR lines ----
@@ -245,7 +245,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
           xlab = "Sample size (n)", ylab = "Power (%)",
           main = "")
   title(main = "A   Power vs Sample Size",
-        adj = 0.5, font.main = 2, cex.main = 1.30, line = 0.4)
+        adj = 0.5, font.main = 2, cex.main = 1.50, line = 0.5)
   for (t in seq_len(n_thresh)) {
     add_se_bars(ss_disp_a, 100 * marginal_mean[disp_idx_a, t],
                 100 * marginal_se[disp_idx_a, t], col = thresh_cols[t])
@@ -257,7 +257,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   grid()
   legend("bottomright", thresh_labels,
          col = thresh_cols, lty = 1, pch = 19, lwd = 2,
-         cex = 0.62, bty = "o", box.col = "grey70", box.lwd = 0.5,
+         cex = 0.95, bty = "o", box.col = "grey70", box.lwd = 0.5,
          inset = 0.01, y.intersp = 0.85)
   if (!is.na(vline_n)) {
     abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.5)
@@ -265,7 +265,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
     # Above the bottom-right legend (~y=0-25) but below the curves' high-N
     # asymptote, so it is clearly visible in white space.
     text(vline_n, 35, sprintf("n=%d", vline_n),
-         col = "steelblue", cex = 0.85, adj = c(-0.10, 0.5), font = 2)
+         col = "steelblue", cex = 1.05, adj = c(-0.10, 0.5), font = 2)
   }
 
   # ---- Panel B: stratified power by r, lines per n ----
@@ -279,18 +279,18 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
           xaxt = "n")
   title(main = bquote(bold("B   ") * bold("Stratified Power by") ~
                        bold(tilde(r)) ~ bold(.(sprintf("(%s)", fdr_label)))),
-        adj = 0.5, font.main = 2, cex.main = 1.30, line = 0.4)
-  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 0.95)
+        adj = 0.5, font.main = 2, cex.main = 1.50, line = 0.5)
+  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 1.15)
   for (j in disp_idx) {
     points(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
-           pch = 19, col = size_colors[j], cex = 0.65)
+           pch = 19, col = size_colors[j], cex = 0.95)
     add_se_bars(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
                 100 * se_pow_plt[j, ], col = size_colors[j])
   }
   grid()
   legend("bottomright", paste0("n=", sample_sizes[disp_idx]),
          col = size_colors[disp_idx], lty = 1, lwd = 2,
-         cex = 0.58, bty = "o", box.col = "grey70", box.lwd = 0.5,
+         cex = 0.95, bty = "o", box.col = "grey70", box.lwd = 0.5,
          inset = 0.01, y.intersp = 0.85)
 
   # ---- Panel C: TD by r-stratum, n lines + overlaid gene distribution ----
@@ -305,8 +305,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
        xaxt = "n")
   title(main = bquote(bold("C   ") * bold("True Discoveries by") ~
                        bold(tilde(r)) ~ bold(.(sprintf("(%s)", fdr_label)))),
-        adj = 0.5, font.main = 2, cex.main = 1.30, line = 0.4)
-  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 0.95)
+        adj = 0.5, font.main = 2, cex.main = 1.50, line = 0.5)
+  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 1.15)
 
   step_x <- rep(seq(0.5, n_strata_plt + 0.5, by = 1), each = 2)
   step_y <- c(0, rep(scaled_counts, each = 2), 0)
@@ -315,7 +315,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
 
   for (j in disp_idx) {
     lines(seq_len(n_strata_plt), mean_TD_plt[j, ], col = size_colors[j], lwd = 2)
-    points(seq_len(n_strata_plt), mean_TD_plt[j, ], pch = 19, col = size_colors[j], cex = 0.65)
+    points(seq_len(n_strata_plt), mean_TD_plt[j, ], pch = 19, col = size_colors[j], cex = 0.95)
     add_se_bars(seq_len(n_strata_plt), mean_TD_plt[j, ], se_TD_plt[j, ], col = size_colors[j])
   }
   grid()
@@ -323,12 +323,12 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
          c(paste0("n=", sample_sizes[disp_idx]), "# Target Discoveries"),
          col = c(size_colors[disp_idx], "grey60"), lty = c(rep(1, length(disp_idx)), 2),
          lwd = c(rep(2, length(disp_idx)), 1.5),
-         cex = 0.58, bty = "o", box.col = "grey70", box.lwd = 0.5,
+         cex = 0.95, bty = "o", box.col = "grey70", box.lwd = 0.5,
          inset = 0.01, y.intersp = 0.85)
   par(mgp = c(3.0, 0.6, 0))   # restore
 
   if (nchar(title) > 0)
-    mtext(title, outer = TRUE, side = 3, line = 0.2, cex = 1.4, font = 2)
+    mtext(title, outer = TRUE, side = 3, line = 0.2, cex = 1.65, font = 2)
 
   invisible(list(marginal_mean = marginal_mean, marginal_se = marginal_se,
                  mean_TD = mean_TD, mean_pow = mean_pow))
