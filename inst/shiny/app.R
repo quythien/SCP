@@ -93,9 +93,15 @@ ui <- fluidPage(
       h4("Sampling design"),
       radioButtons(
         "design", NULL,
-        choices  = c("Active (fixed q4h sampling grid)" = "active",
-                     "Passive (TOD-of-death)"           = "passive"),
+        choices  = c("Active (controlled timecourse)" = "active",
+                     "Passive (TOD-of-death)"         = "passive"),
         selected = "active"
+      ),
+      conditionalPanel(
+        condition = "input.design == 'active'",
+        sliderInput("active_step", "Sampling interval (h)",
+                    min = 1, max = 12, value = 4, step = 1),
+        helpText(em("Active grid: 0, step, 2*step, ... up to 24 h."))
       ),
       hr(),
       h4("Sample size grid"),
@@ -128,7 +134,7 @@ ui <- fluidPage(
         condition = "input.run > 0",
         hr(),
         h4("Power curve"),
-        plotOutput("power_curve", height = "420px"),
+        plotOutput("power_curve", height = "560px"),
         hr(),
         div(style = "padding: 12px; background:#f4f8fc; border-left: 4px solid #2c7fb8;",
             h3(textOutput("recommended_n_text"), style = "margin: 0;"))
@@ -382,7 +388,8 @@ server <- function(input, output, session) {
       cts_vec <- if (design_type == "passive") {
         p$times %||% p$raw$times %||% seq(0, 22, by = 4)
       } else {
-        seq(0, 22, by = 4)
+        step <- as.integer(input$active_step %||% 4L)
+        seq(0, 24 - step, by = step)
       }
       design <- SCP::CircadianDesignOptions(
         sample_sizes = n_grid,
@@ -422,6 +429,7 @@ server <- function(input, output, session) {
       }
     )
   })
+
 
   output$recommended_n_text <- renderText({
     res <- sim_result()
