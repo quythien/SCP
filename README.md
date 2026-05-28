@@ -79,10 +79,12 @@ bio <- scp_load_pilot("human", "GTEx", "Liver", "All")
 design   <- CircadianDesignOptions(sample_sizes = c(20, 40, 60, 80),
                                     nsims = 20L,
                                     cts = seq(0, 22, by = 4))
-analysis <- CircadianAnalysisOptions(alpha = 0.05, K = 1L)
+analysis <- CircadianAnalysisOptions(alpha = 0.05)
 res      <- runSimsSingleCohort(bio.opts = bio,
                                 design.opts = design,
                                 analysis.opts = analysis,
+                                method = "DCP",   # "cosinor" for K >= 2
+                                K = 1L,
                                 mc.cores = 4)
 
 # 4. Recommended N at 80% power, FDR 5%
