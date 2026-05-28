@@ -141,12 +141,26 @@ at several FDR levels (panel A), stratified power by `r_tilde` band
 plotSingleCohortPower(
   res_K1,
   title       = "GTEx Liver pilot, active q4h x 24h",
+  fdr         = 0.05,          # focus panels B and C at FDR 5%
   reference_n = 48
 )
 ```
 
 Read the smallest N where the panel-A curve crosses 0.80 at the FDR you care
 about; that is your recommended sample size.
+
+If the simulated grid never reaches your target power, `npower()` returns
+`NA`. Use the closed-form CircaPower extrapolation instead:
+
+```{r closed-form}
+n80 <- circaPowerApproxN80(
+  bio.opts     = bio,
+  alpha        = 0.05,
+  target_power = 0.80,
+  n_search     = seq(20, 1000, by = 5)
+)
+n80
+```
 
 # 6. Compare K = 1 vs K = 2
 
@@ -160,7 +174,7 @@ res_K2 <- runSimsSingleCohort(
   bio.opts      = bio,
   design.opts   = design,
   analysis.opts = analysis,
-  method        = "DCP",
+  method        = "cosinor",   # K >= 2 uses the K-harmonic dispatcher
   K             = 2,
   verbose       = FALSE
 )
