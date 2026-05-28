@@ -571,8 +571,8 @@ server <- function(input, output, session) {
       )
 
       incProgress(0.3, detail = "Simulating")
-      # Fixed seed so repeated clicks on the same pilot/grid give the same N80
-      set.seed(2026)
+      # Use the same seed as the manuscript figure scripts (GLOBAL_SEED = 2025)
+      set.seed(2025)
       K_val <- as.integer(input$K)
       res <- tryCatch(
         SCP::runSimsSingleCohort(
