@@ -93,6 +93,21 @@ make_row <- function(tag, p, times, species, dataset, tissue, design, condition)
 
   t_mod <- times %% 24
 
+  # TOD design summary: distinct sampling phases (mod 24), cycle count, step
+  uniq_phases <- sort(unique(round(t_mod, 2)))
+  n_unique    <- length(uniq_phases)
+  span_full   <- max(times) - min(times)
+  tod_cycles  <- if (span_full > 0) round(span_full / 24, 2) else 0
+  step_diffs  <- if (n_unique >= 2) diff(uniq_phases) else numeric(0)
+  is_regular  <- length(step_diffs) > 0 && max(step_diffs) - min(step_diffs) < 0.5
+  tod_step    <- if (is_regular) round(stats::median(step_diffs), 1) else NA_real_
+  tod_phases  <- if (n_unique <= 12)
+                   paste(formatC(uniq_phases, format = "g", digits = 3), collapse = ",")
+                 else
+                   paste0(formatC(uniq_phases[1], format = "g", digits = 3),
+                          "..", formatC(uniq_phases[n_unique], format = "g", digits = 3),
+                          " (", n_unique, " phases)")
+
   as.data.frame(list(
     species         = species,
     dataset         = dataset,
@@ -104,6 +119,10 @@ make_row <- function(tag, p, times, species, dataset, tissue, design, condition)
     tod_min         = round(min(t_mod), 1),
     tod_max         = round(max(t_mod), 1),
     tod_sd          = round(sd(t_mod),  2),
+    tod_n_unique    = n_unique,
+    tod_cycles      = tod_cycles,
+    tod_step_hr     = tod_step,
+    tod_phases      = tod_phases,
     r_median_top300 = round(if (length(rv) >= 3) median(rv)                        else NA_real_, 3),
     r_q25_top300    = round(if (length(rv) >= 3) quantile(rv, 0.25, names = FALSE) else NA_real_, 3),
     r_q75_top300    = round(if (length(rv) >= 3) quantile(rv, 0.75, names = FALSE) else NA_real_, 3),
@@ -210,7 +229,7 @@ gse_tissues <- if (SMOKE_TEST) names(dat_mouse$count_clean)[1:3] else names(dat_
 
 gse_data <- lapply(gse_tissues, function(tn) {
   list(tn = tn,
-       expr  = dat_mouse$count_clean[[tn]],
+       expr  = as.matrix(dat_mouse$count_clean[[tn]]),  # count_clean is a data.frame; coerce so per-gene rows are numeric
        times = dat_mouse$tod[[tn]])
 })
 rm(dat_mouse)

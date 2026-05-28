@@ -118,3 +118,30 @@ output/main_figures/archive_*/
 !output/two_harmonic/results/tissue_Liver_kegg.rds
 !output/two_harmonic/results/pilot_2h_GTExLiver_topK300.rds
 !output/two_harmonic/results/fig6_v9_data.rds
+
+# Local AI tool state (not committed)
+.codex/
+paper/PowerSim/SCP.tex
+
+# Workstream manifest deltas (merged into manifest.csv; not for repo)
+inst/extdata/pilots/manifest.[A-Z].csv
+inst/extdata/pilots/ingestion.log*
+inst/extdata/pilots/cache_geo/
+
+# Dropped from public repo (kept locally)
+code/
+doc/
+tests/
+paper/
+paper2/
+submission/
+base/
+slide/
+data/
+data-raw/
+output/
+SCP.Rcheck/
+examples/exploratory/
+examples/figures/
+examples/panelC160/
+examples/publication/archive/

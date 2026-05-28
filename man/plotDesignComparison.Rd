@@ -22,6 +22,6 @@ plotDesignComparison(
 \item{output_file}{Path for PDF output (NULL = screen)}
 }
 \description{
-Panel A: Power curves — two-stage (solid blue) vs bootstrap (dashed orange + CI band).
-Panel B: Recommended N at target_power — bar chart comparing methods.
+Panel A: Power curves, two-stage (solid blue) vs bootstrap (dashed orange + CI band).
+Panel B: Recommended N at target_power, bar chart comparing methods.
 }

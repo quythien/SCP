@@ -1,5 +1,5 @@
 #' =======================================================================
-#' plot_bvsm.R — B vs m Trade-off Plot (Figure 3)
+#' plot_bvsm.R, B vs m Trade-off Plot (Figure 3)
 #' =======================================================================
 #'
 #' Plots DCP power vs N for multiple B values, demonstrating B-invariance.

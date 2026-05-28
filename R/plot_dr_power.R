@@ -112,7 +112,7 @@ plotDensityResults <- function(results_file, output_file = NULL) {
 
   dev.off()
 
-  cat(sprintf("Figure saved: %s\n", output_file))
+  message(sprintf("Figure saved: %s", output_file))
 
   invisible(density_results)
 }

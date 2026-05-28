@@ -331,12 +331,12 @@ cat("\n--- Section 6: Detection functions ---\n")
 small_expr  <- sc$expr[seq_len(50), seq_len(20)]
 small_times <- cts_active[seq_len(20)]
 
-# detect_DCP
-pv_dcp <- tryCatch(detect_DCP(small_expr, small_times, period = 24),
-                   error = function(e) { cat("  ERROR detect_DCP:", conditionMessage(e), "\n"); NULL })
-.expect_true("detect_DCP returns numeric vector", !is.null(pv_dcp) && is.numeric(pv_dcp))
-.expect_true("detect_DCP length equals nrow(expr)", !is.null(pv_dcp) && length(pv_dcp) == 50)
-.expect_range("detect_DCP p-values in [0,1]", pv_dcp[!is.na(pv_dcp)])
+# detect_cosinor (K=1, single-harmonic)
+pv_dcp <- tryCatch(detect_cosinor(small_expr, small_times, K = 1L, period = 24),
+                   error = function(e) { cat("  ERROR detect_cosinor K=1:", conditionMessage(e), "\n"); NULL })
+.expect_true("detect_cosinor K=1 returns numeric vector", !is.null(pv_dcp) && is.numeric(pv_dcp))
+.expect_true("detect_cosinor K=1 length equals nrow(expr)", !is.null(pv_dcp) && length(pv_dcp) == 50)
+.expect_range("detect_cosinor K=1 p-values in [0,1]", pv_dcp[!is.na(pv_dcp)])
 
 # detect_JTK (optional — MetaCycle)
 if (requireNamespace("MetaCycle", quietly = TRUE)) {

@@ -3,7 +3,7 @@
 \name{plotFMMViolation}
 \alias{plotFMMViolation}
 \title{=======================================================================
-plot_fmm.R — FMM Waveform Robustness Plots (Figures 4, 4b)
+plot_fmm.R, FMM Waveform Robustness Plots (Figures 4, 4b)
 =======================================================================}
 \usage{
 plotFMMViolation(
@@ -30,7 +30,7 @@ Produced by \code{runFMMViolationAnalysis()} or the
 \code{design_type}, \code{snr_col}, \code{label}, \code{N}, \code{y}
 providing per-panel text annotations (e.g. dataset name and median
 r-tilde). If \code{NULL} (default), no annotations are drawn.  The
-caller is responsible for populating this from their pilot data — hard-coded
+caller is responsible for populating this from their pilot data, hard-coded
 tissue names must not appear inside this package function.}
 
 \item{output_file}{PDF path. NULL = current device.}
@@ -56,8 +56,8 @@ pure cosinor, \code{omega = 0} gives a flat (arrhythmic) signal.
 \details{
 Plotting functions for FMM-based cosinor violation analyses.
 Two main functions:
-  plotFMMViolation()     — single-cohort 4-row figure (Fig 4)
-  plotFMMDifferential()  — differential 3-panel figure (Fig 4b)
+  plotFMMViolation(), single-cohort 4-row figure (Fig 4)
+  plotFMMDifferential(), differential 3-panel figure (Fig 4b)
 Plot FMM Waveform Robustness: Single-Cohort
 }
 \seealso{

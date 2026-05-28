@@ -121,7 +121,7 @@ npower <- function(res,
 #' @export
 print.npower <- function(x, ...) {
   ep  <- if (!is.null(x$endpoint)) sprintf(" [%s]", x$endpoint) else ""
-  cat(sprintf("npower%s — target: %.0f%% power at FDR %.0f%%\n",
+  cat(sprintf("npower%s (target: %.0f%% power at FDR %.0f%%)\n",
               ep, x$target_power * 100, x$fdr * 100))
   if (is.na(x$n_grid)) {
     cat(sprintf("  Recommended n : not reached within simulation grid\n"))

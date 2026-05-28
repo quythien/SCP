@@ -9,7 +9,7 @@ sampleTimesFromDist(n, cts)
 \arguments{
 \item{n}{Integer. Number of time points to sample.}
 
-\item{cts}{Numeric vector. Pilot TOD values (hours, any range — wrapped to
+\item{cts}{Numeric vector. Pilot TOD values (hours, any range, wrapped to
 \code{[0, 24)} internally).}
 }
 \value{

@@ -6,7 +6,7 @@
 #' using a tripled-data trick so boundary contributions are preserved.
 #'
 #' @param n Integer. Number of time points to sample.
-#' @param cts Numeric vector. Pilot TOD values (hours, any range — wrapped to
+#' @param cts Numeric vector. Pilot TOD values (hours, any range, wrapped to
 #'   \code{[0, 24)} internally).
 #'
 #' @return Numeric vector of length \code{n} with sampled TOD values in
@@ -476,7 +476,7 @@ simCircadianDiff <- function(ngenes = 5000,
 #' @param alpha3 Third-harmonic coefficient (default 0). Same conditions as \code{alpha2}.
 #' @param omega FMM waveform shape parameter in \eqn{(0, 1]} (default \code{1.0}).
 #'   \code{omega = 1} uses the traditional cosinor generator (with \code{alpha2}/\code{alpha3}).
-#'   \code{omega < 1} uses \code{\link{simCircadianFMM}} — a non-sinusoidal Möbius waveform.
+#'   \code{omega < 1} uses \code{\link{simCircadianFMM}}, a non-sinusoidal Möbius waveform.
 #'   The two paths are mutually exclusive: FMM takes precedence when \code{omega < 1}.
 #' @param beta FMM orientation parameter (default \eqn{\pi}). Controls the phase of
 #'   waveform asymmetry. Only used when \code{omega < 1}. \eqn{\beta}-invariance
