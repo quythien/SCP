@@ -65,10 +65,11 @@ ui <- fluidPage(
       ),
       conditionalPanel(
         condition = "input.pilot_source == 'bundled'",
-        selectInput("species",   "Species",   choices = NULL),
-        selectInput("dataset",   "Dataset",   choices = NULL),
-        selectInput("tissue",    "Tissue",    choices = NULL),
-        selectInput("condition", "Condition", choices = NULL)
+        selectInput("species",    "Species",       choices = NULL),
+        selectInput("design_filter", "Design",     choices = c("active", "passive")),
+        selectInput("tissue",     "Tissue",        choices = NULL),
+        selectInput("dataset",    "Study/dataset", choices = NULL),
+        selectInput("condition",  "Condition",     choices = NULL)
       ),
       conditionalPanel(
         condition = "input.pilot_source == 'upload'",
