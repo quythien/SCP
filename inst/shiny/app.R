@@ -129,8 +129,10 @@ ui <- fluidPage(
       h4("Targets"),
       sliderInput("target_power", "Target power",
                   min = 0.50, max = 0.95, value = 0.80, step = 0.05),
-      sliderInput("target_fdr",  "Target FDR",
-                  min = 0.01, max = 0.20, value = 0.05, step = 0.01),
+      selectInput("target_fdr",  "Target FDR",
+                  choices  = c("0.01" = 0.01, "0.05" = 0.05, "0.10" = 0.10,
+                               "0.15" = 0.15, "0.20" = 0.20),
+                  selected = 0.05),
       hr(),
       actionButton("run", "Run simulation",
                    class = "btn-primary btn-block", width = "100%"),
@@ -566,7 +568,7 @@ server <- function(input, output, session) {
         cts          = cts_vec
       )
       analysis <- SCP::CircadianAnalysisOptions(
-        alpha    = input$target_fdr,
+        alpha    = as.numeric(input$target_fdr),
         DCmethod = "DCP"
       )
 
@@ -629,7 +631,7 @@ server <- function(input, output, session) {
     n_cf <- tryCatch(
       SCP::circaPowerApproxN80(
         bio.opts     = p,
-        alpha        = input$target_fdr,
+        alpha        = as.numeric(input$target_fdr),
         target_power = input$target_power,
         n_search     = seq(20, 2000, by = 5)
       ),
@@ -638,7 +640,7 @@ server <- function(input, output, session) {
     sim_msg <- if (is.finite(max_pow))
       sprintf("The largest sample size simulated (N = %d) reached only %.0f%% power at FDR %.0f%%. A larger N is needed to hit the %.0f%% target.",
               n_at_max, 100 * max_pow,
-              100 * input$target_fdr, 100 * input$target_power)
+              100 * as.numeric(input$target_fdr), 100 * input$target_power)
     else
       sprintf("The simulation did not reach %.0f%% power at any N in your grid.",
               100 * input$target_power)
