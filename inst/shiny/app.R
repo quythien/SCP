@@ -596,8 +596,12 @@ server <- function(input, output, session) {
       return(sprintf("Recommended N = %.0f for %.0f%% power at FDR %.0f%% (from simulation grid)",
                      ceiling(np$n), 100 * input$target_power, 100 * input$target_fdr))
     }
-    # Grid did not reach target -> fall back to the CircaPower closed-form
-    # estimate at the pilot's median r-tilde
+    # Grid did not reach target. Report the max observed power AND a
+    # closed-form per-gene-at-median-r-tilde estimate as separate numbers
+    # so the user sees both honestly.
+    max_pow <- if (length(np$power) > 0L) max(np$power, na.rm = TRUE) else NA_real_
+    n_at_max <- if (is.finite(max_pow))
+      res$sample_sizes[which.max(np$power)] else max(res$sample_sizes)
     p <- pilot()
     n_cf <- tryCatch(
       SCP::circaPowerApproxN80(
@@ -608,14 +612,17 @@ server <- function(input, output, session) {
       ),
       error = function(e) NA_real_
     )
-    if (!is.na(n_cf) && is.finite(n_cf)) {
-      sprintf("Recommended N = %.0f for %.0f%% power at FDR %.0f%% (closed-form extrapolation; grid maxed at N = %d)",
-              ceiling(n_cf), 100 * input$target_power, 100 * input$target_fdr,
-              max(res$sample_sizes))
-    } else {
-      sprintf("Target %.0f%% power at FDR %.0f%% not reachable for this pilot. Pilot signal may be too weak; try a different pilot or relax targets.",
-              100 * input$target_power, 100 * input$target_fdr)
-    }
+    sim_msg <- if (is.finite(max_pow))
+      sprintf("Simulation: max %.0f%% power at N = %d (target %.0f%% not reached in the grid).",
+              100 * max_pow, n_at_max, 100 * input$target_power)
+    else
+      sprintf("Simulation: target %.0f%% not reached in the grid.", 100 * input$target_power)
+    cf_msg <- if (is.finite(n_cf))
+      sprintf(" Closed-form per-gene-at-median-r-tilde estimate: N ~ %.0f (no multiplicity correction; optimistic if r-tilde is heterogeneous).",
+              ceiling(n_cf))
+    else
+      " Closed-form estimate unavailable for this pilot."
+    paste0(sim_msg, cf_msg)
   })
 }
 
