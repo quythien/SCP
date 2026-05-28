@@ -55,7 +55,7 @@ ui <- fluidPage(
   ),
   sidebarLayout(
     sidebarPanel(
-      width = 4,
+      width = 3,
       h4("Pilot"),
       radioButtons(
         "pilot_source", NULL,
@@ -124,7 +124,7 @@ ui <- fluidPage(
                    class = "btn-primary btn-block", width = "100%")
     ),
     mainPanel(
-      width = 8,
+      width = 9,
       fluidRow(
         column(7,
           h4("Pilot summary"),
@@ -355,14 +355,14 @@ server <- function(input, output, session) {
       {
         mrow <- manifest()[manifest()$species == input$species &
                            manifest()$dataset == input$dataset &
-                           manifest()$tissue  == input$tissue   &
+                           .tissue_display(manifest()) == input$tissue   &
                            manifest()$condition == input$condition, , drop = FALSE]
         if (nrow(mrow) > 0L) mrow$design[1] else "unknown"
       },
       {
         mrow <- manifest()[manifest()$species == input$species &
                            manifest()$dataset == input$dataset &
-                           manifest()$tissue  == input$tissue   &
+                           .tissue_display(manifest()) == input$tissue   &
                            manifest()$condition == input$condition, , drop = FALSE]
         nn <- if (nrow(mrow) > 0L && "n" %in% names(mrow)) mrow$n[1] else NA_integer_
         if (is.null(nn) || is.na(nn)) "NA" else format(nn, big.mark = ",")
@@ -372,7 +372,7 @@ server <- function(input, output, session) {
         if (is.null(ng) || is.na(ng)) {
           mrow <- manifest()[manifest()$species == input$species &
                              manifest()$dataset == input$dataset &
-                             manifest()$tissue  == input$tissue   &
+                             .tissue_display(manifest()) == input$tissue   &
                              manifest()$condition == input$condition, , drop = FALSE]
           ng <- if (nrow(mrow) > 0L && "ngenes" %in% names(mrow)) mrow$ngenes[1] else NA_integer_
         }
@@ -407,7 +407,7 @@ server <- function(input, output, session) {
     } else if (input$pilot_source == "bundled") {
       mrow <- manifest()[manifest()$species == input$species &
                          manifest()$dataset == input$dataset &
-                         manifest()$tissue  == input$tissue   &
+                         .tissue_display(manifest()) == input$tissue   &
                          manifest()$condition == input$condition, , drop = FALSE]
       if (nrow(mrow) > 0L && "tod_phases" %in% names(mrow) &&
           !is.na(mrow$tod_phases[1]) && nzchar(mrow$tod_phases[1]) &&
