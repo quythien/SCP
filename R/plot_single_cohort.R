@@ -2,7 +2,7 @@
 # (add_se_bars is defined in plot_with_se.R; local fallback below for standalone use)
 if (!exists("add_se_bars")) {
   add_se_bars <- function(x, y, se, col, bar_width = 0.3) {
-    valid <- !is.na(y) & !is.na(se) & se > 0
+    valid <- !is.na(y) & !is.na(se) & se > 1e-6
     if (!any(valid)) return(invisible())
     arrows(x[valid], (y - se)[valid], x[valid], (y + se)[valid],
            angle = 90, code = 3, length = bar_width * 0.15,
@@ -35,11 +35,17 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                                  panel_fdr = 0.05,
                                  vline_power = 0.80,
                                  vline_fdr   = 0.20,
+                                 fdr = NULL,
                                  p.adjust.method = "BH",
                                  reference_n = NULL,
                                  display_sizes = NULL,
                                  r_max = 5,
                                  width = 15, height = 5.5) {
+  # `fdr` is a single-value alias for panel_fdr + vline_fdr (back-compat)
+  if (!is.null(fdr) && is.numeric(fdr) && length(fdr) == 1L) {
+    panel_fdr <- fdr
+    vline_fdr <- fdr
+  }
 
   sample_sizes  <- res$sample_sizes
   nsims         <- res$nsims
@@ -225,7 +231,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   # ------------------------------------------------------------------
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
   # Outer top oma needs ~3 lines for the cex=1.5 title to clear the top edge.
-  par(mfrow = c(1, 3), mai = c(1.05, 1.05, 0.70, 0.20),
+  par(mfrow = c(1, 3), mai = c(0.85, 0.85, 0.55, 0.15),
       mgp = c(3.2, 0.65, 0), oma = c(0, 0, 2.4, 0),
       cex.axis = 1.25, cex.lab = 1.45, cex.main = 1.30, font.main = 2)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)

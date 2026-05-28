@@ -13,6 +13,7 @@ plotSingleCohortPower(
   panel_fdr = 0.05,
   vline_power = 0.8,
   vline_fdr = 0.2,
+  fdr = NULL,
   p.adjust.method = "BH",
   reference_n = NULL,
   display_sizes = NULL,
