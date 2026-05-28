@@ -24,35 +24,43 @@ circadian transcriptomic datasets across human, baboon, mouse, and rat,
 spanning 100+ tissue contexts. Users pick a pilot matching their planned
 study and get a recommended sample size in seconds.
 
-## Try the Shiny app
+## Try it: launch the Shiny app locally
 
-The fastest way to use SCP is the bundled Shiny GUI:
+The fastest way to use SCP is the bundled Shiny GUI. Three lines:
 
 ```r
+install.packages("remotes")
 remotes::install_github("quythien/SCP")
 SCP::launchShiny()
 ```
 
-A browser window opens with cascading dropdowns (species → dataset → tissue →
-condition), sliders for target power and FDR, and a one-click "Run
-simulation" button. Power curve and recommended sample size render in 2-5
-seconds per click.
+A browser window opens with cascading dropdowns (species → dataset → tissue
+→ condition), sliders for target power and FDR, a sampling-design panel,
+and a one-click "Run simulation" button. Power curve and recommended sample
+size render in 2-5 seconds per click. All 127 bundled pilots are
+immediately available.
 
-*(Hosted demo URL coming soon at `https://quythien.shinyapps.io/SCP/`.)*
+The Shiny app runs entirely on your machine, no account or hosting needed.
 
-## Install
+## Install (R package only)
+
+If you want the R API without the GUI:
 
 ```r
-# from GitHub (recommended)
 remotes::install_github("quythien/SCP")
+library(SCP)
+```
 
-# or from a local clone
+Or from a local clone:
+
+```r
 remotes::install_local("path/to/SCP")
 ```
 
-System requirements: R >= 4.4.0, a C++ compiler (Rcpp + RcppArmadillo are
-used for the cosinor fit hot path). On Linux: `apt install r-base-dev
-libblas-dev liblapack-dev`. On macOS: `xcode-select --install`.
+System requirements: R >= 4.4.0, a C++ compiler. Rcpp + RcppArmadillo are
+used for the cosinor fit hot path. On Linux: `apt install r-base-dev
+libblas-dev liblapack-dev`. On macOS: `xcode-select --install`. Suggested
+packages for the Shiny GUI: `shiny`, `rmarkdown`.
 
 ## Quick start (R API)
 
