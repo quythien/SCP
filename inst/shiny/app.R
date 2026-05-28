@@ -9,6 +9,142 @@ suppressPackageStartupMessages({
 
 `%||%` <- function(a, b) if (!is.null(a) && length(a) > 0L) a else b
 
+# ---------------------------------------------------------------------------
+# Shiny-specific 3-panel power-curve plot. Designed to render cleanly inside
+# plotOutput regardless of container size, with legends that always show.
+# ---------------------------------------------------------------------------
+.shiny_power_curve_3panel <- function(res, fdr = 0.05, target_power = 0.80) {
+  ss <- res$sample_sizes
+  nsims <- res$nsims
+  if (is.null(ss) || length(ss) == 0L || is.null(res$pvalues)) {
+    plot.new(); title(main = "No simulation result to plot."); return()
+  }
+  n_sizes <- length(ss)
+  # ---- recompute marginal power per (N, sim) at the user's FDR -----------
+  marg_sim <- matrix(NA_real_, nrow = n_sizes, ncol = nsims)
+  TD_arr   <- matrix(NA_real_, nrow = n_sizes, ncol = nsims)
+  RHY_arr  <- matrix(NA_real_, nrow = n_sizes, ncol = nsims)
+  for (j in seq_len(n_sizes)) {
+    for (s in seq_len(nsims)) {
+      pv <- res$pvalues[j, , s]
+      rv <- res$r_values_list[[j]][[s]]
+      rhy <- rv > 0
+      pv[is.na(pv)] <- 1
+      qv <- p.adjust(pv, "BH")
+      disc <- qv < fdr
+      td   <- sum(disc & rhy, na.rm = TRUE)
+      nr   <- sum(rhy, na.rm = TRUE)
+      marg_sim[j, s] <- if (nr > 0) td / nr else NA_real_
+      TD_arr[j, s]   <- td
+      RHY_arr[j, s]  <- nr
+    }
+  }
+  mean_pow <- rowMeans(marg_sim, na.rm = TRUE)
+  se_pow   <- apply(marg_sim, 1, function(x) sd(x, na.rm=TRUE) / sqrt(sum(!is.na(x))))
+
+  # ---- Panel B: stratified power by r-tilde bin at the largest N ---------
+  r_pool <- unlist(lapply(res$r_values_list[[n_sizes]],
+                          function(v) v[v > 0]), use.names = FALSE)
+  r_max <- if (length(r_pool) > 0L) max(stats::quantile(r_pool, 0.95, na.rm=TRUE), 1.0) else 5
+  r_max <- ceiling(r_max * 2) / 2
+  r_breaks <- c(0, seq(0.25, r_max, length.out = 6))
+  r_breaks <- unique(round(r_breaks, 2))
+  n_strata <- length(r_breaks) - 1
+  strata_labels <- character(n_strata)
+  for (k in seq_len(n_strata)) {
+    strata_labels[k] <- sprintf("(%.2f, %.2f]", r_breaks[k], r_breaks[k+1])
+  }
+  strata_labels[n_strata] <- sprintf("> %.2f", r_breaks[n_strata])
+
+  disp_idx <- seq_len(n_sizes)
+  size_colors <- grDevices::hcl.colors(n_sizes, "viridis")
+  stratum_pow <- array(NA_real_, dim = c(n_sizes, n_strata, nsims))
+  for (j in seq_len(n_sizes)) {
+    for (s in seq_len(nsims)) {
+      rv <- res$r_values_list[[j]][[s]]
+      pv <- res$pvalues[j, , s]
+      pv[is.na(pv)] <- 1
+      qv <- p.adjust(pv, "BH")
+      disc <- qv < fdr
+      rhy  <- rv > 0
+      xgr  <- cut(rv, breaks = r_breaks, include.lowest = TRUE, labels = FALSE)
+      for (k in seq_len(n_strata)) {
+        in_k  <- !is.na(xgr) & xgr == k
+        nr_k  <- sum(rhy & in_k, na.rm = TRUE)
+        td_k  <- sum(disc & rhy & in_k, na.rm = TRUE)
+        stratum_pow[j, k, s] <- if (nr_k > 0) td_k / nr_k else NA_real_
+      }
+    }
+  }
+  mean_strat <- apply(stratum_pow, c(1, 2), mean, na.rm = TRUE)
+
+  # ---- layout ------------------------------------------------------------
+  opar <- par(no.readonly = TRUE); on.exit(par(opar))
+  par(mfrow = c(1, 3), mar = c(4.0, 4.5, 2.4, 0.6), mgp = c(2.5, 0.7, 0),
+      oma = c(0.5, 0, 0.5, 0),
+      cex.axis = 1.20, cex.lab = 1.30, cex.main = 1.40, font.main = 2)
+
+  # ===== Panel A: power vs N at chosen FDR =====
+  plot(ss, 100 * mean_pow, type = "b", pch = 19, cex = 1.5, lwd = 2.5,
+       col = "#1f78b4", xlim = c(0, max(ss) * 1.05), ylim = c(0, 100),
+       xlab = "Sample size (N)", ylab = "Power (%)",
+       main = sprintf("A   Power vs N  (FDR %.0f%%)", 100 * fdr))
+  grid(col = "grey85")
+  abline(h = 100 * target_power, lty = 2, col = "#e31a1c", lwd = 1.8)
+  arrows(ss, pmax(0, 100 * (mean_pow - se_pow)),
+         ss, pmin(100, 100 * (mean_pow + se_pow)),
+         angle = 90, code = 3, length = 0.05, col = "#1f78b4", lwd = 1.2)
+  # large clear legend
+  legend("topleft", title = "What is shown",
+         legend = c(sprintf("Mean power at FDR %.0f%%", 100 * fdr),
+                    sprintf("Target = %.0f%%", 100 * target_power)),
+         col = c("#1f78b4", "#e31a1c"), lty = c(1, 2), lwd = c(2.5, 1.8),
+         pch = c(19, NA), cex = 1.10, bg = "white", box.col = "grey50", inset = 0.02)
+
+  # ===== Panel B: stratified power vs r-tilde =====
+  matplot(seq_len(n_strata), t(100 * mean_strat[disp_idx, , drop = FALSE]),
+          type = "b", pch = 19, lwd = 2,
+          col = size_colors, lty = 1, xaxt = "n",
+          ylim = c(0, 100), xlab = "r-tilde bin (A / sigma)",
+          ylab = "Power (%)",
+          main = sprintf("B   Power vs effect-size bin (FDR %.0f%%)",
+                          100 * fdr))
+  grid(col = "grey85")
+  axis(1, at = seq_len(n_strata), labels = strata_labels, las = 2, cex.axis = 0.95)
+  legend("topleft", title = "Sample size (N)",
+         legend = paste0("N = ", ss),
+         col = size_colors, lty = 1, lwd = 2, pch = 19,
+         cex = 1.10, bg = "white", box.col = "grey50", inset = 0.02)
+
+  # ===== Panel C: number of discoveries vs N at each r-tilde bin =====
+  mean_TD_strat <- array(NA_real_, dim = c(n_sizes, n_strata))
+  for (j in seq_len(n_sizes)) {
+    for (k in seq_len(n_strata)) {
+      n_target_per_sim <- vapply(res$r_values_list[[j]], function(v) {
+        v <- v[v > 0]
+        if (length(v) == 0L) return(0L)
+        bin <- cut(v, breaks = r_breaks, include.lowest = TRUE, labels = FALSE)
+        sum(!is.na(bin) & bin == k, na.rm = TRUE)
+      }, integer(1))
+      n_target <- mean(n_target_per_sim, na.rm = TRUE)
+      mean_TD_strat[j, k] <- mean(stratum_pow[j, k, ], na.rm = TRUE) * n_target
+    }
+  }
+  matplot(seq_len(n_strata), t(mean_TD_strat[disp_idx, , drop = FALSE]),
+          type = "b", pch = 19, lwd = 2,
+          col = size_colors, lty = 1, xaxt = "n",
+          xlab = "r-tilde bin (A / sigma)",
+          ylab = "Mean # rhythmic discoveries",
+          main = sprintf("C   Mean discoveries (FDR %.0f%%)", 100 * fdr))
+  grid(col = "grey85")
+  axis(1, at = seq_len(n_strata), labels = strata_labels, las = 2, cex.axis = 0.95)
+  legend("topleft", title = "Sample size (N)",
+         legend = paste0("N = ", ss),
+         col = size_colors, lty = 1, lwd = 2, pch = 19,
+         cex = 1.10, bg = "white", box.col = "grey50", inset = 0.02)
+  invisible(NULL)
+}
+
 # When SCP_SHINY_DEMO=1, the app reads pilots from ./pilots/ next to app.R
 # instead of system.file("extdata","pilots", package = "SCP"). This is the
 # slim 86-pilot subset bundled for the shinyapps.io free-tier demo.
@@ -512,10 +648,7 @@ server <- function(input, output, session) {
           else p$phase <- rep_len(p$phase, n_sigma)
         }
       }
-      # Cap genes at 5000 for Shiny response (pilots can be up to 20k)
-      if (!is.null(p$ngenes) && is.finite(p$ngenes) && p$ngenes > 5000L) {
-        p$ngenes <- 5000L
-      }
+      # Use the pilot's full gene count (matches the manuscript figure scripts)
       # Build sample-size grid from user-chosen min/max/step
       n_grid <- seq(as.integer(input$n_min),
                     as.integer(input$n_max),
@@ -552,7 +685,7 @@ server <- function(input, output, session) {
       if (length(cts_vec) == 0L) cts_vec <- seq(0, 22, by = 4)
       design <- SCP::CircadianDesignOptions(
         sample_sizes = n_grid,
-        nsims        = 25L,
+        nsims        = 100L,
         design       = design_type,
         cts          = cts_vec
       )
@@ -590,12 +723,8 @@ server <- function(input, output, session) {
     req(res)
     tryCatch({
       tfd <- as.numeric(input$target_fdr)
-      # Pass the chosen FDR as both alias and panel_fdr; pass it as the ONLY
-      # threshold in panel A so the user sees a single labeled curve at their target.
-      SCP::plotSingleCohortPower(res, fdr = tfd,
-                                  panel_fdr = tfd, vline_fdr = tfd,
-                                  fdr_thresholds = tfd,
-                                  r_max = NULL)
+      tpw <- as.numeric(input$target_power)
+      .shiny_power_curve_3panel(res, fdr = tfd, target_power = tpw)
       },
       error = function(e) {
         plot.new()
