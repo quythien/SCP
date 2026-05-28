@@ -227,32 +227,47 @@ server <- function(input, output, session) {
   pilot <- reactive({
     if (isTRUE(input$pilot_source == "upload")) return(uploaded_pilot())
     req(input$species, input$dataset, input$tissue, input$condition)
-    tryCatch(
+    p <- tryCatch(
       .read_pilot(input$species, input$dataset,
                   input$tissue, input$condition),
       error = function(e) NULL
     )
+    # ensure the class is present so runSimsSingleCohort accepts it
+    if (!is.null(p) && !inherits(p, "CircadianBioOptions"))
+      class(p) <- c("CircadianBioOptions", class(p))
+    p
   })
 
   output$pilot_summary <- renderText({
     p <- pilot()
     if (is.null(p)) return("Pick a (species, dataset, tissue, condition) above.")
-    amp <- p$amplitude   %||% NA_real_
-    sig <- p$sigma_rhythmic %||% NA_real_
-    # amp may be top-K only while sig is full G; align by truncating to shorter
-    n_min <- min(length(amp), length(sig))
-    if (n_min > 0L) {
-      r <- amp[seq_len(n_min)] / sig[seq_len(n_min)]
-    } else {
-      r <- NA_real_
+    # Prefer cached r-tilde summaries baked into the pilot (correct gene pairing)
+    r_med <- p$r_median %||% NA_real_
+    r_q25 <- p$r_q25    %||% NA_real_
+    r_q75 <- p$r_q75    %||% NA_real_
+    if (!is.finite(r_med)) {
+      amp <- p$amplitude %||% numeric(0); sig <- p$sigma_rhythmic %||% numeric(0)
+      n_min <- min(length(amp), length(sig))
+      if (n_min > 0L) {
+        r <- amp[seq_len(n_min)] / sig[seq_len(n_min)]
+        r <- r[is.finite(r) & r > 0]
+        if (length(r) > 0) {
+          r_med <- median(r); r_q25 <- quantile(r, 0.25); r_q75 <- quantile(r, 0.75)
+        }
+      }
     }
-    r <- r[is.finite(r) & r > 0]
+    # FDR-aware prop_rhythmic (recompute from raw p-values if present)
+    prop_at_fdr <- p$prop_rhythmic %||% NA_real_
+    if (!is.null(p$raw$pvalue)) {
+      q <- p.adjust(p$raw$pvalue, "BH")
+      prop_at_fdr <- mean(q < input$target_fdr, na.rm = TRUE)
+    }
     sprintf(
       paste0(
         "Pilot     : %s / %s / %s / %s\n",
         "Design    : %s\n",
         "Genes     : %s\n",
-        "Prop. rhythmic (FDR 5%%) : %s\n",
+        "Prop. rhythmic (FDR %.0f%%) : %s\n",
         "Median r-tilde (A / sigma) : %s   IQR [%s, %s]"
       ),
       input$species, input$dataset, input$tissue, input$condition,
@@ -264,7 +279,6 @@ server <- function(input, output, session) {
         if (nrow(mrow) > 0L) mrow$design[1] else "unknown"
       },
       {
-        # Prefer pilot$ngenes; fall back to manifest's ngenes column
         ng <- p$ngenes
         if (is.null(ng) || is.na(ng)) {
           mrow <- manifest()[manifest()$species == input$species &
@@ -275,10 +289,11 @@ server <- function(input, output, session) {
         }
         if (is.null(ng) || is.na(ng)) "NA" else format(ng, big.mark = ",")
       },
-      if (is.null(p$prop_rhythmic)) "NA" else sprintf("%.1f%%", 100 * p$prop_rhythmic),
-      if (length(r) == 0L) "NA" else sprintf("%.2f", stats::median(r)),
-      if (length(r) == 0L) "NA" else sprintf("%.2f", stats::quantile(r, 0.25)),
-      if (length(r) == 0L) "NA" else sprintf("%.2f", stats::quantile(r, 0.75))
+      100 * input$target_fdr,
+      if (!is.finite(prop_at_fdr)) "NA" else sprintf("%.1f%%", 100 * prop_at_fdr),
+      if (!is.finite(r_med)) "NA" else sprintf("%.2f", r_med),
+      if (!is.finite(r_q25)) "NA" else sprintf("%.2f", r_q25),
+      if (!is.finite(r_q75)) "NA" else sprintf("%.2f", r_q75)
     )
   })
 

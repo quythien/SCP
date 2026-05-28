@@ -141,9 +141,7 @@ NumericVector cosinor_pvals_cpp(const NumericMatrix& expr,
     double est[3];
     if (!solve3x3(Smat, dvec, est)) { pvals[g] = 1.0; continue; }
 
-    const double m_hat    = est[0];
-    const double beta1    = est[1];
-    const double beta2    = est[2];
+    // est[0] = m_hat, est[1] = beta1, est[2] = beta2 (referenced by index below)
     const double mean_y   = sum_y / N;
 
     // TSS = sum(y - mean_y)^2 = sum_y2 - N * mean_y^2
