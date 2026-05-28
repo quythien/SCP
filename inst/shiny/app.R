@@ -495,17 +495,6 @@ server <- function(input, output, session) {
       }
       if (!is.null(p$ngenes)) p$ngenes <- as.integer(.as_num(p$ngenes))
       if (!is.null(p$period)) p$period <- .as_num(p$period)
-      # Sanity warning: too few rhythmic candidates -> simulation power is unreliable
-      n_rhy_pilot <- length(p$sigma_rhythmic %||% numeric(0))
-      if (n_rhy_pilot < 50L) {
-        showNotification(
-          sprintf(paste0("This pilot has only %d genes passing its internal ",
-                         "rhythmic threshold. Power numbers may be unreliable. ",
-                         "Try a stronger pilot (larger n or higher r-tilde) or ",
-                         "interpret with caution."), n_rhy_pilot),
-          type = "warning", duration = 12
-        )
-      }
       # Harmonize amplitude / phase to match sigma_rhythmic length when the
       # pilot was built with mismatched gene-sets (caught in some agent-
       # ingested GTEx pilots: amplitude length 1122 vs sigma 300).
