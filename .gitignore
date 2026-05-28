@@ -22,8 +22,6 @@
 !man/**
 !src/
 !src/**
-!tests/
-!tests/**
 !examples/
 !examples/**
 !doc/
@@ -111,13 +109,10 @@ output/main_figures/archive_*/
 !data/gse160521_caudate_ctrl_pilot.rds
 !data/gse160521_putamen_ctrl_pilot.rds
 !data/gtex_adr_vs_liv_pilot_paired.rds
-!output/two_harmonic/
-!output/two_harmonic/results/
-!output/two_harmonic/results/tissue_Liver_fits.rds
-!output/two_harmonic/results/tissue_Liver_venn.rds
-!output/two_harmonic/results/tissue_Liver_kegg.rds
-!output/two_harmonic/results/pilot_2h_GTExLiver_topK300.rds
-!output/two_harmonic/results/fig6_v9_data.rds
+
+# Explicitly exclude from public repo (kept locally for reproducibility)
+output/two_harmonic/results/
+tests/
 
 # Local AI tool state (not committed)
 .codex/

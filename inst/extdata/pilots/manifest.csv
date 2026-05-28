@@ -5,7 +5,6 @@
 "human","GSE160521","Caudate","Control",NA,15041,"passive","RNAseq","in_vivo","GSE160521","Ketchesin et al. 2021 (PNAS)","CC-BY","human/GSE160521_Caudate_Control.rds","ingested",NA,NA,NA,NA,NA,"Caudate"
 "human","GSE160521","NAc","Control",NA,15330,"passive","RNAseq","in_vivo","GSE160521","Ketchesin et al. 2021 (PNAS)","CC-BY","human/GSE160521_NAc_Control.rds","ingested",NA,NA,NA,NA,NA,"Nucleus accumbens"
 "human","GSE160521","Putamen","Control",NA,14866,"passive","RNAseq","in_vivo","GSE160521","Ketchesin et al. 2021 (PNAS)","CC-BY","human/GSE160521_Putamen_Control.rds","ingested",NA,NA,NA,NA,NA,"Putamen"
-"human","GSE160521","Putamen","Control_vs_SCZ",NA,14866,"passive","RNAseq","in_vivo","GSE160521","Ketchesin et al. 2021 (PNAS)","CC-BY","human/GSE160521_Putamen_CtrlVsSCZ.rds","ingested",NA,NA,NA,NA,NA,"Putamen"
 "human","GSE71620","BA11_BA47","Younger",NA,19998,"passive","microarray","in_vivo","GSE71620+CMC","Chen et al. 2016 (PNAS)","CMC restricted","human/GSE71620_BA11BA47_Younger.rds","ingested",NA,NA,NA,NA,NA,"BA11+BA47 PFC (Combined)"
 "human","Seney-ACC","ACC","Control",NA,14455,"passive","RNAseq","in_vivo","Seney_CMC","Seney et al. 2019","CMC restricted","human/Seney_ACC_Control.rds","ingested",NA,NA,NA,NA,NA,"Anterior cingulate cortex"
 "baboon","GSE98965","COR","All",12,4938,"active","microarray","in_vivo","GSE98965","Mure et al. 2018 (Science)","CC-BY","baboon/GSE98965_COR_All.rds","ingested",NA,12,0.92,2,"   0,   2,   4,   6,   8,  10,  12,  14,  16,  18,  20,  22","Cornea"
