@@ -125,8 +125,11 @@ ui <- fluidPage(
                    choices = c("Adjusted FDR (BH)" = "q",
                                "Raw p-value"       = "p"),
                    selected = "q", inline = TRUE),
-      sliderInput("rhy_thresh", "Threshold",
-                  min = 0.001, max = 0.20, value = 0.05, step = 0.001),
+      selectInput("rhy_thresh", "Threshold",
+                  choices  = c("0.25" = 0.25, "0.20" = 0.20, "0.15" = 0.15,
+                               "0.10" = 0.10, "0.05" = 0.05, "0.01" = 0.01,
+                               "0.001" = 0.001, "0.0001" = 0.0001),
+                  selected = 0.05),
       helpText(em("Used only for the 'Prop. rhythmic' figure in the pilot summary.")),
       hr(),
       actionButton("run", "Run simulation",
@@ -351,9 +354,9 @@ server <- function(input, output, session) {
       pv <- as.numeric(p$raw$pvalue)
       pv <- pv[is.finite(pv)]
       stat <- if (input$rhy_stat == "q") p.adjust(pv, "BH") else pv
-      prop_at_fdr <- mean(stat < input$rhy_thresh, na.rm = TRUE)
+      prop_at_fdr <- mean(stat < as.numeric(input$rhy_thresh), na.rm = TRUE)
     }
-    rhy_label <- if (input$rhy_stat == "q") sprintf("FDR %.0f%%", 100 * input$rhy_thresh) else sprintf("p < %.3g", input$rhy_thresh)
+    rhy_label <- if (input$rhy_stat == "q") sprintf("FDR %.0f%%", 100 * as.numeric(input$rhy_thresh)) else sprintf("p < %.3g", as.numeric(input$rhy_thresh))
     sprintf(
       paste0(
         "Pilot     : %s / %s / %s / %s\n",
