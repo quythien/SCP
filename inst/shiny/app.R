@@ -105,9 +105,13 @@ ui <- fluidPage(
       ),
       hr(),
       h4("Sample size grid"),
-      sliderInput("n_max", "Maximum N to simulate", min = 40, max = 300,
+      sliderInput("n_min", "Minimum N", min = 10, max = 100,
+                  value = 20, step = 10),
+      sliderInput("n_max", "Maximum N", min = 40, max = 400,
                   value = 120, step = 20),
-      helpText(em("Grid: 20, 40, ..., up to your chosen max in steps of 20.")),
+      sliderInput("n_step", "Step", min = 10, max = 60,
+                  value = 20, step = 10),
+      helpText(em("Grid: N_min, N_min + step, ..., up to N_max.")),
       hr(),
       h4("Targets"),
       sliderInput("target_power", "Target power",
@@ -380,8 +384,14 @@ server <- function(input, output, session) {
       if (!is.null(p$ngenes) && is.finite(p$ngenes) && p$ngenes > 2000L) {
         p$ngenes <- 2000L
       }
-      # Build sample-size grid: 20, 40, ..., n_max in steps of 20
-      n_grid <- seq(20L, as.integer(input$n_max), by = 20L)
+      # Build sample-size grid from user-chosen min/max/step
+      n_grid <- seq(as.integer(input$n_min),
+                    as.integer(input$n_max),
+                    by = as.integer(input$n_step))
+      if (length(n_grid) < 2L) {
+        n_grid <- as.integer(input$n_min) +
+                  as.integer(input$n_step) * 0:3
+      }
       # cts: q4h grid for active; for passive use the pilot's empirical times
       # if preserved, else fall back to the q4h grid as a placeholder
       design_type <- input$design
