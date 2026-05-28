@@ -145,3 +145,19 @@ examples/exploratory/
 examples/figures/
 examples/panelC160/
 examples/publication/archive/
+
+# Whitelist the curated pilot database (~80 MB, 127 rds, plus manifest)
+!inst/
+!inst/extdata/
+!inst/extdata/pilots/
+!inst/extdata/pilots/manifest.csv
+!inst/extdata/pilots/human/
+!inst/extdata/pilots/baboon/
+!inst/extdata/pilots/other_primate/
+!inst/extdata/pilots/mouse/
+!inst/extdata/pilots/rat/
+!inst/extdata/pilots/**/*.rds
+
+# Whitelist the Shiny app
+!inst/shiny/
+!inst/shiny/**
