@@ -269,10 +269,10 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   }
   abline(h = 80, lty = 2, col = "grey50", lwd = 1.2)
   grid()
-  legend("bottomright", thresh_labels,
+  legend("topleft", title = "FDR threshold", legend = thresh_labels,
          col = thresh_cols, lty = 1, pch = 19, lwd = 2,
-         cex = 1.15, bty = "o", bg = "white", box.col = "grey70", box.lwd = 0.5,
-         inset = 0.01, y.intersp = 0.85)
+         cex = 1.30, bty = "o", bg = "white", box.col = "grey50", box.lwd = 0.8,
+         inset = c(0.02, 0.02), y.intersp = 1.0, title.adj = 0)
   if (!is.na(vline_n)) {
     abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.5)
     # Place "n=NNN" to the RIGHT of the dashed line, low in the plot (y=35).
@@ -302,10 +302,10 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                 100 * se_pow_plt[j, ], col = size_colors[j])
   }
   grid()
-  legend("bottomright", paste0("n=", sample_sizes[disp_idx]),
+  legend("topleft", title = "Sample size", legend = paste0("n = ", sample_sizes[disp_idx]),
          col = size_colors[disp_idx], lty = 1, lwd = 2,
-         cex = 1.15, bty = "o", bg = "white", box.col = "grey70", box.lwd = 0.5,
-         inset = 0.01, y.intersp = 0.85)
+         cex = 1.20, bty = "o", bg = "white", box.col = "grey50", box.lwd = 0.8,
+         inset = c(0.02, 0.02), y.intersp = 1.0, title.adj = 0)
 
   # ---- Panel C: TD by r-stratum, n lines + overlaid gene distribution ----
   y_max_TD      <- max(gene_counts_plt) * 1.15
@@ -333,12 +333,12 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
     add_se_bars(seq_len(n_strata_plt), mean_TD_plt[j, ], se_TD_plt[j, ], col = size_colors[j])
   }
   grid()
-  legend("topright",
-         c(paste0("n=", sample_sizes[disp_idx]), "# Target Discoveries"),
+  legend("topleft", title = "Sample size",
+         legend = c(paste0("n = ", sample_sizes[disp_idx]), "Target gene count"),
          col = c(size_colors[disp_idx], "grey60"), lty = c(rep(1, length(disp_idx)), 2),
          lwd = c(rep(2, length(disp_idx)), 1.5),
-         cex = 1.15, bty = "o", bg = "white", box.col = "grey70", box.lwd = 0.5,
-         inset = 0.01, y.intersp = 0.85)
+         cex = 1.20, bty = "o", bg = "white", box.col = "grey50", box.lwd = 0.8,
+         inset = c(0.02, 0.02), y.intersp = 1.0, title.adj = 0)
   par(mgp = c(3.0, 0.6, 0))   # restore
 
   if (nchar(title) > 0)
