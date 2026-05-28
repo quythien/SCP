@@ -133,7 +133,8 @@ ui <- fluidPage(
                   min = 0.01, max = 0.20, value = 0.05, step = 0.01),
       hr(),
       actionButton("run", "Run simulation",
-                   class = "btn-primary btn-block", width = "100%")
+                   class = "btn-primary btn-block", width = "100%"),
+      uiOutput("stale_banner")
     ),
     mainPanel(
       width = 9,
@@ -300,6 +301,26 @@ server <- function(input, output, session) {
     if (!is.null(p) && !inherits(p, "CircadianBioOptions"))
       class(p) <- c("CircadianBioOptions", class(p))
     p
+  })
+
+  # Track what was last simulated so we can warn when settings drift
+  last_run_state <- reactiveVal(NULL)
+
+  current_state <- reactive({
+    list(species = input$species, dataset = input$dataset,
+         tissue = input$tissue, condition = input$condition,
+         K = input$K, design = input$design,
+         active_step = input$active_step,
+         n_min = input$n_min, n_max = input$n_max, n_step = input$n_step,
+         target_fdr = input$target_fdr)
+  })
+
+  output$stale_banner <- renderUI({
+    if (is.null(last_run_state())) return(NULL)
+    if (identical(current_state(), last_run_state())) return(NULL)
+    div(style = "margin-top: 8px; padding: 8px; background: #fff3cd; border-left: 4px solid #d68f00; font-size: 0.85em;",
+        strong("Settings changed."), br(),
+        "Click Run again to refresh the curve and recommended N.")
   })
 
   output$pilot_links <- renderUI({
@@ -567,6 +588,7 @@ server <- function(input, output, session) {
         }
       )
       incProgress(1, detail = "Done")
+      last_run_state(isolate(current_state()))
       res
     })
   })
