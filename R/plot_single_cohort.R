@@ -39,12 +39,26 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                                  p.adjust.method = "BH",
                                  reference_n = NULL,
                                  display_sizes = NULL,
-                                 r_max = 5,
+                                 r_max = NULL,
                                  width = 15, height = 5.5) {
   # `fdr` is a single-value alias for panel_fdr + vline_fdr (back-compat)
   if (!is.null(fdr) && is.numeric(fdr) && length(fdr) == 1L) {
     panel_fdr <- fdr
     vline_fdr <- fdr
+  }
+  # Adaptive r_max: pick the 95th percentile of observed r-tilde values across
+  # all simulations so panels B and C only show populated strata (don't waste
+  # space on r in (3, 5] when no gene has r > 1.5).
+  if (is.null(r_max)) {
+    r_pool <- unlist(lapply(res$r_values_list, function(rv) {
+      unlist(lapply(rv, function(v) v[v > 0]), use.names = FALSE)
+    }), use.names = FALSE)
+    if (length(r_pool) > 0L) {
+      r_max <- max(stats::quantile(r_pool, 0.95, na.rm = TRUE), 1.0)
+      r_max <- ceiling(r_max * 2) / 2   # round up to nearest 0.5
+    } else {
+      r_max <- 5
+    }
   }
 
   sample_sizes  <- res$sample_sizes
