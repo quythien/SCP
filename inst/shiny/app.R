@@ -523,9 +523,9 @@ server <- function(input, output, session) {
           else p$phase <- rep_len(p$phase, n_sigma)
         }
       }
-      # Cap genes at 2000 for snappier Shiny response
-      if (!is.null(p$ngenes) && is.finite(p$ngenes) && p$ngenes > 2000L) {
-        p$ngenes <- 2000L
+      # Cap genes at 5000 for Shiny response (pilots can be up to 20k)
+      if (!is.null(p$ngenes) && is.finite(p$ngenes) && p$ngenes > 5000L) {
+        p$ngenes <- 5000L
       }
       # Build sample-size grid from user-chosen min/max/step
       n_grid <- seq(as.integer(input$n_min),
@@ -563,7 +563,7 @@ server <- function(input, output, session) {
       if (length(cts_vec) == 0L) cts_vec <- seq(0, 22, by = 4)
       design <- SCP::CircadianDesignOptions(
         sample_sizes = n_grid,
-        nsims        = 10L,
+        nsims        = 25L,
         design       = design_type,
         cts          = cts_vec
       )
@@ -627,9 +627,12 @@ server <- function(input, output, session) {
     # Grid did not reach target. Report the max observed power AND a
     # closed-form per-gene-at-median-r-tilde estimate as separate numbers
     # so the user sees both honestly.
-    max_pow <- if (length(np$power) > 0L) max(np$power, na.rm = TRUE) else NA_real_
-    n_at_max <- if (is.finite(max_pow))
-      res$sample_sizes[which.max(np$power)] else max(res$sample_sizes)
+    # Report at the user's largest N (not at the N where MC noise gave max power)
+    n_largest <- max(res$sample_sizes)
+    last_pow  <- if (length(np$power) > 0L)
+      np$power[which(res$sample_sizes == n_largest)[1]] else NA_real_
+    max_pow   <- last_pow
+    n_at_max  <- n_largest
     p <- pilot()
     n_cf <- tryCatch(
       SCP::circaPowerApproxN80(
