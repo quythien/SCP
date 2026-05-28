@@ -84,8 +84,7 @@ analysis <- CircadianAnalysisOptions(alpha = 0.05)
 res      <- runSimsSingleCohort(bio.opts      = bio,
                                 design.opts   = design,
                                 analysis.opts = analysis,
-                                method        = "DCP",        # "cosinor" for K >= 2
-                                K             = 1,
+                                K             = 1,    # K = 2 for two-harmonic
                                 mc.cores      = 4)
 
 # 4. Recommended N at 80% power, FDR 5%
