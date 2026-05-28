@@ -168,3 +168,5 @@ inst/shiny_demo/
 # Reproducibility scripts
 !scripts/
 !scripts/**
+!summary/
+!summary/**
