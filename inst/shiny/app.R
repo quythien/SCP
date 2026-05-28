@@ -110,8 +110,7 @@ ui <- fluidPage(
                   min = 0.01, max = 0.20, value = 0.05, step = 0.01),
       hr(),
       actionButton("run", "Run simulation",
-                   class = "btn-primary btn-block", width = "100%"),
-      helpText("A single run takes ~3-8 seconds.")
+                   class = "btn-primary btn-block", width = "100%")
     ),
     mainPanel(
       width = 8,
