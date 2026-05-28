@@ -520,13 +520,20 @@ server <- function(input, output, session) {
       incProgress(0.3, detail = "Simulating")
       K_val <- as.integer(input$K)
       method_arg <- if (K_val == 1L) "DCP" else "cosinor"
-      res <- SCP::runSimsSingleCohort(
-        bio.opts      = p,
-        design.opts   = design,
-        analysis.opts = analysis,
-        method        = method_arg,
-        K             = K_val,
-        mc.cores      = n_cores
+      res <- tryCatch(
+        SCP::runSimsSingleCohort(
+          bio.opts      = p,
+          design.opts   = design,
+          analysis.opts = analysis,
+          method        = method_arg,
+          K             = K_val,
+          mc.cores      = n_cores
+        ),
+        error = function(e) {
+          msg <- sprintf("Simulation failed: %s", conditionMessage(e))
+          showNotification(msg, type = "error", duration = 8)
+          structure(list(error = msg), class = "sim_error")
+        }
       )
       incProgress(1, detail = "Done")
       res
