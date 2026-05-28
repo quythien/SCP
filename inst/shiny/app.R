@@ -637,19 +637,13 @@ server <- function(input, output, session) {
       ),
       error = function(e) NA_real_
     )
-    sim_msg <- if (is.finite(max_pow))
+    if (is.finite(max_pow))
       sprintf("The largest sample size simulated (N = %d) reached only %.0f%% power at FDR %.0f%%. A larger N is needed to hit the %.0f%% target.",
               n_at_max, 100 * max_pow,
               100 * as.numeric(input$target_fdr), 100 * input$target_power)
     else
       sprintf("The simulation did not reach %.0f%% power at any N in your grid.",
               100 * input$target_power)
-    cf_msg <- if (is.finite(n_cf))
-      sprintf(" A rough closed-form estimate (based on the pilot's median r-tilde and ignoring multiple testing) suggests N around %.0f, but this number is usually optimistic for genome-wide power.",
-              ceiling(n_cf))
-    else
-      " A closed-form estimate is not available for this pilot."
-    paste0(sim_msg, cf_msg)
   })
 }
 
