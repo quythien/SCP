@@ -464,11 +464,28 @@ server <- function(input, output, session) {
       # if preserved, else fall back to the q4h grid as a placeholder
       design_type <- input$design
       cts_vec <- if (design_type == "passive") {
-        p$times %||% p$raw$times %||% seq(0, 22, by = 4)
+        tt <- p$times %||% p$raw$times %||% NULL
+        if (is.null(tt) || length(tt) == 0L) {
+          # Pilot has no raw times; try the manifest's tod_phases as fallback
+          m <- manifest()
+          mrow <- m[m$species == input$species & m$design == input$design_filter &
+                    m$dataset == input$dataset & m$condition == input$condition, , drop = FALSE]
+          mrow <- mrow[.tissue_display(mrow) == input$tissue, , drop = FALSE]
+          ph <- if (nrow(mrow) > 0L && "tod_phases" %in% names(mrow) &&
+                    !is.na(mrow$tod_phases[1]) && nzchar(mrow$tod_phases[1]) &&
+                    !grepl("phases\\)$", mrow$tod_phases[1])) {
+            suppressWarnings(as.numeric(strsplit(mrow$tod_phases[1], ",")[[1]]))
+          } else NULL
+          if (!is.null(ph) && length(ph) > 0L) ph else seq(0, 22, by = 4)
+        } else as.numeric(tt)
       } else {
-        step <- as.integer(input$active_step %||% 4L)
+        step <- suppressWarnings(as.numeric(input$active_step))
+        if (!is.finite(step) || step <= 0) step <- 4
         seq(0, 24 - step, by = step)
       }
+      cts_vec <- as.numeric(cts_vec)
+      cts_vec <- cts_vec[is.finite(cts_vec)]
+      if (length(cts_vec) == 0L) cts_vec <- seq(0, 22, by = 4)
       design <- SCP::CircadianDesignOptions(
         sample_sizes = n_grid,
         nsims        = 10L,
