@@ -55,7 +55,7 @@ if (file.exists("data/mice_GSE54651_CPM.RData")) {
     for (tn in names(d$count_clean)) {
       tt <- d$tod[[tn]]
       if (length(tt) > 0)
-        times_by_key[[key("Mouse", "GSE54651", tn, "All")]] <- tt
+        times_by_key[[key("mouse", "GSE54651", tn, "All")]] <- tt
     }
   }
 }
@@ -68,11 +68,11 @@ for (nm in names(gtex_local)) {
     p <- tryCatch(readRDS(gtex_local[[nm]]), error = function(e) NULL)
     tt <- p$raw$times %||% p$times %||% NULL
     if (!is.null(tt))
-      times_by_key[[key("Human", "GTEx", nm, "All")]] <- tt
+      times_by_key[[key("human", "GTEx", nm, "All")]] <- tt
   }
 }
 
-# GSE160521 striatum control pilots (3 regions x 1 cond = "CONTROL")
+# GSE160521 striatum control pilots (3 regions x 1 cond = "Control")
 gse160521_paths <- list(
   list(rds="data/gse160521_nac_ctrl_pilot.rds",     tissue="NAc"),
   list(rds="data/gse160521_caudate_ctrl_pilot.rds", tissue="Caudate"),
@@ -83,7 +83,7 @@ for (e in gse160521_paths) {
     p <- tryCatch(readRDS(e$rds), error = function(e) NULL)
     tt <- p$raw$times %||% p$times %||% NULL
     if (!is.null(tt))
-      times_by_key[[key("Human", "GSE160521", e$tissue, "CONTROL")]] <- tt
+      times_by_key[[key("human", "GSE160521", e$tissue, "Control")]] <- tt
   }
 }
 
@@ -92,7 +92,7 @@ if (file.exists("data/seney_ctrl_pilot.rds")) {
   p <- tryCatch(readRDS("data/seney_ctrl_pilot.rds"), error = function(e) NULL)
   tt <- p$raw$times %||% p$times %||% NULL
   if (!is.null(tt))
-    times_by_key[[key("Human", "Seney-ACC", "ACC", "Control")]] <- tt
+    times_by_key[[key("human", "Seney-ACC", "ACC", "Control")]] <- tt
 }
 
 # BA11-BA47 (younger only locally; older needs CMC raw)
@@ -101,7 +101,7 @@ if (file.exists("data/ba11_ba47_younger.rds")) {
   for (region in c("BA11", "BA47")) {
     tt <- p[[region]]$raw$times %||% p[[region]]$times %||% p$raw$times %||% NULL
     if (!is.null(tt))
-      times_by_key[[key("Human", "BA11-BA47", region, "younger")]] <- tt
+      times_by_key[[key("human", "GSE71620", region, "Younger")]] <- tt
   }
 }
 
@@ -120,7 +120,7 @@ if (file.exists("data/CAMO_PRC_hmb.RData")) {
     if (!is.null(bb)) {
       for (tn in names(bb$tod))
         if (length(bb$tod[[tn]]) > 0)
-          times_by_key[[key("Baboon", "GSE98965", tn, "Control")]] <- bb$tod[[tn]]
+          times_by_key[[key("baboon", "GSE98965", tn, "All")]] <- bb$tod[[tn]]
     }
   }
 }
@@ -148,7 +148,7 @@ if (file.exists(manifest_path)) {
 }
 
 # ---------- apply ------------------------------------------------------------
-csv_path <- "output/supp_tissue_summary/tissue_signal_summary.csv"
+csv_path <- "summary/tissue_signal_summary.csv"
 csv <- read.csv(csv_path, stringsAsFactors = FALSE, check.names = FALSE)
 new_cols <- c("tod_n_unique", "tod_cycles", "tod_step_hr", "tod_phases")
 for (c in new_cols) csv[[c]] <- if (c == "tod_phases") NA_character_ else NA
