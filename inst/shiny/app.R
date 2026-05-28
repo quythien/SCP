@@ -120,6 +120,15 @@ ui <- fluidPage(
       sliderInput("target_fdr",  "Target FDR",
                   min = 0.01, max = 0.20, value = 0.05, step = 0.01),
       hr(),
+      h4("Pilot rhythmicity threshold"),
+      radioButtons("rhy_stat", NULL,
+                   choices = c("Adjusted FDR (BH)" = "q",
+                               "Raw p-value"       = "p"),
+                   selected = "q", inline = TRUE),
+      sliderInput("rhy_thresh", "Threshold",
+                  min = 0.001, max = 0.20, value = 0.05, step = 0.001),
+      helpText(em("Used only for the 'Prop. rhythmic' figure in the pilot summary.")),
+      hr(),
       actionButton("run", "Run simulation",
                    class = "btn-primary btn-block", width = "100%")
     ),
@@ -336,19 +345,22 @@ server <- function(input, output, session) {
         }
       }
     }
-    # FDR-aware prop_rhythmic (recompute from raw p-values if present)
+    # Threshold-aware prop_rhythmic from raw p-values if present
     prop_at_fdr <- p$prop_rhythmic %||% NA_real_
     if (!is.null(p$raw$pvalue)) {
-      q <- p.adjust(p$raw$pvalue, "BH")
-      prop_at_fdr <- mean(q < input$target_fdr, na.rm = TRUE)
+      pv <- as.numeric(p$raw$pvalue)
+      pv <- pv[is.finite(pv)]
+      stat <- if (input$rhy_stat == "q") p.adjust(pv, "BH") else pv
+      prop_at_fdr <- mean(stat < input$rhy_thresh, na.rm = TRUE)
     }
+    rhy_label <- if (input$rhy_stat == "q") sprintf("FDR %.0f%%", 100 * input$rhy_thresh) else sprintf("p < %.3g", input$rhy_thresh)
     sprintf(
       paste0(
         "Pilot     : %s / %s / %s / %s\n",
         "Design    : %s\n",
         "Samples (n) : %s\n",
         "Genes     : %s\n",
-        "Prop. rhythmic (FDR %.0f%%) : %s\n",
+        "Prop. rhythmic (%s) : %s\n",
         "Median r-tilde (A / sigma) : %s   IQR [%s, %s]"
       ),
       input$species, input$dataset, input$tissue, input$condition,
@@ -378,7 +390,7 @@ server <- function(input, output, session) {
         }
         if (is.null(ng) || is.na(ng)) "NA" else format(ng, big.mark = ",")
       },
-      100 * input$target_fdr,
+      rhy_label,
       if (!is.finite(prop_at_fdr)) "NA" else sprintf("%.1f%%", 100 * prop_at_fdr),
       if (!is.finite(r_med)) "NA" else sprintf("%.2f", r_med),
       if (!is.finite(r_q25)) "NA" else sprintf("%.2f", r_q25),
@@ -448,7 +460,15 @@ server <- function(input, output, session) {
       n_cores <- max(1L, min(4L, parallel::detectCores(logical = FALSE) - 1L))
       incProgress(0.2, detail = "Setting up design")
 
-      # Cap genes at 2000 for snappier Shiny response (pilots can be up to 20k genes)
+      # Defensive numeric coercion: some pilots may store fields as character / list
+      .as_num <- function(x) suppressWarnings(as.numeric(x))
+      for (fld in c("amplitude", "sigma_rhythmic", "phase",
+                    "lBaselineExpr", "lOD")) {
+        if (!is.null(p[[fld]])) p[[fld]] <- .as_num(p[[fld]])
+      }
+      if (!is.null(p$ngenes)) p$ngenes <- as.integer(.as_num(p$ngenes))
+      if (!is.null(p$period)) p$period <- .as_num(p$period)
+      # Cap genes at 2000 for snappier Shiny response
       if (!is.null(p$ngenes) && is.finite(p$ngenes) && p$ngenes > 2000L) {
         p$ngenes <- 2000L
       }
