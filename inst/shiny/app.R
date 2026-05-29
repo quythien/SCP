@@ -790,6 +790,7 @@ server <- function(input, output, session) {
     bc <- res$.bc
     if (!is.null(bc) && !inherits(bc, "sim_error")) {
       SCP::plotSingleCohortPower(bc, panel_a_res = res, panels = c("A", "B", "C"),
+                                  vertical = TRUE,
                                   fdr_thresholds = fdr_lines, panel_fdr = tfd, vline_fdr = tfd,
                                   vline_power = tpw, r_max = NULL,
                                   cex_main = 1.7, cex_lab = 1.7, cex_axis = 1.45)
@@ -806,12 +807,14 @@ server <- function(input, output, session) {
              error = function(e) { plot.new(); title(main = sprintf("Plot error: %s", conditionMessage(e))) })
   },
   # Both views are fixed-width and centered (via CSS) so they don't stretch
-  # across the whole right pane on wide screens. 3-panel keeps the ~16x6 ratio.
-  width  = function() if (isTRUE(input$eff_sens)) 1080L else 680L,
-  height = function() if (isTRUE(input$eff_sens)) 430L  else 470L)
+  # across the whole right pane on wide screens. The 3-panel view stacks the
+  # panels vertically, each rendered large (Figure-3-like) rather than squished
+  # side by side; single Panel A stays compact.
+  width  = function() if (isTRUE(input$eff_sens)) 740L  else 680L,
+  height = function() if (isTRUE(input$eff_sens)) 1160L else 470L)
 
   # Download the exact figure shown, as PDF or PNG.
-  .fig_dims  <- function() if (isTRUE(input$eff_sens)) c(16, 6) else c(8, 5.5)
+  .fig_dims  <- function() if (isTRUE(input$eff_sens)) c(7.4, 11.6) else c(8, 5.5)
   .fig_fname <- function(ext) sprintf("SCP_power_%s.%s",
       gsub("[^A-Za-z0-9]+", "_", paste(input$species %||% "", input$tissue %||% "pilot", sep = "_")), ext)
   output$dl_pdf <- downloadHandler(
