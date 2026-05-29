@@ -547,12 +547,16 @@ server <- function(input, output, session) {
         if (nrow(mrow) > 0L) mrow$design[1] else "unknown"
       },
       {
-        mrow <- manifest()[manifest()$species == input$species &
-                           manifest()$dataset == input$dataset &
-                           .tissue_display(manifest()) == input$tissue   &
-                           manifest()$condition == input$condition, , drop = FALSE]
-        nn <- if (nrow(mrow) > 0L && "n" %in% names(mrow)) mrow$n[1] else NA_integer_
-        if (is.null(nn) || is.na(nn)) "NA" else format(nn, big.mark = ",")
+        # Prefer the pilot's actual stored sample times; fall back to manifest n.
+        nn <- length(p$times %||% p$raw$times %||% numeric(0))
+        if (nn < 1L) {
+          mrow <- manifest()[manifest()$species == input$species &
+                             manifest()$dataset == input$dataset &
+                             .tissue_display(manifest()) == input$tissue   &
+                             manifest()$condition == input$condition, , drop = FALSE]
+          nn <- if (nrow(mrow) > 0L && "n" %in% names(mrow)) mrow$n[1] else NA_integer_
+        }
+        if (is.null(nn) || is.na(nn) || nn < 1L) "NA" else format(nn, big.mark = ",")
       },
       {
         ng <- p$ngenes
@@ -787,8 +791,7 @@ server <- function(input, output, session) {
                                     fdr_thresholds = fdr_lines,
                                     panel_fdr = tfd, vline_fdr = tfd,
                                     vline_power = tpw, r_max = NULL,
-                                    vertical = TRUE,   # stack A/B/C in one column (full width each)
-                                    cex_main = 1.9, cex_lab = 1.85, cex_axis = 1.6)
+                                    cex_main = 1.7, cex_lab = 1.7, cex_axis = 1.45)
       } else {
         # Default: Panel A only (paired marginal power), enlarged for the app.
         SCP::plotSingleCohortPower(res, panels = "A",
@@ -805,7 +808,7 @@ server <- function(input, output, session) {
         title(main = sprintf("Plot error: %s", conditionMessage(e)))
       }
     )
-  }, height = function() if (isTRUE(input$eff_sens)) 1080 else 520)
+  }, height = function() if (isTRUE(input$eff_sens)) 560 else 500)
 
 
   output$recommended_n_text <- renderText({
