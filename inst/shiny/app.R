@@ -169,9 +169,8 @@ ui <- fluidPage(
                   accept = c(".csv", ".tsv", ".txt")),
         fileInput("upload_tod", "Times-of-day CSV (one value per sample, in hours)",
                   accept = c(".csv", ".tsv", ".txt")),
-        helpText(em("The expression file's first column should be the gene name. ",
-                    "The TOD file should be a single column of numeric hours, length = number of samples. ",
-                    "Once both files load, the pilot is fit on the fly (5-15 sec).")),
+        helpText(em("Once both files load, the pilot is fit on the fly (5-15 sec). ",
+                    "See the expected file layout on the right.")),
         verbatimTextOutput("upload_status")
       ),
       hr(),
@@ -251,6 +250,28 @@ ui <- fluidPage(
         condition = "input.run == 0",
         br(),
         helpText(em("Click 'Run simulation' to compute the power curve."))
+      ),
+      # Format guide for the upload tab: fills the empty right panel so users can
+      # see exactly how to lay out the two CSVs before they run anything.
+      conditionalPanel(
+        condition = "input.pilot_source == 'upload' && input.run == 0",
+        hr(),
+        h4("Expected file layout"),
+        fluidRow(
+          column(6,
+            tags$b("1. Expression CSV"),
+            tags$div(tags$small("Genes in rows, samples in columns. First column = gene IDs, header row = sample IDs.")),
+            tags$pre(style = "font-size:12px;",
+                     ",Sample1,Sample2,Sample3\nGene1,4.21,3.88,5.10\nGene2,1.07,0.92,1.31\nGene3,2.55,2.71,2.40")
+          ),
+          column(6,
+            tags$b("2. Times-of-day CSV"),
+            tags$div(tags$small("One time-of-day (hours) per sample, no header. Must be in the same order as the expression columns.")),
+            tags$pre(style = "font-size:12px;", "0.5\n6.0\n11.5")
+          )
+        ),
+        helpText(em("A ready-made example ships with the package: ",
+                    tags$code('system.file("extdata/example", package = "SCP")'), "."))
       )
     )
   )

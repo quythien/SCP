@@ -53,7 +53,7 @@ a finer N grid.
 
 ```{r install, eval = FALSE}
 # Install from a local tarball or a checkout of the repo:
-# install.packages("SCP_0.4.3.tar.gz", repos = NULL, type = "source")
+# install.packages("SCP_0.4.16.tar.gz", repos = NULL, type = "source")
 ```
 
 ```{r load-pkg}
