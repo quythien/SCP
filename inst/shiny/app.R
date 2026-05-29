@@ -526,6 +526,18 @@ server <- function(input, output, session) {
         }
       }
     }
+    # Fallback: if the chosen threshold admitted no rhythmic genes (common for
+    # weak tissues at FDR 5%), characterise the pilot's overall effect-size
+    # distribution from the full rhythm_fit candidate pool so the summary never
+    # reads NA. prop_rhythmic still reports the honest (possibly 0%) value.
+    if (!is.finite(r_med) && !is.null(p$rhythm_fit) &&
+        nrow(p$rhythm_fit) > 0L && !is.null(p$rhythm_fit$A)) {
+      rfr <- p$rhythm_fit$A / p$rhythm_fit$sigma
+      rfr <- rfr[is.finite(rfr) & rfr > 0]
+      if (length(rfr) > 0L) {
+        r_med <- median(rfr); r_q25 <- quantile(rfr, 0.25); r_q75 <- quantile(rfr, 0.75)
+      }
+    }
     # prop_rhythmic is already re-derived at the selected threshold in pilot()
     # via the stored rhythm_fit table; fall back to the per-gene p-vector or the
     # baked value for pilots built before rhythm_fit existed.
