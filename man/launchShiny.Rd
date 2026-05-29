@@ -4,10 +4,19 @@
 \alias{launchShiny}
 \title{Launch the SCP Shiny app}
 \usage{
-launchShiny(...)
+launchShiny(..., install_deps = TRUE, species_all = FALSE)
 }
 \arguments{
 \item{...}{Additional arguments passed to \code{shiny::runApp()}.}
+
+\item{install_deps}{Logical; if \code{TRUE} (default) install any missing
+optional app packages (enrichR, writexl, shinyscreenshot, org.Hs.eg.db,
+org.Mm.eg.db) before launching. Set \code{FALSE} to skip the check.}
+
+\item{species_all}{Logical; if \code{TRUE} also install annotation databases
+for rat, zebrafish, Drosophila, C. elegans, S. cerevisiae, P. falciparum, and
+Arabidopsis so upload gene-symbol mapping works for every supported species.
+Default \code{FALSE} installs only human + mouse.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for its side effect of

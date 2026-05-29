@@ -123,12 +123,15 @@ suppressPackageStartupMessages({
 # Bioconductor annotation package is installed; unmatched/unmapped IDs keep their
 # original name, so a usable gene label is always present.
 .SPECIES_MAP <- list(
-  human       = list(pkg = "org.Hs.eg.db",   key = "ENSEMBL", pat = "^ENSG[0-9]+",      lab = "human (Ensembl)"),
-  mouse       = list(pkg = "org.Mm.eg.db",   key = "ENSEMBL", pat = "^ENSMUSG[0-9]+",   lab = "mouse (Ensembl)"),
-  rat         = list(pkg = "org.Rn.eg.db",   key = "ENSEMBL", pat = "^ENSRNOG[0-9]+",   lab = "rat (Ensembl)"),
-  zebrafish   = list(pkg = "org.Dr.eg.db",   key = "ENSEMBL", pat = "^ENSDARG[0-9]+",   lab = "zebrafish (Ensembl)"),
-  fly         = list(pkg = "org.Dm.eg.db",   key = "FLYBASE", pat = "^FBgn[0-9]+",      lab = "Drosophila (FlyBase)"),
-  arabidopsis = list(pkg = "org.At.tair.db", key = "TAIR",    pat = "^AT[0-9CM]G[0-9]+", lab = "Arabidopsis (TAIR)")
+  human       = list(pkg = "org.Hs.eg.db",    key = "ENSEMBL", col = "SYMBOL",   pat = "^ENSG[0-9]+",       lab = "human (Ensembl)"),
+  mouse       = list(pkg = "org.Mm.eg.db",    key = "ENSEMBL", col = "SYMBOL",   pat = "^ENSMUSG[0-9]+",    lab = "mouse (Ensembl)"),
+  rat         = list(pkg = "org.Rn.eg.db",    key = "ENSEMBL", col = "SYMBOL",   pat = "^ENSRNOG[0-9]+",    lab = "rat (Ensembl)"),
+  zebrafish   = list(pkg = "org.Dr.eg.db",    key = "ENSEMBL", col = "SYMBOL",   pat = "^ENSDARG[0-9]+",    lab = "zebrafish (Ensembl)"),
+  fly         = list(pkg = "org.Dm.eg.db",    key = "FLYBASE", col = "SYMBOL",   pat = "^FBgn[0-9]+",       lab = "Drosophila (FlyBase)"),
+  worm        = list(pkg = "org.Ce.eg.db",    key = "ENSEMBL", col = "SYMBOL",   pat = "^WBGene[0-9]+",     lab = "C. elegans (WormBase)"),
+  yeast       = list(pkg = "org.Sc.sgd.db",   key = "ORF",     col = "GENENAME", pat = "^Y[A-P][LR][0-9]{3}[WC]", lab = "S. cerevisiae (SGD)"),
+  malaria     = list(pkg = "org.Pf.plasmo.db", key = "ORF",    col = "SYMBOL",   pat = "^PF3D7_[0-9]",      lab = "P. falciparum (PlasmoDB)"),
+  arabidopsis = list(pkg = "org.At.tair.db",  key = "TAIR",    col = "SYMBOL",   pat = "^AT[0-9CM]G[0-9]+", lab = "Arabidopsis (TAIR)")
 )
 
 .upload_symbols <- function(rf, do_map = TRUE, species = "auto") {
@@ -146,7 +149,7 @@ suppressPackageStartupMessages({
     if (is.null(db)) return(invisible())
     keys <- sub("\\..*", "", g[idx])
     m <- suppressMessages(tryCatch(
-      AnnotationDbi::mapIds(db, keys = keys, column = "SYMBOL",
+      AnnotationDbi::mapIds(db, keys = keys, column = s$col %||% "SYMBOL",
                             keytype = s$key, multiVals = "first"),
       error = function(e) NULL))
     if (!is.null(m)) { hit <- !is.na(m); sym[which(idx)[hit]] <<- m[hit] }
@@ -222,13 +225,17 @@ ui <- fluidPage(
                     choices = c("Auto-detect" = "auto", "Human" = "human",
                                 "Mouse" = "mouse", "Rat" = "rat",
                                 "Zebrafish" = "zebrafish", "Drosophila (fly)" = "fly",
+                                "C. elegans (worm)" = "worm",
+                                "S. cerevisiae (yeast)" = "yeast",
+                                "P. falciparum" = "malaria",
                                 "Arabidopsis" = "arabidopsis", "Other / none" = "none"),
                     selected = "auto"),
         checkboxInput("upload_map_sym",
                       "Map gene IDs to gene symbols (unmapped keep their original name)",
                       value = TRUE),
         helpText(em("Symbol mapping supported for: human, mouse, rat, zebrafish, ",
-                    "Drosophila, Arabidopsis (Ensembl / FlyBase / TAIR IDs). ",
+                    "Drosophila, C. elegans, S. cerevisiae, P. falciparum, Arabidopsis ",
+                    "(the Metascape species with Bioconductor annotation). ",
                     "The app also auto-detects the species from your IDs and suggests one. ",
                     "Any other organism, gene symbols, or probe IDs are used as-is.")),
         helpText(em("Once both files load, the pilot is fit on the fly (5-15 sec). ",
