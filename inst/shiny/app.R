@@ -357,10 +357,12 @@ server <- function(input, output, session) {
   # Resolve canonical tissue back to the actual manifest tissue value
   .resolve_actual_tissue <- function() {
     m <- manifest()
+    # Resolve the canonical display name back to the actual manifest tissue
+    # WITHOUT filtering on condition: condition may lag during the dropdown
+    # cascade, and tissue resolution must not depend on it.
     sub <- m[m$species  == input$species  &
              m$design   == input$design_filter &
-             m$dataset  == input$dataset  &
-             m$condition == input$condition, , drop = FALSE]
+             m$dataset  == input$dataset, , drop = FALSE]
     sub <- sub[.tissue_display(sub) == input$tissue, , drop = FALSE]
     if (nrow(sub) > 0L) sub$tissue[1] else input$tissue
   }
@@ -371,6 +373,15 @@ server <- function(input, output, session) {
     req(input$species, input$dataset, input$tissue, input$condition)
     actual_tissue <- .resolve_actual_tissue()
     K_req <- as.integer(input$K %||% 1L)
+    # Only attempt a load when the full (species, dataset, tissue, condition)
+    # combo actually exists. During the dropdown cascade the condition (or
+    # dataset) briefly lags the tissue selection; wait silently for a
+    # consistent state instead of throwing a transient "no pilot matches" error.
+    m0 <- manifest()
+    combo_ok <- nrow(m0[m0$species == input$species & m0$dataset == input$dataset &
+                        m0$tissue == actual_tissue & m0$condition == input$condition, ,
+                        drop = FALSE]) > 0L
+    req(combo_ok)
     p <- tryCatch(
       .read_pilot(input$species, input$dataset,
                   actual_tissue, input$condition, K = K_req),
