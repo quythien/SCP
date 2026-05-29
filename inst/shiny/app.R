@@ -178,8 +178,8 @@ ui <- fluidPage(
     /* center the power-curve figure so the single-panel view doesn't stretch
        across the whole right pane */
     #power_curve img { display: block; margin-left: auto; margin-right: auto; }
-    /* center the fixed-size gene-explorer plots so 1-2 panels don't jam left */
-    #clock_panel img, #gene_cosinor img, #enrich_plot img { display: block; margin-left: auto; margin-right: auto; }
+    /* center the fixed-size plots so they don't jam left / over-stretch */
+    #clock_panel img, #gene_cosinor img, #enrich_plot img, #tod_plot img { display: block; margin-left: auto; margin-right: auto; }
   "))),
   div(class = "center-titles",
       titlePanel("Power Evaluation and Study Design for Circadian Biomarker Detection"),
@@ -293,7 +293,12 @@ ui <- fluidPage(
       # Reset to a clean blank state from ANY point (clears a stuck/frozen UI).
       actionButton("reset_app", "Reset app", class = "btn-block", width = "100%",
                    icon = icon("rotate-left")),
-      helpText(em("Reload everything to the starting state."))
+      helpText(em("Reload everything to the starting state.")),
+      # Whole-screen snapshot, always available (the explorer also has a
+      # panel-scoped capture button of its own).
+      actionButton("capture_app", "Capture full screen (PNG)", class = "btn-block",
+                   width = "100%", icon = icon("camera")),
+      helpText(em("Save the entire app view as one image."))
     ),
     mainPanel(
       width = 9,
@@ -305,7 +310,7 @@ ui <- fluidPage(
         ),
         column(5,
           h4("Sampling design (TOD distribution)"),
-          plotOutput("tod_plot", height = "180px")
+          plotOutput("tod_plot", height = "auto", width = "auto")
         )
       ),
       # ---- Rhythmic gene explorer (pilot-level; shown before & after a run) ----
@@ -376,7 +381,7 @@ ui <- fluidPage(
             selectInput("enrich_top", "Show top", choices = c(10, 15, 20), selected = 15))
         ),
         actionButton("run_enrich", "Run enrichment", class = "btn-primary"),
-        plotOutput("enrich_plot", height = "440px"),
+        plotOutput("enrich_plot", height = "auto", width = "auto"),
         uiOutput("enrich_note"),
         div(style = "margin-top:4px;",
             downloadButton("dl_enrich_top", "Download displayed terms (CSV)"),
@@ -389,9 +394,7 @@ ui <- fluidPage(
         plotOutput("power_curve", height = "auto"),
         div(style = "margin-top: 6px;",
             downloadButton("dl_pdf", "Download figure (PDF)"),
-            downloadButton("dl_png", "Download figure (PNG)"),
-            actionButton("capture_app", "Capture full app (PNG)",
-                         icon = icon("camera"))),
+            downloadButton("dl_png", "Download figure (PNG)")),
         hr(),
         div(style = "padding: 12px 14px; background:#f4f8fc; border-left: 4px solid #2c7fb8; border-radius: 0 4px 4px 0;",
             uiOutput("recommended_n_text"))
@@ -849,7 +852,7 @@ server <- function(input, output, session) {
                          ifelse(is.na(n_samp), "?", as.character(n_samp)),
                          n_u, if (n_u == 1L) "" else "s"),
           cex.main = 1.0, line = 0.6, adj = 0.5, outer = FALSE)
-  })
+  }, width = function() 420L, height = 200L)   # fixed size + centered via CSS
 
   sim_result <- eventReactive(input$run, {
     p <- pilot()
@@ -1242,16 +1245,18 @@ server <- function(input, output, session) {
     mtext(sub, side = 3, line = 0.35, cex = if (compact) 0.78 else 0.92, col = "grey25")
   }
 
-  # Clock genes passing the threshold (alias-aware, deduped, most-significant
-  # first, capped at the max layout of 12 = 4 cols x 3 rows).
+  # Clock genes passing the threshold (alias-aware, deduped). Select the top 12
+  # by significance (so the strongest show when capped), then display them in
+  # ALPHABETICAL order for a predictable, consistent layout.
   clock_genes <- reactive({
     g <- gene_tbl_pass(); if (is.null(g) || !nrow(g)) return(NULL)
     canon <- .clock_canon(g$Gene)
     pr <- g[!is.na(canon), , drop = FALSE]; pc <- canon[!is.na(canon)]
     if (!nrow(pr)) return(pr)
     pr <- pr[!duplicated(pc), , drop = FALSE]
-    pr <- pr[order(pr$p), , drop = FALSE]
-    utils::head(pr, 12L)
+    pr <- pr[order(pr$p), , drop = FALSE]           # rank by significance for the cap
+    pr <- utils::head(pr, 12L)
+    pr[order(toupper(pr$Gene)), , drop = FALSE]      # plot alphabetically
   })
   # Layout: <=4 columns; rows wrap. FIXED per-panel size so 1-2 genes render at a
   # consistent aspect instead of stretching across the full width.
@@ -1271,14 +1276,28 @@ server <- function(input, output, session) {
           else 4L
     list(n = n, nc = nc, nr = ceiling(n / nc))
   }
+  # layout() matrix at half-cell resolution (2*nc sub-columns) so a partial last
+  # row is padded with blank cells on both sides -> its panels sit CENTERED
+  # (e.g. n=10 -> bottom row [blank, P, P, blank]) instead of left-aligned.
+  .clock_layout_mat <- function(n, nc) {
+    nr <- ceiling(n / nc); drawn <- 0L; rows <- vector("list", nr)
+    for (r in seq_len(nr)) {
+      k <- min(nc, n - drawn); ids <- seq.int(drawn + 1L, drawn + k)
+      row <- if (k == nc) rep(ids, each = 2L)
+             else { pad <- nc - k; c(rep(0L, pad), rep(ids, each = 2L), rep(0L, pad)) }
+      rows[[r]] <- row; drawn <- drawn + k
+    }
+    do.call(rbind, rows)
+  }
 
   output$clock_panel <- renderPlot({
     pr <- clock_genes()
     if (is.null(pr) || !nrow(pr)) { plot.new()
       title(sprintf("No core clock genes pass %s in this pilot.", .thresh_label())); return() }
     gd <- .clock_grid()
-    op <- par(mfrow = c(gd$nr, gd$nc), mar = c(3.3, 3.4, 3.4, 0.7),
-              mgp = c(1.9, 0.6, 0)); on.exit(par(op))
+    layout(.clock_layout_mat(gd$n, gd$nc))
+    op <- par(mar = c(3.3, 3.4, 3.4, 0.7), mgp = c(1.9, 0.6, 0))
+    on.exit({ par(op); layout(1) })
     for (i in seq_len(gd$n)) .draw_cos(pr[i, ], compact = TRUE)
   },
   # device sized to the grid -> each panel keeps a fixed ratio for any gene count
@@ -1469,17 +1488,25 @@ server <- function(input, output, session) {
                                 gsub("_", " ", input$enrich_sig %||% "adj 0.05"))); return()
     }
     term <- sub(" \\(GO:.*\\)$", "", r$Term)              # strip GO id suffix
-    term <- ifelse(nchar(term) > 52, paste0(substr(term, 1, 49), "..."), term)
+    term <- ifelse(nchar(term) > 46, paste0(substr(term, 1, 43), "..."), term)
     val  <- -log10(r$P.value)
     ord  <- order(val)                                    # most significant on top
     val <- val[ord]; term <- term[ord]
     pal <- grDevices::colorRampPalette(c("#fee0b6", "#f1a340", "#b35806"))(length(val))
-    op <- par(mar = c(4.2, 0.5, 2.2, 1), oma = c(0, 0, 0, 0)); on.exit(par(op))
-    bp <- barplot(val, horiz = TRUE, col = pal, border = NA, xlab = "-log10(P)",
-                  main = sprintf("Top %d enriched terms  (%s, n=%d genes)",
-                                 nrow(r), e$lib, e$n_genes),
-                  cex.main = 1.25, cex.lab = 1.15, xlim = c(0, max(val) * 1.02))
-    text(x = max(val) * 0.01, y = bp, labels = term, pos = 4, cex = 0.95, col = "grey15", xpd = NA)
+    # Term names as y-axis labels (las=1) with a wide left margin; no in-bar text.
+    op <- par(mar = c(4.2, 15, 2.6, 1.2), mgp = c(2.4, 0.6, 0)); on.exit(par(op))
+    barplot(val, horiz = TRUE, names.arg = term, las = 1, col = pal, border = NA,
+            xlab = "-log10(P)", cex.names = 0.82, cex.lab = 1.15,
+            main = sprintf("Top %d enriched terms (%s)", nrow(r), e$lib),
+            cex.main = 1.2, xlim = c(0, max(val) * 1.02))
+  },
+  # fixed width (centered via CSS) so it doesn't over-stretch; height grows with
+  # the number of bars so they stay a readable thickness.
+  width  = function() 760L,
+  height = function() {
+    r <- tryCatch(enrich_top(), error = function(e) NULL)
+    n <- if (is.null(r) || !nrow(r)) 1L else nrow(r)
+    as.integer(120L + n * 26L)
   })
 
   output$enrich_note <- renderUI({
