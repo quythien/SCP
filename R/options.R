@@ -737,7 +737,13 @@ updateBioOptions <- function(opts, ...) {
 print.CircadianBioOptions <- function(x, ...) {
   cat("CircadianBioOptions\n")
   cat(sprintf("  ngenes:         %d\n", x$ngenes))
-  cat(sprintf("  prop_rhythmic:  %.0f%%\n", 100 * x$prop_rhythmic))
+  if (!is.null(x$alpha_pilot)) {
+    adj <- if (identical(x$adjust_pilot, "BH")) "BH-FDR q" else "raw p"
+    cat(sprintf("  prop_rhythmic:  %.0f%% (alpha_pilot = %g, %s)\n",
+                100 * x$prop_rhythmic, x$alpha_pilot, adj))
+  } else {
+    cat(sprintf("  prop_rhythmic:  %.0f%%\n", 100 * x$prop_rhythmic))
+  }
   cat(sprintf("  period:         %g h\n", x$period))
   cat(sprintf("  prop_DR:        %.0f%%\n", 100 * x$prop_DR))
   cat(sprintf("  prop_DP:        %.0f%%\n", 100 * x$prop_DP))
