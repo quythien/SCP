@@ -183,6 +183,8 @@ ui <- fluidPage(
   "))),
   div(class = "center-titles",
       titlePanel("Power Evaluation and Study Design for Circadian Biomarker Detection"),
+      p(style = "font-size: 0.95em; color:#444; margin-bottom: 4px;",
+        "Thien Quy Pham, Hao Wang, Marianne L. Seney, Colleen A. McClung, Guan Yu, and George C. Tseng"),
       p(em("Pilot-calibrated power analysis for circadian transcriptomics studies."),
         br(),
         "Pick a bundled pilot, set the target power and FDR, and read off the recommended sample size.")
