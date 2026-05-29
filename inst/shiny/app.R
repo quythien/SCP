@@ -178,6 +178,8 @@ ui <- fluidPage(
     /* center the power-curve figure so the single-panel view doesn't stretch
        across the whole right pane */
     #power_curve img { display: block; margin-left: auto; margin-right: auto; }
+    /* center the fixed-size gene-explorer plots so 1-2 panels don't jam left */
+    #clock_panel img, #gene_cosinor img, #enrich_plot img { display: block; margin-left: auto; margin-right: auto; }
   "))),
   div(class = "center-titles",
       titlePanel("Power Evaluation and Study Design for Circadian Biomarker Detection"),
@@ -324,7 +326,7 @@ ui <- fluidPage(
         div(style = "padding:6px 10px; background:#eef4fb; border-radius:4px; margin-bottom:8px;",
             uiOutput("explorer_thresh")),
         tags$b("Core clock genes"),
-        plotOutput("clock_panel", height = "300px"),
+        plotOutput("clock_panel", height = "auto", width = "auto"),
         uiOutput("clock_note"),
         hr(),
         fluidRow(
@@ -1147,7 +1149,7 @@ server <- function(input, output, session) {
     DBP    = c("DBP"), TEF = c("TEF"), HLF = c("HLF"),
     CIART  = c("CIART","CHRONO","GM129","C1ORF51"),
     NFIL3  = c("NFIL3","E4BP4"),
-    RORA   = c("RORA"), RORC = c("RORC")
+    RORA   = c("RORA"), RORB = c("RORB"), RORC = c("RORC")
   )
   # alias (upper) -> canonical name, for vectorised lookup
   .CLOCK_LOOKUP <- unlist(lapply(names(.CLOCK_ALIASES), function(cn)
@@ -1240,19 +1242,42 @@ server <- function(input, output, session) {
     mtext(sub, side = 3, line = 0.35, cex = if (compact) 0.78 else 0.92, col = "grey25")
   }
 
-  output$clock_panel <- renderPlot({
-    g <- gene_tbl_pass(); req(g)   # passing the chosen alpha_pilot -> responds to it
+  # Clock genes passing the threshold (alias-aware, deduped, most-significant
+  # first, capped at the max layout of 8 = 4 cols x 2 rows).
+  clock_genes <- reactive({
+    g <- gene_tbl_pass(); if (is.null(g) || !nrow(g)) return(NULL)
     canon <- .clock_canon(g$Gene)
     pr <- g[!is.na(canon), , drop = FALSE]; pc <- canon[!is.na(canon)]
-    pr <- pr[!duplicated(pc), , drop = FALSE]            # one row per clock gene
-    pr <- pr[order(pr$p), , drop = FALSE]                # most significant first
-    if (!nrow(pr)) { plot.new()
-      title(sprintf("No core clock genes pass %s in this pilot.", .thresh_label())); return() }
-    n  <- min(nrow(pr), 8L)
-    op <- par(mfrow = c(2, ceiling(n / 2)), mar = c(3.3, 3.4, 3.4, 0.7),
-              mgp = c(1.9, 0.6, 0)); on.exit(par(op))
-    for (i in seq_len(n)) .draw_cos(pr[i, ], compact = TRUE)
+    if (!nrow(pr)) return(pr)
+    pr <- pr[!duplicated(pc), , drop = FALSE]
+    pr <- pr[order(pr$p), , drop = FALSE]
+    utils::head(pr, 8L)
   })
+  # Layout: <=4 columns; rows wrap. FIXED per-panel size so 1-2 genes render at a
+  # consistent aspect instead of stretching across the full width.
+  .CLOCK_PW <- 210L; .CLOCK_PH <- 188L
+  .clock_grid <- function() {
+    n <- tryCatch(nrow(clock_genes()), error = function(e) 0L)
+    n <- if (is.null(n) || is.na(n)) 0L else n
+    if (n < 1L) return(list(n = 0L, nc = 1L, nr = 1L))
+    # Balance the rows so no count leaves a lonely/ragged bottom row:
+    # 1-4 -> one row; 5-6 -> 3 cols (3+2 / 3+3); 7-8 -> 4 cols (4+3 / 4+4).
+    nc <- if (n <= 4L) n else if (n <= 6L) 3L else 4L
+    list(n = n, nc = nc, nr = ceiling(n / nc))
+  }
+
+  output$clock_panel <- renderPlot({
+    pr <- clock_genes()
+    if (is.null(pr) || !nrow(pr)) { plot.new()
+      title(sprintf("No core clock genes pass %s in this pilot.", .thresh_label())); return() }
+    gd <- .clock_grid()
+    op <- par(mfrow = c(gd$nr, gd$nc), mar = c(3.3, 3.4, 3.4, 0.7),
+              mgp = c(1.9, 0.6, 0)); on.exit(par(op))
+    for (i in seq_len(gd$n)) .draw_cos(pr[i, ], compact = TRUE)
+  },
+  # device sized to the grid -> each panel keeps a fixed ratio for any gene count
+  width  = function() { gd <- .clock_grid(); if (gd$n < 1L) 460L else gd$nc * .CLOCK_PW },
+  height = function() { gd <- .clock_grid(); if (gd$n < 1L) 130L else gd$nr * .CLOCK_PH })
 
   output$clock_note <- renderUI({
     g <- gene_tbl_pass(); if (is.null(g)) return(NULL)
