@@ -26,10 +26,13 @@ study and get a recommended sample size in seconds.
 
 ## Try it: launch the Shiny app locally
 
-The fastest way to use SCP is the bundled Shiny GUI. Three lines:
+The fastest way to use SCP is the bundled Shiny GUI:
 
 ```r
-install.packages("remotes")
+install.packages(c("remotes", "BiocManager"))
+# SCP depends on the Bioconductor package 'limma'; point remotes at the
+# Bioconductor repositories so it is resolved automatically:
+options(repos = BiocManager::repositories())
 remotes::install_github("quythien/SCP")
 SCP::launchShiny()
 ```
@@ -47,6 +50,8 @@ The Shiny app runs entirely on your machine, no account or hosting needed.
 If you want the R API without the GUI:
 
 ```r
+install.packages("BiocManager")
+options(repos = BiocManager::repositories())   # resolves the Bioconductor dep 'limma'
 remotes::install_github("quythien/SCP")
 library(SCP)
 ```
