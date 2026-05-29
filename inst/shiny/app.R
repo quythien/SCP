@@ -738,18 +738,23 @@ server <- function(input, output, session) {
       # unpaired run (.bc) while keeping Panel A from the paired run (panel_a_res).
       bc <- res$.bc
       if (!is.null(bc) && !inherits(bc, "sim_error")) {
-        SCP::plotSingleCohortPower(bc, panel_a_res = res,
+        # Effect-size sensitivity ON: all 3 panels; Panel A from the paired run
+        # (panel_a_res), Panels B/C from the unpaired run (bc).
+        SCP::plotSingleCohortPower(bc, panel_a_res = res, panels = c("A", "B", "C"),
                                     fdr = tfd, fdr_thresholds = tfd,
                                     panel_fdr = tfd, vline_fdr = tfd,
-                                    vline_power = tpw, r_max = NULL)
+                                    vline_power = tpw, r_max = NULL,
+                                    cex_main = 1.9, cex_lab = 1.85, cex_axis = 1.6)
       } else {
-        SCP::plotSingleCohortPower(res,
+        # Default: Panel A only (paired marginal power), enlarged for the app.
+        SCP::plotSingleCohortPower(res, panels = "A",
                                     fdr            = tfd,
                                     fdr_thresholds = tfd,
                                     panel_fdr      = tfd,
                                     vline_fdr      = tfd,
                                     vline_power    = tpw,
-                                    r_max          = NULL)
+                                    r_max          = NULL,
+                                    cex_main = 1.9, cex_lab = 1.85, cex_axis = 1.6)
       }
       },
       error = function(e) {

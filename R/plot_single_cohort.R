@@ -31,6 +31,7 @@ if (!exists("add_se_bars")) {
 #' @export
 plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                                  panel_a_res = NULL,
+                                 panels = c("A", "B", "C"),
                                  fdr_thresholds = c(0.01, 0.05, 0.10, 0.20),
                                  panel_fdr = 0.05,
                                  vline_power = 0.80,
@@ -40,6 +41,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                                  reference_n = NULL,
                                  display_sizes = NULL,
                                  r_max = 5,
+                                 cex_main = 1.50, cex_lab = 1.60, cex_axis = 1.45,
                                  width = 15, height = 5.5) {
   # `fdr` is a single-value alias for panel_fdr + vline_fdr (back-compat)
   if (!is.null(fdr) && is.numeric(fdr) && length(fdr) == 1L) {
@@ -243,17 +245,20 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   # ------------------------------------------------------------------
   # Open device
   # ------------------------------------------------------------------
+  panels <- intersect(c("A", "B", "C"), panels)
+  if (length(panels) == 0L) panels <- c("A", "B", "C")
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
   # Outer top oma needs ~3 lines for the cex=1.5 title to clear the top edge.
-  par(mfrow = c(1, 3), mai = c(0.85, 0.85, 0.55, 0.15),
+  par(mfrow = c(1, length(panels)), mai = c(0.85, 0.85, 0.55, 0.15),
       mgp = c(3.2, 0.65, 0), oma = c(0, 0, 2.4, 0),
-      cex.axis = 1.45, cex.lab = 1.60, cex.main = 1.50, font.main = 2)
+      cex.axis = cex_axis, cex.lab = cex_lab, cex.main = cex_main, font.main = 2)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
   sample_legend_n <- length(disp_idx)
   sample_legend_cols <- if (sample_legend_n > 24L) 3L else if (sample_legend_n > 12L) 2L else 1L
   sample_legend_cex <- if (sample_legend_n > 24L) 0.72 else if (sample_legend_n > 12L) 0.85 else 1.05
 
+  if ("A" %in% panels) {
   # ---- Panel A: marginal power vs n, multiple FDR lines ----
   ss_disp_a <- sample_sizes_a[disp_idx_a]
   matplot(ss_disp_a, 100 * marginal_mean[disp_idx_a, , drop = FALSE],
@@ -263,7 +268,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
           xlab = "Sample size (n)", ylab = "Power (%)",
           main = "")
   title(main = "A   Power vs Sample Size",
-        adj = 0.5, font.main = 2, cex.main = 1.50, line = 0.5)
+        adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.5)
   for (t in seq_len(n_thresh)) {
     add_se_bars(ss_disp_a, 100 * marginal_mean[disp_idx_a, t],
                 100 * marginal_se[disp_idx_a, t], col = thresh_cols[t])
@@ -287,7 +292,9 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
     text(vline_n, 35, sprintf("n=%d", vline_n),
          col = "steelblue", cex = 1.05, adj = c(-0.10, 0.5), font = 2)
   }
+  }  # end Panel A
 
+  if ("B" %in% panels) {
   # ---- Panel B: stratified power by r, lines per n ----
   # Increase mgp[1] so r̃ label clears the vertical (las=2) tick labels
   par(mgp = c(4.6, 0.6, 0))
@@ -299,8 +306,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
           xaxt = "n")
   title(main = bquote(bold("B   ") * bold("Stratified Power by") ~
                        bold(tilde(r)) ~ bold(.(sprintf("(%s)", fdr_label)))),
-        adj = 0.5, font.main = 2, cex.main = 1.50, line = 0.5)
-  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 1.15)
+        adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.5)
+  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = max(1.15, cex_axis * 0.8))
   for (j in disp_idx) {
     points(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
            pch = 19, col = size_colors[j], cex = 0.95)
@@ -315,7 +322,9 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
          text.col = "black", title.col = "black",
          inset = c(0.02, 0.02), y.intersp = 0.95, title.adj = 0,
          seg.len = 1.2, x.intersp = 0.6, ncol = sample_legend_cols)
+  }  # end Panel B
 
+  if ("C" %in% panels) {
   # ---- Panel C: TD by r-stratum, n lines + overlaid gene distribution ----
   y_max_TD      <- max(gene_counts_plt) * 1.15
   scaled_counts <- gene_counts_plt
@@ -328,8 +337,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
        xaxt = "n")
   title(main = bquote(bold("C   ") * bold("True Discoveries by") ~
                        bold(tilde(r)) ~ bold(.(sprintf("(%s)", fdr_label)))),
-        adj = 0.5, font.main = 2, cex.main = 1.50, line = 0.5)
-  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = 1.15)
+        adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.5)
+  axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = max(1.15, cex_axis * 0.8))
 
   step_x <- rep(seq(0.5, n_strata_plt + 0.5, by = 1), each = 2)
   step_y <- c(0, rep(scaled_counts, each = 2), 0)
@@ -352,6 +361,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
          inset = c(0.02, 0.02), y.intersp = 0.95, title.adj = 0,
          seg.len = 1.2, x.intersp = 0.6, ncol = sample_legend_cols)
   par(mgp = c(3.0, 0.6, 0))   # restore
+  }  # end Panel C
 
   if (nchar(title) > 0)
     mtext(title, outer = TRUE, side = 3, line = 0.2, cex = 1.65, font = 2)
