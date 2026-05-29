@@ -134,7 +134,7 @@ ui <- fluidPage(
                    choices = c("Adjusted FDR (BH)" = "q",
                                "Raw p-value"       = "p"),
                    selected = "q", inline = TRUE),
-      selectInput("rhy_thresh", "Threshold",
+      selectInput("rhy_thresh", "Threshold (alpha_pilot)",
                   choices  = c("0.20" = 0.20, "0.15" = 0.15,
                                "0.10" = 0.10, "0.05" = 0.05, "0.01" = 0.01,
                                "0.001" = 0.001, "0.0001" = 0.0001),
