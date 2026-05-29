@@ -413,7 +413,7 @@ estCircadianParam <- function(data, times, period = 24,
     prop_DM <- prop_DM * scale_factor
   }
 
-  CircadianBioOptions(
+  obj <- CircadianBioOptions(
     ngenes = ngenes,
     prop_rhythmic = params$prop_rhythmic,
     period = period,
@@ -435,6 +435,78 @@ estCircadianParam <- function(data, times, period = 24,
     dr_sigma_scale = dr_sigma_scale,
     sim.seed = sim.seed
   )
+
+  # Attach the per-gene rhythm table so the threshold (alpha_pilot) can be
+  # re-selected at load time (see scp_load_pilot()).  Stored capped at
+  # `pilot_rhythm_cap` and sorted ascending by p-value, so any alpha <= cap
+  # is a prefix slice; ngenes (above) is the prop_rhythmic denominator, so
+  # genes with p >= cap can be dropped without affecting the proportion.
+  obj$rhythm_fit  <- .build_rhythm_fit(params$raw)
+  obj$pilot_cap   <- .pilot_rhythm_cap
+  obj$alpha_pilot <- min_rhythm_pval
+  obj$pilot_top_k <- 300L     # top-K cap used to form the effect-size distribution
+  obj
+}
+
+# Cap on the stored per-gene rhythm table.  alpha_pilot is re-selectable in
+# (0, .pilot_rhythm_cap]; genes with raw cosinor p >= this are never rhythmic
+# at any supported alpha and are dropped to keep the pilot rds small.
+.pilot_rhythm_cap <- 0.2
+
+#' Build the capped, p-sorted per-gene rhythm table for a pilot
+#'
+#' @param raw The \code{$raw} list returned by \code{estimate_circadian_params}
+#'   (fields M, A, phi, sigma, pvalue across all genes).
+#' @param cap Upper p-value cap for retained genes (default
+#'   \code{.pilot_rhythm_cap}).
+#' @return A data.frame with columns \code{pvalue}, \code{A}, \code{phi},
+#'   \code{sigma}, one row per gene with \code{pvalue < cap} and a finite,
+#'   positive amplitude, sorted ascending by \code{pvalue}.
+#' @keywords internal
+.build_rhythm_fit <- function(raw, cap = .pilot_rhythm_cap) {
+  keep <- is.finite(raw$pvalue) & raw$pvalue < cap &
+          is.finite(raw$A) & raw$A > 0 &
+          is.finite(raw$sigma) & raw$sigma > 0
+  df <- data.frame(
+    pvalue = raw$pvalue[keep],
+    A      = raw$A[keep],
+    phi    = raw$phi[keep],
+    sigma  = raw$sigma[keep]
+  )
+  df[order(df$pvalue), , drop = FALSE]
+}
+
+#' Build the capped, p-sorted per-gene rhythm table for a two-harmonic (K=2) pilot
+#'
+#' @description Two-harmonic analog of \code{\link{.build_rhythm_fit}}. The
+#'   threshold column \code{pvalue} holds the K=1 cosinor F-test p-value
+#'   (\code{p_K1}) so that \code{alpha_pilot} has identical "which genes are
+#'   rhythmic" semantics in K=1 and K=2 modes; the extra columns carry the
+#'   gene-paired 2nd-harmonic parameters so the joint
+#'   \eqn{(A_1, \phi_1, A_2, \phi_2, \sigma)} draw is preserved when re-sliced.
+#' @param p_K1,A1,phi1,A2,phi2,sigma Per-gene vectors (length = ngenes) from the
+#'   two-harmonic fit.
+#' @param cap Upper p-value cap (default \code{.pilot_rhythm_cap}).
+#' @return A data.frame with columns \code{pvalue, A, phi, A2, phi2, sigma},
+#'   one row per gene with \code{p_K1 < cap} and a finite positive \code{A1} and
+#'   \code{sigma}, sorted ascending by \code{pvalue}. Presence of the \code{A2}
+#'   column is the signal that downstream re-slicing should treat the pilot as
+#'   two-harmonic.
+#' @keywords internal
+.build_rhythm_fit2h <- function(p_K1, A1, phi1, A2, phi2, sigma,
+                                cap = .pilot_rhythm_cap) {
+  keep <- is.finite(p_K1) & p_K1 < cap &
+          is.finite(A1) & A1 > 0 &
+          is.finite(sigma) & sigma > 0
+  df <- data.frame(
+    pvalue = p_K1[keep],
+    A      = A1[keep],
+    phi    = phi1[keep],
+    A2     = A2[keep],
+    phi2   = phi2[keep],
+    sigma  = sigma[keep]
+  )
+  df[order(df$pvalue), , drop = FALSE]
 }
 
 
@@ -743,6 +815,15 @@ estCircadianParam2H <- function(data, times, period = 24,
     cat(sprintf("Proportion rhythmic (joint F-test): %.1f%%\n",
                 100 * prop_rhythmic_emp))
   }
+
+  # Attach the wider per-gene rhythm table so alpha_pilot is re-selectable at
+  # load time (scp_load_pilot). Thresholded on the K=1 cosinor p (p_K1), the
+  # same statistic that defines the candidate set above, so alpha_pilot means
+  # the same thing in K=1 and K=2 modes.
+  opts$rhythm_fit  <- .build_rhythm_fit2h(p_K1, A1_g, phi1_g, A2_g, phi2_g, sigma_hat)
+  opts$pilot_cap   <- .pilot_rhythm_cap
+  opts$alpha_pilot <- min_rhythm_pval
+  opts$pilot_top_k <- top_k
 
   opts
 }

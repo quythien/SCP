@@ -26,16 +26,88 @@ suppressPackageStartupMessages({
   }
 }
 
-.read_pilot <- function(species, dataset, tissue, condition) {
+.read_pilot <- function(species, dataset, tissue, condition, K = 1) {
+  K <- as.integer(K)
   if (.demo_mode) {
     m <- .read_manifest()
     hit <- m$species == species & m$dataset == dataset &
            m$tissue == tissue & m$condition == condition
     if (!any(hit)) stop("Pilot not in demo bundle.")
-    readRDS(file.path(.demo_pilots, m$file[which(hit)[1]]))
+    f <- m$file[which(hit)[1]]
+    if (K == 2L) {
+      f2 <- sub("\\.rds$", "_2H.rds", f)
+      p2 <- file.path(.demo_pilots, f2)
+      if (!file.exists(p2)) stop("No two-harmonic (K=2) variant for this pilot.")
+      f <- f2
+    }
+    readRDS(file.path(.demo_pilots, f))
   } else {
-    SCP::scp_load_pilot(species, dataset, tissue, condition)
+    SCP::scp_load_pilot(species, dataset, tissue, condition, K = K)
   }
+}
+
+# Does a K=2 (two-harmonic) variant exist for this pilot?
+.has_k2_variant <- function(species, dataset, tissue, condition) {
+  out <- tryCatch(.read_pilot(species, dataset, tissue, condition, K = 2),
+                  error = function(e) NULL)
+  !is.null(out)
+}
+
+# Safe worker count for parallel::mclapply. Caps at `cap`, leaves one core
+# free, and is robust to environments where detectCores() returns NA (common
+# in containers / shinyapps.io). mclapply uses fork(), which is unsupported on
+# Windows, so force serial (1 core) there.
+.safe_cores <- function(cap = 4L) {
+  if (.Platform$OS.type == "windows") return(1L)
+  nc <- tryCatch(parallel::detectCores(logical = FALSE), error = function(e) NA_integer_)
+  if (is.na(nc) || nc < 1L)
+    nc <- tryCatch(parallel::detectCores(), error = function(e) NA_integer_)
+  if (is.na(nc) || nc < 1L) nc <- 1L
+  max(1L, min(as.integer(cap), nc - 1L))
+}
+
+# Re-select the rhythmicity threshold from a pilot's stored per-gene table
+# (rhythm_fit). Self-contained so it works in both demo mode (raw readRDS) and
+# packaged mode. Mirrors SCP:::.reslice_pilot: rhythm_fit is p-sorted and capped,
+# so thresholding is a prefix slice; the top-300 candidates drive the effect-size
+# distribution. Pilots built before rhythm_fit existed are returned unchanged.
+.app_apply_threshold <- function(p, stat = "p", thresh = 0.01, paired_sigma = TRUE) {
+  if (is.null(p)) return(p)
+  rf <- p$rhythm_fit
+  if (is.null(rf) || nrow(rf) == 0L) return(p)   # legacy pilot: keep baked values
+  cap <- p$pilot_cap %||% 0.2
+  if (identical(stat, "q")) {
+    n_total <- p$ngenes %||% nrow(rf)
+    i <- seq_len(nrow(rf))
+    sval <- rev(cummin(rev(rf$pvalue * n_total / i)))   # BH q-values
+  } else {
+    sval <- rf$pvalue
+    if (thresh > cap) thresh <- cap                      # clamp raw-p to stored cap
+  }
+  cand  <- rf[sval < thresh, , drop = FALSE]
+  K     <- min(as.integer(p$pilot_top_k %||% 300L), nrow(cand))
+  estim <- if (K > 0L) cand[seq_len(K), , drop = FALSE] else cand[0, , drop = FALSE]
+  p$prop_rhythmic  <- nrow(cand) / (p$ngenes %||% nrow(rf))
+  if ("A2" %in% names(rf)) {
+    # Two-harmonic pilot: keep all five fields gene-index-aligned (length K).
+    p$amplitude      <- estim$A
+    p$phase          <- estim$phi
+    p$sigma_rhythmic <- estim$sigma
+    p$amplitude2     <- estim$A2
+    p$phase2         <- estim$phi2
+    p$paired_2h      <- TRUE
+  } else {
+    p$amplitude      <- estim$A
+    p$sigma_rhythmic <- estim$sigma
+    p$phase          <- estim$phi[is.finite(estim$phi)]
+  }
+  # paired_sigma=TRUE keeps (A, sigma) gene-paired (realistic narrow r-tilde,
+  # the marginal / Panel-A behavior). FALSE decouples sigma -> wide r-tilde
+  # (stratified Panel-B/C). The app defaults to paired for recommended-N.
+  if (!isTRUE(paired_sigma) && length(p$sigma_rhythmic) > 1L)
+    p$sigma_rhythmic <- sample(p$sigma_rhythmic)
+  p$paired_sigma <- isTRUE(paired_sigma)
+  p
 }
 
 # ---------------------------------------------------------------------------
@@ -63,7 +135,7 @@ ui <- fluidPage(
                                "Raw p-value"       = "p"),
                    selected = "q", inline = TRUE),
       selectInput("rhy_thresh", "Threshold",
-                  choices  = c("0.25" = 0.25, "0.20" = 0.20, "0.15" = 0.15,
+                  choices  = c("0.20" = 0.20, "0.15" = 0.15,
                                "0.10" = 0.10, "0.05" = 0.05, "0.01" = 0.01,
                                "0.001" = 0.001, "0.0001" = 0.0001),
                   selected = 0.05),
@@ -300,13 +372,24 @@ server <- function(input, output, session) {
     if (isTRUE(input$pilot_source == "upload")) return(uploaded_pilot())
     req(input$species, input$dataset, input$tissue, input$condition)
     actual_tissue <- .resolve_actual_tissue()
+    K_req <- as.integer(input$K %||% 1L)
     p <- tryCatch(
       .read_pilot(input$species, input$dataset,
-                  actual_tissue, input$condition),
-      error = function(e) NULL
+                  actual_tissue, input$condition, K = K_req),
+      error = function(e) {
+        if (K_req == 2L)
+          showNotification(
+            paste0("No two-harmonic (K=2) pilot has been built for this dataset. ",
+                   "Switch to K = 1, or build a K=2 variant."),
+            type = "warning", duration = 8)
+        NULL
+      }
     )
     if (!is.null(p) && !inherits(p, "CircadianBioOptions"))
       class(p) <- c("CircadianBioOptions", class(p))
+    # Apply the user-selected rhythmicity threshold so prop_rhythmic and the
+    # effect-size distribution feeding the simulation reflect alpha_pilot.
+    p <- .app_apply_threshold(p, input$rhy_stat, as.numeric(input$rhy_thresh))
     p
   })
 
@@ -316,6 +399,7 @@ server <- function(input, output, session) {
   current_state <- reactive({
     list(species = input$species, dataset = input$dataset,
          tissue = input$tissue, condition = input$condition,
+         rhy_stat = input$rhy_stat, rhy_thresh = input$rhy_thresh,
          K = input$K, design = input$design,
          active_step = input$active_step,
          n_min = input$n_min, n_max = input$n_max, n_step = input$n_step,
@@ -376,9 +460,11 @@ server <- function(input, output, session) {
         }
       }
     }
-    # Threshold-aware prop_rhythmic from raw p-values if present
+    # prop_rhythmic is already re-derived at the selected threshold in pilot()
+    # via the stored rhythm_fit table; fall back to the per-gene p-vector or the
+    # baked value for pilots built before rhythm_fit existed.
     prop_at_fdr <- p$prop_rhythmic %||% NA_real_
-    if (!is.null(p$raw$pvalue)) {
+    if (is.null(p$rhythm_fit) && !is.null(p$raw$pvalue)) {
       pv <- as.numeric(p$raw$pvalue)
       pv <- pv[is.finite(pv)]
       stat <- if (input$rhy_stat == "q") p.adjust(pv, "BH") else pv
@@ -489,7 +575,7 @@ server <- function(input, output, session) {
     p <- pilot()
     req(p)
     withProgress(message = "Running simulation...", value = 0.1, {
-      n_cores <- max(1L, min(4L, parallel::detectCores(logical = FALSE) - 1L))
+      n_cores <- .safe_cores(4L)
       incProgress(0.2, detail = "Setting up design")
 
       # Defensive numeric coercion: some pilots may store fields as character / list

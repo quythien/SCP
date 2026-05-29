@@ -124,23 +124,6 @@ detect_cosinor(expr, times, K = 2L)   # two-harmonic (ultradian extension)
 Identifiability requires at least `2K + 1` distinct sampling phases per
 period (`B >= 3` for `K = 1`, `B >= 5` for `K = 2`).
 
-## Reproducing the manuscript figures
-
-The publication-figure generators live in `examples/`. After installing the
-package locally:
-
-```r
-Rscript examples/fig1_single_cohort_power.R
-Rscript examples/fig2_paired_sims.R
-Rscript examples/fig3_bvsm_method_comparison.R
-Rscript examples/two_harmonic/fig4_twoharm_demo.R
-Rscript examples/two_harmonic/fig5_twoharm_framework.R
-Rscript examples/two_harmonic/fig6_cosinor_rebuild.R
-```
-
-Outputs land in `figures/`. The final PDFs used in the manuscript are
-checked in there for reference.
-
 ## Documentation
 
 - Runnable vignette: `vignettes/SCP_tutorial.Rmd`
