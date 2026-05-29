@@ -310,9 +310,14 @@ ui <- fluidPage(
       hr(),
       div(style = "background:#fbfcfe; border:1px solid #e3e9f0; border-radius:6px; padding:14px 16px; margin-top:6px;",
         h4("Rhythmic gene explorer", style = "margin-top:0;"),
-        helpText(em(paste0("Per-gene rhythmicity in this pilot at the threshold set on the left. ",
-                           "Curves are the fitted cosinor (bundled pilots store fit estimates, ",
-                           "not raw samples); the shaded band is +/- 1.96 sigma (noise)."))),
+        helpText(em(paste0("Per-gene rhythmicity at the threshold set on the left (changing it ",
+                           "updates the clock panel and table below). Curves are the fitted cosinor ",
+                           "(bundled pilots store fit estimates, not raw samples); the shaded band ",
+                           "is +/- 1.96 sigma (noise)."))),
+        # Live banner: echoes the current alpha_pilot / statistic + rhythmic count
+        # so it is obvious the explorer reflects the left-panel threshold.
+        div(style = "padding:6px 10px; background:#eef4fb; border-radius:4px; margin-bottom:8px;",
+            uiOutput("explorer_thresh")),
         tags$b("Core clock genes"),
         plotOutput("clock_panel", height = "300px"),
         uiOutput("clock_note"),
@@ -1136,6 +1141,21 @@ server <- function(input, output, session) {
     g[sval < thr, , drop = FALSE]
   })
 
+  # Human-readable description of the current alpha_pilot threshold.
+  .thresh_label <- reactive({
+    metric <- if (identical(input$rhy_stat, "q")) "BH-FDR" else "raw p"
+    sprintf("%s < %s", metric, input$rhy_thresh %||% "0.01")
+  })
+
+  # Live banner so it is obvious the explorer reflects the left-panel threshold.
+  output$explorer_thresh <- renderUI({
+    g <- gene_tbl()
+    if (is.null(g)) return(HTML("<em>Select a pilot to explore its rhythmic genes.</em>"))
+    np <- nrow(gene_tbl_pass())
+    HTML(sprintf("<b>Threshold (alpha_pilot):</b> %s &nbsp;|&nbsp; <b>%s</b> rhythmic genes pass &nbsp;|&nbsp; clock panel + table below update with this setting.",
+                 .thresh_label(), format(np, big.mark = ",")))
+  })
+
   # Populate the gene lookup (server-side; rhythmic gene set can be large).
   observe({
     g <- gene_tbl()
@@ -1174,11 +1194,12 @@ server <- function(input, output, session) {
   }
 
   output$clock_panel <- renderPlot({
-    g <- gene_tbl(); req(g)
+    g <- gene_tbl_pass(); req(g)   # passing the chosen alpha_pilot -> responds to it
     pr <- g[toupper(g$Gene) %in% .CLOCK, , drop = FALSE]
     pr <- pr[!duplicated(toupper(pr$Gene)), , drop = FALSE]
     pr <- pr[order(match(toupper(pr$Gene), .CLOCK)), , drop = FALSE]
-    if (!nrow(pr)) { plot.new(); title("No core clock genes rhythmic at p < 0.2 in this pilot."); return() }
+    if (!nrow(pr)) { plot.new()
+      title(sprintf("No core clock genes pass %s in this pilot.", .thresh_label())); return() }
     n  <- min(nrow(pr), 8L)
     op <- par(mfrow = c(2, ceiling(n / 2)), mar = c(3.3, 3.4, 3.4, 0.7),
               mgp = c(1.9, 0.6, 0)); on.exit(par(op))
@@ -1186,20 +1207,24 @@ server <- function(input, output, session) {
   })
 
   output$clock_note <- renderUI({
-    g <- gene_tbl(); if (is.null(g)) return(NULL)
+    g <- gene_tbl_pass(); if (is.null(g)) return(NULL)
     absent <- setdiff(.CLOCK, toupper(g$Gene))
     if (length(absent))
-      helpText(em(sprintf("Clock genes not rhythmic at p<0.2 here: %s",
-                          paste(absent, collapse = ", "))))
+      helpText(em(sprintf("Clock genes not passing %s here: %s",
+                          .thresh_label(), paste(absent, collapse = ", "))))
   })
 
   output$gene_table <- renderTable({
     g <- gene_tbl_pass(); req(g)
     if (!nrow(g)) return(data.frame(Note = "No genes pass the chosen threshold."))
     out <- head(g, 100L)
-    data.frame(Gene = out$Gene, p = signif(out$p, 3), q = signif(out$q, 3),
-               `r~` = round(out$rtilde, 2), `Peak (h)` = out$Peak_h,
-               check.names = FALSE)
+    # "r̃" = r + combining tilde -> renders as r-tilde; "σ" = sigma.
+    tcol <- "r̃ (A/σ)"
+    df <- data.frame(Gene = out$Gene, p = signif(out$p, 3), q = signif(out$q, 3),
+                     x = round(out$rtilde, 2), `Peak (h)` = out$Peak_h,
+                     check.names = FALSE)
+    names(df)[names(df) == "x"] <- tcol
+    df
   }, striped = TRUE, hover = TRUE, width = "100%", digits = 3)
 
   # Full export: ALL fitted genes (the pilot's complete rhythm_fit, p-sorted)
@@ -1307,6 +1332,13 @@ server <- function(input, output, session) {
                   "No rhythmic genes at the current threshold to enrich."))
     if (!requireNamespace("enrichR", quietly = TRUE))
       return(list(err = "The 'enrichR' package is not installed."))
+    # enrichR's setEnrichrSite()/enrichr() rely on options set in the package's
+    # .onAttach (enrichR.sites, .sites.base.address, .live). Calling via :: alone
+    # leaves them unset -> setEnrichrSite() does gsub(NULL,...) -> "invalid
+    # 'pattern' argument". Attaching the package runs .onAttach and initialises
+    # them (and does the connection check). Guard so it only happens once.
+    if (is.null(getOption("enrichR.sites.base.address")))
+      suppressMessages(suppressWarnings(library(enrichR)))
     sp    <- .enrich_species()
     genes <- unique(g$Gene)
     if (sp == "human") genes <- toupper(genes)   # HUGO symbols are upper-case

@@ -91,6 +91,14 @@ used for the cosinor fit hot path. On Linux: `apt install r-base-dev
 libblas-dev liblapack-dev`. On macOS: `xcode-select --install`. Suggested
 packages for the Shiny GUI: `shiny`, `rmarkdown`.
 
+**macOS note (Fortran):** RcppArmadillo links against a Fortran/BLAS toolchain,
+and CRAN R for macOS expects the official **gfortran** build. If the install
+fails to compile with an error mentioning `gfortran`, `libgfortran`, or
+`-lgfortran`, install the matching compiler from
+<https://mac.r-project.org/tools/> (for R 4.4 on Apple Silicon/Intel this is
+**gfortran 12.2-universal** -- `gfortran-12.2-universal.pkg`), then retry the
+install. This is a one-time setup.
+
 ## Quick start (R API)
 
 ```r
