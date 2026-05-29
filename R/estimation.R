@@ -187,7 +187,9 @@ estimate_circadian_params = function(data, times, period = 24,
     params$phi_rayleigh_p = rayleigh_test$pvalue
   }
 
-  # Store raw values for flexible simulation
+  # Store raw values for flexible simulation. `gene` carries the source gene
+  # identifiers (matrix rownames) so the per-gene rhythm table can report which
+  # genes are rhythmic; falls back to integer positions if the matrix is unnamed.
   params$raw = list(
     M = M_vals,
     A = A_vals,
@@ -195,6 +197,7 @@ estimate_circadian_params = function(data, times, period = 24,
     sigma = sigma_vals,
     r = r_vals,
     pvalue = pvals,
+    gene = if (!is.null(rownames(data))) rownames(data) else as.character(seq_len(nrow(data))),
     is_rhythmic = rhythmic_genes,  # G_R^cand: full set for prop_rhythmic / DR/DP/DM typing
     in_estim_set = estim_set       # G_R: top-K for F_{A,sigma}, F_phi
   )
@@ -467,11 +470,14 @@ estCircadianParam <- function(data, times, period = 24,
   keep <- is.finite(raw$pvalue) & raw$pvalue < cap &
           is.finite(raw$A) & raw$A > 0 &
           is.finite(raw$sigma) & raw$sigma > 0
+  gene <- if (!is.null(raw$gene)) raw$gene[keep] else as.character(which(keep))
   df <- data.frame(
+    gene   = gene,
     pvalue = raw$pvalue[keep],
     A      = raw$A[keep],
     phi    = raw$phi[keep],
-    sigma  = raw$sigma[keep]
+    sigma  = raw$sigma[keep],
+    stringsAsFactors = FALSE
   )
   df[order(df$pvalue), , drop = FALSE]
 }
@@ -494,17 +500,20 @@ estCircadianParam <- function(data, times, period = 24,
 #'   two-harmonic.
 #' @keywords internal
 .build_rhythm_fit2h <- function(p_K1, A1, phi1, A2, phi2, sigma,
-                                cap = .pilot_rhythm_cap) {
+                                gene = NULL, cap = .pilot_rhythm_cap) {
   keep <- is.finite(p_K1) & p_K1 < cap &
           is.finite(A1) & A1 > 0 &
           is.finite(sigma) & sigma > 0
+  g <- if (!is.null(gene)) gene[keep] else as.character(which(keep))
   df <- data.frame(
+    gene   = g,
     pvalue = p_K1[keep],
     A      = A1[keep],
     phi    = phi1[keep],
     A2     = A2[keep],
     phi2   = phi2[keep],
-    sigma  = sigma[keep]
+    sigma  = sigma[keep],
+    stringsAsFactors = FALSE
   )
   df[order(df$pvalue), , drop = FALSE]
 }
@@ -820,7 +829,10 @@ estCircadianParam2H <- function(data, times, period = 24,
   # load time (scp_load_pilot). Thresholded on the K=1 cosinor p (p_K1), the
   # same statistic that defines the candidate set above, so alpha_pilot means
   # the same thing in K=1 and K=2 modes.
-  opts$rhythm_fit  <- .build_rhythm_fit2h(p_K1, A1_g, phi1_g, A2_g, phi2_g, sigma_hat)
+  # gene IDs from the source matrix rownames, aligned to the per-gene vectors;
+  # length-guarded so a subset/transform never produces a wrong mapping.
+  gene_ids_2h <- if (!is.null(rownames(data)) && length(p_K1) == nrow(data)) rownames(data) else NULL
+  opts$rhythm_fit  <- .build_rhythm_fit2h(p_K1, A1_g, phi1_g, A2_g, phi2_g, sigma_hat, gene = gene_ids_2h)
   opts$pilot_cap   <- .pilot_rhythm_cap
   opts$alpha_pilot <- min_rhythm_pval
   opts$pilot_top_k <- top_k
