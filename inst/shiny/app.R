@@ -123,6 +123,9 @@ ui <- fluidPage(
     .center-titles h1, .center-titles h2, .center-titles h3, .center-titles h4, .center-titles p {
       text-align: center;
     }
+    /* center the power-curve figure so the single-panel view doesn't stretch
+       across the whole right pane */
+    #power_curve img { display: block; margin-left: auto; margin-right: auto; }
   "))),
   div(class = "center-titles",
       titlePanel("Power Evaluation and Study Design for Circadian Biomarker Detection"),
@@ -799,7 +802,11 @@ server <- function(input, output, session) {
   output$power_curve <- renderPlot({
     tryCatch(.draw_power(),
              error = function(e) { plot.new(); title(main = sprintf("Plot error: %s", conditionMessage(e))) })
-  }, height = function() if (isTRUE(input$eff_sens)) 560 else 500)
+  },
+  # Both views are fixed-width and centered (via CSS) so they don't stretch
+  # across the whole right pane on wide screens. 3-panel keeps the ~16x6 ratio.
+  width  = function() if (isTRUE(input$eff_sens)) 1080L else 680L,
+  height = function() if (isTRUE(input$eff_sens)) 430L  else 470L)
 
   # Download the exact figure shown, as PDF or PNG.
   .fig_dims  <- function() if (isTRUE(input$eff_sens)) c(16, 6) else c(8, 5.5)
