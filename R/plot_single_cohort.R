@@ -42,6 +42,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                                  display_sizes = NULL,
                                  r_max = 5,
                                  cex_main = 1.50, cex_lab = 1.60, cex_axis = 1.45,
+                                 vertical = FALSE,
                                  width = 15, height = 5.5) {
   # `fdr` is a single-value alias for panel_fdr + vline_fdr (back-compat)
   if (!is.null(fdr) && is.numeric(fdr) && length(fdr) == 1L) {
@@ -257,13 +258,16 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   needs_strata <- any(c("B", "C") %in% panels)   # panels with vertical r-tilde tick labels
   # B/C push both axis titles out via a larger mgp[1] (to clear the vertical
   # tick labels), so they also need a wider left margin than Panel A.
-  mai_left  <- 0.85 + (if (needs_strata) 2.0 else 1.25) * extra_lab
+  mai_left  <- 0.85 + (if (needs_strata) 2.8 else 1.25) * extra_lab
   # B/C carry long vertical (las=2) stratum labels under which the r-tilde
   # x-title sits, so they need much more bottom room at large fonts.
-  mai_bot   <- 0.85 + (if (needs_strata) 2.2 else 0.6) * extra_lab
-  mgp_bc1   <- 4.6 + 3.0 * extra_lab             # x/y-title line for B/C (clears las=2 labels)
+  mai_bot   <- 0.85 + (if (needs_strata) 3.6 else 0.6) * extra_lab
+  mgp_bc1   <- 4.6 + 6.0 * extra_lab             # x/y-title line for B/C (clears las=2 labels)
   # Outer top oma needs ~3 lines for the cex=1.5 title to clear the top edge.
-  par(mfrow = c(1, length(panels)), mai = c(mai_bot, mai_left, 0.55, 0.15),
+  # vertical = TRUE stacks the panels in one column (each full width), which
+  # gives the r-tilde x-axis far more room than the cramped 1x3 layout.
+  par(mfrow = if (isTRUE(vertical)) c(length(panels), 1L) else c(1L, length(panels)),
+      mai = c(mai_bot, mai_left, 0.55, 0.15),
       mgp = c(3.2, 0.65, 0), oma = c(0, 0, 2.4, 0),
       cex.axis = cex_axis, cex.lab = cex_lab, cex.main = cex_main, font.main = 2)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
