@@ -263,6 +263,10 @@ setPhase <- function(input, n_rhythmic, period) {
 #'   \code{"uniform"} (sample uniformly within \code{phase_diff} range).
 #' @param dr_amp_scale Scale factor for amplitude (A) to adjust DR strength.
 #' @param dr_sigma_scale Scale factor for sigma to adjust DR strength.
+#' @param alpha_pilot Rhythmicity pre-screen threshold used to define the
+#'   pilot's rhythmic gene set (the value at which \code{prop_rhythmic} and the
+#'   effect-size distribution were calibrated). Stored on the object for
+#'   provenance and reporting; default \code{NULL}.
 #' @param sim.seed Random seed.
 #'
 #' @return Object of class \code{"CircadianBioOptions"}.
@@ -296,6 +300,7 @@ CircadianBioOptions <- function(ngenes = 5000,
                                 dp_shift_mode = c("fixed", "uniform"),
                                 dr_amp_scale = 1.0,
                                 dr_sigma_scale = 1.0,
+                                alpha_pilot = NULL,
                                 sim.seed = 12345) {
 
   dp_shift_mode <- match.arg(dp_shift_mode)
@@ -489,6 +494,7 @@ CircadianBioOptions <- function(ngenes = 5000,
     dp_shift_mode = dp_shift_mode,
     dr_amp_scale = dr_amp_scale,
     dr_sigma_scale = dr_sigma_scale,
+    alpha_pilot = alpha_pilot,
     sim.seed = sim.seed
   )
   class(opts) <- "CircadianBioOptions"

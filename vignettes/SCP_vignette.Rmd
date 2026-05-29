@@ -1,5 +1,5 @@
 ---
-title: "SCP: Semiparametric Circadian Power — User Guide"
+title: "SCP: Simulation-Based Circadian Power — User Guide"
 author: "Thien Quy Pham"
 date: "`r Sys.Date()`"
 output:
@@ -8,7 +8,7 @@ output:
     toc_depth: 3
     number_sections: true
 vignette: >
-  %\VignetteIndexEntry{SCP: Semiparametric Circadian Power — User Guide}
+  %\VignetteIndexEntry{SCP: Simulation-Based Circadian Power — User Guide}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -17,63 +17,81 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment  = "#>",
-  eval     = FALSE   # examples use real data; set eval=TRUE when running locally
+  eval     = TRUE
 )
+set.seed(2026)
+
+# Simulations run in parallel; single-core is impractically slow. We use a few
+# cores here (fork on Linux/macOS; 1 on Windows, which cannot fork).
+NCORES <- if (.Platform$OS.type == "windows") 1L else
+            max(1L, min(4L, parallel::detectCores() - 1L))
 ```
 
 # Overview
 
-**SCP** (Semiparametric Circadian Power) is an R framework for transcriptome-wide
-power analysis of circadian rhythm studies. It supports:
+**SCP** (Simulation-Based Circadian Power) is an R framework for
+transcriptome-wide power analysis of circadian rhythm studies. It answers four
+planning questions:
 
-1. **Single-cohort power** — how many samples are needed to detect rhythmic genes
-   in one group?
-2. **Differential power** — how many samples per group are needed to detect
-   differential rhythmicity (DR), differential phase (DP), or differential mesor
-   (DM) between two conditions?
-3. **B vs m trade-off** — given a fixed total N, how should samples be spread
-   across time points (B) versus replicates per time point (m = N/B)?
+1. **Single-cohort power** — how many samples detect rhythmic genes in one group?
+2. **Differential power** — how many samples per group detect differential
+   rhythmicity (DR), phase (DP), or mesor (DM) between two conditions?
+3. **B vs m trade-off** — at a fixed total N, how should samples be split across
+   time points (B) versus replicates per time point (m = N/B)?
 4. **Bootstrap uncertainty** — how wide are power estimates when the pilot is small?
 
-The framework is *semiparametric*: effect-size distributions (amplitude A,
-noise σ, proportion rhythmic) are estimated from real pilot data, while the
-cosinor waveform structure is used for simulation.
+SCP calibrates simulations from real pilot data: it estimates the empirical
+distributions of gene-level amplitude (A), noise (sigma), phase, and the
+proportion of rhythmic genes, then simulates cohorts under the cosinor model and
+applies FDR-controlled detection. This guide is fully runnable using a bundled
+pilot database and a small bundled example matrix; every code chunk executes as
+written.
 
 ---
 
-# Quick Start
+# Installation and setup
 
-## Load the framework
+```{r install, eval = FALSE}
+# install.packages("remotes")
+remotes::install_github("quythien/SCP")
+```
 
 ```{r load}
-# From the PowerSim project root:
-old_wd <- setwd("code")
-source("setup.R")
-setwd(old_wd)
+library(SCP)
 ```
 
-## Build options objects
+The three option objects below drive every analysis: a **bio** object (pilot
+biology), a **design** object (sampling plan), and an **analysis** object
+(multiple-testing settings).
 
-Three option objects drive every analysis:
+---
 
-```{r options}
-# CircadianBioOptions — biological parameters estimated from pilot data
-bio <- estCircadianParam(
-  data    = pilot_expr,   # gene × sample expression matrix (log2-CPM or similar)
-  times   = pilot_times,  # collection time of day (hours, 0–24)
-  period  = 24,
-  verbose = TRUE
-)
+# Quick start
 
-# CircadianDesignOptions — study design
+SCP ships a curated pilot database; `scp_pilots()` lists every entry and
+`scp_pilot_search()` filters it.
+
+```{r discover}
+head(scp_pilots()[, c("species", "dataset", "tissue", "condition", "design")])
+scp_pilot_search(species = "human", tissue_pattern = "adrenal")
+```
+
+Load a bundled pilot as a ready-to-use `CircadianBioOptions` object:
+
+```{r load-pilot}
+bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+
+# Power is a proportion, so it is essentially invariant to the simulated gene
+# count; we cap it here only to keep this guide fast to build. Remove for real runs.
+bio$ngenes <- 1200L
+
 design <- CircadianDesignOptions(
-  sample_sizes = c(20, 30, 40, 50, 60, 80, 100),
-  nsims        = 200L,
-  design       = "passive",   # "passive" uses pilot TOD; "active" = equispaced
-  cts          = bio$cts      # pilot TOD vector (passive design)
+  sample_sizes = c(20, 40, 60, 80),
+  nsims        = 30,
+  design       = "active",          # "active" = equispaced grid; "passive" = pilot TOD
+  cts          = seq(0, 20, by = 4)
 )
 
-# CircadianAnalysisOptions — multiple-testing settings
 analysis <- CircadianAnalysisOptions(
   alpha           = 0.05,
   p.adjust.method = "BH",
@@ -83,342 +101,291 @@ analysis <- CircadianAnalysisOptions(
 
 ---
 
-# Single-Cohort Power
+# Single-cohort power
 
-Use `runSingleCohortPower()` to evaluate detection power for one group.
-It sweeps N values under the pilot effect-size distribution and returns
-a rich list fed directly into `plotSingleCohortPower()`.
+`runSimsSingleCohort()` sweeps N under the pilot effect-size distribution and
+returns a rich result that feeds `plotSingleCohortPower()`. The detector is the
+cosinor F-test; `K = 1` is the single-harmonic (24 h) model.
 
-## Minimal example (DCP only)
-
-```{r single-dcp}
-bio <- readRDS("data/gse160521_nac_ctrl_pilot.rds")
-
-design <- CircadianDesignOptions(
-  sample_sizes = c(20, 40, 60, 80, 100),
-  nsims        = 200L,
-  design       = "passive",
-  cts          = bio$cts
-)
-
-analysis <- CircadianAnalysisOptions(
-  alpha           = 0.05,
-  p.adjust.method = "BH",
-  r_strata        = makeAdaptiveRStrata(bio, bin_width = 0.25)
-)
-
-res <- runSingleCohortPower(
-  bio.opts    = bio,
-  design.opts = design,
+```{r single, message = FALSE}
+res <- runSimsSingleCohort(
+  bio.opts      = bio,
+  design.opts   = design,
   analysis.opts = analysis,
-  methods     = "DCP",         # DCP | JTK | RAIN | MH
-  mc.cores    = 4L,
-  plot        = FALSE
+  K             = 1,
+  mc.cores      = NCORES,
+  verbose       = FALSE
 )
 
-plotSingleCohortPower(res, out_pdf = "figures/single_cohort_power.pdf",
-                      title = "My Cohort — Single-Cohort Power")
-saveRDS(res, "output/single_cohort_power.rds")
+data.frame(N     = res$sample_sizes,
+           power = round(rowMeans(res$marginal_power, na.rm = TRUE), 3))
 ```
 
-## Multi-method B vs m comparison
+`npower()` reads the smallest N that reaches a target power at a target FDR
+(interpolated between grid points); it returns `NA` if the grid never reaches
+the target.
 
-For multi-method and B vs m sweeps, use `recommendDesign()` — it runs guidance,
-closed-form, and simulation steps automatically. See the
-[B vs m Trade-off](#b-vs-m-trade-off-and-method-recommendation) section.
+```{r npower}
+np <- npower(res, target_power = 0.80, fdr = 0.05)
+np$n
+```
 
-`runSingleCohortPower()` accepts a single method only. Passing multiple methods
-raises a warning and uses only the first.
+```{r plot-single, fig.width = 11, fig.height = 4.2}
+plotSingleCohortPower(res, title = "GTEx Adrenal Gland — single-cohort power",
+                      fdr = 0.05)
+```
 
-## Cosinor violation parameter (α₂)
-
-The `alpha2` argument adds a second harmonic to the simulated signal:
-
-$$y \sim M + A\bigl[\cos(\omega t - \phi) + \alpha_2 \cos(2\omega t - \phi)\bigr] + \varepsilon$$
-
-- `alpha2 = 0`: pure sinusoid (cosinor truth)
-- `alpha2 = 0.5`: moderate non-sinusoidal waveform
-- `alpha2 = 1.0`: equal first and second harmonic (highly non-sinusoidal)
-
-DCP power is insensitive to α₂ (its F-test is omnibus); MH power *increases*
-with α₂ because its adaptive K captures extra signal in higher harmonics.
+Panel A is the marginal power curve at several FDR levels; panel B stratifies
+power by the per-gene effect size r = A / sigma; panel C shows the true-discovery
+count per stratum.
 
 ---
 
-# Differential Power
+# Bring your own data
 
-Use `runDifferentialPower()` for two-group designs. Pilot parameters are
-estimated with `estCircadianParamTwoGroup()`.
+In practice you start from your own pilot: a gene-by-sample expression matrix
+plus a vector of collection times (hours). SCP bundles a small demo matrix in
+`inst/extdata/example_pilot_raw.rds` (1200 genes x 48 samples, **simulated to
+resemble GTEx Adrenal Gland and Liver** so it is freely shareable; it is not
+real GTEx expression). Swap in your own `expr` / `times` and nothing else
+changes.
 
-## Supported methods and endpoints
+```{r own-data}
+ex   <- readRDS(system.file("extdata", "example_pilot_raw.rds", package = "SCP"))
+expr  <- ex$adrenal$expr      # genes x samples
+times <- ex$adrenal$times     # collection time of day per sample (hours)
+dim(expr)
 
-| Method | DR | DP | DM | Notes |
-|--------|----|----|-----|-------|
-| DCP | ✓ | ✓ | ✓ | Full pipeline: DCP_Rhythmicity → DCP_DiffR² → DCP_DiffPar |
-| CircaCompare | — | ✓ | ✓ | Parametric; no DR test |
-| LimoRhyde | ✓ | — | — | limma interaction model |
-| DODR | ✓ | — | — | Differential oscillation |
+bio_own <- estCircadianParam(expr, times, period = 24, verbose = FALSE)
+cat(sprintf("Own pilot: %d genes, %.1f%% rhythmic, median r = %.2f\n",
+            bio_own$ngenes, 100 * bio_own$prop_rhythmic,
+            median(bio_own$amplitude / bio_own$sigma_rhythmic, na.rm = TRUE)))
+```
 
-Unsupported combinations return `NA` silently — no error.
+`bio_own` plugs into the same `runSimsSingleCohort()` call as a bundled pilot.
 
-## Example
+---
 
-```{r differential}
-bio_diff <- readRDS("data/gse160521_nac_vs_putamen_ctrl_pilot.rds")
+# Two-harmonic detection (K = 2)
 
-design <- CircadianDesignOptions(
-  sample_sizes = c(20, 40, 60, 80, 100, 120),
-  nsims        = 200L,
+`K = 2` adds a 12 h harmonic. It is more sensitive when the waveform is
+non-sinusoidal (asymmetric or twin peaks) but costs two extra degrees of
+freedom, so it loses a little power on clean sinusoidal genes. Identifiability
+needs at least `2K + 1` distinct sampling phases (B >= 5 for K = 2).
+
+```{r k2, message = FALSE}
+res_K2 <- runSimsSingleCohort(bio.opts = bio, design.opts = design,
+                              analysis.opts = analysis, K = 2,
+                              mc.cores = NCORES, verbose = FALSE)
+
+data.frame(N        = res$sample_sizes,
+           power_K1 = round(rowMeans(res$marginal_power,    na.rm = TRUE), 3),
+           power_K2 = round(rowMeans(res_K2$marginal_power, na.rm = TRUE), 3))
+```
+
+---
+
+# Differential power (DR, DP, DM)
+
+For two-group studies, estimate a two-group pilot with
+`estCircadianParamTwoGroup()` and run `runDifferentialPower()`. Here we use the
+two arms of the bundled demo matrix (Adrenal vs Liver) as the two groups.
+
+```{r diff, message = FALSE}
+bio_diff <- estCircadianParamTwoGroup(
+  data_1  = ex$adrenal$expr, data_2  = ex$liver$expr,
+  times_1 = ex$adrenal$times, times_2 = ex$liver$times,
+  paired_sigma = TRUE,         # joint (A, sigma) draw — preserves pilot correlation
+  verbose = FALSE
+)
+
+design_d <- CircadianDesignOptions(
+  sample_sizes = c(40, 80, 120),
+  nsims        = 15,
   design       = "passive",
   cts          = bio_diff$cts,
   test_types   = c("DR", "DP", "DM")
 )
 
-analysis <- CircadianAnalysisOptions(alpha = 0.05, p.adjust.method = "BH")
-
 res_diff <- runDifferentialPower(
-  bio.opts      = bio_diff,
-  design.opts   = design,
-  analysis.opts = analysis,
-  methods       = "DCP",
-  test_types    = c("DR", "DP", "DM"),
-  mc.cores      = 4L,
-  plot          = FALSE
+  bio_diff, design_d, CircadianAnalysisOptions(alpha = 0.05),
+  methods    = "DCP",
+  test_types = c("DR", "DP", "DM"),
+  mc.cores   = NCORES,
+  plot       = FALSE,
+  verbose    = FALSE
 )
 
-plotDiffPower(list(res_diff),
-              comp_labels = "Group A vs Group B",
-              endpoints   = c("DR", "DP", "DM"),
-              out_pdf     = "figures/diff_power.pdf")
-saveRDS(res_diff, "output/diff_power.rds")
+# Recommended N per endpoint at 80% power, FDR 20%
+sapply(c("DR", "DP", "DM"),
+       function(ep) npower(res_diff, target_power = 0.80, fdr = 0.20, endpoint = ep)$n)
 ```
 
-## Biological interpretation of endpoints
+```{r plot-diff, fig.width = 11, fig.height = 9}
+plotDiffPower(list(res_diff),
+              comp_labels    = "Adrenal vs Liver (demo)",
+              endpoints      = c("DR", "DP", "DM"),
+              fdr_thresholds = c(0.01, 0.05, 0.10, 0.20),
+              panel_fdr      = 0.05,
+              vline_fdr      = 0.20)
+```
 
-- **DR** (differential rhythmicity): gene oscillates in one condition but not
-  the other — e.g., clock-regulated genes disrupted in neurodegeneration.
-- **DP** (differential phase): gene oscillates in both conditions but peak
-  shifts — e.g., circadian misalignment, tissue-specific timing differences.
-- **DM** (differential mesor): gene oscillates in both but baseline shifts —
-  e.g., inflammatory state superimposed on an intact oscillation. Analogous
-  to differential expression in RNA-seq.
+**Interpreting the endpoints.** DR (differential rhythmicity): a gene oscillates
+in one condition but not the other. DP (differential phase): it oscillates in
+both but the peak shifts. DM (differential mesor): it oscillates in both but the
+baseline shifts (analogous to differential expression). DR is typically the
+hardest to detect at matched N.
+
+## Customizing the differential scenario
+
+`runDifferentialPower()` builds the second group synthetically by perturbing the
+first, so you do not need two real groups: you can plan a hypothesized study by
+overriding the injection parameters on the pilot object before simulating. The
+defaults are estimated from the data; override any of them to ask "what if".
+
+| field | controls |
+|---|---|
+| `prop_DR`, `prop_DP`, `prop_DM` | fraction of genes that differ in rhythmicity / phase / mesor |
+| `phase_diff` + `dp_shift_mode` | DP phase shift (hours); `"fixed"` uses `phase_diff[2]`, `"uniform"` draws in the range |
+| `mesor_diff` | DM baseline-shift range |
+| `dr_amp_scale` | global multiplier on rhythmic amplitude (effect-size sensitivity) |
+| `dr_sigma_scale` | global multiplier on noise (effect-size sensitivity) |
+
+```{r diff-scenario, message = FALSE}
+bio_plan <- bio_diff
+bio_plan$prop_DR        <- 0.15        # hypothesize 15% differentially rhythmic
+bio_plan$prop_DP        <- 0.10        # 10% phase-shifted
+bio_plan$prop_DM        <- 0.05        # 5% mesor-shifted
+bio_plan$phase_diff     <- c(-6, 6)    # phase shifts up to 6 h
+bio_plan$dp_shift_mode  <- "fixed"     # fixed shift = phase_diff[2] (vs "uniform")
+bio_plan$dr_amp_scale   <- 1.0         # effect size as in pilot; lower to stress-test
+bio_plan$dr_sigma_scale <- 1.0
+
+res_plan <- runDifferentialPower(
+  bio_plan,
+  CircadianDesignOptions(sample_sizes = c(40, 80, 120), nsims = 15,
+                         design = "passive", cts = bio_plan$cts,
+                         test_types = c("DR", "DP", "DM")),
+  CircadianAnalysisOptions(alpha = 0.05),
+  methods = "DCP", test_types = c("DR", "DP", "DM"),
+  mc.cores = NCORES, plot = FALSE, verbose = FALSE)
+
+# power at the largest N (FDR 20%) for each endpoint under this scenario
+sapply(c("DR", "DP", "DM"),
+       function(ep) round(npower(res_plan, 0.80, 0.20, endpoint = ep)$power[3], 3))
+```
+
+To stress-test a weaker-than-pilot effect, lower `dr_amp_scale` (or raise
+`dr_sigma_scale`) and re-run; power drops accordingly, telling you how robust
+your sample size is to an optimistic pilot.
 
 ---
 
-# B vs m Trade-off and Method Recommendation
+# B vs m design trade-off
 
-`recommendDesign()` is the high-level entry point for the B vs m analysis.
-It runs in three steps:
+At a fixed total N, how should you spread samples across time points (B) versus
+replicates per time point (m = N / B)? `recommendDesign()` runs guidance plus a
+simulation sweep over a B x N grid. For the single-harmonic cosinor F-test,
+power depends on total N and effect size, not on the allocation, once B >= 3.
 
-1. **Guidance** — prints method-specific B sensitivity table
-2. **Analytical** — DCP closed-form CircaPower estimate (fast baseline)
-3. **Simulation** — calls `runSingleCohortPower()` or `runDifferentialPower()`
-   over the B × N grid
-
-```{r recommend}
-bio <- readRDS("data/gse160521_nac_ctrl_pilot.rds")
-
-design_bvsm <- CircadianDesignOptions(
-  sample_sizes = seq(12, 96, by = 12),
-  nsims        = 100L,
-  design       = "active",
-  cts          = seq(0, 20, by = 4),
-  B_values     = c(3L, 4L, 6L, 8L, 12L)
-)
-
-analysis <- CircadianAnalysisOptions(alpha = 0.05, p.adjust.method = "BH")
-
+```{r bvsm, message = FALSE}
 rec <- recommendDesign(
   bio.opts      = bio,
-  design.opts   = design_bvsm,
-  analysis.opts = analysis,
-  methods       = c("DCP", "MH"),
-  target_power  = 0.80,
-  mode          = "single",
+  design.opts   = CircadianDesignOptions(sample_sizes = c(24, 48, 72),
+                                         nsims = 10, design = "active",
+                                         cts = seq(0, 20, by = 4),
+                                         B_values = c(6)),
+  analysis.opts = CircadianAnalysisOptions(alpha = 0.05),
+  methods        = "DCP",
+  target_power   = 0.80,
+  mode           = "single",
   run_simulation = TRUE,
-  mc.cores      = 8L
+  mc.cores       = NCORES,
+  plot           = FALSE,
+  verbose        = FALSE
 )
-
-print(rec)   # prints CircaPower estimate + simulation n80 per method×B
-```
-
-### Reusing previous results
-
-If you have already run `runSingleCohortPower()`, pass it as `prior_result`
-to skip re-running the simulation:
-
-```{r recommend-reuse}
-rec2 <- recommendDesign(
-  bio.opts      = bio,
-  design.opts   = design_bvsm,
-  analysis.opts = analysis,
-  methods       = c("DCP", "MH"),
-  prior_result  = rec$simulation,   # result from earlier recommendDesign() call
-  target_power  = 0.80,
-  mode          = "single"
-)
-```
-
-### Method guidance table
-
-You can print the guidance table independently before committing to a run:
-
-```{r guidance}
-printMethodGuidance(methods = c("DCP", "JTK", "RAIN", "MH"), verbose = TRUE)
-```
-
-Expected output:
-
-```
-Method    B-sensitive?  Why
-------    ------------  ---
-DCP       No            NCP = N·r²/2 for equispaced B≥3; B cancels analytically
-JTK       Favors low B  MetaCycle averages replicates before ranking — always prefer m
-RAIN      Yes (genuine) Umbrella test uses individual obs; more distinct ZTs help
-MH        Yes           Adaptive K = floor((B-1)/2); more harmonics captured at B≥6
 ```
 
 ---
 
-# Bootstrap Uncertainty
+# Bootstrap uncertainty
 
-`runBootstrapDesignGrid()` quantifies pilot uncertainty by re-sampling the
-pilot with replacement and re-estimating power at each draw.
+When the pilot is small, the recommended N is itself uncertain.
+`runBootstrapDesignGrid()` resamples the pilot with replacement and re-estimates
+power on each draw, producing confidence bands. It is the most expensive routine;
+the call below is deliberately tiny so the vignette builds quickly. For real use,
+raise `nboot` (>= 50) and `nsims_inner` (>= 20).
 
-```{r bootstrap}
+```{r bootstrap, message = FALSE}
 boot_opts <- CircadianBootstrapOptions(
-  design_vector = seq(0, 22, by = 2),   # active: 12 equispaced ZTs
-  B_values      = 12L,
-  N_values      = c(20, 40, 60, 80, 100),
-  nboot         = 50L,
-  nsims_inner   = 20L,
+  design_vector = seq(0, 20, by = 4),
+  B_values      = 6,
+  N_values      = c(24, 48),
+  nboot         = 4,
+  nsims_inner   = 5,
   design        = "active",
-  seed          = 42L
+  seed          = 42
 )
 
 boot_res <- runBootstrapDesignGrid(
-  pilot_data    = pilot_expr,
-  pilot_times   = pilot_times,
+  pilot_data    = ex$adrenal$expr,
+  pilot_times   = ex$adrenal$times,
   boot.opts     = boot_opts,
-  analysis.opts = analysis,
-  bio_diff.opts = bio_diff,
-  mode          = "differential",
+  analysis.opts = CircadianAnalysisOptions(alpha = 0.05),
+  bio_diff.opts = bio,        # required even in single mode
+  mode          = "single",
   methods       = "DCP",
-  test_types    = "DR",
-  mc.cores      = 8L
+  mc.cores      = NCORES
 )
 ```
 
-Bootstrap CIs are wide when pilot n < 20 or signal-to-noise r̃ < 0.5. In
-those cases, treat the median power estimate conservatively and consider
-collecting additional pilot data before designing the full study.
+Bootstrap CIs are wide when pilot n < 20 or median r < 0.5; in those cases treat
+the median power estimate conservatively and consider collecting more pilot data.
 
 ---
 
-# Working with Result Objects
+# Working with result objects
 
-`runSingleCohortPower()` and `runDifferentialPower()` return rich lists
-containing raw per-gene FDR arrays. Pass them directly to the plotting
-functions, or save with `saveRDS()` for later replotting at any FDR threshold.
+`runSimsSingleCohort()` and `runDifferentialPower()` return rich lists. Save them
+with `saveRDS()` and replot at any FDR threshold later without re-simulating.
 
-```{r result-objects}
-# Single-cohort result — pass to plotSingleCohortPower()
-res <- runSingleCohortPower(bio, design, analysis,
-                             methods = "DCP", plot = FALSE, mc.cores = 4L)
-saveRDS(res, "output/single_cohort_power.rds")
-plotSingleCohortPower(res, out_pdf = "output/fig1.pdf",
-                      title = "My Cohort — Single-Cohort Power")
+```{r result-objects, eval = FALSE}
+saveRDS(res, "single_cohort_power.rds")
 
-# Key fields in the result:
-res$sample_sizes          # N values swept
-res$marginal_power        # [N × nsims] matrix of per-sim marginal power
-res$strat_power           # [N × r_strata × nsims] stratified by SNR
-res$pvalues               # [N × genes × nsims] raw p-values (replot at any FDR)
+res$sample_sizes     # N values swept
+res$marginal_power   # [N x nsims] marginal power
+res$strat_power      # [N x r_strata x nsims] power stratified by effect size
+res$pvalues          # [N x genes x nsims] raw p-values (replot at any FDR)
 
-# Differential result — pass to plotDiffPower()
-res_diff <- runDifferentialPower(bio_diff, design, analysis,
-                                  methods = "DCP", plot = FALSE, mc.cores = 4L)
-saveRDS(res_diff, "output/diff_power.rds")
-plotDiffPower(list(res_diff),
-              comp_labels = "Group A vs Group B",
-              endpoints   = c("DR", "DP", "DM"),
-              out_pdf     = "output/fig2.pdf")
-
-# Key fields in the differential result:
-res_diff$fdr_DR            # [genes × N × nsims] FDR for DR test
-res_diff$fdr_DP            # [genes × N × nsims] FDR for DP test
-res_diff$fdr_DM            # [genes × N × nsims] FDR for DM test
-res_diff$diff_type         # list[nsims]: per-gene ground-truth type (0–5)
-res_diff$effectsize        # list[nsims]: per-gene effect sizes
-
-# recommendDesign() result still has print/plot S3 methods:
-rec
-plot(rec)
+res_diff$fdr_DR      # [genes x N x nsims] FDR for the DR test
+res_diff$fdr_DP      # ... DP
+res_diff$fdr_DM      # ... DM
+res_diff$diff_type   # per-gene ground-truth type per simulation
 ```
 
 ---
 
-# Complete Publication Example
-
-This is the pattern used for all paper figures.
-
-```{r publication-pattern}
-# 0. Setup
-old_wd <- setwd("code"); source("setup.R"); setwd(old_wd)
-GLOBAL_SEED <- 2025L
-
-# 1. Load pilot
-bio <- readRDS("data/gse160521_nac_ctrl_pilot.rds")
-
-# 2. Options
-design <- CircadianDesignOptions(
-  sample_sizes = c(20, 30, 40, 50, 60, 80, 100, 120, 150, 200),
-  nsims        = 200L, design = "passive", cts = bio$cts
-)
-analysis <- CircadianAnalysisOptions(
-  alpha = 0.05, p.adjust.method = "BH",
-  r_strata = makeAdaptiveRStrata(bio, bin_width = 0.25)
-)
-
-# 3. Run
-set.seed(GLOBAL_SEED)
-res <- runSingleCohortPower(
-  bio, design, analysis,
-  methods     = "DCP",
-  mc.cores    = as.integer(Sys.getenv("MC_CORES", "4")),
-  plot        = TRUE,
-  output_file = "output/single_cohort/figures/fig1_nac.pdf"
-)
-
-# 4. Save
-saveRDS(res, sprintf("output/single_cohort/results/fig1_nac_%s.rds",
-                     format(Sys.time(), "%Y%m%d_%H%M%S")))
-```
-
----
-
-# Function Reference
+# Function reference
 
 | Function | Purpose |
 |----------|---------|
-| `estCircadianParam()` | Estimate single-group pilot parameters |
+| `scp_pilots()`, `scp_pilot_search()`, `scp_load_pilot()` | Browse and load bundled pilots |
+| `estCircadianParam()` | Estimate single-group pilot parameters from raw data |
 | `estCircadianParamTwoGroup()` | Estimate two-group pilot parameters |
-| `CircadianDesignOptions()` | Build design option object |
-| `CircadianAnalysisOptions()` | Build analysis option object |
-| `makeAdaptiveRStrata()` | Build adaptive r-strata breaks from pilot |
-| `runSingleCohortPower()` | Single-cohort power (methods=, alpha2=, plot=) |
-| `runDifferentialPower()` | Differential power (methods=, test_types=, alpha2=, plot=) |
-| `recommendDesign()` | B vs m orchestrator (guidance → analytical → simulation) |
-| `printMethodGuidance()` | Print method × B sensitivity table |
-| `runBootstrapDesignGrid()` | Bootstrap pilot uncertainty quantification |
-| `plotSingleCohortPower()` | 3-panel single-cohort power figure |
-| `plotDiffPower()` | Multi-panel differential power figure |
-| `print.SCPRecommendResult()` | Print recommendation summary |
-| `plot.SCPRecommendResult()` | Plot B vs m recommendation |
+| `CircadianDesignOptions()` | Build the design option object |
+| `CircadianAnalysisOptions()` | Build the analysis option object |
+| `makeAdaptiveRStrata()` | Build adaptive r-strata breaks from a pilot |
+| `runSimsSingleCohort()` | Single-cohort power (K = 1 or 2) |
+| `runDifferentialPower()` | Differential power (DR, DP, DM) |
+| `npower()` | Recommended N at a target power and FDR |
+| `recommendDesign()` | B vs m design orchestrator |
+| `runBootstrapDesignGrid()` | Bootstrap pilot-uncertainty quantification |
+| `plotSingleCohortPower()`, `plotDiffPower()` | Power figures |
+| `launchShiny()` | Launch the bundled point-and-click app |
 
 ---
 
-# Session Info
+# Session info
 
 ```{r session}
 sessionInfo()
