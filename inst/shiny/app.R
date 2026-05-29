@@ -1243,7 +1243,7 @@ server <- function(input, output, session) {
   }
 
   # Clock genes passing the threshold (alias-aware, deduped, most-significant
-  # first, capped at the max layout of 8 = 4 cols x 2 rows).
+  # first, capped at the max layout of 12 = 4 cols x 3 rows).
   clock_genes <- reactive({
     g <- gene_tbl_pass(); if (is.null(g) || !nrow(g)) return(NULL)
     canon <- .clock_canon(g$Gene)
@@ -1251,7 +1251,7 @@ server <- function(input, output, session) {
     if (!nrow(pr)) return(pr)
     pr <- pr[!duplicated(pc), , drop = FALSE]
     pr <- pr[order(pr$p), , drop = FALSE]
-    utils::head(pr, 8L)
+    utils::head(pr, 12L)
   })
   # Layout: <=4 columns; rows wrap. FIXED per-panel size so 1-2 genes render at a
   # consistent aspect instead of stretching across the full width.
@@ -1260,9 +1260,13 @@ server <- function(input, output, session) {
     n <- tryCatch(nrow(clock_genes()), error = function(e) 0L)
     n <- if (is.null(n) || is.na(n)) 0L else n
     if (n < 1L) return(list(n = 0L, nc = 1L, nr = 1L))
-    # Balance the rows so no count leaves a lonely/ragged bottom row:
-    # 1-4 -> one row; 5-6 -> 3 cols (3+2 / 3+3); 7-8 -> 4 cols (4+3 / 4+4).
-    nc <- if (n <= 4L) n else if (n <= 6L) 3L else 4L
+    # Balanced columns so no count leaves a lonely/ragged bottom row (max 12):
+    # 1-4 -> 1 row; 5-6 -> 3 cols; 7-8 -> 4 cols; 9 -> 3x3; 10-12 -> 4 cols.
+    nc <- if (n <= 4L) n
+          else if (n <= 6L) 3L
+          else if (n <= 8L) 4L
+          else if (n == 9L) 3L
+          else 4L
     list(n = n, nc = nc, nr = ceiling(n / nc))
   }
 
