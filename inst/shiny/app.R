@@ -201,7 +201,7 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       width = 3,
-      h3("Power Study", style = "text-align:center; margin-top:2px; font-weight:700;"),
+      h3("Circadian Power Study", style = "text-align:center; margin-top:2px; font-weight:700;"),
       hr(style = "margin-top:6px; margin-bottom:10px;"),
       h4("Pilot rhythmicity threshold"),
       radioButtons("rhy_stat", NULL,
@@ -331,7 +331,7 @@ ui <- fluidPage(
       div(id = "gene_explore_card",
           style = "background:#fbfcfe; border:1px solid #e3e9f0; border-radius:6px; padding:14px 16px; margin-top:6px;",
         div(style = "display:flex; justify-content:space-between; align-items:center;",
-            h4("Rhythmic Biomarker Detection", style = "margin:0;"),
+            h4("Circadian Biomarker Detection", style = "margin:0;"),
             actionButton("capture_explorer", "Capture this panel (PNG)",
                          icon = icon("camera"), class = "btn-sm")),
         helpText(em(paste0("Per-gene rhythmicity at the threshold set on the left (changing it ",
