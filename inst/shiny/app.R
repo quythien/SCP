@@ -308,12 +308,17 @@ ui <- fluidPage(
       ),
       # ---- Rhythmic gene explorer (pilot-level; shown before & after a run) ----
       hr(),
-      div(style = "background:#fbfcfe; border:1px solid #e3e9f0; border-radius:6px; padding:14px 16px; margin-top:6px;",
-        h4("Rhythmic gene explorer", style = "margin-top:0;"),
+      div(id = "gene_explore_card",
+          style = "background:#fbfcfe; border:1px solid #e3e9f0; border-radius:6px; padding:14px 16px; margin-top:6px;",
+        div(style = "display:flex; justify-content:space-between; align-items:center;",
+            h4("Rhythmic gene explorer", style = "margin:0;"),
+            actionButton("capture_explorer", "Capture explorer panel (PNG)",
+                         icon = icon("camera"), class = "btn-sm")),
         helpText(em(paste0("Per-gene rhythmicity at the threshold set on the left (changing it ",
-                           "updates the clock panel and table below). Curves are the fitted cosinor ",
-                           "(bundled pilots store fit estimates, not raw samples); the shaded band ",
-                           "is +/- 1.96 sigma (noise)."))),
+                           "updates the clock panel and table below). Curves are the fitted cosinor; ",
+                           "the shaded band is +/- 1.96 sigma (noise). Bundled pilots store fit ",
+                           "estimates only, so they show the curve; uploaded data also overlays each ",
+                           "sample's actual expression as points."))),
         # Live banner: echoes the current alpha_pilot / statistic + rhythmic count
         # so it is obvious the explorer reflects the left-panel threshold.
         div(style = "padding:6px 10px; background:#eef4fb; border-radius:4px; margin-bottom:8px;",
@@ -510,6 +515,10 @@ server <- function(input, output, session) {
         bio <- SCP::estCircadianParam(mat, tod, paired_sigma = TRUE, verbose = FALSE)
         incProgress(0.7)
         bio$times <- tod
+        # Keep the uploaded matrix in-session so the gene cosinor plot can overlay
+        # each sample's actual expression (bundled pilots store no raw data, so
+        # this is upload-only). Not used by the simulator.
+        bio$.raw_expr <- mat
         # Map IDs to symbols using the user-selected species (or auto-detect);
         # unmapped IDs keep their original name. `detected` is the auto-detected
         # species regardless of the user's choice, used to suggest below.
@@ -1059,6 +1068,19 @@ server <- function(input, output, session) {
     shinyscreenshot::screenshot(filename = "SCP_app_view", timer = 0)
   })
 
+  # Capture just the gene-explorer region (clock panel + table + cosinor) as one
+  # PNG, mirroring the power-curve capture but scoped to this card.
+  observeEvent(input$capture_explorer, {
+    if (!requireNamespace("shinyscreenshot", quietly = TRUE)) {
+      showNotification(
+        "Capture needs the 'shinyscreenshot' package: install.packages('shinyscreenshot') and relaunch.",
+        type = "warning", duration = 10)
+      return(invisible(NULL))
+    }
+    shinyscreenshot::screenshot(id = "gene_explore_card",
+                                filename = "SCP_gene_explorer", timer = 0)
+  })
+
 
   output$recommended_n_text <- renderUI({
     res <- sim_result()
@@ -1110,8 +1132,27 @@ server <- function(input, output, session) {
   })
 
   # ======================= Rhythmic gene explorer =========================
-  .CLOCK <- c("ARNTL","CLOCK","NPAS2","PER1","PER2","PER3","CRY1","CRY2",
-              "NR1D1","NR1D2","DBP","TEF","HLF","CIART","NFIL3")
+  # Core clock genes with common aliases (datasets use either the official HGNC
+  # symbol or the common name, e.g. ARNTL vs BMAL1). Matching is alias-aware so a
+  # gene is recognised whichever name the pilot/upload uses. All upper-case.
+  .CLOCK_ALIASES <- list(
+    ARNTL  = c("ARNTL","BMAL1","MOP3"),
+    ARNTL2 = c("ARNTL2","BMAL2","MOP9"),
+    CLOCK  = c("CLOCK"),
+    NPAS2  = c("NPAS2","MOP4"),
+    PER1   = c("PER1"), PER2 = c("PER2"), PER3 = c("PER3"),
+    CRY1   = c("CRY1"), CRY2 = c("CRY2"),
+    NR1D1  = c("NR1D1","REVERBA","REV-ERBA","NR1D1A","THRAL"),
+    NR1D2  = c("NR1D2","REVERBB","REV-ERBB","RVR"),
+    DBP    = c("DBP"), TEF = c("TEF"), HLF = c("HLF"),
+    CIART  = c("CIART","CHRONO","GM129","C1ORF51"),
+    NFIL3  = c("NFIL3","E4BP4"),
+    RORA   = c("RORA"), RORC = c("RORC")
+  )
+  # alias (upper) -> canonical name, for vectorised lookup
+  .CLOCK_LOOKUP <- unlist(lapply(names(.CLOCK_ALIASES), function(cn)
+    stats::setNames(rep(cn, length(.CLOCK_ALIASES[[cn]])), .CLOCK_ALIASES[[cn]])))
+  .clock_canon <- function(syms) unname(.CLOCK_LOOKUP[toupper(syms)])   # NA if not a clock gene
 
   # Per-gene table from the loaded pilot's rhythm_fit: BH q-value, r-tilde, peak,
   # mesor (if stored). Sorted by p-value. Reacts to the left-panel threshold via
@@ -1169,18 +1210,24 @@ server <- function(input, output, session) {
   # noise ribbon; peak marked. `compact` (clock small-multiples) shows only the
   # gene title + peak; the full p/q/peak/(A/sigma) subtitle is reserved for the
   # large single-gene detail plot where there is room (avoids title collisions).
-  .draw_cos <- function(row, period = 24, compact = FALSE) {
+  # `pts` (optional list(t, y)) overlays each sample's actual expression on the
+  # fit -- available for uploaded data (raw matrix in session); bundled pilots
+  # store no raw data so they show the fitted curve + noise band only.
+  .draw_cos <- function(row, period = 24, compact = FALSE, pts = NULL) {
     t <- seq(0, period, length.out = 240); w <- 2 * pi / period
     m0 <- if (!is.null(row$Mesor) && is.finite(row$Mesor)) row$Mesor else 0
     y  <- m0 + row$Amp * cos(w * (t - row$Peak_h)); band <- 1.96 * row$Sigma
     ylab <- if (m0 != 0) "Expression (log2)" else "Expression (centered)"
-    plot(t, y, type = "n", ylim = range(c(y + band, y - band)),
+    yl   <- range(c(y + band, y - band, if (!is.null(pts)) pts$y))
+    plot(t, y, type = "n", ylim = yl,
          xlab = "Time of day (h)", ylab = if (compact) "centered" else ylab,
          main = row$Gene, xaxt = "n", bty = "l",
          cex.lab = if (compact) 1.0 else 1.2,
          cex.main = if (compact) 1.2 else 1.45, font.main = 2)
     axis(1, at = seq(0, 24, if (compact) 6 else 4))
     polygon(c(t, rev(t)), c(y + band, rev(y - band)), col = "#2c7fb822", border = NA)
+    if (!is.null(pts)) points(pts$t %% period, pts$y, pch = 19,
+                              col = "#2c7fb899", cex = 1.1)   # actual sample points
     lines(t, y, lwd = 2.5, col = "#2c7fb8")
     abline(v = row$Peak_h, lty = 2, col = "grey50")
     # stats subtitle on every panel; compact (clock small-multiples) drops q and
@@ -1195,9 +1242,10 @@ server <- function(input, output, session) {
 
   output$clock_panel <- renderPlot({
     g <- gene_tbl_pass(); req(g)   # passing the chosen alpha_pilot -> responds to it
-    pr <- g[toupper(g$Gene) %in% .CLOCK, , drop = FALSE]
-    pr <- pr[!duplicated(toupper(pr$Gene)), , drop = FALSE]
-    pr <- pr[order(match(toupper(pr$Gene), .CLOCK)), , drop = FALSE]
+    canon <- .clock_canon(g$Gene)
+    pr <- g[!is.na(canon), , drop = FALSE]; pc <- canon[!is.na(canon)]
+    pr <- pr[!duplicated(pc), , drop = FALSE]            # one row per clock gene
+    pr <- pr[order(pr$p), , drop = FALSE]                # most significant first
     if (!nrow(pr)) { plot.new()
       title(sprintf("No core clock genes pass %s in this pilot.", .thresh_label())); return() }
     n  <- min(nrow(pr), 8L)
@@ -1208,7 +1256,8 @@ server <- function(input, output, session) {
 
   output$clock_note <- renderUI({
     g <- gene_tbl_pass(); if (is.null(g)) return(NULL)
-    absent <- setdiff(.CLOCK, toupper(g$Gene))
+    present <- unique(.clock_canon(g$Gene)); present <- present[!is.na(present)]
+    absent  <- setdiff(names(.CLOCK_ALIASES), present)
     if (length(absent))
       helpText(em(sprintf("Clock genes not passing %s here: %s",
                           .thresh_label(), paste(absent, collapse = ", "))))
@@ -1220,7 +1269,8 @@ server <- function(input, output, session) {
     out <- head(g, 100L)
     # "r̃" = r + combining tilde -> renders as r-tilde; "σ" = sigma.
     tcol <- "r̃ (A/σ)"
-    df <- data.frame(Gene = out$Gene, p = signif(out$p, 3), q = signif(out$q, 3),
+    df <- data.frame(Gene = out$Gene, `p-value` = signif(out$p, 3),
+                     `q-value` = signif(out$q, 3),
                      x = round(out$rtilde, 2), `Peak (h)` = out$Peak_h,
                      check.names = FALSE)
     names(df)[names(df) == "x"] <- tcol
@@ -1271,7 +1321,12 @@ server <- function(input, output, session) {
     g <- gene_tbl(); req(g, input$gene_pick)
     row <- g[g$ID == input$gene_pick, , drop = FALSE]
     if (!nrow(row)) { plot.new(); title("Gene not rhythmic in this pilot (p >= 0.2)."); return() }
-    .draw_cos(row[1, ])
+    # Overlay actual sample points when raw data is available (uploaded pilots).
+    p <- pilot(); pts <- NULL
+    rx <- p$.raw_expr
+    if (!is.null(rx) && input$gene_pick %in% rownames(rx) && !is.null(p$times))
+      pts <- list(t = as.numeric(p$times), y = as.numeric(rx[input$gene_pick, ]))
+    .draw_cos(row[1, ], pts = pts)
   })
 
   output$gene_readout <- renderText({
