@@ -1261,8 +1261,10 @@ server <- function(input, output, session) {
     n <- if (is.null(n) || is.na(n)) 0L else n
     if (n < 1L) return(list(n = 0L, nc = 1L, nr = 1L))
     # Balanced columns so no count leaves a lonely/ragged bottom row (max 12):
-    # 1-4 -> 1 row; 5-6 -> 3 cols; 7-8 -> 4 cols; 9 -> 3x3; 10-12 -> 4 cols.
-    nc <- if (n <= 4L) n
+    # 1-3 -> 1 row; 4 -> 2x2 block; 5-6 -> 3 cols; 7-8 -> 4 cols; 9 -> 3x3;
+    # 10-12 -> 4 cols.
+    nc <- if (n <= 3L) n
+          else if (n == 4L) 2L
           else if (n <= 6L) 3L
           else if (n <= 8L) 4L
           else if (n == 9L) 3L
