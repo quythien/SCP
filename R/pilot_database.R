@@ -256,7 +256,12 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
   K <- min(as.integer(p$pilot_top_k %||% 300L), n_cand)
   estim <- if (K > 0L) cand[seq_len(K), , drop = FALSE] else cand[0, , drop = FALSE]
 
-  p$prop_rhythmic  <- n_cand / (p$ngenes %||% nrow(rf))
+  # Stable denominator: the pilot's full gene count, captured on first reslice
+  # so prop_rhythmic stays correct even if p$ngenes is later overwritten with a
+  # simulation gene count (e.g. the Shiny app fixes ngenes = 2000).
+  denom <- p$rhythm_denom %||% p$ngenes %||% nrow(rf)
+  p$rhythm_denom   <- denom
+  p$prop_rhythmic  <- n_cand / denom
   p$alpha_pilot    <- alpha_pilot
   p$adjust_pilot   <- adjust
 
