@@ -380,14 +380,29 @@ server <- function(input, output, session) {
             paste0("No two-harmonic (K=2) pilot has been built for this dataset. ",
                    "Switch to K = 1, or build a K=2 variant."),
             type = "warning", duration = 8)
+        else
+          showNotification(
+            sprintf("Could not load pilot [%s / %s / %s / %s]: %s",
+                    input$species, input$dataset, actual_tissue, input$condition,
+                    conditionMessage(e)),
+            type = "error", duration = 12)
         NULL
       }
     )
     if (!is.null(p) && !inherits(p, "CircadianBioOptions"))
       class(p) <- c("CircadianBioOptions", class(p))
     # Apply the user-selected rhythmicity threshold so prop_rhythmic and the
-    # effect-size distribution feeding the simulation reflect alpha_pilot.
-    p <- .app_apply_threshold(p, input$rhy_stat, as.numeric(input$rhy_thresh))
+    # effect-size distribution reflect alpha_pilot. Never let a threshold
+    # hiccup blank out a successfully-loaded pilot: fall back to the loaded
+    # object and surface the error.
+    p <- tryCatch(
+      .app_apply_threshold(p, input$rhy_stat, as.numeric(input$rhy_thresh)),
+      error = function(e) {
+        showNotification(sprintf("Threshold step failed (%s); showing pilot defaults.",
+                                 conditionMessage(e)), type = "warning", duration = 8)
+        p
+      }
+    )
     p
   })
 
