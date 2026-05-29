@@ -198,10 +198,6 @@ ui <- fluidPage(
       sliderInput("n_step", "Step", min = 2, max = 60,
                   value = 20, step = 2),
       helpText(em("Grid: N_min, N_min + step, ..., up to N_max.")),
-      selectInput("nsims", "Simulations per N",
-                  choices  = c("10 (quickest)" = 10, "25 (fast)" = 25, "50" = 50,
-                               "100 (paper)" = 100, "200" = 200),
-                  selected = 25),
       hr(),
       h4("Targets"),
       sliderInput("target_power", "Target power",
@@ -584,7 +580,10 @@ server <- function(input, output, session) {
                     "lBaselineExpr", "lOD")) {
         if (!is.null(p[[fld]])) p[[fld]] <- .as_num(p[[fld]])
       }
-      if (!is.null(p$ngenes)) p$ngenes <- as.integer(.as_num(p$ngenes))
+      # Fixed simulation gene count: matches the manuscript figure scripts
+      # (NGENES_SIM = 2000) and keeps the interactive app responsive. The
+      # runner resamples the per-gene baseline vectors to this length.
+      p$ngenes <- 2000L
       if (!is.null(p$period)) p$period <- .as_num(p$period)
       # Apply the user's pilot rhythmicity threshold to redefine the rhythmic
       # gene set (top-K = 300 by p-value among genes passing the threshold).
@@ -660,7 +659,7 @@ server <- function(input, output, session) {
       if (length(cts_vec) == 0L) cts_vec <- seq(0, 22, by = 4)
       design <- SCP::CircadianDesignOptions(
         sample_sizes = n_grid,
-        nsims        = as.integer(as.numeric(input$nsims)),
+        nsims        = 20L,   # fixed for a responsive, reproducible interactive run
         design       = design_type,
         cts          = cts_vec
       )
