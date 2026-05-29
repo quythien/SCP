@@ -250,8 +250,14 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   panels <- intersect(c("A", "B", "C"), panels)
   if (length(panels) == 0L) panels <- c("A", "B", "C")
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
+  # Scale left/bottom margins with the label font so the "Power (%)" y-title
+  # is not clipped at large cex (e.g. the enlarged Shiny fonts). Anchored at
+  # ~1.55 so the manuscript figures (default cex) are essentially unchanged.
+  extra_lab <- max(0, cex_lab - 1.55)
+  mai_left  <- 0.85 + 1.25 * extra_lab
+  mai_bot   <- 0.85 + 0.60 * extra_lab
   # Outer top oma needs ~3 lines for the cex=1.5 title to clear the top edge.
-  par(mfrow = c(1, length(panels)), mai = c(0.85, 0.85, 0.55, 0.15),
+  par(mfrow = c(1, length(panels)), mai = c(mai_bot, mai_left, 0.55, 0.15),
       mgp = c(3.2, 0.65, 0), oma = c(0, 0, 2.4, 0),
       cex.axis = cex_axis, cex.lab = cex_lab, cex.main = cex_main, font.main = 2)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
