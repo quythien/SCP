@@ -175,6 +175,8 @@ ui <- fluidPage(
                      "Two-harmonic (K = 2)"    = "2"),
         selected = "1"
       ),
+      checkboxInput("eff_sens", "Effect-size sensitivity", value = FALSE),
+      helpText(em("Also show power stratified by effect size r̃ = A/σ.")),
       hr(),
       h4("Sampling design"),
       radioButtons(
@@ -396,7 +398,7 @@ server <- function(input, output, session) {
     list(species = input$species, dataset = input$dataset,
          tissue = input$tissue, condition = input$condition,
          rhy_stat = input$rhy_stat, rhy_thresh = input$rhy_thresh,
-         K = input$K, design = input$design,
+         K = input$K, eff_sens = input$eff_sens, design = input$design,
          active_step = input$active_step,
          n_min = input$n_min, n_max = input$n_max, n_step = input$n_step,
          target_fdr = input$target_fdr)
@@ -670,22 +672,30 @@ server <- function(input, output, session) {
 
       incProgress(0.3, detail = "Simulating")
       # Use the same seed as the manuscript figure scripts (GLOBAL_SEED = 2025)
-      set.seed(2025)
       K_val <- as.integer(input$K)
-      res <- tryCatch(
-        SCP::runSimsSingleCohort(
-          bio.opts      = p,
-          design.opts   = design,
-          analysis.opts = analysis,
-          K             = K_val,
-          mc.cores      = n_cores
-        ),
+      run_sim <- function(bio) tryCatch(
+        { set.seed(2025)
+          SCP::runSimsSingleCohort(bio.opts = bio, design.opts = design,
+                                   analysis.opts = analysis, K = K_val,
+                                   mc.cores = n_cores) },
         error = function(e) {
-          msg <- sprintf("Simulation failed: %s", conditionMessage(e))
-          showNotification(msg, type = "error", duration = 8)
-          structure(list(error = msg), class = "sim_error")
+          showNotification(sprintf("Simulation failed: %s", conditionMessage(e)),
+                           type = "error", duration = 8)
+          structure(list(error = conditionMessage(e)), class = "sim_error")
         }
       )
+      # Panel A: paired (A, sigma) draw -> realistic marginal power (p is paired).
+      res <- run_sim(p)
+      # Effect-size sensitivity (Panels B/C): unpaired draw -> wide r-tilde, so
+      # the stratified panels span the full effect-size range. Re-derived from
+      # the same rhythm_fit table at the same threshold (no extra fitting).
+      if (isTRUE(input$eff_sens) && !inherits(res, "sim_error")) {
+        incProgress(0.3, detail = "Effect-size sensitivity")
+        p_unpaired <- .app_apply_threshold(p, input$rhy_stat,
+                                           as.numeric(input$rhy_thresh),
+                                           paired_sigma = FALSE)
+        res$.bc <- run_sim(p_unpaired)
+      }
       incProgress(1, detail = "Done")
       last_run_state(isolate(current_state()))
       res
@@ -698,13 +708,23 @@ server <- function(input, output, session) {
     tryCatch({
       tfd <- as.numeric(input$target_fdr)
       tpw <- as.numeric(input$target_power)
-      SCP::plotSingleCohortPower(res,
-                                  fdr            = tfd,
-                                  fdr_thresholds = tfd,
-                                  panel_fdr      = tfd,
-                                  vline_fdr      = tfd,
-                                  vline_power    = tpw,
-                                  r_max          = NULL)
+      # If effect-size sensitivity is on, draw the stratified panels from the
+      # unpaired run (.bc) while keeping Panel A from the paired run (panel_a_res).
+      bc <- res$.bc
+      if (!is.null(bc) && !inherits(bc, "sim_error")) {
+        SCP::plotSingleCohortPower(bc, panel_a_res = res,
+                                    fdr = tfd, fdr_thresholds = tfd,
+                                    panel_fdr = tfd, vline_fdr = tfd,
+                                    vline_power = tpw, r_max = NULL)
+      } else {
+        SCP::plotSingleCohortPower(res,
+                                    fdr            = tfd,
+                                    fdr_thresholds = tfd,
+                                    panel_fdr      = tfd,
+                                    vline_fdr      = tfd,
+                                    vline_power    = tpw,
+                                    r_max          = NULL)
+      }
       },
       error = function(e) {
         plot.new()
