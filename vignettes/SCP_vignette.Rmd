@@ -40,12 +40,11 @@ planning questions:
    time points (B) versus replicates per time point (m = N/B)?
 4. **Bootstrap uncertainty** — how wide are power estimates when the pilot is small?
 
-SCP calibrates simulations from real pilot data: it estimates the empirical
+Simulations are calibrated from real pilot data: SCP estimates the empirical
 distributions of gene-level amplitude (A), noise (sigma), phase, and the
 proportion of rhythmic genes, then simulates cohorts under the cosinor model and
-applies FDR-controlled detection. This guide is fully runnable using a bundled
-pilot database and a small bundled example matrix; every code chunk executes as
-written.
+applies FDR-controlled detection. Every chunk below runs as-is on the bundled
+pilots and example data.
 
 ---
 
