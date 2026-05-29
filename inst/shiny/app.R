@@ -234,7 +234,7 @@ ui <- fluidPage(
         condition = "input.run > 0",
         hr(),
         h4("Power curve"),
-        plotOutput("power_curve", height = "560px"),
+        plotOutput("power_curve", height = "auto"),
         hr(),
         div(style = "padding: 12px; background:#f4f8fc; border-left: 4px solid #2c7fb8;",
             h3(textOutput("recommended_n_text"), style = "margin: 0;"))
@@ -377,7 +377,12 @@ server <- function(input, output, session) {
 
   # ---- bundled pilot ------------------------------------------------------
   pilot <- reactive({
-    if (isTRUE(input$pilot_source == "upload")) return(uploaded_pilot())
+    if (isTRUE(input$pilot_source == "upload")) {
+      # Uploaded pilots carry a rhythm_fit table too, so honor the threshold
+      # slider just like bundled pilots.
+      return(.app_apply_threshold(uploaded_pilot(), input$rhy_stat,
+                                  as.numeric(input$rhy_thresh)))
+    }
     req(input$species, input$dataset, input$tissue, input$condition)
     actual_tissue <- .resolve_actual_tissue()
     K_req <- as.integer(input$K %||% 1L)
@@ -477,6 +482,27 @@ server <- function(input, output, session) {
   output$pilot_summary <- renderText({
     p <- pilot()
     if (is.null(p)) return("Pick a (species, dataset, tissue, condition) above.")
+    # Uploaded pilots have no manifest row; summarise straight from the object.
+    if (isTRUE(input$pilot_source == "upload")) {
+      amp <- p$amplitude %||% numeric(0); sig <- p$sigma_rhythmic %||% numeric(0)
+      k <- min(length(amp), length(sig))
+      rv <- if (k > 0L) { v <- amp[seq_len(k)] / sig[seq_len(k)]; v[is.finite(v) & v > 0] } else numeric(0)
+      nsamp <- length(p$times %||% p$raw$times %||% numeric(0))
+      rlab  <- if (input$rhy_stat == "q") sprintf("FDR %.0f%%", 100*as.numeric(input$rhy_thresh))
+               else sprintf("p < %.3g", as.numeric(input$rhy_thresh))
+      return(sprintf(paste0(
+        "Pilot     : User-uploaded\n",
+        "Samples (n) : %s\nGenes     : %s\n",
+        "Prop. rhythmic (%s) : %s\n",
+        "Median r-tilde (A / sigma) : %s   IQR [%s, %s]"),
+        if (nsamp > 0L) nsamp else "NA",
+        format(p$ngenes %||% NA_integer_, big.mark = ","),
+        rlab,
+        if (is.finite(p$prop_rhythmic %||% NA_real_)) sprintf("%.1f%%", 100*p$prop_rhythmic) else "NA",
+        if (length(rv) >= 3L) sprintf("%.2f", median(rv)) else "NA",
+        if (length(rv) >= 3L) sprintf("%.2f", quantile(rv, .25)) else "NA",
+        if (length(rv) >= 3L) sprintf("%.2f", quantile(rv, .75)) else "NA"))
+    }
     # Prefer cached r-tilde summaries baked into the pilot (correct gene pairing)
     r_med <- p$r_median %||% NA_real_
     r_q25 <- p$r_q25    %||% NA_real_
@@ -761,6 +787,7 @@ server <- function(input, output, session) {
                                     fdr_thresholds = fdr_lines,
                                     panel_fdr = tfd, vline_fdr = tfd,
                                     vline_power = tpw, r_max = NULL,
+                                    vertical = TRUE,   # stack A/B/C in one column (full width each)
                                     cex_main = 1.9, cex_lab = 1.85, cex_axis = 1.6)
       } else {
         # Default: Panel A only (paired marginal power), enlarged for the app.
@@ -778,7 +805,7 @@ server <- function(input, output, session) {
         title(main = sprintf("Plot error: %s", conditionMessage(e)))
       }
     )
-  })
+  }, height = function() if (isTRUE(input$eff_sens)) 1080 else 520)
 
 
   output$recommended_n_text <- renderText({
