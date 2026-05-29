@@ -87,7 +87,11 @@ suppressPackageStartupMessages({
   cand  <- rf[sval < thresh, , drop = FALSE]
   K     <- min(as.integer(p$pilot_top_k %||% 300L), nrow(cand))
   estim <- if (K > 0L) cand[seq_len(K), , drop = FALSE] else cand[0, , drop = FALSE]
-  p$prop_rhythmic  <- nrow(cand) / (p$ngenes %||% nrow(rf))
+  # Stable denominator (see .reslice_pilot): the pilot's full gene count,
+  # immune to p$ngenes being overwritten with the sim gene count (2000).
+  denom <- p$rhythm_denom %||% p$ngenes %||% nrow(rf)
+  p$rhythm_denom   <- denom
+  p$prop_rhythmic  <- nrow(cand) / denom
   if ("A2" %in% names(rf)) {
     # Two-harmonic pilot: keep all five fields gene-index-aligned (length K).
     p$amplitude      <- estim$A
