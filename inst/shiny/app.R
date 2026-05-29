@@ -696,14 +696,20 @@ server <- function(input, output, session) {
         DCmethod = "DCP"
       )
 
-      incProgress(0.3, detail = "Simulating")
       # Use the same seed as the manuscript figure scripts (GLOBAL_SEED = 2025)
       K_val <- as.integer(input$K)
-      run_sim <- function(bio) tryCatch(
+      # Advance the bar per sample size (and per sim when sensitivity is on) so
+      # it moves smoothly instead of sitting frozen during the long sim call.
+      n_steps  <- length(n_grid) * (if (isTRUE(input$eff_sens)) 2L else 1L)
+      step_amt <- 0.8 / max(n_steps, 1L)
+      run_sim <- function(bio, label) tryCatch(
         { set.seed(2025)
-          SCP::runSimsSingleCohort(bio.opts = bio, design.opts = design,
-                                   analysis.opts = analysis, K = K_val,
-                                   mc.cores = n_cores) },
+          SCP::runSimsSingleCohort(
+            bio.opts = bio, design.opts = design, analysis.opts = analysis,
+            K = K_val, mc.cores = n_cores,
+            progress = function(j, nj, n)
+              incProgress(step_amt,
+                          detail = sprintf("%s | n = %d  (%d of %d)", label, n, j, nj))) },
         error = function(e) {
           showNotification(sprintf("Simulation failed: %s", conditionMessage(e)),
                            type = "error", duration = 8)
@@ -711,16 +717,15 @@ server <- function(input, output, session) {
         }
       )
       # Panel A: paired (A, sigma) draw -> realistic marginal power (p is paired).
-      res <- run_sim(p)
+      res <- run_sim(p, if (isTRUE(input$eff_sens)) "Paired (Panel A)" else "Simulating")
       # Effect-size sensitivity (Panels B/C): unpaired draw -> wide r-tilde, so
       # the stratified panels span the full effect-size range. Re-derived from
       # the same rhythm_fit table at the same threshold (no extra fitting).
       if (isTRUE(input$eff_sens) && !inherits(res, "sim_error")) {
-        incProgress(0.3, detail = "Effect-size sensitivity")
         p_unpaired <- .app_apply_threshold(p, input$rhy_stat,
                                            as.numeric(input$rhy_thresh),
                                            paired_sigma = FALSE)
-        res$.bc <- run_sim(p_unpaired)
+        res$.bc <- run_sim(p_unpaired, "Unpaired (Panels B/C)")
       }
       incProgress(1, detail = "Done")
       last_run_state(isolate(current_state()))
@@ -734,6 +739,10 @@ server <- function(input, output, session) {
     tryCatch({
       tfd <- as.numeric(input$target_fdr)
       tpw <- as.numeric(input$target_power)
+      # Panel A always shows FDR 1/5/10/20% plus the user's chosen threshold
+      # (free: re-applied post-hoc to the same p-values). The blue vline and the
+      # recommended-N text stay tied to the user's chosen FDR (panel_fdr/vline_fdr).
+      fdr_lines <- sort(unique(c(0.01, 0.05, 0.10, 0.20, tfd)))
       # If effect-size sensitivity is on, draw the stratified panels from the
       # unpaired run (.bc) while keeping Panel A from the paired run (panel_a_res).
       bc <- res$.bc
@@ -741,15 +750,14 @@ server <- function(input, output, session) {
         # Effect-size sensitivity ON: all 3 panels; Panel A from the paired run
         # (panel_a_res), Panels B/C from the unpaired run (bc).
         SCP::plotSingleCohortPower(bc, panel_a_res = res, panels = c("A", "B", "C"),
-                                    fdr = tfd, fdr_thresholds = tfd,
+                                    fdr_thresholds = fdr_lines,
                                     panel_fdr = tfd, vline_fdr = tfd,
                                     vline_power = tpw, r_max = NULL,
                                     cex_main = 1.9, cex_lab = 1.85, cex_axis = 1.6)
       } else {
         # Default: Panel A only (paired marginal power), enlarged for the app.
         SCP::plotSingleCohortPower(res, panels = "A",
-                                    fdr            = tfd,
-                                    fdr_thresholds = tfd,
+                                    fdr_thresholds = fdr_lines,
                                     panel_fdr      = tfd,
                                     vline_fdr      = tfd,
                                     vline_power    = tpw,
