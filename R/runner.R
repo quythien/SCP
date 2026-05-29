@@ -830,7 +830,8 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
                                 method = "cosinor",
                                 K = 1L,
                                 harmonics = c(0, 0),
-                                verbose = TRUE, mc.cores = 1L) {
+                                verbose = TRUE, mc.cores = 1L,
+                                progress = NULL) {
   # New default: method = "cosinor" + K = 1. Users wanting the two-harmonic
   # test set K = 2 only; method = "DCP" / "FMM" / "Kharmonic" are retained
   # as legacy aliases.
@@ -962,7 +963,7 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
     # Run nsims replicates (parallel if mc.cores > 1).
     # mc.set.seed=TRUE activates L'Ecuyer-CMRG streams per worker,
     # making results reproducible across mc.cores values.
-    sim_results <- parallel::mclapply(seq_len(nsims), function(i) {
+    one_sim <- function(i) {
       set.seed((j * 1000L + i) * 7919L)
 
       # Draw gene parameters
@@ -1119,7 +1120,24 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
       fdr_g <- p.adjust(pvals, method = p.adjust.method)
 
       list(pvals = pvals, fdr_g = fdr_g, is_rhythmic = is_rhythmic, r_values = r_values)
-    }, mc.cores = mc.cores, mc.set.seed = TRUE)
+    }
+    sim_results <- parallel::mclapply(seq_len(nsims), one_sim,
+                                      mc.cores = mc.cores, mc.set.seed = TRUE)
+    # Fork workers can crash (notably macOS GUI/RStudio mclapply, and on a
+    # second parallel call within one session). When that happens mclapply
+    # returns try-error objects (atomic), which would later blow up with
+    # "$ operator is invalid for atomic vectors". Detect it, retry serially,
+    # and only then surface the real per-replicate error.
+    if (any(!vapply(sim_results, is.list, logical(1)))) {
+      sim_results <- lapply(seq_len(nsims), one_sim)
+      bad <- which(!vapply(sim_results, is.list, logical(1)))
+      if (length(bad) > 0L) {
+        em <- tryCatch(attr(sim_results[[bad[1]]], "condition")$message,
+                       error = function(e) NULL)
+        stop("simulation replicate failed",
+             if (!is.null(em)) paste0(": ", em) else "", call. = FALSE)
+      }
+    }
 
     for (i in seq_len(nsims)) {
       res_i       <- sim_results[[i]]
@@ -1175,6 +1193,10 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
                   100 * mean(marginal_power[j, ], na.rm = TRUE),
                   mean(marginal_FDR[j, ], na.rm = TRUE)))
     }
+    # Per-sample-size progress callback (used by the Shiny app to advance its
+    # bar smoothly instead of sitting at one value through the whole sim).
+    if (is.function(progress))
+      tryCatch(progress(j, length(sample_sizes), n), error = function(e) NULL)
   }
 
   list(

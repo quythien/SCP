@@ -71,8 +71,10 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   n_strata      <- length(strata_labels)
   n_thresh      <- length(fdr_thresholds)
 
-  thresh_cols   <- c("darkgreen", "steelblue", "orange", "red")[seq_len(n_thresh)]
-  thresh_labels <- paste0("FDR ", round(100 * fdr_thresholds), "%")
+  base_cols     <- c("darkgreen", "steelblue", "orange", "red", "purple", "brown", "magenta")
+  thresh_cols   <- if (n_thresh <= length(base_cols)) base_cols[seq_len(n_thresh)]
+                   else grDevices::rainbow(n_thresh)
+  thresh_labels <- paste0("FDR ", round(100 * fdr_thresholds, 1), "%")
   size_colors   <- rainbow(n_sizes, s = 0.6, v = 0.8)
 
   # Which sample sizes to show in panels B and C (all by default)
