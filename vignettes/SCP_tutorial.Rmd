@@ -21,6 +21,11 @@ knitr::opts_chunk$set(
   dpi = 72
 )
 set.seed(2026)
+
+# Simulations run in parallel; single-core is impractically slow. We use a few
+# cores here (fork on Linux/macOS; 1 on Windows, which cannot fork).
+NCORES <- if (.Platform$OS.type == "windows") 1L else
+            max(1L, min(4L, parallel::detectCores() - 1L))
 ```
 
 # What this tutorial covers
@@ -40,15 +45,15 @@ from a small pilot dataset. The workflow has four steps:
    power at the target FDR.
 
 This vignette walks the whole loop in under a minute using a bundled
-GTEx Liver pilot. It is intentionally small (NSIMS = 50, a coarse N grid)
-so it builds quickly. For publication-grade numbers use NSIMS >= 200 and
+GTEx Adrenal Gland pilot. It is intentionally small (NSIMS = 50, a coarse N
+grid) so it builds quickly. For publication-grade numbers use NSIMS >= 200 and
 a finer N grid.
 
 # 1. Install and load
 
 ```{r install, eval = FALSE}
 # Install from a local tarball or a checkout of the repo:
-# install.packages("SCP_0.4.0.tar.gz", repos = NULL, type = "source")
+# install.packages("SCP_0.4.3.tar.gz", repos = NULL, type = "source")
 ```
 
 ```{r load-pkg}
@@ -57,21 +62,19 @@ library(SCP)
 
 # 2. Load a bundled pilot
 
-The repository bundles several pilots in `data/`. We use a single-cohort GTEx
-Liver pilot stored as a pre-built `CircadianBioOptions` object, so we can skip
-straight to simulation. (If you have your own raw expression matrix, you would
-run `estCircadianParam()` first; see Section 7.)
+SCP ships a curated pilot database; `scp_pilots()` lists every entry. We load
+the GTEx Adrenal Gland pilot, a strong-rhythmicity human tissue, as a pre-built
+`CircadianBioOptions` object so we can go straight to simulation. (If you have
+your own raw expression matrix, run `estCircadianParam()` first; see Section 7.)
 
 ```{r load-pilot}
-# Vignettes build with the source tree as the working dir, so data/ is one up.
-candidates <- c(
-  file.path("..", "data", "gtex_Liver_single_pilot.rds"),
-  system.file("extdata", "gtex_Liver_single_pilot.rds", package = "SCP")
-)
-pilot_path <- candidates[file.exists(candidates)][1]
-stopifnot(!is.na(pilot_path))
+bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
 
-bio <- readRDS(pilot_path)
+# Power is a proportion, so it is essentially invariant to the simulated gene
+# count; we cap it here only to keep this vignette fast to build. Drop this line
+# (or raise it) for your own runs.
+bio$ngenes <- 1200L
+
 class(bio)
 cat(sprintf("Pilot: %d genes, %.1f%% rhythmic, period = %g h\n",
             bio$ngenes, 100 * bio$prop_rhythmic, bio$period))
@@ -87,14 +90,14 @@ r_tilde <- bio$amplitude / bio$sigma_rhythmic
 summary(r_tilde)
 
 hist(r_tilde, breaks = 40, col = "steelblue", border = "white",
-     main = "Pilot r = A / sigma  (GTEx Liver)",
+     main = "Pilot r = A / sigma  (GTEx Adrenal Gland)",
      xlab = expression(tilde(r) == A / sigma))
 abline(v = median(r_tilde), col = "red", lwd = 2)
 ```
 
 # 4. Run a single-cohort power simulation
 
-Goal: how many liver samples does an *active* design with q4h x 24h sampling
+Goal: how many adrenal samples does an *active* design with q4h x 24h sampling
 need to reach 80% power at FDR 5%? An active q4h x 24h design has 6 distinct
 time points (B = 6); the total N is 6 x m where m is replicates per timepoint.
 
@@ -123,6 +126,7 @@ res_K1 <- runSimsSingleCohort(
   design.opts   = design,
   analysis.opts = analysis,
   K             = 1,            # single-harmonic cosinor (default)
+  mc.cores      = NCORES,
   verbose       = FALSE
 )
 
@@ -139,7 +143,7 @@ at several FDR levels (panel A), stratified power by `r_tilde` band
 ```{r plot-power, fig.width = 11, fig.height = 4.2}
 plotSingleCohortPower(
   res_K1,
-  title       = "GTEx Liver pilot, active q4h x 24h",
+  title       = "GTEx Adrenal Gland pilot, active q4h x 24h",
   fdr         = 0.05,          # focus panels B and C at FDR 5%
   reference_n = 48
 )
@@ -174,6 +178,7 @@ res_K2 <- runSimsSingleCohort(
   design.opts   = design,
   analysis.opts = analysis,
   K             = 2,            # two-harmonic cosinor (12 h + 24 h)
+  mc.cores      = NCORES,
   verbose       = FALSE
 )
 
@@ -188,21 +193,58 @@ data.frame(
 On a sinusoidal pilot the two curves should be close, with K = 1 a touch
 higher. If your pilot has clear 12 h components, K = 2 wins.
 
-# 7. Starting from a raw expression matrix
+# 7. Starting from your own expression matrix
 
-If you have your own pilot (a gene-by-sample log-CPM matrix `expr` and a
-vector of collection times `times` in hours), build the `bio` object yourself:
+In practice you usually start from your *own* pilot: a gene-by-sample log-CPM
+matrix plus a vector of collection times (hours). To make this runnable, SCP
+bundles a small demo matrix in `inst/extdata/example_pilot_raw.rds`
+(1200 genes x 48 samples, **simulated to resemble GTEx Adrenal Gland and
+Liver** so it is freely shareable; it is not real GTEx expression). Swap in
+your own `expr` / `times` and the rest of the workflow is identical.
 
-```{r raw-pilot, eval = FALSE}
-bio <- estCircadianParam(
+```{r own-data}
+ex   <- readRDS(system.file("extdata", "example_pilot_raw.rds", package = "SCP"))
+expr <- ex$adrenal$expr     # genes x samples; rows = genes, cols = samples
+times <- ex$adrenal$times   # collection time of day per sample, in hours
+dim(expr)
+head(times)
+```
+
+Step 1: estimate the pilot's empirical parameter distributions from the raw
+matrix. This is the only step that differs from using a bundled pilot.
+
+```{r own-data-est}
+bio_own <- estCircadianParam(
   data    = expr,
   times   = times,
   period  = 24,
-  verbose = TRUE
+  verbose = FALSE
 )
+cat(sprintf("Own pilot: %d genes, %.1f%% rhythmic, median r = %.2f\n",
+            bio_own$ngenes, 100 * bio_own$prop_rhythmic,
+            median(bio_own$amplitude / bio_own$sigma_rhythmic, na.rm = TRUE)))
 ```
 
-Then feed `bio` into the same `runSimsSingleCohort()` call as above.
+Step 2 onward is exactly as before: feed `bio_own` into `runSimsSingleCohort()`.
+
+```{r own-data-power, message = FALSE}
+res_own <- runSimsSingleCohort(
+  bio.opts      = bio_own,
+  design.opts   = CircadianDesignOptions(sample_sizes = c(24, 36, 48, 72, 96),
+                                         nsims = 50, design = "active",
+                                         cts = seq(0, 20, by = 4)),
+  analysis.opts = CircadianAnalysisOptions(alpha = 0.05),
+  K             = 1,
+  mc.cores      = NCORES,
+  verbose       = FALSE
+)
+data.frame(N = res_own$sample_sizes,
+           power = round(rowMeans(res_own$marginal_power, na.rm = TRUE), 3))
+```
+
+The Liver demo (`ex$liver`) works the same way and, being a weaker-signal
+tissue, needs a larger N to reach the same power; that contrast is the whole
+point of pilot-calibrated planning.
 
 # Where to go next
 

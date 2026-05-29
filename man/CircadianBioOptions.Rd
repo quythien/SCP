@@ -34,6 +34,7 @@ CircadianBioOptions(
   dp_shift_mode = c("fixed", "uniform"),
   dr_amp_scale = 1,
   dr_sigma_scale = 1,
+  alpha_pilot = NULL,
   sim.seed = 12345
 )
 }
@@ -120,6 +121,11 @@ or the same forms as \code{lBaselineExpr}.}
 \item{dr_amp_scale}{Scale factor for amplitude (A) to adjust DR strength.}
 
 \item{dr_sigma_scale}{Scale factor for sigma to adjust DR strength.}
+
+\item{alpha_pilot}{Rhythmicity pre-screen threshold used to define the
+pilot's rhythmic gene set (the value at which \code{prop_rhythmic} and the
+effect-size distribution were calibrated). Stored on the object for
+provenance and reporting; default \code{NULL}.}
 
 \item{sim.seed}{Random seed.}
 }

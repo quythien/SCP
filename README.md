@@ -70,10 +70,10 @@ library(SCP)
 # 1. Discover what's bundled
 scp_pilots()                                  # full manifest tibble
 scp_pilot_search(species = "human",
-                 tissue_pattern = "liver")    # filter
+                 tissue_pattern = "adrenal")  # filter
 
 # 2. Load a pilot
-bio <- scp_load_pilot("human", "GTEx", "Liver", "All")
+bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
 
 # 3. Set the design and run a small power sim
 design   <- CircadianDesignOptions(sample_sizes = c(20, 40, 60, 80),
@@ -90,7 +90,7 @@ res      <- runSimsSingleCohort(bio.opts      = bio,
 # 4. Recommended N at 80% power, FDR 5%
 np <- npower(res, target_power = 0.80, fdr = 0.05)
 np$n
-#> [1] 42
+#> [1] 36
 
 # 5. Plot
 plotSingleCohortPower(res, fdr = 0.05)
@@ -117,8 +117,8 @@ FDR thresholds, time-of-day sampling pattern) lives at
 A single entry point for the cosinor F-test:
 
 ```r
-detect_cosinor(expr, times, K = 1L)   # single-harmonic
-detect_cosinor(expr, times, K = 2L)   # two-harmonic (ultradian extension)
+detect_cosinor(expr, times, K = 1)   # single-harmonic
+detect_cosinor(expr, times, K = 2)   # two-harmonic (ultradian extension)
 ```
 
 Identifiability requires at least `2K + 1` distinct sampling phases per
@@ -136,7 +136,7 @@ If you use SCP in your research, please cite:
 
 ```
 Pham, T. Q. (2026). SCP: Simulation-Based Circadian Power Analysis.
-  R package version 0.4.0. https://github.com/quythien/SCP
+  R package version 0.4.3. https://github.com/quythien/SCP
 ```
 
 A `CITATION.cff` is provided.
