@@ -332,7 +332,10 @@ server <- function(input, output, session) {
       mat <- as.matrix(ex)
       mode(mat) <- "numeric"
       withProgress(message = "Fitting pilot...", value = 0.3, {
-        bio <- SCP::estimate_circadian_params(mat, tod, verbose = FALSE)
+        # estCircadianParam (not estimate_circadian_params) returns a full
+        # CircadianBioOptions with amplitude/sigma/phase + the rhythm_fit table,
+        # so uploaded pilots support the simulation AND the threshold knob.
+        bio <- SCP::estCircadianParam(mat, tod, paired_sigma = TRUE, verbose = FALSE)
         incProgress(1)
         bio$times <- tod
         bio
@@ -344,12 +347,13 @@ server <- function(input, output, session) {
       uploaded_pilot_state$msg <- sprintf("Upload error: %s", conditionMessage(res))
     } else {
       uploaded_pilot_state$pilot <- res
+      rt_up <- (res$amplitude %||% NA_real_) / (res$sigma_rhythmic %||% NA_real_)
       uploaded_pilot_state$msg <- sprintf(
-        "OK: %d genes x %d samples fit. Median r-tilde = %.2f.",
-        ncol(res$raw$pvalue %||% rep(NA, res$ngenes)),
-        length(input$upload_tod$datapath),
-        stats::median((res$amplitude %||% NA) / (res$sigma_rhythmic %||% NA),
-                      na.rm = TRUE)
+        "OK: %d genes fit, %d rhythmic (%.0f%%). Median r-tilde = %.2f.",
+        res$ngenes %||% NA_integer_,
+        length(res$amplitude %||% numeric(0)),
+        100 * (res$prop_rhythmic %||% NA_real_),
+        stats::median(rt_up, na.rm = TRUE)
       )
     }
   })
@@ -721,7 +725,7 @@ server <- function(input, output, session) {
         }
       )
       # Panel A: paired (A, sigma) draw -> realistic marginal power (p is paired).
-      res <- run_sim(p, if (isTRUE(input$eff_sens)) "Paired (Panel A)" else "Simulating")
+      res <- run_sim(p, if (isTRUE(input$eff_sens)) "Panel A" else "Simulating")
       # Effect-size sensitivity (Panels B/C): unpaired draw -> wide r-tilde, so
       # the stratified panels span the full effect-size range. Re-derived from
       # the same rhythm_fit table at the same threshold (no extra fitting).
@@ -729,7 +733,7 @@ server <- function(input, output, session) {
         p_unpaired <- .app_apply_threshold(p, input$rhy_stat,
                                            as.numeric(input$rhy_thresh),
                                            paired_sigma = FALSE)
-        res$.bc <- run_sim(p_unpaired, "Unpaired (Panels B/C)")
+        res$.bc <- run_sim(p_unpaired, "Panels B & C")
       }
       incProgress(1, detail = "Done")
       last_run_state(isolate(current_state()))

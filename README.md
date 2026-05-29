@@ -45,6 +45,16 @@ immediately available.
 
 The Shiny app runs entirely on your machine, no account or hosting needed.
 
+You can also calibrate from **your own pilot** via the "Upload my own pilot"
+option (an expression matrix CSV with genes in rows + samples in columns, and a
+one-column time-of-day CSV). A ready-made example (GTEx Adrenal Gland) ships
+with the package:
+
+```r
+system.file("extdata/example/GTEx_Adrenal_expression.csv", package = "SCP")
+system.file("extdata/example/GTEx_Adrenal_tod.csv",        package = "SCP")
+```
+
 ## Install (R package only)
 
 If you want the R API without the GUI:
