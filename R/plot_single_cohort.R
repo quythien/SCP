@@ -43,6 +43,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                                  r_max = 5,
                                  cex_main = 1.50, cex_lab = 1.60, cex_axis = 1.45,
                                  vertical = FALSE,
+                                 panel_c_legend = FALSE,
                                  width = 15, height = 5.5) {
   # `fdr` is a single-value alias for panel_fdr + vline_fdr (back-compat)
   if (!is.null(fdr) && is.numeric(fdr) && length(fdr) == 1L) {
@@ -369,15 +370,20 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
     add_se_bars(seq_len(n_strata_plt), mean_TD_plt[j, ], se_TD_plt[j, ], col = size_colors[j])
   }
   grid()
-  legend("topleft", title = NULL,
-         legend = c(paste0("n = ", sample_sizes[disp_idx]), "Target gene count"),
-         col = c(size_colors[disp_idx], "grey60"), lty = c(rep(1, length(disp_idx)), 2),
-         lwd = c(rep(2, length(disp_idx)), 1.5),
-         cex = sample_legend_cex, bty = "o", bg = "white",
-         box.col = "grey50", box.lwd = 0.8,
-         text.col = "black", title.col = "black",
-         inset = c(0.02, 0.02), y.intersp = 0.95, title.adj = 0,
-         seg.len = 1.2, x.intersp = 0.6, ncol = sample_legend_cols)
+  # Panel C legend is off by default: the n-by-colour key is already shown in
+  # Panel B, so repeating it in C is redundant. Set panel_c_legend = TRUE to
+  # restore it (e.g. when C is plotted on its own).
+  if (isTRUE(panel_c_legend)) {
+    legend("topleft", title = NULL,
+           legend = c(paste0("n = ", sample_sizes[disp_idx]), "Target gene count"),
+           col = c(size_colors[disp_idx], "grey60"), lty = c(rep(1, length(disp_idx)), 2),
+           lwd = c(rep(2, length(disp_idx)), 1.5),
+           cex = sample_legend_cex, bty = "o", bg = "white",
+           box.col = "grey50", box.lwd = 0.8,
+           text.col = "black", title.col = "black",
+           inset = c(0.02, 0.02), y.intersp = 0.95, title.adj = 0,
+           seg.len = 1.2, x.intersp = 0.6, ncol = sample_legend_cols)
+  }
   par(mgp = c(3.0, 0.6, 0))   # restore
   }  # end Panel C
 
