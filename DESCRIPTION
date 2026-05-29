@@ -1,8 +1,8 @@
 Package: SCP
 Type: Package
 Title: Simulation-Based Circadian Power Analysis with K-harmonic LRT
-Version: 0.4.0
-Date: 2026-05-28
+Version: 0.4.1
+Date: 2026-05-29
 Authors@R: person("Thien Quy", "Pham",
     role = c("aut", "cre"),
     email = "quythien14@gmail.com",
