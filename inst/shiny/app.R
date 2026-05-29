@@ -240,10 +240,12 @@ ui <- fluidPage(
         plotOutput("power_curve", height = "auto"),
         div(style = "margin-top: 6px;",
             downloadButton("dl_pdf", "Download figure (PDF)"),
-            downloadButton("dl_png", "Download figure (PNG)")),
+            downloadButton("dl_png", "Download figure (PNG)"),
+            actionButton("capture_app", "Capture full app (PNG)",
+                         icon = icon("camera"))),
         hr(),
-        div(style = "padding: 12px; background:#f4f8fc; border-left: 4px solid #2c7fb8;",
-            h3(textOutput("recommended_n_text"), style = "margin: 0;"))
+        div(style = "padding: 12px 14px; background:#f4f8fc; border-left: 4px solid #2c7fb8; border-radius: 0 4px 4px 0;",
+            uiOutput("recommended_n_text"))
       ),
       conditionalPanel(
         condition = "input.run == 0",
@@ -825,8 +827,21 @@ server <- function(input, output, session) {
       tryCatch(.draw_power(), error = function(e) { plot.new(); title(conditionMessage(e)) })
     })
 
+  # Capture the ENTIRE app UI (inputs, summary, plot, everything you would
+  # scroll to) into one PNG via html2canvas, so it can be emailed as a single
+  # snapshot. This works regardless of viewport/scroll, unlike a browser print.
+  observeEvent(input$capture_app, {
+    if (!requireNamespace("shinyscreenshot", quietly = TRUE)) {
+      showNotification(
+        "Full-app capture needs the 'shinyscreenshot' package. Install it with install.packages('shinyscreenshot') and relaunch. (You can still use the PDF/PNG figure downloads.)",
+        type = "warning", duration = 12)
+      return(invisible(NULL))
+    }
+    shinyscreenshot::screenshot(filename = "SCP_app_view", timer = 0)
+  })
 
-  output$recommended_n_text <- renderText({
+
+  output$recommended_n_text <- renderUI({
     res <- sim_result()
     req(res)
     tpw <- as.numeric(input$target_power)
@@ -837,8 +852,13 @@ server <- function(input, output, session) {
     # from the plot.
     mp <- res$marginal_power
     if (is.null(mp)) {
-      return("Simulation did not return a marginal_power matrix.")
+      return(div(style = "color:#a33; font-size: 0.95em;",
+                 "Simulation did not return a marginal_power matrix."))
     }
+    # Typographic hierarchy: a bold headline number, then a smaller caption,
+    # so the box reads cleanly instead of one long oversized sentence.
+    head_style <- "font-size: 1.55em; font-weight: 600; color:#2c7fb8; line-height: 1.2;"
+    sub_style  <- "font-size: 0.92em; color:#556; margin-top: 3px; line-height: 1.3;"
     mean_pow <- rowMeans(mp, na.rm = TRUE)
     sizes    <- res$sample_sizes
     above    <- which(mean_pow >= tpw)
@@ -853,13 +873,21 @@ server <- function(input, output, session) {
                          (mean_pow[j2] - mean_pow[j1]) *
                          (sizes[j2] - sizes[j1]))
       }
-      return(sprintf("Recommended N = %d for %.0f%% power at FDR %.0f%% (from simulation grid)",
-                     rec_n, 100 * tpw, 100 * tfd))
+      return(tagList(
+        div(style = head_style, sprintf("Recommended N = %d", rec_n)),
+        div(style = sub_style,
+            sprintf("for %.0f%% power at FDR %.0f%%", 100 * tpw, 100 * tfd),
+            tags$span(style = "color:#889; font-style: italic;", " (from simulation grid)"))
+      ))
     }
     n_largest <- max(sizes)
     last_pow  <- mean_pow[which(sizes == n_largest)[1]]
-    sprintf("The largest sample size simulated (N = %d) reached %.0f%% power at FDR %.0f%%. A larger N is needed to hit the %.0f%% target.",
-            n_largest, 100 * last_pow, 100 * tfd, 100 * tpw)
+    tagList(
+      div(style = head_style, sprintf("N > %d needed", n_largest)),
+      div(style = sub_style,
+          sprintf("Largest N simulated (%d) reached %.0f%% power at FDR %.0f%%; a larger N is needed to hit the %.0f%% target.",
+                  n_largest, 100 * last_pow, 100 * tfd, 100 * tpw))
+    )
   })
 }
 
