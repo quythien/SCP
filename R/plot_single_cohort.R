@@ -322,8 +322,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
           xlab = expression(tilde(r) == A/sigma), ylab = "Power (%)",
           main = "",
           xaxt = "n")
-  title(main = bquote(bold("B   ") * bold("Stratified Power by") ~
-                       bold(tilde(r)) ~ bold(.(sprintf("(%s)", fdr_label)))),
+  title(main = bquote(bold("B   ") * bold("Stratified Power") ~
+                       bold(.(sprintf("(%s)", fdr_label)))),
         adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.5)
   axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = max(1.15, cex_axis * 0.8))
   for (j in disp_idx) {
@@ -353,8 +353,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
        xlab = expression(tilde(r) == A/sigma), ylab = "# True Discoveries",
        main = "",
        xaxt = "n")
-  title(main = bquote(bold("C   ") * bold("True Discoveries by") ~
-                       bold(tilde(r)) ~ bold(.(sprintf("(%s)", fdr_label)))),
+  title(main = bquote(bold("C   ") * bold("True Discoveries") ~
+                       bold(.(sprintf("(%s)", fdr_label)))),
         adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.5)
   axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = max(1.15, cex_axis * 0.8))
 
