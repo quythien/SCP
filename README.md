@@ -33,8 +33,20 @@ install.packages(c("remotes", "BiocManager"))
 # SCP depends on the Bioconductor package 'limma'; point remotes at the
 # Bioconductor repositories so it is resolved automatically:
 options(repos = BiocManager::repositories())
-remotes::install_github("quythien/SCP")
+# SCP bundles ~100 MB of pilot data, so raise the download timeout from the
+# 60s default to avoid "download ... failed" on slower connections:
+options(timeout = 600)
+remotes::install_github("quythien/SCP", upgrade = "never")
 SCP::launchShiny()
+```
+
+If the GitHub download still times out, clone and install locally instead
+(`git` handles the large download more reliably):
+
+```r
+# in a shell:  git clone https://github.com/quythien/SCP.git
+options(repos = BiocManager::repositories())
+remotes::install_local("SCP", upgrade = "never")
 ```
 
 A browser window opens with cascading dropdowns (species → dataset → tissue
@@ -63,7 +75,8 @@ If you want the R API without the GUI:
 ```r
 install.packages("BiocManager")
 options(repos = BiocManager::repositories())   # resolves the Bioconductor dep 'limma'
-remotes::install_github("quythien/SCP")
+options(timeout = 600)                          # bundled pilot data is ~100 MB
+remotes::install_github("quythien/SCP", upgrade = "never")
 library(SCP)
 ```
 
