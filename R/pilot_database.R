@@ -114,6 +114,25 @@ scp_pilots <- function(species = NULL, status = "ingested") {
 #'   (e.g. \code{"Control"}, \code{"All"}). If \code{NULL} and the
 #'   (species, dataset, tissue) triple identifies more than one row,
 #'   the function errors and prints the available conditions.
+#' @param alpha_pilot Numeric in \code{(0, cap]}. Rhythmicity threshold used
+#'   to re-derive \code{prop_rhythmic} and the amplitude/phase/sigma
+#'   distributions from the pilot's stored per-gene rhythm table. Default
+#'   \code{0.01} matches the build-time threshold. Only takes effect for
+#'   pilots rebuilt with a \code{rhythm_fit} table; older pilots ignore it
+#'   (with a warning) and return their frozen build-time distributions.
+#' @param adjust Multiple-testing adjustment applied to the per-gene
+#'   p-values before thresholding at \code{alpha_pilot}: \code{"none"}
+#'   (raw cosinor p, default) or \code{"BH"} (Benjamini-Hochberg q-value).
+#' @param K Harmonic order of the requested pilot: \code{1} (single-harmonic
+#'   cosinor, default) or \code{2} (two-harmonic). For \code{K = 2} the
+#'   two-harmonic variant of the pilot (\code{<file>_2H.rds}) is loaded; an
+#'   error is raised if no such variant has been built for the pilot.
+#' @param paired_sigma Logical (default \code{TRUE}). Keep the per-gene
+#'   \code{(A, sigma)} pairing so the simulator draws amplitude and noise from
+#'   the same pilot gene, preserving the realistic narrow \eqn{\tilde r = A/\sigma}
+#'   distribution (the marginal-power / Fig 1-2 Panel A convention). \code{FALSE}
+#'   decouples sigma from amplitude, giving the wide \eqn{\tilde r} used by the
+#'   effect-size-stratified panels (Fig 1-2 Panels B/C).
 #'
 #' @return A \code{CircadianBioOptions} object with empirical
 #'   distributions of mesor, log-sigma, amplitude, phase, and proportion
@@ -122,10 +141,18 @@ scp_pilots <- function(species = NULL, status = "ingested") {
 #' @examples
 #' \dontrun{
 #'   bio <- scp_load_pilot("human", "GTEx", "Liver")
+#'   bio <- scp_load_pilot("human", "GTEx", "Liver", alpha_pilot = 0.05)
+#'   bio <- scp_load_pilot("human", "GTEx", "Liver", alpha_pilot = 0.1, adjust = "BH")
 #'   bio <- scp_load_pilot("human", "GSE160521", "NAc", "Control")
 #' }
 #' @export
-scp_load_pilot <- function(species, dataset, tissue, condition = NULL) {
+scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
+                           alpha_pilot = 0.01,
+                           adjust = c("none", "BH"),
+                           K = 1,
+                           paired_sigma = TRUE) {
+  adjust <- match.arg(adjust)
+  K <- as.integer(K)
   stopifnot(length(species) == 1, length(dataset) == 1, length(tissue) == 1)
   m <- scp_pilots(species = species, status = "ingested")
   hit <- m$dataset == dataset & m$tissue == tissue
@@ -144,6 +171,15 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL) {
   if (!file.exists(path)) {
     stop(sprintf("Manifest lists '%s' but the file is missing on disk.", m$file[1]))
   }
+  if (K == 2L) {
+    path <- sub("\\.rds$", "_2H.rds", path)
+    if (!file.exists(path)) {
+      stop(sprintf(paste0("No two-harmonic (K=2) variant built for this pilot ",
+                          "(expected '%s'). Build it with estCircadianParam2H() ",
+                          "via pilot_builders/build_2h_pilots.R, or load with K = 1."),
+                   basename(path)))
+    }
+  }
   p <- readRDS(path)
   # Harmonize amplitude / phase to match sigma_rhythmic length when the pilot
   # was built with mismatched per-slot gene sets (caught in several agent-
@@ -161,8 +197,96 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL) {
           p$phase[seq_len(n_sigma)] else rep_len(p$phase, n_sigma)
     }
   }
+  # Re-select the rhythmicity threshold (and A/sigma pairing) from the stored
+  # per-gene table.
+  p <- .reslice_pilot(p, alpha_pilot = alpha_pilot, adjust = adjust,
+                      paired_sigma = paired_sigma)
   if (!inherits(p, "CircadianBioOptions"))
     class(p) <- c("CircadianBioOptions", class(p))
+  p
+}
+
+
+# -------------------------------------------------------------------------
+# Internal: re-derive prop_rhythmic + effect-size distributions at a chosen
+# alpha_pilot from the stored per-gene rhythm table (rhythm_fit).
+# -------------------------------------------------------------------------
+
+#' @keywords internal
+.reslice_pilot <- function(p, alpha_pilot = 0.01, adjust = "none",
+                           paired_sigma = TRUE) {
+  rf <- p$rhythm_fit
+  if (is.null(rf) || nrow(rf) == 0L) {
+    if (!isTRUE(all.equal(alpha_pilot, p$alpha_pilot %||% 0.01)) ||
+        !identical(adjust, "none")) {
+      warning("This pilot was built without a rhythm_fit table; alpha_pilot/adjust ",
+              "are ignored. Rebuild it with build_all_pilots.R to enable ",
+              "runtime threshold selection.", call. = FALSE)
+    }
+    return(p)
+  }
+
+  cap <- p$pilot_cap %||% 0.2
+  stopifnot(alpha_pilot > 0)
+  if (alpha_pilot > cap) {
+    warning(sprintf(paste0("alpha_pilot (%.3g) exceeds the stored cap (%.3g); the ",
+                           "rhythm table is truncated above the cap, so the candidate ",
+                           "set may be incomplete. Clamping to the cap."),
+                    alpha_pilot, cap), call. = FALSE)
+    alpha_pilot <- cap
+  }
+
+  # rf is sorted ascending by raw p-value and contains every gene with p < cap,
+  # so a stored gene's row index equals its rank in the full gene list.
+  if (identical(adjust, "BH")) {
+    n_total <- p$ngenes %||% nrow(rf)
+    i <- seq_len(nrow(rf))
+    q <- rev(cummin(rev(rf$pvalue * n_total / i)))   # BH step-up q-values
+    cand_mask <- q < alpha_pilot
+  } else {
+    cand_mask <- rf$pvalue < alpha_pilot
+  }
+
+  cand <- rf[cand_mask, , drop = FALSE]              # G_R^cand (already p-sorted)
+  n_cand <- nrow(cand)
+
+  # Top-K estimation set used for the effect-size distributions, mirroring the
+  # estimator: K = min(pilot_top_k, n_cand) highest-signal genes (300 for K=1,
+  # 500 for K=2 by default).
+  K <- min(as.integer(p$pilot_top_k %||% 300L), n_cand)
+  estim <- if (K > 0L) cand[seq_len(K), , drop = FALSE] else cand[0, , drop = FALSE]
+
+  p$prop_rhythmic  <- n_cand / (p$ngenes %||% nrow(rf))
+  p$alpha_pilot    <- alpha_pilot
+  p$adjust_pilot   <- adjust
+
+  has2h <- "A2" %in% names(rf)
+  if (has2h) {
+    # Two-harmonic pilot: keep all five fields gene-index-aligned (length K) so
+    # simCircadianSingleCohort2H's shared-index draw preserves the joint
+    # (A1, phi1, A2, phi2, sigma) dependence. Do NOT independently filter phase.
+    p$amplitude      <- estim$A
+    p$phase          <- estim$phi
+    p$sigma_rhythmic <- estim$sigma
+    p$amplitude2     <- estim$A2
+    p$phase2         <- estim$phi2
+    p$paired_2h      <- TRUE
+  } else {
+    p$amplitude      <- estim$A
+    p$sigma_rhythmic <- estim$sigma
+    p$phase          <- estim$phi[is.finite(estim$phi)]
+  }
+
+  # paired_sigma controls whether (A, sigma) stay gene-paired. TRUE (default)
+  # keeps them aligned -> realistic narrow r-tilde = A/sigma -> the marginal /
+  # Panel-A behavior (e.g. GTEx Liver 0.92 at N=200). FALSE permutes sigma to
+  # decouple it from A -> wide r-tilde -> the stratified Panel-B/C behavior
+  # (e.g. ~0.72 at N=200). The pilot stores (A, sigma) gene-paired, so both are
+  # recoverable from one file.
+  if (!isTRUE(paired_sigma) && length(p$sigma_rhythmic) > 1L) {
+    p$sigma_rhythmic <- sample(p$sigma_rhythmic)
+  }
+  p$paired_sigma <- isTRUE(paired_sigma)
   p
 }
 
