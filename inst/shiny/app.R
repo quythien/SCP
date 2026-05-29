@@ -235,6 +235,9 @@ ui <- fluidPage(
         hr(),
         h4("Power curve"),
         plotOutput("power_curve", height = "auto"),
+        div(style = "margin-top: 6px;",
+            downloadButton("dl_pdf", "Download figure (PDF)"),
+            downloadButton("dl_png", "Download figure (PNG)")),
         hr(),
         div(style = "padding: 12px; background:#f4f8fc; border-left: 4px solid #2c7fb8;",
             h3(textOutput("recommended_n_text"), style = "margin: 0;"))
@@ -771,44 +774,49 @@ server <- function(input, output, session) {
     })
   })
 
-  output$power_curve <- renderPlot({
+  # Shared drawing fn so the on-screen plot and the PDF/PNG downloads are identical.
+  .draw_power <- function() {
     res <- sim_result()
-    req(res)
-    tryCatch({
-      tfd <- as.numeric(input$target_fdr)
-      tpw <- as.numeric(input$target_power)
-      # Panel A always shows FDR 1/5/10/20% plus the user's chosen threshold
-      # (free: re-applied post-hoc to the same p-values). The blue vline and the
-      # recommended-N text stay tied to the user's chosen FDR (panel_fdr/vline_fdr).
-      fdr_lines <- sort(unique(c(0.01, 0.05, 0.10, 0.20, tfd)))
-      # If effect-size sensitivity is on, draw the stratified panels from the
-      # unpaired run (.bc) while keeping Panel A from the paired run (panel_a_res).
-      bc <- res$.bc
-      if (!is.null(bc) && !inherits(bc, "sim_error")) {
-        # Effect-size sensitivity ON: all 3 panels; Panel A from the paired run
-        # (panel_a_res), Panels B/C from the unpaired run (bc).
-        SCP::plotSingleCohortPower(bc, panel_a_res = res, panels = c("A", "B", "C"),
-                                    fdr_thresholds = fdr_lines,
-                                    panel_fdr = tfd, vline_fdr = tfd,
-                                    vline_power = tpw, r_max = NULL,
-                                    cex_main = 1.7, cex_lab = 1.7, cex_axis = 1.45)
-      } else {
-        # Default: Panel A only (paired marginal power), enlarged for the app.
-        SCP::plotSingleCohortPower(res, panels = "A",
-                                    fdr_thresholds = fdr_lines,
-                                    panel_fdr      = tfd,
-                                    vline_fdr      = tfd,
-                                    vline_power    = tpw,
-                                    r_max          = NULL,
-                                    cex_main = 1.9, cex_lab = 1.85, cex_axis = 1.6)
-      }
-      },
-      error = function(e) {
-        plot.new()
-        title(main = sprintf("Plot error: %s", conditionMessage(e)))
-      }
-    )
+    if (is.null(res)) { plot.new(); title(main = "Run a simulation first."); return(invisible()) }
+    tfd <- as.numeric(input$target_fdr); tpw <- as.numeric(input$target_power)
+    # Panel A always shows FDR 1/5/10/20% + the user's threshold (post-hoc, free);
+    # the blue vline + recommended-N stay tied to the chosen FDR.
+    fdr_lines <- sort(unique(c(0.01, 0.05, 0.10, 0.20, tfd)))
+    bc <- res$.bc
+    if (!is.null(bc) && !inherits(bc, "sim_error")) {
+      SCP::plotSingleCohortPower(bc, panel_a_res = res, panels = c("A", "B", "C"),
+                                  fdr_thresholds = fdr_lines, panel_fdr = tfd, vline_fdr = tfd,
+                                  vline_power = tpw, r_max = NULL,
+                                  cex_main = 1.7, cex_lab = 1.7, cex_axis = 1.45)
+    } else {
+      SCP::plotSingleCohortPower(res, panels = "A",
+                                  fdr_thresholds = fdr_lines, panel_fdr = tfd, vline_fdr = tfd,
+                                  vline_power = tpw, r_max = NULL,
+                                  cex_main = 1.9, cex_lab = 1.85, cex_axis = 1.6)
+    }
+  }
+
+  output$power_curve <- renderPlot({
+    tryCatch(.draw_power(),
+             error = function(e) { plot.new(); title(main = sprintf("Plot error: %s", conditionMessage(e))) })
   }, height = function() if (isTRUE(input$eff_sens)) 560 else 500)
+
+  # Download the exact figure shown, as PDF or PNG.
+  .fig_dims  <- function() if (isTRUE(input$eff_sens)) c(16, 6) else c(8, 5.5)
+  .fig_fname <- function(ext) sprintf("SCP_power_%s.%s",
+      gsub("[^A-Za-z0-9]+", "_", paste(input$species %||% "", input$tissue %||% "pilot", sep = "_")), ext)
+  output$dl_pdf <- downloadHandler(
+    filename = function() .fig_fname("pdf"),
+    content  = function(file) {
+      d <- .fig_dims(); grDevices::pdf(file, width = d[1], height = d[2]); on.exit(grDevices::dev.off())
+      tryCatch(.draw_power(), error = function(e) { plot.new(); title(conditionMessage(e)) })
+    })
+  output$dl_png <- downloadHandler(
+    filename = function() .fig_fname("png"),
+    content  = function(file) {
+      d <- .fig_dims(); grDevices::png(file, width = d[1]*110, height = d[2]*110, res = 120); on.exit(grDevices::dev.off())
+      tryCatch(.draw_power(), error = function(e) { plot.new(); title(conditionMessage(e)) })
+    })
 
 
   output$recommended_n_text <- renderText({
