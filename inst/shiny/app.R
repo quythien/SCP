@@ -279,7 +279,12 @@ ui <- fluidPage(
       hr(),
       actionButton("run", "Run simulation",
                    class = "btn-primary btn-block", width = "100%"),
-      uiOutput("stale_banner")
+      uiOutput("stale_banner"),
+      hr(),
+      # Reset to a clean blank state from ANY point (clears a stuck/frozen UI).
+      actionButton("reset_app", "Reset app", class = "btn-block", width = "100%",
+                   icon = icon("rotate-left")),
+      helpText(em("Reload everything to the starting state."))
     ),
     mainPanel(
       width = 9,
@@ -324,6 +329,39 @@ ui <- fluidPage(
             verbatimTextOutput("gene_readout")
           )
         )
+      ),
+      # ---- Pathway enrichment (Metascape-style; Enrichr hypergeometric + BH) ----
+      div(style = "background:#fbfcfe; border:1px solid #e3e9f0; border-radius:6px; padding:14px 16px; margin-top:10px;",
+        h4("Pathway enrichment", style = "margin-top:0;"),
+        helpText(em(paste0("Over-representation of the rhythmic gene set (genes passing the threshold ",
+                           "on the left) against the chosen ontology, via Enrichr (hypergeometric + ",
+                           "Benjamini-Hochberg). Top significant terms shown as -log10(P). Requires internet."))),
+        fluidRow(
+          column(3,
+            selectInput("enrich_db", "Ontology",
+                        choices = c("KEGG pathways" = "kegg", "Reactome" = "reactome",
+                                    "GO Biological Process" = "gobp",
+                                    "GO Molecular Function" = "gomf",
+                                    "GO Cellular Component" = "gocc"),
+                        selected = "kegg")),
+          column(3,
+            selectInput("enrich_species", "Gene-set species",
+                        choices = c("Auto (from pilot)" = "auto", "Human" = "human", "Mouse" = "mouse"),
+                        selected = "auto")),
+          column(3,
+            selectInput("enrich_sig", "Significance cutoff",
+                        choices = c("Adjusted P < 0.05" = "adj_0.05", "Adjusted P < 0.01" = "adj_0.01",
+                                    "P < 0.05" = "p_0.05", "P < 0.01" = "p_0.01"),
+                        selected = "adj_0.05")),
+          column(3,
+            selectInput("enrich_top", "Show top", choices = c(10, 15, 20), selected = 15))
+        ),
+        actionButton("run_enrich", "Run enrichment", class = "btn-primary"),
+        plotOutput("enrich_plot", height = "440px"),
+        uiOutput("enrich_note"),
+        div(style = "margin-top:4px;",
+            downloadButton("dl_enrich_top", "Download displayed terms (CSV)"),
+            downloadButton("dl_enrich_all", "Download all significant (CSV)"))
       ),
       conditionalPanel(
         condition = "input.run > 0",
@@ -1205,6 +1243,130 @@ server <- function(input, output, session) {
       if (is.finite(r$Mesor)) sprintf("Mesor     : %.3f\n", r$Mesor)
       else                    "Mesor     : (not stored for this pilot)\n")
   })
+
+  # Reset: reload the session to a clean blank state from anywhere (recovers a
+  # stuck/frozen UI without restarting the R process).
+  observeEvent(input$reset_app, { session$reload() })
+
+  # ======================= Pathway enrichment (Enrichr) ===================
+  # Enrichr library for (ontology, species). Human/mouse share the GO + Reactome
+  # libraries (gene-symbol based); KEGG is species-specific.
+  .enrichr_db <- function(db, species) {
+    mouse <- identical(species, "mouse")
+    switch(db,
+      kegg     = if (mouse) "KEGG_2019_Mouse" else "KEGG_2021_Human",
+      reactome = "Reactome_2022",
+      gobp     = "GO_Biological_Process_2023",
+      gomf     = "GO_Molecular_Function_2023",
+      gocc     = "GO_Cellular_Component_2023",
+      "KEGG_2021_Human")
+  }
+  # Resolve the gene-set species: explicit choice, else inferred from the pilot
+  # (bundled species, or the uploaded data's detected/selected species). Enrichr's
+  # main site is human/mouse; anything else falls back to human symbols.
+  .enrich_species <- function() {
+    s <- input$enrich_species %||% "auto"
+    if (s != "auto") return(s)
+    if (isTRUE(input$pilot_source == "upload")) {
+      up <- uploaded_pilot()
+      d  <- if (!is.null(up)) attr(up, "detected") else NA
+      if (!is.na(d) && d %in% c("human", "mouse")) return(d)
+      if (identical(input$upload_species, "mouse")) return("mouse")
+      return("human")
+    }
+    if (identical(input$species, "mouse")) "mouse" else "human"
+  }
+
+  # Network query runs ONLY on the button (cached); the significance cutoff and
+  # top-N re-filter the cached result instantly without re-querying Enrichr.
+  enrich_res <- eventReactive(input$run_enrich, {
+    g <- gene_tbl_pass()
+    validate(need(!is.null(g) && nrow(g) > 0,
+                  "No rhythmic genes at the current threshold to enrich."))
+    if (!requireNamespace("enrichR", quietly = TRUE))
+      return(list(err = "The 'enrichR' package is not installed."))
+    sp    <- .enrich_species()
+    genes <- unique(g$Gene)
+    if (sp == "human") genes <- toupper(genes)   # HUGO symbols are upper-case
+    lib   <- .enrichr_db(input$enrich_db, sp)
+    out <- withProgress(message = "Querying Enrichr...", value = 0.4, {
+      tryCatch({
+        enrichR::setEnrichrSite("Enrichr")
+        r <- enrichR::enrichr(genes, lib)[[1]]
+        incProgress(1); r
+      }, error = function(e) e)
+    })
+    if (inherits(out, "error"))
+      return(list(err = sprintf("Enrichr query failed (internet?): %s", conditionMessage(out))))
+    list(res = out, lib = lib, species = sp, n_genes = length(genes))
+  })
+
+  # All terms passing the user's significance cutoff (>= 3 genes), p-sorted.
+  enrich_sig <- reactive({
+    e <- enrich_res(); req(e)
+    if (!is.null(e$err) || is.null(e$res) || !nrow(e$res)) return(NULL)
+    r <- e$res
+    parts  <- strsplit(input$enrich_sig %||% "adj_0.05", "_")[[1]]
+    metric <- parts[1]; cut <- as.numeric(parts[2])
+    pv <- if (metric == "adj") r$Adjusted.P.value else r$P.value
+    k  <- as.integer(sub("/.*", "", r$Overlap))
+    r  <- r[is.finite(pv) & k >= 3 & pv < cut, , drop = FALSE]
+    if (!nrow(r)) return(r[0, , drop = FALSE])
+    r[order(r$P.value), , drop = FALSE]
+  })
+  enrich_top <- reactive({
+    r <- enrich_sig(); if (is.null(r) || !nrow(r)) return(r)
+    head(r, as.integer(input$enrich_top %||% 15L))
+  })
+
+  output$enrich_plot <- renderPlot({
+    e <- enrich_res()
+    if (is.null(e)) { plot.new(); title("Pick an ontology and click 'Run enrichment'."); return() }
+    if (!is.null(e$err)) { plot.new(); title(e$err); return() }
+    r <- enrich_top()
+    if (is.null(r) || !nrow(r)) {
+      plot.new(); title(sprintf("No terms pass %s with >=3 genes.",
+                                gsub("_", " ", input$enrich_sig %||% "adj 0.05"))); return()
+    }
+    term <- sub(" \\(GO:.*\\)$", "", r$Term)              # strip GO id suffix
+    term <- ifelse(nchar(term) > 52, paste0(substr(term, 1, 49), "..."), term)
+    val  <- -log10(r$P.value)
+    ord  <- order(val)                                    # most significant on top
+    val <- val[ord]; term <- term[ord]
+    pal <- grDevices::colorRampPalette(c("#fee0b6", "#f1a340", "#b35806"))(length(val))
+    op <- par(mar = c(4.2, 0.5, 2.2, 1), oma = c(0, 0, 0, 0)); on.exit(par(op))
+    bp <- barplot(val, horiz = TRUE, col = pal, border = NA, xlab = "-log10(P)",
+                  main = sprintf("Top %d enriched terms  (%s, n=%d genes)",
+                                 nrow(r), e$lib, e$n_genes),
+                  cex.main = 1.25, cex.lab = 1.15, xlim = c(0, max(val) * 1.02))
+    text(x = max(val) * 0.01, y = bp, labels = term, pos = 4, cex = 0.95, col = "grey15", xpd = NA)
+  })
+
+  output$enrich_note <- renderUI({
+    e <- enrich_res()
+    if (is.null(e)) return(helpText(em("Pick an ontology, set the cutoff, and click 'Run enrichment'. Requires internet.")))
+    if (!is.null(e$err)) return(helpText(em(e$err)))
+    nsig <- if (is.null(enrich_sig())) 0L else nrow(enrich_sig())
+    helpText(em(sprintf("Enrichr library: %s. %d genes submitted (%s). %d terms significant at %s; showing top %d. x-axis = -log10(P).",
+                        e$lib, e$n_genes, e$species, nsig,
+                        gsub("_", " ", input$enrich_sig %||% "adj 0.05"),
+                        min(nsig, as.integer(input$enrich_top %||% 15L)))))
+  })
+
+  output$dl_enrich_top <- downloadHandler(
+    filename = function() sprintf("SCP_enrichment_%s_top_%s.csv", input$enrich_db %||% "kegg", .gene_fname()),
+    content  = function(f) {
+      r <- enrich_top()
+      utils::write.csv(if (is.null(r) || !nrow(r)) data.frame(note = "no significant terms") else r,
+                       f, row.names = FALSE)
+    })
+  output$dl_enrich_all <- downloadHandler(
+    filename = function() sprintf("SCP_enrichment_%s_allsig_%s.csv", input$enrich_db %||% "kegg", .gene_fname()),
+    content  = function(f) {
+      r <- enrich_sig()
+      utils::write.csv(if (is.null(r) || !nrow(r)) data.frame(note = "no significant terms") else r,
+                       f, row.names = FALSE)
+    })
 }
 
 shinyApp(ui, server)
