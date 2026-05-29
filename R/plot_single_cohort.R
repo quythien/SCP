@@ -253,9 +253,15 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   # Scale left/bottom margins with the label font so the "Power (%)" y-title
   # is not clipped at large cex (e.g. the enlarged Shiny fonts). Anchored at
   # ~1.55 so the manuscript figures (default cex) are essentially unchanged.
-  extra_lab <- max(0, cex_lab - 1.55)
-  mai_left  <- 0.85 + 1.25 * extra_lab
-  mai_bot   <- 0.85 + 0.60 * extra_lab
+  extra_lab    <- max(0, cex_lab - 1.55)
+  needs_strata <- any(c("B", "C") %in% panels)   # panels with vertical r-tilde tick labels
+  # B/C push both axis titles out via a larger mgp[1] (to clear the vertical
+  # tick labels), so they also need a wider left margin than Panel A.
+  mai_left  <- 0.85 + (if (needs_strata) 2.0 else 1.25) * extra_lab
+  # B/C carry long vertical (las=2) stratum labels under which the r-tilde
+  # x-title sits, so they need much more bottom room at large fonts.
+  mai_bot   <- 0.85 + (if (needs_strata) 2.2 else 0.6) * extra_lab
+  mgp_bc1   <- 4.6 + 3.0 * extra_lab             # x/y-title line for B/C (clears las=2 labels)
   # Outer top oma needs ~3 lines for the cex=1.5 title to clear the top edge.
   par(mfrow = c(1, length(panels)), mai = c(mai_bot, mai_left, 0.55, 0.15),
       mgp = c(3.2, 0.65, 0), oma = c(0, 0, 2.4, 0),
@@ -286,7 +292,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   }
   abline(h = 80, lty = 2, col = "grey50", lwd = 1.2)
   grid()
-  legend("topleft", title = "FDR", legend = thresh_labels,
+  legend("topleft", title = NULL, legend = thresh_labels,
          col = thresh_cols, lty = 1, pch = 19, lwd = 2,
          cex = 1.05, bty = "o", bg = "white", box.col = "grey50", box.lwd = 0.8,
          text.col = "black", title.col = "black",
@@ -305,7 +311,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   if ("B" %in% panels) {
   # ---- Panel B: stratified power by r, lines per n ----
   # Increase mgp[1] so r̃ label clears the vertical (las=2) tick labels
-  par(mgp = c(4.6, 0.6, 0))
+  par(mgp = c(mgp_bc1, 0.6, 0))
   matplot(seq_len(n_strata_plt), 100 * t(mean_pow_plt[disp_idx, , drop = FALSE]),
           type = "l", lwd = 2, col = size_colors[disp_idx], lty = 1,
           xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, 100), bty = "l",
@@ -323,7 +329,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                 100 * se_pow_plt[j, ], col = size_colors[j])
   }
   grid()
-  legend("topleft", title = "Sample size", legend = paste0("n = ", sample_sizes[disp_idx]),
+  legend("topleft", title = NULL, legend = paste0("n = ", sample_sizes[disp_idx]),
          col = size_colors[disp_idx], lty = 1, lwd = 2,
          cex = sample_legend_cex, bty = "o", bg = "white",
          box.col = "grey50", box.lwd = 0.8,
@@ -359,7 +365,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
     add_se_bars(seq_len(n_strata_plt), mean_TD_plt[j, ], se_TD_plt[j, ], col = size_colors[j])
   }
   grid()
-  legend("topleft", title = "Sample size",
+  legend("topleft", title = NULL,
          legend = c(paste0("n = ", sample_sizes[disp_idx]), "Target gene count"),
          col = c(size_colors[disp_idx], "grey60"), lty = c(rep(1, length(disp_idx)), 2),
          lwd = c(rep(2, length(disp_idx)), 1.5),
