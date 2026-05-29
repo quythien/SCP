@@ -891,13 +891,16 @@ server <- function(input, output, session) {
         }
       }
       # Use the pilot's full gene count (matches the manuscript figure scripts)
-      # Build sample-size grid from user-chosen min/max/step
-      n_grid <- seq(as.integer(input$n_min),
-                    as.integer(input$n_max),
-                    by = as.integer(input$n_step))
+      # Build sample-size grid from user-chosen min/max/step. Guard against an
+      # inverted range (n_min > n_max), which would make seq() throw "wrong sign
+      # in 'by'": swap so the grid is always ascending, and force a positive step.
+      n_lo   <- as.integer(input$n_min)
+      n_hi   <- as.integer(input$n_max)
+      n_by   <- max(1L, as.integer(input$n_step))
+      if (n_lo > n_hi) { tmp <- n_lo; n_lo <- n_hi; n_hi <- tmp }
+      n_grid <- seq(n_lo, n_hi, by = n_by)
       if (length(n_grid) < 2L) {
-        n_grid <- as.integer(input$n_min) +
-                  as.integer(input$n_step) * 0:3
+        n_grid <- n_lo + n_by * 0:3
       }
       # cts: q4h grid for active; for passive use the pilot's empirical times
       # if preserved, else fall back to the q4h grid as a placeholder
@@ -1019,10 +1022,22 @@ server <- function(input, output, session) {
       d <- .fig_dims(); grDevices::pdf(file, width = d[1], height = d[2]); on.exit(grDevices::dev.off())
       tryCatch(.draw_power(), error = function(e) { plot.new(); title(conditionMessage(e)) })
     })
+  # Open a PNG device that works on headless servers. The default png() device
+  # needs an X11 display (absent on shinyapps.io / most Linux deploys), so prefer
+  # the cairo backend, then ragg, then fall back to the stock device.
+  .open_png <- function(file, width, height, res = 120) {
+    if (isTRUE(capabilities("cairo"))) {
+      grDevices::png(file, width = width, height = height, res = res, type = "cairo")
+    } else if (requireNamespace("ragg", quietly = TRUE)) {
+      ragg::agg_png(file, width = width, height = height, units = "px", res = res)
+    } else {
+      grDevices::png(file, width = width, height = height, res = res)
+    }
+  }
   output$dl_png <- downloadHandler(
     filename = function() .fig_fname("png"),
     content  = function(file) {
-      d <- .fig_dims(); grDevices::png(file, width = d[1]*110, height = d[2]*110, res = 120); on.exit(grDevices::dev.off())
+      d <- .fig_dims(); .open_png(file, d[1]*110, d[2]*110, res = 120); on.exit(grDevices::dev.off())
       tryCatch(.draw_power(), error = function(e) { plot.new(); title(conditionMessage(e)) })
     })
 
