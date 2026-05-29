@@ -40,7 +40,7 @@ runGroundTruthComparison(
 \item{verbose}{Print progress}
 }
 \value{
-List with true_power, two-stage power, and bootstrap power ± CI
+List with true_power, two-stage power, and bootstrap power +/- CI
 }
 \description{
 Generates synthetic pilot data from known parameters, then evaluates how

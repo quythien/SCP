@@ -90,9 +90,9 @@
 "mouse","GSE36975","Brain","Brain","active","All",24,21788,0,22,8.59,4,0.92,"irregular","   0,   4,  16,  22",3.434,3.052,3.969,0.1784
 "mouse","GSE38622","SCN","Suprachiasmatic nuclei","active","All",13,35557,6,22,6.9,3,200,"8","   6,  14,  22",1.76,1.649,1.997,0.01
 "mouse","GSE83855","Liver","Liver","active","All",24,24844,0,20,7.91,6,11.83,"4","   0,   4,   8,  12,  16,  20",1.254,1.184,1.367,0.027
-"human","GSE48113","Blood","Blood","passive","All",286,43758,0,23.9,7.19,173,1,"irregular","   0..23.9 (173 phases)",0.321,0.291,0.39,0.0064
-"human","GSE39445","Blood","Blood","passive","All",438,43758,0,23.8,6.62,264,0.99,"0.1","   0..23.8 (264 phases)",0.56,0.527,0.593,0.2607
-"human","GSE104674","Adipose_Subcutaneous","Adipose Subcutaneous","active","All",48,19820,0.2,15.5,5.8,4,0.64,"irregular","0.25,5.75,11.2,15.5",0.94,0.838,1.057,0.0374
+"human","GSE48113","Blood","Blood","passive","All",287,34415,1,7,2,7,0.25,"1","   1,   2,   3,   4,   5,   6,   7",0.788,0.465,1.403,0.002
+"human","GSE39445","Blood","Blood","passive","All",438,43758,0,21,6.32,8,1.25,"3","   0,   3,   6,   9,  12,  15,  18,  21",0.599,0.573,0.643,0.3068
+"human","GSE104674","Adipose_Subcutaneous","Adipose Subcutaneous","active","All",48,19820,6,23,7.54,3,11.71,"irregular","   6,  11,  23",1.524,1.331,1.724,0.04
 "rat","GSE46069","Pineal_Retina","Pineal Retina","active","All",14,14742,1,23,7.4,6,0.92,"irregular","   1,   7,  13,  15,  19,  23",1.643,1.519,1.864,0.0053
 "rat","GSE25612","Lung","Lung","active","All",54,31099,0.2,23.8,7.37,18,0.98,"irregular","0.25..23.8 (18 phases)",2.414,2.129,2.879,0.3304
 "rat","GSE20635","Adipose","Adipose","active","All",52,31099,0.2,23.8,7.33,18,0.98,"irregular","0.25..23.8 (18 phases)",1.532,1.353,1.794,0.124
@@ -101,7 +101,7 @@
 "rat","GSE127919","SCN","Suprachiasmatic nuclei","active","LCM",36,25615,2,7,2.08,3,0.21,"irregular","   2,   5,   7",5.854,3.967,9.154,0.0823
 "mouse","GSE54650","Adrenal_gland","Adrenal gland","active","All",24,35556,0,22,7.05,12,1.92,"2","   0,   2,   4,   6,   8,  10,  12,  14,  16,  18,  20,  22",2.045,1.872,2.338,0.0756
 "mouse","GSE54650","Aorta","Aorta","active","All",24,35556,0,22,7.05,12,1.92,"2","   0,   2,   4,   6,   8,  10,  12,  14,  16,  18,  20,  22",2.038,1.854,2.364,0.0687
-"mouse","GSE54650","Brown_adipose","Brown adipose","active","All",24,35556,0,22,7.05,12,1.92,"2","   0,   2,   4,   6,   8,  10,  12,  14,  16,  18,  20,  22",2.526,2.329,2.97,0.1339
+"mouse","GSE54650","Brown_adipose","Brown adipose","active","All",48,35556,0,22,6.98,12,1.92,"2","   0,   2,   4,   6,   8,  10,  12,  14,  16,  18,  20,  22",1.25,1.119,1.483,0.0419
 "mouse","GSE54650","Brainstem","Brainstem","active","All",24,35556,0,22,7.05,12,1.92,"2","   0,   2,   4,   6,   8,  10,  12,  14,  16,  18,  20,  22",1.788,1.67,2.07,0.0608
 "mouse","GSE54650","Cerebellum","Cerebellum","active","All",24,35556,0,22,7.05,12,1.92,"2","   0,   2,   4,   6,   8,  10,  12,  14,  16,  18,  20,  22",1.779,1.666,2.032,0.0648
 "mouse","GSE54650","Heart","Heart","active","All",24,35556,0,22,7.05,12,1.92,"2","   0,   2,   4,   6,   8,  10,  12,  14,  16,  18,  20,  22",2.35,2.167,2.768,0.0836
@@ -110,7 +110,7 @@
 "mouse","GSE54650","Liver","Liver","active","All",24,35556,0,22,7.05,12,1.92,"2","   0,   2,   4,   6,   8,  10,  12,  14,  16,  18,  20,  22",3.226,2.96,3.653,0.2041
 "mouse","GSE54650","Lung","Lung","active","All",24,35556,0,22,7.05,12,1.92,"2","   0,   2,   4,   6,   8,  10,  12,  14,  16,  18,  20,  22",3.007,2.667,3.474,0.1561
 "mouse","GSE54650","Muscle","Muscle","active","All",24,35556,0,22,7.05,12,1.92,"2","   0,   2,   4,   6,   8,  10,  12,  14,  16,  18,  20,  22",1.981,1.773,2.329,0.0562
-"mouse","GSE54650","White_adipose","White adipose","active","All",24,35556,0,22,7.05,12,1.92,"2","   0,   2,   4,   6,   8,  10,  12,  14,  16,  18,  20,  22",1.998,1.823,2.346,0.0616
+"mouse","GSE54650","White_adipose","White adipose","active","All",48,35556,0,22,6.98,12,1.92,"2","   0,   2,   4,   6,   8,  10,  12,  14,  16,  18,  20,  22",1.25,1.119,1.483,0.0419
 "human","GTEx","Adipose_Subcutaneous","Adipose Subcutaneous","passive","All",548,10672,0.4,23.4,7.77,24,1.12,"irregular","0.43..23.4 (24 phases)",0.652,0.626,0.693,0.5513
 "human","GTEx","Muscle_Skeletal","Muscle Skeletal","passive","All",748,8184,0.4,23.4,7.52,23,1.17,"irregular","0.43..23.4 (23 phases)",0.572,0.552,0.601,0.6645
 "human","GTEx","Artery_Tibial","Artery Tibial","passive","All",571,9998,0.4,23.4,7.19,24,1.17,"1","0.43..23.4 (24 phases)",0.479,0.449,0.516,0.5119
@@ -140,22 +140,22 @@
 "human","GTEx","Skin_Sun_Exposed_Lower_leg","Skin Sun Exposed Lower leg","passive","All",619,10854,0.4,23.4,7.84,24,1.21,"1","0.43..23.4 (24 phases)",0.508,0.477,0.545,0.3472
 "human","GTEx","Heart_Left_Ventricle","Heart Left Ventricle","passive","All",332,8565,0.4,23.4,4.44,23,1,"irregular","0.43..23.4 (23 phases)",0.615,0.601,0.633,0.6472
 "human","GTEx","Brain_Cerebellum","Brain Cerebellum","passive","All",169,10943,1.4,23.4,3.33,14,1.12,"irregular","1.43..23.4 (14 phases)",0.7,0.646,0.781,0.016
-"human","GTEx","Cells_Cultured_fibroblasts","Cells Cultured fibroblasts","passive","All",641,9537,0.1,24,6.98,510,1,"0","0.05..  24 (510 phases)",0.2,0.195,0.217,9e-04
-"human","GTEx","Whole_Blood","Whole Blood","passive","All",789,9537,0,24,6.94,623,1,"0","0.05..  24 (623 phases)",0.174,0.167,0.181,0.0343
+"human","GTEx","Cells_Cultured_fibroblasts","Cells Cultured fibroblasts","passive","All",641,8218,0.1,24,6.98,510,1,"0","0.05..  24 (510 phases)",0.18,0.174,0.189,0.0032
+"human","GTEx","Whole_Blood","Whole Blood","passive","All",789,8218,0,24,6.94,623,1,"0","0.05..  24 (623 phases)",0.167,0.162,0.176,0.0403
 "human","GTEx","Artery_Aorta","Artery Aorta","passive","All",372,10284,0.4,22.4,4.6,24,1.08,"irregular","0.43..22.4 (24 phases)",0.727,0.683,0.781,0.5183
 "human","GTEx","Pituitary","Pituitary","passive","All",156,11780,0.4,23.4,3.16,15,0.87,"irregular","0.43..23.4 (15 phases)",0.814,0.745,0.872,0.0076
-"human","GTEx","Brain_Frontal_Cortex_BA9","Brain Frontal Cortex BA9","passive","All",269,9537,0.1,24,6.88,242,1,"irregular","0.08..  24 (242 phases)",0.326,0.306,0.355,0.0037
-"human","GTEx","Brain_Caudate_basal_ganglia","Brain Caudate basal ganglia","passive","All",300,9537,0.1,23.9,6.95,264,0.99,"irregular","0.14..23.9 (264 phases)",0.296,0.284,0.313,0.0246
-"human","GTEx","Brain_Nucleus_accumbens_basal_ganglia","Brain Nucleus accumbens basal ganglia","passive","All",285,9537,0.1,23.9,6.83,250,0.99,"irregular","0.08..23.9 (250 phases)",0.301,0.288,0.33,0.0025
-"human","GTEx","Brain_Putamen_basal_ganglia","Brain Putamen basal ganglia","passive","All",254,9537,0.2,24,6.67,230,0.99,"irregular","0.25..  24 (230 phases)",0.321,0.313,0.354,0.0013
-"human","GTEx","Brain_Hypothalamus","Brain Hypothalamus","passive","All",257,9537,0.2,23.9,6.89,233,0.98,"irregular","0.25..23.9 (233 phases)",0.324,0.313,0.34,0.0099
-"human","GTEx","Brain_Hippocampus","Brain Hippocampus","passive","All",255,9537,0.1,24,6.99,232,1,"irregular","0.08..  24 (232 phases)",0.337,0.326,0.355,0.0121
-"human","GTEx","Brain_Anterior_cingulate_cortex_BA24","Brain Anterior cingulate cortex BA24","passive","All",233,9537,0.2,23.9,6.81,214,0.99,"irregular","0.24..23.9 (214 phases)",0.354,0.333,0.39,0.0022
+"human","GTEx","Brain_Frontal_Cortex_BA9","Brain Frontal Cortex BA9","passive","All",269,8218,0.1,24,6.88,242,1,"irregular","0.08..  24 (242 phases)",0.291,0.275,0.312,0.0085
+"human","GTEx","Brain_Caudate_basal_ganglia","Brain Caudate basal ganglia","passive","All",300,8218,0.1,23.9,6.95,264,0.99,"irregular","0.14..23.9 (264 phases)",0.287,0.274,0.304,0.0521
+"human","GTEx","Brain_Nucleus_accumbens_basal_ganglia","Brain Nucleus accumbens basal ganglia","passive","All",285,8218,0.1,23.9,6.83,250,0.99,"irregular","0.08..23.9 (250 phases)",0.277,0.266,0.292,0.008
+"human","GTEx","Brain_Putamen_basal_ganglia","Brain Putamen basal ganglia","passive","All",254,8218,0.2,24,6.67,230,0.99,"irregular","0.25..  24 (230 phases)",0.29,0.284,0.333,0.0018
+"human","GTEx","Brain_Hypothalamus","Brain Hypothalamus","passive","All",257,8218,0.2,23.9,6.89,233,0.98,"irregular","0.25..23.9 (233 phases)",0.288,0.278,0.307,0.0237
+"human","GTEx","Brain_Hippocampus","Brain Hippocampus","passive","All",255,8218,0.1,24,6.99,232,1,"irregular","0.08..  24 (232 phases)",0.305,0.291,0.323,0.022
+"human","GTEx","Brain_Anterior_cingulate_cortex_BA24","Brain Anterior cingulate cortex BA24","passive","All",233,8218,0.2,23.9,6.81,214,0.99,"irregular","0.24..23.9 (214 phases)",0.307,0.296,0.323,0.0195
 "human","GTEx","Ovary","Ovary","passive","All",156,10817,0.4,23.4,6.96,24,1.25,"1","0.43..23.4 (24 phases)",0.507,0.489,0.535,0.2004
-"human","GTEx","Brain_Cerebellar_Hemisphere","Brain Cerebellar Hemisphere","passive","All",277,9537,0.1,24,7.03,245,1,"irregular","0.08..  24 (245 phases)",0.324,0.31,0.348,0.0294
-"human","GTEx","Brain_Substantia_nigra","Brain Substantia nigra","passive","All",183,9537,0.1,23.9,7.08,169,0.99,"irregular","0.14..23.9 (169 phases)",0.387,0.37,0.418,0.0192
-"human","GTEx","Kidney_Cortex","Kidney Cortex","passive","All",104,9537,0.2,23.9,7.41,101,0.99,"irregular"," 0.2..23.9 (101 phases)",0.528,0.507,0.549,0.0068
-"human","GTEx","Brain_Amygdala","Brain Amygdala","passive","All",181,9537,0.5,23.9,6.86,170,0.98,"irregular"," 0.5..23.9 (170 phases)",0.383,0.374,0.395,0.0071
+"human","GTEx","Brain_Cerebellar_Hemisphere","Brain Cerebellar Hemisphere","passive","All",277,8218,0.1,24,7.03,245,1,"irregular","0.08..  24 (245 phases)",0.288,0.271,0.308,0.0075
+"human","GTEx","Brain_Substantia_nigra","Brain Substantia nigra","passive","All",183,8218,0.1,23.9,7.08,169,0.99,"irregular","0.14..23.9 (169 phases)",0.339,0.323,0.359,0.0266
+"human","GTEx","Kidney_Cortex","Kidney Cortex","passive","All",104,8218,0.2,23.9,7.41,101,0.99,"irregular"," 0.2..23.9 (101 phases)",0.498,0.478,0.529,0.0186
+"human","GTEx","Brain_Amygdala","Brain Amygdala","passive","All",181,8218,0.5,23.9,6.86,170,0.98,"irregular"," 0.5..23.9 (170 phases)",0.363,0.347,0.387,0.0033
 "human","GSE71620","BA11_BA47","BA11+BA47 PFC (Combined)","passive","Older",74,19998,0.7,22.9,5.94,37,0.97,"irregular"," 0.7..22.9 (37 phases)",0.639,0.599,0.69,0.1853
 "human","GSE71620","BA11","BA11 PFC","passive","All",68,19998,0.7,22.9,5.99,67,0.97,"irregular"," 0.7..22.9 (67 phases)",0.599,0.548,0.65,0.1236
 "human","GSE71620","BA47","BA47 PFC","passive","All",68,19998,0.7,22.9,5.99,67,0.97,"irregular"," 0.7..22.9 (67 phases)",0.629,0.564,0.692,0.1064

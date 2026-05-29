@@ -23,7 +23,7 @@ or a tidy \code{data.frame} with columns
 \code{N, B, power, power_se, dataset} (and optionally
 \code{alpha2}).}
 
-\item{nsims}{Number of simulation replicates used (to convert SE → SD).
+\item{nsims}{Number of simulation replicates used (to convert SE -> SD).
 Default 30.}
 
 \item{alpha2}{Which \code{alpha2} value to plot (default 0 = pure cosinor).}
@@ -44,7 +44,7 @@ Invisibly returns the ggplot object.
 }
 \description{
 Produces a faceted power-vs-N figure for each dataset in the result,
-with one line per B value. SD bars (±1 SD across simulation replicates)
+with one line per B value. SD bars (+/-1 SD across simulation replicates)
 are drawn at each N. B-invariance appears as overlapping lines.
 }
 \details{

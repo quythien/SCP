@@ -166,7 +166,7 @@ printDensitySummary <- function(density_results) {
 #'
 #' @description
 #' Loads a saved power analysis result and produces a multi-panel plot showing
-#' detection power stratified by signal-to-noise ratio (r = A/σ) for each
+#' detection power stratified by signal-to-noise ratio (r = A/sigma) for each
 #' sample size and time-point design.
 #'
 #' @param results_file Character. Path to a saved \code{.RData} results file

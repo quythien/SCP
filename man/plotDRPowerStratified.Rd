@@ -23,6 +23,6 @@ Invisibly returns \code{NULL}. Called for its side-effect of
 }
 \description{
 Loads a saved power analysis result and produces a multi-panel plot showing
-detection power stratified by signal-to-noise ratio (r = A/σ) for each
+detection power stratified by signal-to-noise ratio (r = A/sigma) for each
 sample size and time-point design.
 }

@@ -21,5 +21,5 @@ Constructs a \code{CircadianBioOptions} object from a single bootstrap
 resample of pilot-gene cosinor fits. Differential parameters
 (prop_DR, prop_DP, phase_diff, etc.) are inherited from \code{bio_diff.opts}.
 Amplitude and sigma are kept jointly sampled to preserve the empirical
-A–sigma correlation.
+A-sigma correlation.
 }

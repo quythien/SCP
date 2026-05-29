@@ -22,7 +22,7 @@ omega, beta, power, power_se, dataset, design_row, snr_col}.
 Produced by \code{runFMMViolationAnalysis()} or the
 \code{fig4_fmm_violation.R} script.}
 
-\item{nsims}{Number of simulation replicates (for SE → SD conversion).}
+\item{nsims}{Number of simulation replicates (for SE -> SD conversion).}
 
 \item{omega_fixed}{Omega value used in the beta sweep rows (for subtitle).}
 
@@ -48,7 +48,7 @@ FMM cosinor violation: row 1 sweeps omega at fixed beta; row 2 sweeps beta
 at fixed omega. SD bars are drawn at each N. Each panel is faceted by
 design type (active / passive) and SNR column (strong / moderate / weak).
 
-The FMM model (Rueda, Rodríguez-Collado & Peddada, 2019, Sci Rep,
+The FMM model (Rueda, Rodriguez-Collado & Peddada, 2019, Sci Rep,
 doi:10.1038/s41598-019-54569-1) parameterises waveform shape via
 \code{omega} and orientation via \code{beta}. \code{omega = 1} recovers
 pure cosinor, \code{omega = 0} gives a flat (arrhythmic) signal.

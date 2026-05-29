@@ -4,13 +4,13 @@
 #' (2nd, 3rd) that DCP's cosinor model doesn't fit.
 #'
 #' The cosinor model assumes:
-#'   y(t) = M + A*cos(ωt - ωφ) + ε
+#'   y(t) = M + A*cos(omegat - omegaphi) + epsilon
 #'
 #' But the true waveform may be:
-#'   y(t) = M + A*[cos(ωt - ωφ) + α₂*cos(2ωt - ωφ) + α₃*cos(3ωt - ωφ)] + ε
+#'   y(t) = M + A*[cos(omegat - omegaphi) + alpha2*cos(2omegat - omegaphi) + alpha3*cos(3omegat - omegaphi)] + epsilon
 #'
-#' where α₂, α₃ are relative harmonic amplitudes. This module sweeps over
-#' (α₂, α₃) combinations and measures resulting power degradation.
+#' where alpha2, alpha3 are relative harmonic amplitudes. This module sweeps over
+#' (alpha2, alpha3) combinations and measures resulting power degradation.
 
 
 # =====================================================================
@@ -166,7 +166,7 @@ runFourierDeviationPower <- function(bio.opts,
 
 #' Plot Fourier deviation power results
 #'
-#' Panel A: Heatmap of mean power at reference_n over (α₂, α₃) grid.
+#' Panel A: Heatmap of mean power at reference_n over (alpha2, alpha3) grid.
 #' Panel B: Power vs N lines, one per harmonic combination.
 #'
 #' @param result      Output from runFourierDeviationPower()

@@ -38,7 +38,7 @@ Invisibly returns the ggplot object.
 Produces a 1-row x 3-column figure showing DCP differential power (DR, DP, DM)
 as a function of N for multiple omega values under FMM cosinor violation.
 
-The FMM model (Rueda, Rodríguez-Collado & Peddada, 2019, Sci Rep,
+The FMM model (Rueda, Rodriguez-Collado & Peddada, 2019, Sci Rep,
 doi:10.1038/s41598-019-54569-1) parameterises waveform shape via
 \code{omega}: \code{omega = 1} recovers pure cosinor; \code{omega = 0}
 gives a flat (arrhythmic) signal; intermediate values produce increasingly

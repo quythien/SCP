@@ -22,6 +22,6 @@ plotFourierDeviation(
 \item{output_file}{Path for PDF output (NULL = screen)}
 }
 \description{
-Panel A: Heatmap of mean power at reference_n over (α₂, α₃) grid.
+Panel A: Heatmap of mean power at reference_n over (alpha2, alpha3) grid.
 Panel B: Power vs N lines, one per harmonic combination.
 }

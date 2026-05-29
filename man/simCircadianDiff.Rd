@@ -69,7 +69,7 @@ Named list with the following elements:
     \item{\code{times1}}{Numeric vector of sample times for group 1 (hours).}
     \item{\code{times2}}{Numeric vector of sample times for group 2 (hours).}
     \item{\code{ground_truth}}{data.frame (ngenes rows) with columns:
-      \code{gene}, \code{diff_type} (0–5), \code{diff_type_label},
+      \code{gene}, \code{diff_type} (0-5), \code{diff_type_label},
       \code{mesor1}, \code{mesor2}, \code{amplitude1}, \code{amplitude2},
       \code{phase1}, \code{phase2}, \code{sigma}, \code{sigma2},
       \code{phase_diff}, \code{amp_ratio}, \code{is_rhythmic_g1},

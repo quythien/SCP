@@ -11,7 +11,7 @@ CircaPower(n = NULL, power = NULL, r = NULL, alpha = 0.05, design_factor = 0.5)
 
 \item{power}{Target power (NULL to solve for power)}
 
-\item{r}{Effect size (A/σ)}
+\item{r}{Effect size (A/sigma)}
 
 \item{alpha}{Significance level}
 

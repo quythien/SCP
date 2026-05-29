@@ -36,7 +36,7 @@ plotDiffPower(
 
 \item{stratified}{Logical (default FALSE). If FALSE, draws only the
 marginal power-vs-sample-size panel per endpoint (1 x n_endpoints layout
-per comparison). If TRUE, also draws power-by-r̃ and true-discoveries-by-r̃
+per comparison). If TRUE, also draws power-by-r and true-discoveries-by-r
 strata panels in the original 3-column layout.}
 
 \item{r_break_width}{Width of r-strata bins (default 0.25). Ignored if
@@ -54,6 +54,6 @@ Invisibly, list of panel data per comparison/endpoint.
 \description{
 Default layout is marginal power vs sample size only (one column per
 endpoint, one row per comparison). The effect-size-stratified panels
-(power and true-discoveries by r̃) are opt-in via \code{stratified = TRUE},
+(power and true-discoveries by r) are opt-in via \code{stratified = TRUE},
 which restores the original 3-column-per-row layout.
 }

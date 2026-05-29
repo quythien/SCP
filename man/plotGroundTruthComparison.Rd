@@ -21,6 +21,6 @@ plotGroundTruthComparison(
 \item{output_file}{Path for PDF output (NULL = screen)}
 }
 \description{
-Panel A: Power vs N, oracle (black), two-stage (blue), bootstrap mean ± CI (orange).
+Panel A: Power vs N, oracle (black), two-stage (blue), bootstrap mean +/- CI (orange).
 Panel B: Per-N calibration, point estimates vs CI bars vs true value.
 }

@@ -18,7 +18,7 @@ compareDesignApproaches(
 
 \item{test_type}{Test type to extract from bootstrap result}
 
-\item{target_power}{Target power level for n₈₀ calculation}
+\item{target_power}{Target power level for n80 calculation}
 }
 \value{
 List with comparison data frame and n_80 summaries

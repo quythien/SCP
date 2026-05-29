@@ -4,7 +4,16 @@
 \alias{scp_load_pilot}
 \title{Load a Bundled SCP Pilot Dataset}
 \usage{
-scp_load_pilot(species, dataset, tissue, condition = NULL)
+scp_load_pilot(
+  species,
+  dataset,
+  tissue,
+  condition = NULL,
+  alpha_pilot = 0.01,
+  adjust = c("none", "BH"),
+  K = 1,
+  paired_sigma = TRUE
+)
 }
 \arguments{
 \item{species}{Character, length 1. One of \code{"human"},
@@ -22,6 +31,29 @@ in the manifest (e.g. \code{"Liver"}, \code{"NAc"}).}
 (e.g. \code{"Control"}, \code{"All"}). If \code{NULL} and the
 (species, dataset, tissue) triple identifies more than one row,
 the function errors and prints the available conditions.}
+
+\item{alpha_pilot}{Numeric in \code{(0, cap]}. Rhythmicity threshold used
+to re-derive \code{prop_rhythmic} and the amplitude/phase/sigma
+distributions from the pilot's stored per-gene rhythm table. Default
+\code{0.01} matches the build-time threshold. Only takes effect for
+pilots rebuilt with a \code{rhythm_fit} table; older pilots ignore it
+(with a warning) and return their frozen build-time distributions.}
+
+\item{adjust}{Multiple-testing adjustment applied to the per-gene
+p-values before thresholding at \code{alpha_pilot}: \code{"none"}
+(raw cosinor p, default) or \code{"BH"} (Benjamini-Hochberg q-value).}
+
+\item{K}{Harmonic order of the requested pilot: \code{1} (single-harmonic
+cosinor, default) or \code{2} (two-harmonic). For \code{K = 2} the
+two-harmonic variant of the pilot (\code{<file>_2H.rds}) is loaded; an
+error is raised if no such variant has been built for the pilot.}
+
+\item{paired_sigma}{Logical (default \code{TRUE}). Keep the per-gene
+\code{(A, sigma)} pairing so the simulator draws amplitude and noise from
+the same pilot gene, preserving the realistic narrow \eqn{\tilde r = A/\sigma}
+distribution (the marginal-power / Fig 1-2 Panel A convention). \code{FALSE}
+decouples sigma from amplitude, giving the wide \eqn{\tilde r} used by the
+effect-size-stratified panels (Fig 1-2 Panels B/C).}
 }
 \value{
 A \code{CircadianBioOptions} object with empirical
@@ -37,6 +69,8 @@ to \code{runSimsSingleCohort()} or \code{runDifferentialPower()}.
 \examples{
 \dontrun{
   bio <- scp_load_pilot("human", "GTEx", "Liver")
+  bio <- scp_load_pilot("human", "GTEx", "Liver", alpha_pilot = 0.05)
+  bio <- scp_load_pilot("human", "GTEx", "Liver", alpha_pilot = 0.1, adjust = "BH")
   bio <- scp_load_pilot("human", "GSE160521", "NAc", "Control")
 }
 }

@@ -19,7 +19,7 @@ prepCircadianData(
 \item{expr}{A matrix, data.frame, or file path (CSV/TSV) of expression values.
 Rows = genes, columns = samples. Row names used as gene IDs.}
 
-\item{times}{Numeric vector of time-of-day values (hours, 0–24) for each sample,
+\item{times}{Numeric vector of time-of-day values (hours, 0-24) for each sample,
 OR a character column name in \code{pheno} to extract times from.}
 
 \item{input_type}{One of \code{"counts"}, \code{"cpm"}, or \code{"log2"}.
@@ -41,8 +41,8 @@ is a column name string).}
 }
 \value{
 A list with:
-  \item{data}{Numeric matrix (genes × samples), log2-scale}
-  \item{times}{Numeric vector of hours (0–24), length == ncol(data)}
+  \item{data}{Numeric matrix (genes x samples), log2-scale}
+  \item{times}{Numeric vector of hours (0-24), length == ncol(data)}
   \item{n_genes}{Number of genes}
   \item{n_samples}{Number of samples}
   \item{input_type}{The \code{input_type} used}
@@ -54,7 +54,7 @@ and \code{runBootstrapDesignGrid()}.
 
 The pipeline always expects:
   \itemize{
-    \item \code{data}, numeric matrix, \strong{genes × samples}, log2-scale
+    \item \code{data}, numeric matrix, \strong{genes x samples}, log2-scale
     \item \code{times}, numeric vector, hours in [0, 24), same length as \code{ncol(data)}
   }
 

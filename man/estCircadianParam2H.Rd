@@ -98,7 +98,7 @@ modified.
         passing the joint 4-d.f. F-test contribute, even those whose
         \eqn{A_2} is essentially noise. The empirical \eqn{F_{A_2}} will
         have a noise spike near zero, which is fine.
-  \item K=2 extension is single-cohort only — the differential simulator
+  \item K=2 extension is single-cohort only -- the differential simulator
         (\code{simCircadianDiff}) is not extended.
 }
 }

@@ -27,7 +27,7 @@ A \code{CircadianBioOptions} S3 object (27 fields) including:
   \code{mesor_diff}, \code{ngenes}, \code{period}, \code{sim.seed}.
   Pass directly to \code{runSimsSingleCohort()} or \code{runDifferentialPower()}.
 
-Numeric. Angle(s) mapped to \code{[0, 2π)}.
+Numeric. Angle(s) mapped to \code{[0, 2pi)}.
 }
 \description{
 Fits a cosinor model to each gene in the pilot dataset, selects the
@@ -39,5 +39,5 @@ simulation and power analysis.
 \seealso{
 \code{\link{estCircadianParamTwoGroup}} for two-group differential setup,
   \code{\link{CircadianBioOptions}} for the options constructor.
-Wrap Angle to [0, 2π)
+Wrap Angle to [0, 2pi)
 }

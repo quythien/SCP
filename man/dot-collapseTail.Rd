@@ -39,6 +39,6 @@ Named list with collapsed vectors: \code{strata_labels},
 }
 \description{
 Merges all r-strata whose left boundary is at or above \code{threshold}
-into a single "r ≥ threshold" bin. This prevents sparse high-r strata
+into a single "r >= threshold" bin. This prevents sparse high-r strata
 from cluttering stratified differential power plots.
 }

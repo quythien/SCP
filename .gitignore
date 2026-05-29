@@ -169,3 +169,4 @@ inst/shiny_demo/
 !summary/
 !summary/**
 scripts/
+!SCP-manual.pdf

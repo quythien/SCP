@@ -14,14 +14,14 @@
 #'
 #' @description
 #' Produces a faceted power-vs-N figure for each dataset in the result,
-#' with one line per B value. SD bars (±1 SD across simulation replicates)
+#' with one line per B value. SD bars (+/-1 SD across simulation replicates)
 #' are drawn at each N. B-invariance appears as overlapping lines.
 #'
 #' @param x         An \code{SCPSingleResult} from \code{runSingleCohortGrid()},
 #'                  or a tidy \code{data.frame} with columns
 #'                  \code{N, B, power, power_se, dataset} (and optionally
 #'                  \code{alpha2}).
-#' @param nsims     Number of simulation replicates used (to convert SE → SD).
+#' @param nsims     Number of simulation replicates used (to convert SE -> SD).
 #'                  Default 30.
 #' @param alpha2    Which \code{alpha2} value to plot (default 0 = pure cosinor).
 #' @param fdr_power  Reference power level for dashed line (default 0.80).

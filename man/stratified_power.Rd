@@ -18,7 +18,7 @@ stratified_power(
 
 \item{ground_truth}{Logical vector of true positives}
 
-\item{effect_sizes}{Vector of effect sizes (r = A/σ)}
+\item{effect_sizes}{Vector of effect sizes (r = A/sigma)}
 
 \item{breaks}{Break points for effect size strata}
 

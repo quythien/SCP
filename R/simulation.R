@@ -103,7 +103,7 @@ sampleTimesFromDist <- function(n, cts) {
 #'     \item{\code{times1}}{Numeric vector of sample times for group 1 (hours).}
 #'     \item{\code{times2}}{Numeric vector of sample times for group 2 (hours).}
 #'     \item{\code{ground_truth}}{data.frame (ngenes rows) with columns:
-#'       \code{gene}, \code{diff_type} (0–5), \code{diff_type_label},
+#'       \code{gene}, \code{diff_type} (0-5), \code{diff_type_label},
 #'       \code{mesor1}, \code{mesor2}, \code{amplitude1}, \code{amplitude2},
 #'       \code{phase1}, \code{phase2}, \code{sigma}, \code{sigma2},
 #'       \code{phase_diff}, \code{amp_ratio}, \code{is_rhythmic_g1},
@@ -476,7 +476,7 @@ simCircadianDiff <- function(ngenes = 5000,
 #' @param alpha3 Third-harmonic coefficient (default 0). Same conditions as \code{alpha2}.
 #' @param omega FMM waveform shape parameter in \eqn{(0, 1]} (default \code{1.0}).
 #'   \code{omega = 1} uses the traditional cosinor generator (with \code{alpha2}/\code{alpha3}).
-#'   \code{omega < 1} uses \code{\link{simCircadianFMM}}, a non-sinusoidal Möbius waveform.
+#'   \code{omega < 1} uses \code{\link{simCircadianFMM}}, a non-sinusoidal Mobius waveform.
 #'   The two paths are mutually exclusive: FMM takes precedence when \code{omega < 1}.
 #' @param beta FMM orientation parameter (default \eqn{\pi}). Controls the phase of
 #'   waveform asymmetry. Only used when \code{omega < 1}. \eqn{\beta}-invariance
@@ -703,7 +703,7 @@ simCircadianSingleCohort2H <- function(bio.opts, cts, seed = NULL) {
 #' Simulate Single-Cohort Circadian Data Under FMM Waveform
 #'
 #' @description Generates a synthetic gene expression matrix for one cohort
-#' using the Frequency Modulated Möbius (FMM) model.  The waveform shape is
+#' using the Frequency Modulated Mobius (FMM) model.  The waveform shape is
 #' controlled by \code{omega}: \code{omega = 1} reproduces a pure sinusoid
 #' (identical to DCP cosinor truth), \code{omega = 0} produces a flat signal
 #' (no rhythmicity), and intermediate values produce a peaked waveform.
@@ -716,7 +716,7 @@ simCircadianSingleCohort2H <- function(bio.opts, cts, seed = NULL) {
 #' fitted cosinor signal.  DCP amplitude-based detection power is therefore
 #' invariant to \code{beta}; only phase estimation is affected.
 #'
-#' @references Rueda C, Rodríguez-Collado A, Peddada SD (2019).
+#' @references Rueda C, Rodriguez-Collado A, Peddada SD (2019).
 #'   "A single notable oscillation in humans and mammals with strong
 #'   implications in chronobiology." Sci Rep 9, 17982.
 #'   \doi{10.1038/s41598-019-54569-1}
@@ -946,7 +946,7 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
 #'
 #' @description
 #' Extends \code{\link{simCircadianDiff}} by replacing the cosinor generative
-#' model with the FMM (Frequency Modulated Möbius) waveform.  Gene-type
+#' model with the FMM (Frequency Modulated Mobius) waveform.  Gene-type
 #' assignment (DR/DP/DM/null) and parameter draws are identical to
 #' \code{simCircadianDiff}; only expression generation uses FMM.
 #'
@@ -963,7 +963,7 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
 #' exactly to the cosinor model; this function returns the \code{simCircadianDiff}
 #' result unmodified for efficiency.
 #'
-#' @references Rueda C, Rodríguez-Collado A, Peddada SD (2019).
+#' @references Rueda C, Rodriguez-Collado A, Peddada SD (2019).
 #'   "A single notable oscillation in humans and mammals with strong
 #'   implications in chronobiology." Sci Rep 9, 17982.
 #'   \doi{10.1038/s41598-019-54569-1}
