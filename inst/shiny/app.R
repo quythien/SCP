@@ -114,6 +114,55 @@ suppressPackageStartupMessages({
   p
 }
 
+# Detect the gene-ID type of a pilot's rhythm_fit$gene and (optionally) attach a
+# `symbol` column. ENSG -> human symbol, ENSMUSG -> mouse symbol when the
+# annotation packages are installed; everything else (real symbols, probe IDs,
+# or pseudo-names like "Gene123") is kept verbatim so a name is always present.
+# Returns list(rf = <rhythm_fit + symbol>, type = <human-readable id type>).
+# Supported organisms for upload ID->symbol mapping. Each maps only when its
+# Bioconductor annotation package is installed; unmatched/unmapped IDs keep their
+# original name, so a usable gene label is always present.
+.SPECIES_MAP <- list(
+  human       = list(pkg = "org.Hs.eg.db",   key = "ENSEMBL", pat = "^ENSG[0-9]+",      lab = "human (Ensembl)"),
+  mouse       = list(pkg = "org.Mm.eg.db",   key = "ENSEMBL", pat = "^ENSMUSG[0-9]+",   lab = "mouse (Ensembl)"),
+  rat         = list(pkg = "org.Rn.eg.db",   key = "ENSEMBL", pat = "^ENSRNOG[0-9]+",   lab = "rat (Ensembl)"),
+  zebrafish   = list(pkg = "org.Dr.eg.db",   key = "ENSEMBL", pat = "^ENSDARG[0-9]+",   lab = "zebrafish (Ensembl)"),
+  fly         = list(pkg = "org.Dm.eg.db",   key = "FLYBASE", pat = "^FBgn[0-9]+",      lab = "Drosophila (FlyBase)"),
+  arabidopsis = list(pkg = "org.At.tair.db", key = "TAIR",    pat = "^AT[0-9CM]G[0-9]+", lab = "Arabidopsis (TAIR)")
+)
+
+.upload_symbols <- function(rf, do_map = TRUE, species = "auto") {
+  if (is.null(rf) || !nrow(rf) || !("gene" %in% names(rf)))
+    return(list(rf = rf, type = "unknown", detected = NA_character_, n_mapped = 0L))
+  g <- as.character(rf$gene); sym <- g
+  # Always auto-detect the dominant ID pattern (independent of the user's choice)
+  # so we can SUGGEST a species even when they pre-selected one or left it on auto.
+  hits     <- vapply(.SPECIES_MAP, function(s) mean(grepl(s$pat, g)), numeric(1))
+  dom      <- which.max(hits)
+  detected <- if (length(dom) && hits[dom] > 0.5) names(.SPECIES_MAP)[dom] else NA_character_
+  map_with <- function(idx, s) {
+    if (!any(idx) || !requireNamespace(s$pkg, quietly = TRUE)) return(invisible())
+    db <- tryCatch(getExportedValue(s$pkg, s$pkg), error = function(e) NULL)
+    if (is.null(db)) return(invisible())
+    keys <- sub("\\..*", "", g[idx])
+    m <- suppressMessages(tryCatch(
+      AnnotationDbi::mapIds(db, keys = keys, column = "SYMBOL",
+                            keytype = s$key, multiVals = "first"),
+      error = function(e) NULL))
+    if (!is.null(m)) { hit <- !is.na(m); sym[which(idx)[hit]] <<- m[hit] }
+  }
+  use <- if (identical(species, "auto")) detected else species
+  if (!is.null(use) && use %in% names(.SPECIES_MAP)) {
+    s <- .SPECIES_MAP[[use]]; type <- s$lab
+    if (isTRUE(do_map)) map_with(rep(TRUE, length(g)), s)
+  } else {
+    type <- "gene symbols / names"
+  }
+  rf$symbol <- sym
+  list(rf = rf, type = type, detected = detected,
+       n_mapped = sum(sym != g))
+}
+
 # ---------------------------------------------------------------------------
 # UI
 # ---------------------------------------------------------------------------
@@ -169,6 +218,19 @@ ui <- fluidPage(
                   accept = c(".csv", ".tsv", ".txt")),
         fileInput("upload_tod", "Times-of-day CSV (one value per sample, in hours)",
                   accept = c(".csv", ".tsv", ".txt")),
+        selectInput("upload_species", "Species of uploaded data",
+                    choices = c("Auto-detect" = "auto", "Human" = "human",
+                                "Mouse" = "mouse", "Rat" = "rat",
+                                "Zebrafish" = "zebrafish", "Drosophila (fly)" = "fly",
+                                "Arabidopsis" = "arabidopsis", "Other / none" = "none"),
+                    selected = "auto"),
+        checkboxInput("upload_map_sym",
+                      "Map gene IDs to gene symbols (unmapped keep their original name)",
+                      value = TRUE),
+        helpText(em("Symbol mapping supported for: human, mouse, rat, zebrafish, ",
+                    "Drosophila, Arabidopsis (Ensembl / FlyBase / TAIR IDs). ",
+                    "The app also auto-detects the species from your IDs and suggests one. ",
+                    "Any other organism, gene symbols, or probe IDs are used as-is.")),
         helpText(em("Once both files load, the pilot is fit on the fly (5-15 sec). ",
                     "See the expected file layout on the right.")),
         verbatimTextOutput("upload_status")
@@ -230,6 +292,37 @@ ui <- fluidPage(
         column(5,
           h4("Sampling design (TOD distribution)"),
           plotOutput("tod_plot", height = "180px")
+        )
+      ),
+      # ---- Rhythmic gene explorer (pilot-level; shown before & after a run) ----
+      hr(),
+      div(style = "background:#fbfcfe; border:1px solid #e3e9f0; border-radius:6px; padding:14px 16px; margin-top:6px;",
+        h4("Rhythmic gene explorer", style = "margin-top:0;"),
+        helpText(em(paste0("Per-gene rhythmicity in this pilot at the threshold set on the left. ",
+                           "Curves are the fitted cosinor (bundled pilots store fit estimates, ",
+                           "not raw samples); the shaded band is +/- 1.96 sigma (noise)."))),
+        tags$b("Core clock genes"),
+        plotOutput("clock_panel", height = "300px"),
+        uiOutput("clock_note"),
+        hr(),
+        fluidRow(
+          column(7,
+            tags$b("Top rhythmic genes"),
+            div(style = "max-height: 340px; overflow-y: auto; margin-top:6px;",
+                tableOutput("gene_table")),
+            div(style = "margin-top:6px;",
+                helpText(em("Downloads include ALL fitted genes with full parameters (p, BH q, amplitude, sigma, r-tilde, peak, mesor).")),
+                downloadButton("dl_genes",      "Download all genes (CSV)"),
+                downloadButton("dl_genes_xlsx", "Download all genes (XLSX)"))
+          ),
+          column(5,
+            tags$b("Gene detail"),
+            selectizeInput("gene_pick", "Look up a gene (symbol or ID)",
+                           choices = NULL, multiple = FALSE,
+                           options = list(placeholder = "type a gene symbol...")),
+            plotOutput("gene_cosinor", height = "260px"),
+            verbatimTextOutput("gene_readout")
+          )
         )
       ),
       conditionalPanel(
@@ -365,8 +458,18 @@ server <- function(input, output, session) {
         # CircadianBioOptions with amplitude/sigma/phase + the rhythm_fit table,
         # so uploaded pilots support the simulation AND the threshold knob.
         bio <- SCP::estCircadianParam(mat, tod, paired_sigma = TRUE, verbose = FALSE)
-        incProgress(1)
+        incProgress(0.7)
         bio$times <- tod
+        # Map IDs to symbols using the user-selected species (or auto-detect);
+        # unmapped IDs keep their original name. `detected` is the auto-detected
+        # species regardless of the user's choice, used to suggest below.
+        sm <- .upload_symbols(bio$rhythm_fit, do_map = isTRUE(input$upload_map_sym),
+                              species = input$upload_species %||% "auto")
+        bio$rhythm_fit <- sm$rf
+        attr(bio, "id_type")  <- sm$type
+        attr(bio, "detected") <- sm$detected
+        attr(bio, "n_mapped") <- sm$n_mapped
+        incProgress(1)
         bio
       })
     }, error = function(e) e)
@@ -376,14 +479,27 @@ server <- function(input, output, session) {
       uploaded_pilot_state$msg <- sprintf("Upload error: %s", conditionMessage(res))
     } else {
       uploaded_pilot_state$pilot <- res
-      rt_up <- (res$amplitude %||% NA_real_) / (res$sigma_rhythmic %||% NA_real_)
+      rt_up    <- (res$amplitude %||% NA_real_) / (res$sigma_rhythmic %||% NA_real_)
+      n_mapped <- attr(res, "n_mapped") %||% 0L
+      detected <- attr(res, "detected")
+      sel      <- input$upload_species %||% "auto"
+      labof    <- function(k) if (!is.na(k) && k %in% names(.SPECIES_MAP)) .SPECIES_MAP[[k]]$lab else NA
+      # Suggestion line: the app's auto-detected species, flagged if it differs
+      # from the user's selection (Metascape-style guidance).
+      sugg <- if (is.na(detected)) "Auto-detect: IDs look like gene symbols/names already."
+              else if (sel == "auto") sprintf("Auto-detected %s.", labof(detected))
+              else if (sel == detected) sprintf("Matches detected species (%s).", labof(detected))
+              else sprintf("Note: you selected %s, but the IDs look like %s. Switch the dropdown if that is wrong.",
+                           .SPECIES_MAP[[sel]]$lab %||% sel, labof(detected))
+      map_note <- if (!isTRUE(input$upload_map_sym)) "Mapping off (showing original IDs)."
+                  else if (n_mapped > 0) sprintf("Mapped %d IDs to symbols.", n_mapped)
+                  else "No IDs needed mapping (already symbols / no annotation match)."
       uploaded_pilot_state$msg <- sprintf(
-        "OK: %d genes fit, %d rhythmic (%.0f%%). Median r-tilde = %.2f.",
+        "OK: %d genes fit, %d rhythmic (%.0f%%). Median r-tilde = %.2f.\n%s\n%s",
         res$ngenes %||% NA_integer_,
         length(res$amplitude %||% numeric(0)),
         100 * (res$prop_rhythmic %||% NA_real_),
-        stats::median(rt_up, na.rm = TRUE)
-      )
+        stats::median(rt_up, na.rm = TRUE), sugg, map_note)
     }
   })
 
@@ -926,6 +1042,168 @@ server <- function(input, output, session) {
           sprintf("Largest N simulated (%d) reached %.0f%% power at FDR %.0f%%; a larger N is needed to hit the %.0f%% target.",
                   n_largest, 100 * last_pow, 100 * tfd, 100 * tpw))
     )
+  })
+
+  # ======================= Rhythmic gene explorer =========================
+  .CLOCK <- c("ARNTL","CLOCK","NPAS2","PER1","PER2","PER3","CRY1","CRY2",
+              "NR1D1","NR1D2","DBP","TEF","HLF","CIART","NFIL3")
+
+  # Per-gene table from the loaded pilot's rhythm_fit: BH q-value, r-tilde, peak,
+  # mesor (if stored). Sorted by p-value. Reacts to the left-panel threshold via
+  # pilot() (which carries the full capped rhythm_fit regardless of threshold).
+  gene_tbl <- reactive({
+    p <- pilot(); req(p); rf <- p$rhythm_fit
+    if (is.null(rf) || !nrow(rf)) return(NULL)
+    n_total <- p$rhythm_denom %||% p$ngenes %||% nrow(rf)
+    rf <- rf[order(rf$pvalue), , drop = FALSE]
+    i  <- seq_len(nrow(rf))
+    q  <- pmin(rev(cummin(rev(rf$pvalue * n_total / i))), 1)
+    data.frame(
+      Gene   = if (!is.null(rf$symbol)) rf$symbol else rf$gene,
+      ID     = rf$gene,
+      p      = rf$pvalue, q = q,
+      Amp    = rf$A, Sigma = rf$sigma, rtilde = rf$A / rf$sigma,
+      Peak_h = round(rf$phi %% 24, 2),
+      Mesor  = if (!is.null(rf$mesor)) rf$mesor else NA_real_,
+      stringsAsFactors = FALSE)
+  })
+
+  # Genes passing the chosen alpha_pilot (matches the summary's prop_rhythmic).
+  gene_tbl_pass <- reactive({
+    g <- gene_tbl(); req(g)
+    thr  <- as.numeric(input$rhy_thresh)
+    sval <- if (identical(input$rhy_stat, "q")) g$q else g$p
+    g[sval < thr, , drop = FALSE]
+  })
+
+  # Populate the gene lookup (server-side; rhythmic gene set can be large).
+  observe({
+    g <- gene_tbl()
+    ch <- if (is.null(g) || !nrow(g)) character(0)
+          else stats::setNames(g$ID, sprintf("%s  (p=%.1e)", g$Gene, g$p))
+    updateSelectizeInput(session, "gene_pick", choices = ch,
+                         selected = if (length(ch)) ch[[1]] else "", server = TRUE)
+  })
+
+  # Fitted cosinor curve: mesor-anchored if stored, else mean-centered; +/-1.96s
+  # noise ribbon; peak marked. `compact` (clock small-multiples) shows only the
+  # gene title + peak; the full p/q/peak/(A/sigma) subtitle is reserved for the
+  # large single-gene detail plot where there is room (avoids title collisions).
+  .draw_cos <- function(row, period = 24, compact = FALSE) {
+    t <- seq(0, period, length.out = 240); w <- 2 * pi / period
+    m0 <- if (!is.null(row$Mesor) && is.finite(row$Mesor)) row$Mesor else 0
+    y  <- m0 + row$Amp * cos(w * (t - row$Peak_h)); band <- 1.96 * row$Sigma
+    ylab <- if (m0 != 0) "Expression (log2)" else "Expression (centered)"
+    plot(t, y, type = "n", ylim = range(c(y + band, y - band)),
+         xlab = "Time of day (h)", ylab = if (compact) "centered" else ylab,
+         main = row$Gene, xaxt = "n", bty = "l",
+         cex.lab = if (compact) 1.0 else 1.2,
+         cex.main = if (compact) 1.2 else 1.45, font.main = 2)
+    axis(1, at = seq(0, 24, if (compact) 6 else 4))
+    polygon(c(t, rev(t)), c(y + band, rev(y - band)), col = "#2c7fb822", border = NA)
+    lines(t, y, lwd = 2.5, col = "#2c7fb8")
+    abline(v = row$Peak_h, lty = 2, col = "grey50")
+    # stats subtitle on every panel; compact (clock small-multiples) drops q and
+    # uses a smaller font so the line fits a narrow panel without overlapping.
+    sub <- if (compact)
+      sprintf("p=%.0e  peak %.1fh  A/s=%.1f", row$p, row$Peak_h, row$rtilde)
+    else
+      sprintf("p=%.1e   q=%.1e   peak=%.1fh   A/s=%.2f",
+              row$p, row$q, row$Peak_h, row$rtilde)
+    mtext(sub, side = 3, line = 0.35, cex = if (compact) 0.78 else 0.92, col = "grey25")
+  }
+
+  output$clock_panel <- renderPlot({
+    g <- gene_tbl(); req(g)
+    pr <- g[toupper(g$Gene) %in% .CLOCK, , drop = FALSE]
+    pr <- pr[!duplicated(toupper(pr$Gene)), , drop = FALSE]
+    pr <- pr[order(match(toupper(pr$Gene), .CLOCK)), , drop = FALSE]
+    if (!nrow(pr)) { plot.new(); title("No core clock genes rhythmic at p < 0.2 in this pilot."); return() }
+    n  <- min(nrow(pr), 8L)
+    op <- par(mfrow = c(2, ceiling(n / 2)), mar = c(3.3, 3.4, 3.4, 0.7),
+              mgp = c(1.9, 0.6, 0)); on.exit(par(op))
+    for (i in seq_len(n)) .draw_cos(pr[i, ], compact = TRUE)
+  })
+
+  output$clock_note <- renderUI({
+    g <- gene_tbl(); if (is.null(g)) return(NULL)
+    absent <- setdiff(.CLOCK, toupper(g$Gene))
+    if (length(absent))
+      helpText(em(sprintf("Clock genes not rhythmic at p<0.2 here: %s",
+                          paste(absent, collapse = ", "))))
+  })
+
+  output$gene_table <- renderTable({
+    g <- gene_tbl_pass(); req(g)
+    if (!nrow(g)) return(data.frame(Note = "No genes pass the chosen threshold."))
+    out <- head(g, 100L)
+    data.frame(Gene = out$Gene, p = signif(out$p, 3), q = signif(out$q, 3),
+               `r~` = round(out$rtilde, 2), `Peak (h)` = out$Peak_h,
+               check.names = FALSE)
+  }, striped = TRUE, hover = TRUE, width = "100%", digits = 3)
+
+  # Full export: ALL fitted genes (the pilot's complete rhythm_fit, p-sorted)
+  # with every parameter and a clean column order/labels.
+  gene_export <- reactive({
+    g <- gene_tbl(); req(g)
+    data.frame(
+      gene        = g$Gene,
+      gene_id     = g$ID,
+      pvalue      = g$p,
+      qvalue_BH   = g$q,
+      amplitude   = g$Amp,
+      sigma       = g$Sigma,
+      r_tilde     = g$rtilde,
+      peak_hours  = g$Peak_h,
+      mesor       = g$Mesor,
+      stringsAsFactors = FALSE)
+  })
+  .gene_fname <- function() gsub("[^A-Za-z0-9]+", "_",
+      paste(if (isTRUE(input$pilot_source == "upload")) "upload" else input$species %||% "pilot",
+            input$dataset %||% "", input$tissue %||% ""))
+
+  output$dl_genes <- downloadHandler(
+    filename = function() sprintf("SCP_genes_%s.csv", .gene_fname()),
+    content  = function(f) utils::write.csv(gene_export(), f, row.names = FALSE))
+
+  output$dl_genes_xlsx <- downloadHandler(
+    filename = function() sprintf("SCP_genes_%s.xlsx", .gene_fname()),
+    content  = function(f) {
+      g <- gene_export()
+      if (requireNamespace("writexl", quietly = TRUE)) {
+        writexl::write_xlsx(g, f)
+      } else if (requireNamespace("openxlsx", quietly = TRUE)) {
+        openxlsx::write.xlsx(g, f)
+      } else {
+        # graceful fallback: still deliver the data as CSV-in-xlsx-name
+        utils::write.csv(g, f, row.names = FALSE)
+        showNotification("XLSX writer not installed; wrote CSV content instead.",
+                         type = "warning", duration = 6)
+      }
+    })
+
+  output$gene_cosinor <- renderPlot({
+    g <- gene_tbl(); req(g, input$gene_pick)
+    row <- g[g$ID == input$gene_pick, , drop = FALSE]
+    if (!nrow(row)) { plot.new(); title("Gene not rhythmic in this pilot (p >= 0.2)."); return() }
+    .draw_cos(row[1, ])
+  })
+
+  output$gene_readout <- renderText({
+    g <- gene_tbl(); req(g, input$gene_pick)
+    row <- g[g$ID == input$gene_pick, , drop = FALSE]
+    if (!nrow(row)) return("Gene not in the rhythmic set (p >= 0.2).")
+    r <- row[1, ]
+    paste0(
+      sprintf("Gene      : %s  (%s)\n", r$Gene, r$ID),
+      sprintf("p-value   : %.3e\n", r$p),
+      sprintf("q (BH)    : %.3e\n", r$q),
+      sprintf("Amplitude : %.3f\n", r$Amp),
+      sprintf("Sigma     : %.3f\n", r$Sigma),
+      sprintf("r-tilde   : %.2f   (A/sigma)\n", r$rtilde),
+      sprintf("Peak      : %.2f h\n", r$Peak_h),
+      if (is.finite(r$Mesor)) sprintf("Mesor     : %.3f\n", r$Mesor)
+      else                    "Mesor     : (not stored for this pilot)\n")
   })
 }
 
