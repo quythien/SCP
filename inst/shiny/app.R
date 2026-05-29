@@ -526,6 +526,18 @@ server <- function(input, output, session) {
         }
       }
     }
+    # Fallback: if the chosen threshold admitted no rhythmic genes (common for
+    # weak tissues at FDR 5%), characterise the pilot's overall effect-size
+    # distribution from the full rhythm_fit candidate pool so the summary never
+    # reads NA. prop_rhythmic still reports the honest (possibly 0%) value.
+    if (!is.finite(r_med) && !is.null(p$rhythm_fit) &&
+        nrow(p$rhythm_fit) > 0L && !is.null(p$rhythm_fit$A)) {
+      rfr <- p$rhythm_fit$A / p$rhythm_fit$sigma
+      rfr <- rfr[is.finite(rfr) & rfr > 0]
+      if (length(rfr) > 0L) {
+        r_med <- median(rfr); r_q25 <- quantile(rfr, 0.25); r_q75 <- quantile(rfr, 0.75)
+      }
+    }
     # prop_rhythmic is already re-derived at the selected threshold in pilot()
     # via the stored rhythm_fit table; fall back to the per-gene p-vector or the
     # baked value for pilots built before rhythm_fit existed.
@@ -789,11 +801,13 @@ server <- function(input, output, session) {
     fdr_lines <- sort(unique(c(0.01, 0.05, 0.10, 0.20, tfd)))
     bc <- res$.bc
     if (!is.null(bc) && !inherits(bc, "sim_error")) {
+      # Vertical stack: each panel sized + styled like the single Panel A view,
+      # so the three panels look identical in scale, just stacked.
       SCP::plotSingleCohortPower(bc, panel_a_res = res, panels = c("A", "B", "C"),
                                   vertical = TRUE,
                                   fdr_thresholds = fdr_lines, panel_fdr = tfd, vline_fdr = tfd,
                                   vline_power = tpw, r_max = NULL,
-                                  cex_main = 1.7, cex_lab = 1.7, cex_axis = 1.45)
+                                  cex_main = 1.9, cex_lab = 1.85, cex_axis = 1.55)
     } else {
       SCP::plotSingleCohortPower(res, panels = "A",
                                   fdr_thresholds = fdr_lines, panel_fdr = tfd, vline_fdr = tfd,
@@ -810,11 +824,11 @@ server <- function(input, output, session) {
   # across the whole right pane on wide screens. The 3-panel view stacks the
   # panels vertically, each rendered large (Figure-3-like) rather than squished
   # side by side; single Panel A stays compact.
-  width  = function() if (isTRUE(input$eff_sens)) 740L  else 680L,
-  height = function() if (isTRUE(input$eff_sens)) 1160L else 470L)
+  width  = function() 680L,
+  height = function() if (isTRUE(input$eff_sens)) 1450L else 470L)
 
   # Download the exact figure shown, as PDF or PNG.
-  .fig_dims  <- function() if (isTRUE(input$eff_sens)) c(7.4, 11.6) else c(8, 5.5)
+  .fig_dims  <- function() if (isTRUE(input$eff_sens)) c(6.8, 14.5) else c(8, 5.5)
   .fig_fname <- function(ext) sprintf("SCP_power_%s.%s",
       gsub("[^A-Za-z0-9]+", "_", paste(input$species %||% "", input$tissue %||% "pilot", sep = "_")), ext)
   output$dl_pdf <- downloadHandler(
