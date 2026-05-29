@@ -201,6 +201,8 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       width = 3,
+      h3("Power Study", style = "text-align:center; margin-top:2px; font-weight:700;"),
+      hr(style = "margin-top:6px; margin-bottom:10px;"),
       h4("Pilot rhythmicity threshold"),
       radioButtons("rhy_stat", NULL,
                    choices = c("Adjusted FDR (BH)" = "q",
