@@ -1307,10 +1307,19 @@ server <- function(input, output, session) {
   output$clock_note <- renderUI({
     g <- gene_tbl_pass(); if (is.null(g)) return(NULL)
     present <- unique(.clock_canon(g$Gene)); present <- present[!is.na(present)]
-    absent  <- setdiff(names(.CLOCK_ALIASES), present)
-    if (length(absent))
-      helpText(em(sprintf("Clock genes not passing %s here: %s",
-                          .thresh_label(), paste(absent, collapse = ", "))))
+    cg <- clock_genes()
+    shown <- if (is.null(cg) || !nrow(cg)) character(0) else {
+      s <- unique(.clock_canon(cg$Gene)); s[!is.na(s)] }
+    absent <- setdiff(names(.CLOCK_ALIASES), present)   # not passing the threshold
+    extra  <- setdiff(present, shown)                   # passing but beyond the 12-panel cap
+    tagList(
+      if (length(extra))
+        helpText(em(sprintf("Other clock genes passing %s but not shown (panel caps at 12): %s",
+                            .thresh_label(), paste(sort(extra), collapse = ", ")))),
+      if (length(absent))
+        helpText(em(sprintf("Clock genes not passing %s here: %s",
+                            .thresh_label(), paste(absent, collapse = ", "))))
+    )
   })
 
   output$gene_table <- renderTable({
