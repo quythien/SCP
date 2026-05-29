@@ -632,41 +632,37 @@ server <- function(input, output, session) {
   output$recommended_n_text <- renderText({
     res <- sim_result()
     req(res)
-    np <- tryCatch(
-      SCP::npower(res, target_power = input$target_power,
-                  fdr = input$target_fdr),
-      error = function(e) list(n = NA_real_)
-    )
-    if (!is.na(np$n)) {
-      return(sprintf("Recommended N = %.0f for %.0f%% power at FDR %.0f%% (from simulation grid)",
-                     ceiling(np$n), 100 * input$target_power, 100 * input$target_fdr))
+    tpw <- as.numeric(input$target_power)
+    tfd <- as.numeric(input$target_fdr)
+    # Use the runner's stored marginal_power matrix [N x nsims] — this is
+    # exactly what the runner prints to the console at each N and what
+    # plotSingleCohortPower's Panel A renders, so the text cannot drift
+    # from the plot.
+    mp <- res$marginal_power
+    if (is.null(mp)) {
+      return("Simulation did not return a marginal_power matrix.")
     }
-    # Grid did not reach target. Report the max observed power AND a
-    # closed-form per-gene-at-median-r-tilde estimate as separate numbers
-    # so the user sees both honestly.
-    # Report at the user's largest N (not at the N where MC noise gave max power)
-    n_largest <- max(res$sample_sizes)
-    last_pow  <- if (length(np$power) > 0L)
-      np$power[which(res$sample_sizes == n_largest)[1]] else NA_real_
-    max_pow   <- last_pow
-    n_at_max  <- n_largest
-    p <- pilot()
-    n_cf <- tryCatch(
-      SCP::circaPowerApproxN80(
-        bio.opts     = p,
-        alpha        = as.numeric(input$target_fdr),
-        target_power = input$target_power,
-        n_search     = seq(20, 2000, by = 5)
-      ),
-      error = function(e) NA_real_
-    )
-    if (is.finite(max_pow))
-      sprintf("The largest sample size simulated (N = %d) reached only %.0f%% power at FDR %.0f%%. A larger N is needed to hit the %.0f%% target.",
-              n_at_max, 100 * max_pow,
-              100 * as.numeric(input$target_fdr), 100 * input$target_power)
-    else
-      sprintf("The simulation did not reach %.0f%% power at any N in your grid.",
-              100 * input$target_power)
+    mean_pow <- rowMeans(mp, na.rm = TRUE)
+    sizes    <- res$sample_sizes
+    above    <- which(mean_pow >= tpw)
+    if (length(above) > 0L) {
+      j2 <- min(above)
+      if (j2 == 1L) {
+        rec_n <- sizes[1L]
+      } else {
+        j1 <- j2 - 1L
+        rec_n <- ceiling(sizes[j1] +
+                         (tpw - mean_pow[j1]) /
+                         (mean_pow[j2] - mean_pow[j1]) *
+                         (sizes[j2] - sizes[j1]))
+      }
+      return(sprintf("Recommended N = %d for %.0f%% power at FDR %.0f%% (from simulation grid)",
+                     rec_n, 100 * tpw, 100 * tfd))
+    }
+    n_largest <- max(sizes)
+    last_pow  <- mean_pow[which(sizes == n_largest)[1]]
+    sprintf("The largest sample size simulated (N = %d) reached %.0f%% power at FDR %.0f%%. A larger N is needed to hit the %.0f%% target.",
+            n_largest, 100 * last_pow, 100 * tfd, 100 * tpw)
   })
 }
 
