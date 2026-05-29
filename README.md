@@ -152,7 +152,7 @@ If you use SCP in your research, please cite:
 
 ```
 Pham, T. Q. (2026). SCP: Simulation-Based Circadian Power Analysis.
-  R package version 0.4.3. https://github.com/quythien/SCP
+  R package version 0.4.16. https://github.com/quythien/SCP
 ```
 
 A `CITATION.cff` is provided.
