@@ -9,6 +9,15 @@ suppressPackageStartupMessages({
 
 `%||%` <- function(a, b) if (!is.null(a) && length(a) > 0L) a else b
 
+# Capitalize the first letter for DISPLAY only; underlying values are unchanged.
+.cap1 <- function(x) {
+  x <- as.character(x)
+  ifelse(nchar(x) > 0L, paste0(toupper(substr(x, 1, 1)), substr(x, 2, nchar(x))), x)
+}
+# Named choices vector: shown label = capitalized, value = original (lowercase)
+# so dropdowns read "Human"/"Active" while the loader keys stay "human"/"active".
+.cap_choices <- function(v) stats::setNames(as.character(v), .cap1(v))
+
 
 # When SCP_SHINY_DEMO=1, the app reads pilots from ./pilots/ next to app.R
 # instead of system.file("extdata","pilots", package = "SCP"). This is the
@@ -197,7 +206,7 @@ ui <- fluidPage(
                    choices = c("Adjusted FDR (BH)" = "q",
                                "Raw p-value"       = "p"),
                    selected = "q", inline = TRUE),
-      selectInput("rhy_thresh", "Threshold (alpha_pilot)",
+      selectInput("rhy_thresh", HTML("Threshold (&alpha;<sub>pilot</sub>)"),
                   choices  = c("0.20" = 0.20, "0.15" = 0.15,
                                "0.10" = 0.10, "0.05" = 0.05, "0.01" = 0.01,
                                "0.001" = 0.001, "0.0001" = 0.0001),
@@ -214,7 +223,7 @@ ui <- fluidPage(
       conditionalPanel(
         condition = "input.pilot_source == 'bundled'",
         selectInput("species",    "Species",       choices = NULL),
-        selectInput("design_filter", "Design",     choices = c("active", "passive")),
+        selectInput("design_filter", "Design",     choices = c("Active" = "active", "Passive" = "passive")),
         selectInput("tissue",     "Tissue",        choices = NULL),
         selectInput("dataset",    "Study/dataset", choices = NULL),
         selectInput("condition",  "Condition",     choices = NULL)
@@ -272,13 +281,13 @@ ui <- fluidPage(
       ),
       hr(),
       h4("Sample size grid"),
-      sliderInput("n_min", "Minimum N", min = 4, max = 100,
+      sliderInput("n_min", HTML("N<sub>min</sub> (minimum sample size)"), min = 4, max = 100,
                   value = 20, step = 2),
-      sliderInput("n_max", "Maximum N", min = 20, max = 500,
+      sliderInput("n_max", HTML("N<sub>max</sub> (maximum sample size)"), min = 20, max = 500,
                   value = 120, step = 10),
       sliderInput("n_step", "Step", min = 2, max = 60,
                   value = 20, step = 2),
-      helpText(em("Grid: N_min, N_min + step, ..., up to N_max.")),
+      helpText(HTML("<em>Grid: N<sub>min</sub>, N<sub>min</sub> + step, ..., up to N<sub>max</sub>.</em>")),
       hr(),
       h4("Targets"),
       sliderInput("target_power", "Target power",
@@ -325,7 +334,7 @@ ui <- fluidPage(
                          icon = icon("camera"), class = "btn-sm")),
         helpText(em(paste0("Per-gene rhythmicity at the threshold set on the left (changing it ",
                            "updates the clock panel and table below). Curves are the fitted cosinor; ",
-                           "the shaded band is +/- 1.96 sigma (noise). Bundled pilots store fit ",
+                           "the shaded band is ± 1.96σ (noise). Bundled pilots store fit ",
                            "estimates only, so they show the curve; uploaded data also overlays each ",
                            "sample's actual expression as points."))),
         # Live banner: echoes the current alpha_pilot / statistic + rhythmic count
@@ -450,7 +459,7 @@ server <- function(input, output, session) {
     m <- manifest()
     req(m)
     sp <- sort(unique(m$species))
-    updateSelectInput(session, "species", choices = sp,
+    updateSelectInput(session, "species", choices = .cap_choices(sp),
                       selected = if ("human" %in% sp) "human" else sp[1])
   })
 
@@ -464,7 +473,7 @@ server <- function(input, output, session) {
     m <- manifest()
     req(m, input$species)
     designs <- sort(unique(m$design[m$species == input$species]))
-    updateSelectInput(session, "design_filter", choices = designs,
+    updateSelectInput(session, "design_filter", choices = .cap_choices(designs),
                       selected = if ("active" %in% designs) "active" else designs[1])
   })
 
@@ -492,7 +501,7 @@ server <- function(input, output, session) {
              m$dataset == input$dataset, , drop = FALSE]
     sub <- sub[.tissue_display(sub) == input$tissue, , drop = FALSE]
     cd <- sort(unique(sub$condition))
-    updateSelectInput(session, "condition", choices = cd, selected = cd[1])
+    updateSelectInput(session, "condition", choices = .cap_choices(cd), selected = cd[1])
   })
 
   # ---- custom pilot upload ------------------------------------------------
@@ -1200,7 +1209,7 @@ server <- function(input, output, session) {
     g <- gene_tbl()
     if (is.null(g)) return(HTML("<em>Select a pilot to explore its rhythmic genes.</em>"))
     np <- nrow(gene_tbl_pass())
-    HTML(sprintf("<b>Threshold (alpha_pilot):</b> %s &nbsp;|&nbsp; <b>%s</b> rhythmic genes pass &nbsp;|&nbsp; clock panel + table below update with this setting.",
+    HTML(sprintf("<b>Threshold (&alpha;<sub>pilot</sub>):</b> %s &nbsp;|&nbsp; <b>%s</b> rhythmic genes pass &nbsp;|&nbsp; clock panel + table below update with this setting.",
                  .thresh_label(), format(np, big.mark = ",")))
   })
 
@@ -1330,10 +1339,13 @@ server <- function(input, output, session) {
     out <- head(g, 100L)
     # "r̃" = r + combining tilde -> renders as r-tilde; "σ" = sigma.
     tcol <- "r̃ (A/σ)"
-    df <- data.frame(Gene = out$Gene, `p-value` = signif(out$p, 3),
-                     `q-value` = signif(out$q, 3),
+    # p/q as scientific-notation strings so tiny values show as e.g. 4.8e-38
+    # instead of rounding to 0; r-tilde/peak stay numeric.
+    df <- data.frame(Gene = out$Gene,
+                     `p-value` = formatC(out$p, format = "e", digits = 2),
+                     `q-value` = formatC(out$q, format = "e", digits = 2),
                      x = round(out$rtilde, 2), `Peak (h)` = out$Peak_h,
-                     check.names = FALSE)
+                     check.names = FALSE, stringsAsFactors = FALSE)
     names(df)[names(df) == "x"] <- tcol
     df
   }, striped = TRUE, hover = TRUE, width = "100%", digits = 3)
