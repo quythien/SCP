@@ -23,7 +23,7 @@ estCircadianParamFMM(
 )
 }
 \arguments{
-\item{data}{Gene expression matrix (genes × samples).}
+\item{data}{Gene expression matrix (genes x samples).}
 
 \item{times}{Sample collection times (length = ncol(data)).}
 
@@ -61,17 +61,17 @@ CircadianBioOptions object with:
 }
 \description{
 Like \code{\link{estCircadianParam}}, but additionally fits the
-FMM (Frequency Modulated Möbius) waveform per top-K rhythmic gene to obtain
+FMM (Frequency Modulated Mobius) waveform per top-K rhythmic gene to obtain
 empirical \eqn{\hat\omega_g} (shape) and \eqn{\hat\alpha_g} (peak location,
 radians). Returns a \code{CircadianBioOptions} populated with paired
 \code{omega_rhythmic} and \code{alpha_rhythmic} vectors (paired with
 amplitude and sigma_rhythmic by gene index). A \code{$diagnostics} list
-carries empirical fit summaries: Beta(1, β̂) MoM estimate, σ̂_α (standard
-deviation of alpha in hours), median R² of the FMM fits, and the raw
+carries empirical fit summaries: Beta(1, beta) MoM estimate, sigma_alpha (standard
+deviation of alpha in hours), median R^2 of the FMM fits, and the raw
 per-gene vectors for diagnostic plotting.
 
 Used by Fig 5 (B-vs-m grid under empirical FMM truth) and the diagnostic
-supplementary figure. Fig 4 (sensitivity sweep) does NOT need this — it
+supplementary figure. Fig 4 (sensitivity sweep) does NOT need this -- it
 uses synthetic \code{omega_dist}/\code{alpha_dist} draws.
 }
 \section{FMM scale convention}{

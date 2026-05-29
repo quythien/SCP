@@ -29,8 +29,8 @@ SE = sd(power) / sqrt(nsims) computed across simulation replicates.
 }
 \details{
 Functions:
-  add_se_bars()          - Add ±1 SE error bars to a plot
+  add_se_bars()          - Add +/-1 SE error bars to a plot
   plotWithSE()           - 6-panel DR/DP power figure with SE bars
   plotPhaseShiftWithSE() - 6-panel phase shift figure with SE bars
-Add ±1 SE Error Bars to a Base-R Plot
+Add +/-1 SE Error Bars to a Base-R Plot
 }

@@ -6,7 +6,7 @@
 #' SE = sd(power) / sqrt(nsims) computed across simulation replicates.
 #'
 #' Functions:
-#'   add_se_bars()          - Add ±1 SE error bars to a plot
+#'   add_se_bars()          - Add +/-1 SE error bars to a plot
 #'   plotWithSE()           - 6-panel DR/DP power figure with SE bars
 #'   plotPhaseShiftWithSE() - 6-panel phase shift figure with SE bars
 
@@ -14,7 +14,7 @@
 # =====================================================================
 # HELPER: add error bars to a plot
 # =====================================================================
-#' Add ±1 SE Error Bars to a Base-R Plot
+#' Add +/-1 SE Error Bars to a Base-R Plot
 #'
 #' @param x Numeric vector. x-coordinates of the bar centres.
 #' @param y Numeric vector. y-coordinates (point estimates).

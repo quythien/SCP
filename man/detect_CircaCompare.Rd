@@ -30,7 +30,7 @@ detect_CircaCompare(
 \item{alpha_threshold}{Significance level for per-group rhythmicity (default 0.05)}
 }
 \value{
-List with pval_DR (NA — no equivalent), pval_DP, pval_DM
+List with pval_DR (NA -- no equivalent), pval_DP, pval_DM
         Each is a numeric vector of length ngenes; default 1 for failed/untested.
 }
 \description{
@@ -42,6 +42,6 @@ phase diff (phi1 -> DP), and mesor diff (k1 -> DM).
 \details{
 CircaCompare calls stop() when either group is arrhythmic, so every
          gene call is wrapped in tryCatch. NLS failures also yield p=1 (conservative).
-         CircaCompare has no differential rhythmicity (DR) test — only per-group
+         CircaCompare has no differential rhythmicity (DR) test -- only per-group
          rhythmicity p-values. pval_DR is set to NA for all genes.
 }

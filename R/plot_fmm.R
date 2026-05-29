@@ -19,7 +19,7 @@
 #' at fixed omega. SD bars are drawn at each N. Each panel is faceted by
 #' design type (active / passive) and SNR column (strong / moderate / weak).
 #'
-#' The FMM model (Rueda, Rodríguez-Collado & Peddada, 2019, Sci Rep,
+#' The FMM model (Rueda, Rodriguez-Collado & Peddada, 2019, Sci Rep,
 #' doi:10.1038/s41598-019-54569-1) parameterises waveform shape via
 #' \code{omega} and orientation via \code{beta}. \code{omega = 1} recovers
 #' pure cosinor, \code{omega = 0} gives a flat (arrhythmic) signal.
@@ -28,7 +28,7 @@
 #'                   omega, beta, power, power_se, dataset, design_row, snr_col}.
 #'                   Produced by \code{runFMMViolationAnalysis()} or the
 #'                   \code{fig4_fmm_violation.R} script.
-#' @param nsims      Number of simulation replicates (for SE → SD conversion).
+#' @param nsims      Number of simulation replicates (for SE -> SD conversion).
 #' @param omega_fixed Omega value used in the beta sweep rows (for subtitle).
 #' @param tissue_annotations Optional \code{data.frame} with columns
 #'   \code{design_type}, \code{snr_col}, \code{label}, \code{N}, \code{y}
@@ -281,7 +281,7 @@ plotFMMViolation <- function(x,
 #' Produces a 1-row x 3-column figure showing DCP differential power (DR, DP, DM)
 #' as a function of N for multiple omega values under FMM cosinor violation.
 #'
-#' The FMM model (Rueda, Rodríguez-Collado & Peddada, 2019, Sci Rep,
+#' The FMM model (Rueda, Rodriguez-Collado & Peddada, 2019, Sci Rep,
 #' doi:10.1038/s41598-019-54569-1) parameterises waveform shape via
 #' \code{omega}: \code{omega = 1} recovers pure cosinor; \code{omega = 0}
 #' gives a flat (arrhythmic) signal; intermediate values produce increasingly

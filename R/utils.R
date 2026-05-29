@@ -14,7 +14,7 @@
 #'
 #' @param n Sample size (NULL to solve for n)
 #' @param power Target power (NULL to solve for power)
-#' @param r Effect size (A/σ)
+#' @param r Effect size (A/sigma)
 #' @param alpha Significance level
 #' @param design_factor Sampling design factor (0.5 for even spacing)
 #'
@@ -95,7 +95,7 @@ CircaPower = function(n = NULL, power = NULL, r = NULL,
 #'
 #' @param pvals Vector of p-values
 #' @param ground_truth Logical vector of true positives
-#' @param effect_sizes Vector of effect sizes (r = A/σ)
+#' @param effect_sizes Vector of effect sizes (r = A/sigma)
 #' @param breaks Break points for effect size strata
 #' @param alpha Significance threshold
 #'
@@ -156,7 +156,7 @@ false_discovery_cost = function(TP, FP) {
 #'
 #' @param pvals P-values
 #' @param ground_truth Logical vector of true positives
-#' @param effect_sizes Effect sizes (r = A/σ)
+#' @param effect_sizes Effect sizes (r = A/sigma)
 #' @param min_effect Minimum effect size to be considered "meaningful"
 #' @param alpha Significance threshold
 #'
@@ -429,14 +429,14 @@ generate_power_report = function(power_results, output_file = NULL) {
 
 #' Estimate Signal-to-Noise Ratio (r) from DCP Results
 #'
-#' @description Estimate the median signal-to-noise ratio r = A/σ from the
+#' @description Estimate the median signal-to-noise ratio r = A/sigma from the
 #' top circadian genes in a DCP (Differential Circadian Pipeline) analysis.
-#' Uses the relationship r = 1/sqrt(1/R² - 1) where R² is rhythm strength.
+#' Uses the relationship r = 1/sqrt(1/R^2 - 1) where R^2 is rhythm strength.
 #'
 #' @param dcp_results List from DCP analysis containing DR and DP components
 #' @param top_n Number of top circadian genes to use (default: 100)
 #' @param rank_by Column to rank genes by (default: "p.overall" from DP results)
-#' @param group Which group to use for R² ("min" for minimum across groups, "1" or "2" for specific group)
+#' @param group Which group to use for R^2 ("min" for minimum across groups, "1" or "2" for specific group)
 #'
 #' @return List with median r, mean r, and individual r values
 #'
@@ -595,7 +595,7 @@ get_r_stratum = function(r_estimate, r_strata = c(0, 0.25, 0.5, 0.75, 1, 1.25, 1
 #'
 #' The pipeline always expects:
 #'   \itemize{
-#'     \item \code{data}, numeric matrix, \strong{genes × samples}, log2-scale
+#'     \item \code{data}, numeric matrix, \strong{genes x samples}, log2-scale
 #'     \item \code{times}, numeric vector, hours in [0, 24), same length as \code{ncol(data)}
 #'   }
 #'
@@ -611,7 +611,7 @@ get_r_stratum = function(r_estimate, r_strata = c(0, 0.25, 0.5, 0.75, 1, 1.25, 1
 #'
 #' @param expr  A matrix, data.frame, or file path (CSV/TSV) of expression values.
 #'              Rows = genes, columns = samples. Row names used as gene IDs.
-#' @param times Numeric vector of time-of-day values (hours, 0–24) for each sample,
+#' @param times Numeric vector of time-of-day values (hours, 0-24) for each sample,
 #'              OR a character column name in \code{pheno} to extract times from.
 #' @param input_type One of \code{"counts"}, \code{"cpm"}, or \code{"log2"}.
 #'              Default \code{"counts"}.
@@ -626,8 +626,8 @@ get_r_stratum = function(r_estimate, r_strata = c(0, 0.25, 0.5, 0.75, 1, 1.25, 1
 #' @param verbose Print a short summary of what was done. Default TRUE.
 #'
 #' @return A list with:
-#'   \item{data}{Numeric matrix (genes × samples), log2-scale}
-#'   \item{times}{Numeric vector of hours (0–24), length == ncol(data)}
+#'   \item{data}{Numeric matrix (genes x samples), log2-scale}
+#'   \item{times}{Numeric vector of hours (0-24), length == ncol(data)}
 #'   \item{n_genes}{Number of genes}
 #'   \item{n_samples}{Number of samples}
 #'   \item{input_type}{The \code{input_type} used}

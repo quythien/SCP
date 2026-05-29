@@ -27,5 +27,5 @@ Named list with fields: \code{M} (mesor), \code{A} (amplitude),
 Fits the cosinor model \eqn{y = M + A\cos(\omega t - \phi) + \epsilon}
 via ordinary least squares by reparameterising as
 \eqn{y = M + \beta_1\cos(\omega t) + \beta_2\sin(\omega t) + \epsilon}.
-Returns mesor, amplitude, acrophase, p-value, and R².
+Returns mesor, amplitude, acrophase, p-value, and R^2.
 }

@@ -36,10 +36,10 @@ DCP_DiffR2(
 \item{parallel.ncores}{Number of cores for parallel processing}
 }
 \value{
-Data frame with differential R² test results
+Data frame with differential R^2 test results
 }
 \description{
-Tests for differential rhythmicity between two groups using R² difference
+Tests for differential rhythmicity between two groups using R^2 difference
 }
 \examples{
 x = DCP_sim_data(ngene=1000, nsample=30, A1=c(1, 3), A2=c(1, 3),

@@ -36,13 +36,13 @@ Tests how power degrades when the true waveform has higher harmonics
 }
 \details{
 The cosinor model assumes:
-  y(t) = M + A*cos(ωt - ωφ) + ε
+  y(t) = M + A*cos(omegat - omegaphi) + epsilon
 
 But the true waveform may be:
-  y(t) = M + A*[cos(ωt - ωφ) + α₂*cos(2ωt - ωφ) + α₃*cos(3ωt - ωφ)] + ε
+  y(t) = M + A*[cos(omegat - omegaphi) + alpha2*cos(2omegat - omegaphi) + alpha3*cos(3omegat - omegaphi)] + epsilon
 
-where α₂, α₃ are relative harmonic amplitudes. This module sweeps over
-(α₂, α₃) combinations and measures resulting power degradation.
+where alpha2, alpha3 are relative harmonic amplitudes. This module sweeps over
+(alpha2, alpha3) combinations and measures resulting power degradation.
 Run Fourier deviation power analysis
 
 Measures how power degrades as higher harmonics are added to the true waveform

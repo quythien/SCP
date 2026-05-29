@@ -15,9 +15,9 @@ DCP_Analyze(
 )
 }
 \arguments{
-\item{expr1}{Expression matrix for group 1 (genes × samples)}
+\item{expr1}{Expression matrix for group 1 (genes x samples)}
 
-\item{expr2}{Expression matrix for group 2 (genes × samples)}
+\item{expr2}{Expression matrix for group 2 (genes x samples)}
 
 \item{times1}{Time points for group 1}
 

@@ -17,7 +17,7 @@ targeted_power(
 
 \item{ground_truth}{Logical vector of true positives}
 
-\item{effect_sizes}{Effect sizes (r = A/σ)}
+\item{effect_sizes}{Effect sizes (r = A/sigma)}
 
 \item{min_effect}{Minimum effect size to be considered "meaningful"}
 

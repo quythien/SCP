@@ -46,7 +46,7 @@ Named list with:
 }
 \description{
 Generates a synthetic gene expression matrix for one cohort
-using the Frequency Modulated Möbius (FMM) model.  The waveform shape is
+using the Frequency Modulated Mobius (FMM) model.  The waveform shape is
 controlled by \code{omega}: \code{omega = 1} reproduces a pure sinusoid
 (identical to DCP cosinor truth), \code{omega = 0} produces a flat signal
 (no rhythmicity), and intermediate values produce a peaked waveform.
@@ -60,7 +60,7 @@ fitted cosinor signal.  DCP amplitude-based detection power is therefore
 invariant to \code{beta}; only phase estimation is affected.
 }
 \references{
-Rueda C, Rodríguez-Collado A, Peddada SD (2019).
+Rueda C, Rodriguez-Collado A, Peddada SD (2019).
   "A single notable oscillation in humans and mammals with strong
   implications in chronobiology." Sci Rep 9, 17982.
   \doi{10.1038/s41598-019-54569-1}

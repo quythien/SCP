@@ -24,10 +24,10 @@
 #'   \code{\link{CircadianBioOptions}} for the options constructor.
 
 
-#' Wrap Angle to [0, 2π)
+#' Wrap Angle to [0, 2pi)
 #'
 #' @param x Numeric. Angle(s) in radians.
-#' @return Numeric. Angle(s) mapped to \code{[0, 2π)}.
+#' @return Numeric. Angle(s) mapped to \code{[0, 2pi)}.
 adjust.to.2pi = function(x) x %% (2 * pi)
 
 #' Fit a Cosinor Model to a Single Gene by OLS
@@ -36,7 +36,7 @@ adjust.to.2pi = function(x) x %% (2 * pi)
 #' Fits the cosinor model \eqn{y = M + A\cos(\omega t - \phi) + \epsilon}
 #' via ordinary least squares by reparameterising as
 #' \eqn{y = M + \beta_1\cos(\omega t) + \beta_2\sin(\omega t) + \epsilon}.
-#' Returns mesor, amplitude, acrophase, p-value, and R².
+#' Returns mesor, amplitude, acrophase, p-value, and R^2.
 #'
 #' @param tod Numeric vector. Sample time points (hours).
 #' @param y Numeric vector. Gene expression values (same length as \code{tod}).
@@ -555,7 +555,7 @@ estCircadianParam <- function(data, times, period = 24,
 #'         passing the joint 4-d.f. F-test contribute, even those whose
 #'         \eqn{A_2} is essentially noise. The empirical \eqn{F_{A_2}} will
 #'         have a noise spike near zero, which is fine.
-#'   \item K=2 extension is single-cohort only — the differential simulator
+#'   \item K=2 extension is single-cohort only -- the differential simulator
 #'         (\code{simCircadianDiff}) is not extended.
 #' }
 #'
@@ -844,20 +844,20 @@ estCircadianParam2H <- function(data, times, period = 24,
 #' Estimate CircadianBioOptions with FMM Per-Gene Parameters
 #'
 #' @description Like \code{\link{estCircadianParam}}, but additionally fits the
-#' FMM (Frequency Modulated Möbius) waveform per top-K rhythmic gene to obtain
+#' FMM (Frequency Modulated Mobius) waveform per top-K rhythmic gene to obtain
 #' empirical \eqn{\hat\omega_g} (shape) and \eqn{\hat\alpha_g} (peak location,
 #' radians). Returns a \code{CircadianBioOptions} populated with paired
 #' \code{omega_rhythmic} and \code{alpha_rhythmic} vectors (paired with
 #' amplitude and sigma_rhythmic by gene index). A \code{$diagnostics} list
-#' carries empirical fit summaries: Beta(1, β̂) MoM estimate, σ̂_α (standard
-#' deviation of alpha in hours), median R² of the FMM fits, and the raw
+#' carries empirical fit summaries: Beta(1, beta) MoM estimate, sigma_alpha (standard
+#' deviation of alpha in hours), median R^2 of the FMM fits, and the raw
 #' per-gene vectors for diagnostic plotting.
 #'
 #' Used by Fig 5 (B-vs-m grid under empirical FMM truth) and the diagnostic
-#' supplementary figure. Fig 4 (sensitivity sweep) does NOT need this — it
+#' supplementary figure. Fig 4 (sensitivity sweep) does NOT need this -- it
 #' uses synthetic \code{omega_dist}/\code{alpha_dist} draws.
 #'
-#' @param data Gene expression matrix (genes × samples).
+#' @param data Gene expression matrix (genes x samples).
 #' @param times Sample collection times (length = ncol(data)).
 #' @param period Period in hours (default 24).
 #' @param min_rhythm_pval detect_FMM pre-screen p-value threshold (default 0.01).

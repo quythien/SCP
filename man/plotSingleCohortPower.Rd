@@ -9,6 +9,7 @@ plotSingleCohortPower(
   out_pdf = NULL,
   title = "",
   panel_a_res = NULL,
+  panels = c("A", "B", "C"),
   fdr_thresholds = c(0.01, 0.05, 0.1, 0.2),
   panel_fdr = 0.05,
   vline_power = 0.8,
@@ -18,6 +19,11 @@ plotSingleCohortPower(
   reference_n = NULL,
   display_sizes = NULL,
   r_max = 5,
+  cex_main = 1.5,
+  cex_lab = 1.6,
+  cex_axis = 1.45,
+  vertical = FALSE,
+  panel_c_legend = FALSE,
   width = 15,
   height = 5.5
 )

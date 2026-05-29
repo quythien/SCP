@@ -16,7 +16,7 @@
 #'
 #' Key notation:
 #'   B = number of distinct time bins (subset of design_vector; must be >= 3)
-#'   m = subjects per time bin  → N = B * m per-group sample size (exact, no rounding)
+#'   m = subjects per time bin  -> N = B * m per-group sample size (exact, no rounding)
 #'   nboot = outer bootstrap draws for pilot-estimation uncertainty
 
 
@@ -106,7 +106,7 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 #' resample of pilot-gene cosinor fits. Differential parameters
 #' (prop_DR, prop_DP, phase_diff, etc.) are inherited from \code{bio_diff.opts}.
 #' Amplitude and sigma are kept jointly sampled to preserve the empirical
-#' A–sigma correlation.
+#' A-sigma correlation.
 #'
 #' @param boot_df Data frame. One bootstrap resample of \code{fitCosinorAll()}
 #'   output (columns: M, A, phi, sigma, is_rhythmic).

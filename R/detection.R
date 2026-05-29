@@ -756,7 +756,7 @@ LR_deltaR2 <- function(tt1, yy1, tt2, yy2, period = 24, FN=TRUE){
 
 #' Differential Rhythmicity Test (DR)
 #'
-#' Tests for differential rhythmicity between two groups using R² difference
+#' Tests for differential rhythmicity between two groups using R^2 difference
 #'
 #' @param x Output from DCP_Rhythmicity(x1, x2)
 #' @param method One of "LR" (recommended), "permutation", "bootstrap", "LR_sigma2"
@@ -768,7 +768,7 @@ LR_deltaR2 <- function(tt1, yy1, tt2, yy2, period = 24, FN=TRUE){
 #' @param p.adjust.method P-value adjustment method
 #' @param parallel.ncores Number of cores for parallel processing
 #'
-#' @return Data frame with differential R² test results
+#' @return Data frame with differential R^2 test results
 #'
 #' @examples
 #' x = DCP_sim_data(ngene=1000, nsample=30, A1=c(1, 3), A2=c(1, 3),
@@ -1131,8 +1131,8 @@ DCP_DiffPar = function(x, Par = c("A"), TOJR=NULL, alpha = 0.05,
 #'
 #' Performs differential tests (DR, DP) with classification
 #'
-#' @param expr1 Expression matrix for group 1 (genes × samples)
-#' @param expr2 Expression matrix for group 2 (genes × samples)
+#' @param expr1 Expression matrix for group 1 (genes x samples)
+#' @param expr2 Expression matrix for group 2 (genes x samples)
 #' @param times1 Time points for group 1
 #' @param times2 Time points for group 2
 #' @param alpha Significance threshold (default 0.05)
@@ -1428,8 +1428,8 @@ format_for_DCP <- function(expr_matrix, times, gene_names = NULL) {
 #' @description Uses the complete DiffCircadian pipeline with TOJR,
 #' hierarchical testing, and proper LR tests. This is the RIGOROUS approach.
 #'
-#' @param expr1 Expression matrix for group 1 (genes × samples)
-#' @param expr2 Expression matrix for group 2 (genes × samples)
+#' @param expr1 Expression matrix for group 1 (genes x samples)
+#' @param expr2 Expression matrix for group 2 (genes x samples)
 #' @param times1 Time points for group 1
 #' @param times2 Time points for group 2
 #' @param gene_names Gene names (optional)
@@ -1555,12 +1555,12 @@ testAnyDifferential <- function(y1, y2, times1, times2,
 #' @param period Circadian period (default 24)
 #' @param alpha_threshold Significance level for per-group rhythmicity (default 0.05)
 #'
-#' @return List with pval_DR (NA — no equivalent), pval_DP, pval_DM
+#' @return List with pval_DR (NA -- no equivalent), pval_DP, pval_DM
 #'         Each is a numeric vector of length ngenes; default 1 for failed/untested.
 #'
 #' @details CircaCompare calls stop() when either group is arrhythmic, so every
 #'          gene call is wrapped in tryCatch. NLS failures also yield p=1 (conservative).
-#'          CircaCompare has no differential rhythmicity (DR) test — only per-group
+#'          CircaCompare has no differential rhythmicity (DR) test -- only per-group
 #'          rhythmicity p-values. pval_DR is set to NA for all genes.
 #' @export
 detect_CircaCompare <- function(expr1, times1, expr2, times2,
@@ -1858,7 +1858,7 @@ detect_MH <- function(expr, times, period = 24) {
 
 #' DCP two-group differential detection
 #'
-#' Wraps run_DCP_pipeline() (TOJR → DiffR2 → DiffPar).
+#' Wraps run_DCP_pipeline() (TOJR -> DiffR2 -> DiffPar).
 #' DM is not tested by DCP; pval_DM is returned as NA.
 #'
 #' @param expr1,expr2   Gene x sample matrices for groups 1 and 2
@@ -1891,8 +1891,8 @@ detect_DCP_diff <- function(expr1, times1, expr2, times2, period = 24) {
 
 #' LimoRhyde two-group differential rhythmicity
 #'
-#' limma interaction model: group × cosinor (cos + sin terms).
-#' Tests H0: no group × rhythm interaction. DR only.
+#' limma interaction model: group x cosinor (cos + sin terms).
+#' Tests H0: no group x rhythm interaction. DR only.
 #'
 #' @param expr1,expr2   Gene x sample matrices
 #' @param times1,times2 Numeric time vectors

@@ -3,10 +3,10 @@
 #' Compares two approaches to pilot-informed power analysis for a FIXED design:
 #'
 #' 1. Two-stage (point estimate): Estimate circadian parameters from pilot once,
-#'    simulate with those fixed estimates → one power curve (no uncertainty).
+#'    simulate with those fixed estimates -> one power curve (no uncertainty).
 #'
 #' 2. Bootstrap simulation: Resample pilot gene rows (nboot times) to get a
-#'    distribution of parameter sets, simulate for each → power ± CI.
+#'    distribution of parameter sets, simulate for each -> power +/- CI.
 #'
 #' The comparison isolates pilot-estimation uncertainty: both approaches use the
 #' same design (same B and m); the only difference is whether the parameter
@@ -151,7 +151,7 @@ runTwoStagePower <- function(pilot_data,
 #' @param two_stage_result  Output from runTwoStagePower()
 #' @param bootstrap_result  Output from runBootstrapDesignGrid()
 #' @param test_type         Test type to extract from bootstrap result
-#' @param target_power      Target power level for n₈₀ calculation
+#' @param target_power      Target power level for n80 calculation
 #'
 #' @return List with comparison data frame and n_80 summaries
 compareDesignApproaches <- function(two_stage_result,
@@ -503,7 +503,7 @@ generatePilotData <- function(true_bio.opts, n_pilot, pilot_times, seed = 42) {
 #' @param seed           Random seed
 #' @param verbose        Print progress
 #'
-#' @return List with true_power, two-stage power, and bootstrap power ± CI
+#' @return List with true_power, two-stage power, and bootstrap power +/- CI
 runGroundTruthComparison <- function(true_bio.opts,
                                       design.opts,
                                       analysis.opts,
@@ -650,7 +650,7 @@ runGroundTruthComparison <- function(true_bio.opts,
 
 #' Plot ground truth calibration results
 #'
-#' Panel A: Power vs N, oracle (black), two-stage (blue), bootstrap mean ± CI (orange).
+#' Panel A: Power vs N, oracle (black), two-stage (blue), bootstrap mean +/- CI (orange).
 #' Panel B: Per-N calibration, point estimates vs CI bars vs true value.
 #'
 #' @param gt_result    Output from runGroundTruthComparison()

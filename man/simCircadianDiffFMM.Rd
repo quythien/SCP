@@ -22,7 +22,7 @@ Same list structure as \code{\link{simCircadianDiff}}.
 }
 \description{
 Extends \code{\link{simCircadianDiff}} by replacing the cosinor generative
-model with the FMM (Frequency Modulated Möbius) waveform.  Gene-type
+model with the FMM (Frequency Modulated Mobius) waveform.  Gene-type
 assignment (DR/DP/DM/null) and parameter draws are identical to
 \code{simCircadianDiff}; only expression generation uses FMM.
 
@@ -40,7 +40,7 @@ exactly to the cosinor model; this function returns the \code{simCircadianDiff}
 result unmodified for efficiency.
 }
 \references{
-Rueda C, Rodríguez-Collado A, Peddada SD (2019).
+Rueda C, Rodriguez-Collado A, Peddada SD (2019).
   "A single notable oscillation in humans and mammals with strong
   implications in chronobiology." Sci Rep 9, 17982.
   \doi{10.1038/s41598-019-54569-1}

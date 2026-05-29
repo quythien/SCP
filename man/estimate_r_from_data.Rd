@@ -13,15 +13,15 @@ estimate_r_from_data(dcp_results, top_n = 100, rank_by = "q.R2", use_group = 1)
 
 \item{rank_by}{Column to rank genes by (default: "p.overall" from DP results)}
 
-\item{group}{Which group to use for R² ("min" for minimum across groups, "1" or "2" for specific group)}
+\item{group}{Which group to use for R^2 ("min" for minimum across groups, "1" or "2" for specific group)}
 }
 \value{
 List with median r, mean r, and individual r values
 }
 \description{
-Estimate the median signal-to-noise ratio r = A/σ from the
+Estimate the median signal-to-noise ratio r = A/sigma from the
 top circadian genes in a DCP (Differential Circadian Pipeline) analysis.
-Uses the relationship r = 1/sqrt(1/R² - 1) where R² is rhythm strength.
+Uses the relationship r = 1/sqrt(1/R^2 - 1) where R^2 is rhythm strength.
 }
 \examples{
 \dontrun{

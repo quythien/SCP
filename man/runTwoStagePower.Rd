@@ -41,10 +41,10 @@ Compares two approaches to pilot-informed power analysis for a FIXED design:
 }
 \details{
 1. Two-stage (point estimate): Estimate circadian parameters from pilot once,
-   simulate with those fixed estimates → one power curve (no uncertainty).
+   simulate with those fixed estimates -> one power curve (no uncertainty).
 
 2. Bootstrap simulation: Resample pilot gene rows (nboot times) to get a
-   distribution of parameter sets, simulate for each → power ± CI.
+   distribution of parameter sets, simulate for each -> power +/- CI.
 
 The comparison isolates pilot-estimation uncertainty: both approaches use the
 same design (same B and m); the only difference is whether the parameter

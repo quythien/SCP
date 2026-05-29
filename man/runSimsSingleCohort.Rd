@@ -8,11 +8,12 @@ runSimsSingleCohort(
   bio.opts,
   design.opts,
   analysis.opts,
-  method = "DCP",
-  K = 2L,
+  method = "cosinor",
+  K = 1L,
   harmonics = c(0, 0),
   verbose = TRUE,
-  mc.cores = 1L
+  mc.cores = 1L,
+  progress = NULL
 )
 }
 \arguments{

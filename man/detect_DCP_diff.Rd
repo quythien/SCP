@@ -17,6 +17,6 @@ detect_DCP_diff(expr1, times1, expr2, times2, period = 24)
 list(pval_DR, pval_DP, pval_DM=NA) each numeric[G]
 }
 \description{
-Wraps run_DCP_pipeline() (TOJR → DiffR2 → DiffPar).
+Wraps run_DCP_pipeline() (TOJR -> DiffR2 -> DiffPar).
 DM is not tested by DCP; pval_DM is returned as NA.
 }

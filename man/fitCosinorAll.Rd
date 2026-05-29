@@ -36,7 +36,7 @@ baseline for cross-sectional post-mortem studies.
 
 Key notation:
   B = number of distinct time bins (subset of design_vector; must be >= 3)
-  m = subjects per time bin  → N = B * m per-group sample size (exact, no rounding)
+  m = subjects per time bin  -> N = B * m per-group sample size (exact, no rounding)
   nboot = outer bootstrap draws for pilot-estimation uncertainty
 Fit cosinor model to all genes in pilot data
 }

@@ -112,7 +112,7 @@ if (!exists("add_se_bars")) {
 #'
 #' @description
 #' Merges all r-strata whose left boundary is at or above \code{threshold}
-#' into a single "r ≥ threshold" bin. This prevents sparse high-r strata
+#' into a single "r >= threshold" bin. This prevents sparse high-r strata
 #' from cluttering stratified differential power plots.
 #'
 #' @param r_breaks Numeric vector. Stratum breakpoints (length = n_strata + 1).
@@ -167,7 +167,7 @@ if (!exists("add_se_bars")) {
 #'
 #' Default layout is marginal power vs sample size only (one column per
 #' endpoint, one row per comparison). The effect-size-stratified panels
-#' (power and true-discoveries by r̃) are opt-in via \code{stratified = TRUE},
+#' (power and true-discoveries by r) are opt-in via \code{stratified = TRUE},
 #' which restores the original 3-column-per-row layout.
 #'
 #' @param res_list    Named list of length 2, each element output of runSimsDiff().
@@ -177,7 +177,7 @@ if (!exists("add_se_bars")) {
 #' @param display_sizes  Sample sizes to show in all panels (NULL = all).
 #' @param stratified  Logical (default FALSE). If FALSE, draws only the
 #'   marginal power-vs-sample-size panel per endpoint (1 x n_endpoints layout
-#'   per comparison). If TRUE, also draws power-by-r̃ and true-discoveries-by-r̃
+#'   per comparison). If TRUE, also draws power-by-r and true-discoveries-by-r
 #'   strata panels in the original 3-column layout.
 #' @param r_break_width  Width of r-strata bins (default 0.25). Ignored if
 #'   stratified = FALSE.

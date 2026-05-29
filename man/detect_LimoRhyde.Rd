@@ -17,6 +17,6 @@ detect_LimoRhyde(expr1, times1, expr2, times2, period = 24)
 list(pval_DR, pval_DP=NA, pval_DM=NA)
 }
 \description{
-limma interaction model: group × cosinor (cos + sin terms).
-Tests H0: no group × rhythm interaction. DR only.
+limma interaction model: group x cosinor (cos + sin terms).
+Tests H0: no group x rhythm interaction. DR only.
 }
