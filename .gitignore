@@ -153,6 +153,8 @@ examples/publication/archive/
 !inst/extdata/pilots/rat/
 !inst/extdata/pilots/**/*.rds
 !inst/extdata/example_pilot_raw.rds
+!inst/extdata/example/
+!inst/extdata/example/*.csv
 
 # Whitelist the Shiny app
 !inst/shiny/
