@@ -1,3 +1,34 @@
+# SCP 0.4.48
+
+## Major changes
+
+* **Pilot database enriched and expanded.** The bundled database now holds 161
+  pilots across human, mouse, rat, and baboon. Every pilot's per-gene
+  `rhythm_fit` table now carries `gene` (native ID), `symbol` (mapped gene
+  symbol, original ID retained when none maps), and `mesor`, in addition to
+  `pvalue`, `A`, `phi`, and `sigma`. The pilot rds are xz-compressed.
+
+* **Shiny app is now a full study-design and biomarker tool.** Two panels:
+  "Circadian Power Study" (pilot selection, threshold, sampling design, sample
+  size grid, power curve, recommended N) and "Circadian Biomarker Detection"
+  (a core clock-gene cosinor panel, a ranked rhythmic-gene table with BH q-values
+  and effect sizes, a per-gene cosinor view, and Metascape-style pathway
+  enrichment via Enrichr for KEGG / Reactome / GO). Both work on bundled pilots
+  and on user-uploaded data.
+
+* **Upload path.** Uploaded data is fit on the fly; the app detects the species
+  from the gene IDs and maps them to symbols for nine model organisms (human,
+  mouse, rat, zebrafish, Drosophila, C. elegans, S. cerevisiae, P. falciparum,
+  Arabidopsis) when the matching annotation package is installed, keeping the
+  original ID otherwise. Uploaded cosinor plots overlay the actual sample points.
+
+* **Runtime-selectable rhythmicity threshold.** `alpha_pilot` (raw p or
+  BH-FDR) is chosen at load time and reslices each pilot's `rhythm_fit`, so the
+  threshold is no longer frozen at build time.
+
+* **`launchShiny()`** checks for and installs the app's optional helper packages
+  (enrichR, writexl, org.Hs/Mm.eg.db) on first launch.
+
 # SCP 0.4.0
 
 ## Major changes
