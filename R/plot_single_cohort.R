@@ -42,6 +42,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                                  display_sizes = NULL,
                                  r_max = 5,
                                  cex_main = 1.50, cex_lab = 1.60, cex_axis = 1.45,
+                                 line_lwd = 2, pt_cex = 0.95, legend_cex = NULL,
+                                 title_cex = 1.65, oma_top = 2.4,
                                  vertical = FALSE,
                                  panel_c_legend = FALSE,
                                  width = 15, height = 5.5) {
@@ -268,26 +270,35 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   # vertical = TRUE stacks the panels in one column (each full width), which
   # gives the r-tilde x-axis far more room than the cramped 1x3 layout.
   par(mfrow = if (isTRUE(vertical)) c(length(panels), 1L) else c(1L, length(panels)),
-      mai = c(mai_bot, mai_left, 0.55, 0.15),
-      mgp = c(3.2, 0.65, 0), oma = c(0, 0, 2.4, 0),
+      mai = c(mai_bot, mai_left, 0.55, 0.50),
+      mgp = c(3.2, 0.65, 0), oma = c(0, 0, oma_top, 0),
       cex.axis = cex_axis, cex.lab = cex_lab, cex.main = cex_main, font.main = 2)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
   sample_legend_n <- length(disp_idx)
   sample_legend_cols <- if (sample_legend_n > 24L) 3L else if (sample_legend_n > 12L) 2L else 1L
   sample_legend_cex <- if (sample_legend_n > 24L) 0.72 else if (sample_legend_n > 12L) 0.85 else 1.05
+  # A caller-supplied legend_cex scales the adaptive value up/down uniformly so
+  # the larger manuscript figures can carry bigger keys without the app (which
+  # leaves legend_cex NULL) changing at all.
+  if (!is.null(legend_cex)) {
+    sample_legend_cex <- sample_legend_cex * (legend_cex / 1.05)
+    panel_a_legend_cex <- legend_cex
+  } else {
+    panel_a_legend_cex <- 1.05
+  }
 
   if ("A" %in% panels) {
   # ---- Panel A: marginal power vs n, multiple FDR lines ----
   ss_disp_a <- sample_sizes_a[disp_idx_a]
   matplot(ss_disp_a, 100 * marginal_mean[disp_idx_a, , drop = FALSE],
-          type = "b", pch = 19, lwd = 2,
+          type = "b", pch = 19, lwd = line_lwd, cex = pt_cex,
           col = thresh_cols, lty = 1,
           xlim = c(0, max(ss_disp_a) * 1.05), ylim = c(0, 100),
           xlab = "Sample size (n)", ylab = "Power (%)",
           main = "")
   title(main = "A   Power vs Sample Size",
-        adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.5)
+        adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.6)
   for (t in seq_len(n_thresh)) {
     add_se_bars(ss_disp_a, 100 * marginal_mean[disp_idx_a, t],
                 100 * marginal_se[disp_idx_a, t], col = thresh_cols[t])
@@ -298,8 +309,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   abline(h = 80, lty = 2, col = "grey50", lwd = 1.2)
   grid()
   legend("topleft", title = NULL, legend = thresh_labels,
-         col = thresh_cols, lty = 1, pch = 19, lwd = 2,
-         cex = 1.05, bty = "o", bg = "white", box.col = "grey50", box.lwd = 0.8,
+         col = thresh_cols, lty = 1, pch = 19, lwd = line_lwd,
+         cex = panel_a_legend_cex, bty = "o", bg = "white", box.col = "grey50", box.lwd = 0.8,
          text.col = "black", title.col = "black",
          inset = c(0.02, 0.02), y.intersp = 1.0, title.adj = 0,
          seg.len = 1.4, x.intersp = 0.7)
@@ -309,7 +320,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
     # Above the bottom-right legend (~y=0-25) but below the curves' high-N
     # asymptote, so it is clearly visible in white space.
     text(vline_n, 35, sprintf("n=%d", vline_n),
-         col = "steelblue", cex = 1.05, adj = c(-0.10, 0.5), font = 2)
+         col = "steelblue", cex = panel_a_legend_cex, adj = c(-0.10, 0.5), font = 2)
   }
   }  # end Panel A
 
@@ -318,7 +329,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   # Increase mgp[1] so r̃ label clears the vertical (las=2) tick labels
   par(mgp = c(mgp_bc1, 0.6, 0))
   matplot(seq_len(n_strata_plt), 100 * t(mean_pow_plt[disp_idx, , drop = FALSE]),
-          type = "l", lwd = 2, col = size_colors[disp_idx], lty = 1,
+          type = "l", lwd = line_lwd, col = size_colors[disp_idx], lty = 1,
           xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, 100), bty = "l",
           xlab = expression(tilde(r) == A/sigma), ylab = "Power (%)",
           main = "",
@@ -329,7 +340,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = max(1.15, cex_axis * 0.8))
   for (j in disp_idx) {
     points(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
-           pch = 19, col = size_colors[j], cex = 0.95)
+           pch = 19, col = size_colors[j], cex = pt_cex)
     add_se_bars(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
                 100 * se_pow_plt[j, ], col = size_colors[j])
   }
@@ -365,8 +376,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   lines(step_x, step_y, col = "grey60", lwd = 1.5, lty = 2)
 
   for (j in disp_idx) {
-    lines(seq_len(n_strata_plt), mean_TD_plt[j, ], col = size_colors[j], lwd = 2)
-    points(seq_len(n_strata_plt), mean_TD_plt[j, ], pch = 19, col = size_colors[j], cex = 0.95)
+    lines(seq_len(n_strata_plt), mean_TD_plt[j, ], col = size_colors[j], lwd = line_lwd)
+    points(seq_len(n_strata_plt), mean_TD_plt[j, ], pch = 19, col = size_colors[j], cex = pt_cex)
     add_se_bars(seq_len(n_strata_plt), mean_TD_plt[j, ], se_TD_plt[j, ], col = size_colors[j])
   }
   grid()
@@ -388,7 +399,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   }  # end Panel C
 
   if (nchar(title) > 0)
-    mtext(title, outer = TRUE, side = 3, line = 0.2, cex = 1.65, font = 2)
+    mtext(title, outer = TRUE, side = 3, line = 0.3, cex = title_cex, font = 2)
 
   invisible(list(marginal_mean = marginal_mean, marginal_se = marginal_se,
                  mean_TD = mean_TD, mean_pow = mean_pow))

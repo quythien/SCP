@@ -105,12 +105,12 @@ render_gene <- function(gene, status, letter_label) {
 
   ylim <- range(c(y, c1, c2), na.rm = TRUE)
 
-  plot(tod_plot, y, pch = 19, col = adjustcolor("grey50", 0.5), cex = 0.55,
+  plot(tod_plot, y, pch = 19, col = adjustcolor("grey50", 0.5), cex = 0.62,
        xlim = c(TOD_MIN, TOD_MAX), ylim = ylim,
        xlab = "Time of day (h)", ylab = expression(log[2](CPM+1)),
        xaxt = "n", main = "")
-  lines(tt_plot, c1, col = "red",  lwd = 2.2, lty = 2)
-  lines(tt_plot, c2, col = "blue", lwd = 2.2, lty = 1)
+  lines(tt_plot, c1, col = "red",  lwd = 2.9, lty = 2)
+  lines(tt_plot, c2, col = "blue", lwd = 2.9, lty = 1)
   axis(1, at = seq(TOD_MIN, TOD_MAX, 6))
 
   # Peak markers from K=2 fit; in-plot label positioned lower (~85% of plot height)
@@ -123,20 +123,20 @@ render_gene <- function(gene, status, letter_label) {
     abline(v = pk_t[k], lty = 3, col = "blue", lwd = 1.2)
     text(pk_t[k], lbl_y,
          sprintf("%.1fh", pk_t[k]),
-         adj = c(-0.1, 0.5), cex = 0.72, col = "blue", xpd = NA)
+         adj = c(-0.1, 0.5), cex = 0.92, col = "blue", xpd = NA)
   }
   box()
 
   # Centered main title = gene name (bold); subtitle further below for spacing
-  title(main = gene, adj = 0.5, font.main = 2, cex.main = 1.30, line = 1.55)
+  title(main = gene, adj = 0.5, font.main = 2, cex.main = 1.65, line = 1.65)
   # Single subtitle line: q-values only (no status label; that's in caption)
   mtext(bquote(q[1*H] == .(formatC(q1, format="g", digits=2)) ~~ "  " ~~
                q[2*H] == .(formatC(q2, format="g", digits=2))),
-        side = 3, line = 0.25, adj = 0.5, cex = 0.78, col = "grey20")
+        side = 3, line = 0.30, adj = 0.5, cex = 1.00, col = "grey20")
   # Optional sub-panel letter (only printed when letter_label != "")
   if (nzchar(letter_label)) {
-    mtext(letter_label, side = 3, line = 1.95, at = par("usr")[1],
-          adj = 0, font = 2, cex = 1.25, col = "grey20")
+    mtext(letter_label, side = 3, line = 2.05, at = par("usr")[1],
+          adj = 0, font = 2, cex = 1.55, col = "grey20")
   }
 }
 
@@ -150,126 +150,69 @@ draw_venn_panel <- function(n_k1only, n_both, n_k2only, n_total) {
   c2 <- cbind( 0.55 + r*cos(theta),  r*sin(theta))
   polygon(c1, col = adjustcolor("#d62728", 0.45), border = "#d62728", lwd = 1.5)
   polygon(c2, col = adjustcolor("#1f77b4", 0.45), border = "#1f77b4", lwd = 1.5)
-  text(-1.10, -0.05, format(n_k1only, big.mark = ","), cex = 1.55, font = 2)
-  text( 1.10, -0.05, format(n_k2only, big.mark = ","), cex = 1.55, font = 2)
-  text( 0.00, -0.05, format(n_both,   big.mark = ","), cex = 1.55, font = 2)
-  text(-0.85,  1.05, "K=1", col = "#d62728", cex = 1.25, font = 2)
-  text( 0.85,  1.05, "K=2", col = "#1f77b4", cex = 1.25, font = 2)
+  text(-1.10, -0.05, format(n_k1only, big.mark = ","), cex = 1.95, font = 2)
+  text( 1.10, -0.05, format(n_k2only, big.mark = ","), cex = 1.95, font = 2)
+  text( 0.00, -0.05, format(n_both,   big.mark = ","), cex = 1.95, font = 2)
+  text(-0.85,  1.05, "K=1", col = "#d62728", cex = 1.55, font = 2)
+  text( 0.85,  1.05, "K=2", col = "#1f77b4", cex = 1.55, font = 2)
   text(0, -1.20,
        sprintf("n = %s genes", format(n_total, big.mark = ",")),
-       cex = 0.95, col = "grey25")
+       cex = 1.20, col = "grey25")
   title(main = "Rhythmicity Biomarker overlap in GTEx Liver (FDR 5%)",
-        adj = 0.5, font.main = 2, cex.main = 1.30, line = 1.4)
-  mtext("B", side = 3, line = 2.4, at = par("usr")[1],
-        adj = 0, font = 2, cex = 1.05, col = "grey20")
+        adj = 0.5, font.main = 2, cex.main = 1.52, line = 1.5)
+  mtext("B", side = 3, line = 2.7, at = par("usr")[1],
+        adj = 0, font = 2, cex = 1.55, col = "grey20")
 }
 
-# ---- Helper: KEGG dot plot with proper legends ----
+# ---- Helper: KEGG enrichment as a horizontal -log10(P) bar chart ----
+# Metascape convention: bars encode statistical significance as -log10(P)
+# (raw enrichment p-value), pathway names sit on the y-axis. This mirrors the
+# SCP Shiny app's enrichment view; the dot-plot gene-ratio/count/colour
+# encoding is dropped in favour of a single, directly readable significance bar.
 draw_kegg_panel <- function(ek, max_terms = 10) {
-  par(mar = c(4.5, 15.0, 4.5, 7.0))    # wider left margin for pathway labels; wider right for legends
+  par(mar = c(5.2, 17.5, 4.6, 2.4))    # wide left margin for pathway labels
   df_e <- as.data.frame(ek)
   # Drop KEGG "Human Diseases" category. These pathway gene sets share genes
   # with metabolism/proteostasis/immunity categories already represented in
   # the result, so the underlying biology is preserved without disease labels.
   if ("category" %in% colnames(df_e))
     df_e <- df_e[df_e$category != "Human Diseases", , drop = FALSE]
-  df_e <- df_e[order(df_e$p.adjust), ]
+
+  # Significance = -log10(raw enrichment p-value). Fall back to the adjusted
+  # p-value only if the raw column is unavailable.
+  pcol <- if ("pvalue" %in% colnames(df_e)) df_e$pvalue else df_e$p.adjust
+  df_e$.p <- pcol
+  df_e <- df_e[order(df_e$.p), ]          # most significant first
   df_e <- head(df_e, max_terms)
   if (nrow(df_e) == 0L) {
     plot.new(); title("KEGG: no terms enriched"); return(invisible())
   }
-  gene_ratio_num <- sapply(strsplit(df_e$GeneRatio, "/"),
-                            function(z) as.integer(z[1]))
-  gene_ratio_den <- sapply(strsplit(df_e$GeneRatio, "/"),
-                            function(z) as.integer(z[2]))
-  gene_ratio <- gene_ratio_num / gene_ratio_den
 
-  # Reorder so smallest q at top (largest -log10(q) at top)
-  ord <- order(df_e$p.adjust, decreasing = TRUE)
-  df_e <- df_e[ord, ]; gene_ratio <- gene_ratio[ord]
+  # barplot() draws the first entry at the BOTTOM; reverse so the most
+  # significant pathway sits at the TOP of the panel.
+  df_e <- df_e[rev(seq_len(nrow(df_e))), ]
+  val  <- -log10(df_e$.p)
+  labs <- df_e$Description
 
-  qadj <- df_e$p.adjust
-  size <- df_e$Count
-  z <- -log10(qadj)
+  # Metascape-style orange gradient: paler = less significant (bottom),
+  # darker = more significant (top).
+  pal <- colorRampPalette(c("#fee0b6", "#f1a340", "#b35806"))(nrow(df_e))
 
-  # Color gradient: blue (low sig) -> orange (high sig)
-  col_pal <- colorRampPalette(c("#2c7fb8", "#7fcdbb", "#ffeda0", "#feb24c", "#f03b20"))(60)
-  z_rng <- range(z); if (diff(z_rng) < 1e-9) z_rng[2] <- z_rng[1] + 1
-  col_idx <- pmin(60, pmax(1, ceiling(60 * (z - z_rng[1]) / diff(z_rng))))
-  cols <- col_pal[col_idx]
-
-  # Size scaling (capped for legend readability)
-  size_rng <- range(size)
-  cex_pts <- 0.9 + 3.0 * (size - size_rng[1]) / (diff(size_rng) + 1e-9)
-
-  plot(gene_ratio, seq_len(nrow(df_e)),
-       pch = 19, cex = cex_pts, col = cols,
-       xlim = c(0, max(gene_ratio) * 1.10),
-       ylim = c(0.5, nrow(df_e) + 0.5),
-       xlab = "Gene ratio (K=2-only set)",
-       ylab = "", yaxt = "n", main = "")
-  axis(2, at = seq_len(nrow(df_e)), labels = df_e$Description,
-       las = 1, cex.axis = 1.00)
+  bp <- barplot(val, horiz = TRUE, names.arg = labs, las = 1,
+                col = pal, border = NA,
+                xlab = expression(-log[10](P)),
+                cex.names = 1.22, cex.lab = 1.45, cex.axis = 1.22,
+                xlim = c(0, max(val) * 1.12), main = "")
+  # Subtle vertical reference grid behind the bars
   grid(nx = NULL, ny = NA, lty = "dotted", col = "grey80")
+  barplot(val, horiz = TRUE, col = pal, border = NA, add = TRUE, axes = FALSE)
+  # Value label at the end of each bar
+  text(val, bp, sprintf("%.1f", val), pos = 4, offset = 0.35,
+       cex = 0.95, col = "grey25", xpd = NA)
   title(main = "KEGG enrichment (K=2-only)",
-        adj = 0.5, font.main = 2, cex.main = 1.35, line = 1.7)
+        adj = 0.5, font.main = 2, cex.main = 1.55, line = 1.7)
   mtext("C", side = 3, line = 2.7, at = par("usr")[1],
-        adj = 0, font = 2, cex = 1.10, col = "grey20")
-
-  # --- Legends in right margin (more space + clear separation) ---
-  usr <- par("usr")
-  plot_w <- usr[2] - usr[1]
-  # Anchor legends in the right margin with explicit horizontal offset
-  leg_x <- usr[2] + plot_w * 0.13
-
-  # ---- Size legend (top of right margin) ----
-  size_breaks <- pretty(size, 4)
-  size_breaks <- size_breaks[size_breaks > 0]
-  if (length(size_breaks) > 4)
-    size_breaks <- size_breaks[seq(1, length(size_breaks), length.out = 4)]
-  size_cex_leg <- 0.55 + 1.5 * (size_breaks - size_rng[1]) /
-                  (diff(size_rng) + 1e-9)
-  n_sz <- length(size_breaks)
-  # Compact count legend; leaves clear visual gap before the gradient bar
-  legend_top_y    <- usr[4] - (usr[4]-usr[3]) * 0.05
-  legend_bot_y    <- usr[4] - (usr[4]-usr[3]) * 0.28
-  sz_y_positions  <- seq(legend_top_y, legend_bot_y, length.out = n_sz + 1)
-  text(leg_x, sz_y_positions[1], "Count",
-       cex = 0.85, font = 2, xpd = NA, adj = 0.5)
-  for (k in seq_along(size_breaks)) {
-    yy <- sz_y_positions[k + 1]
-    points(leg_x - plot_w * 0.02, yy,
-           pch = 19, cex = size_cex_leg[k], col = "grey50", xpd = NA)
-    text(leg_x + plot_w * 0.025, yy,
-         size_breaks[k], cex = 0.72, adj = 0, xpd = NA)
-  }
-
-  # ---- Color gradient bar (bottom of right margin) ----
-  bar_x  <- leg_x - plot_w * 0.022
-  bar_w  <- plot_w * 0.030
-  bar_y_high <- usr[3] + (usr[4]-usr[3]) * 0.45
-  bar_y_low  <- usr[3] + (usr[4]-usr[3]) * 0.05
-  n_seg <- 60
-  ys <- seq(bar_y_low, bar_y_high, length.out = n_seg + 1)
-  for (j in seq_len(n_seg))
-    rect(bar_x, ys[j], bar_x + bar_w, ys[j + 1],
-         col = col_pal[j], border = NA, xpd = NA)
-  rect(bar_x, bar_y_low, bar_x + bar_w, bar_y_high,
-       col = NA, border = "grey50", xpd = NA)
-  z_tick_vals <- pretty(z, 4)
-  z_tick_vals <- z_tick_vals[z_tick_vals >= z_rng[1] & z_tick_vals <= z_rng[2]]
-  if (length(z_tick_vals) > 4)
-    z_tick_vals <- z_tick_vals[seq(1, length(z_tick_vals), length.out = 4)]
-  for (zt in z_tick_vals) {
-    y_zt <- bar_y_low + (zt - z_rng[1]) / diff(z_rng) * (bar_y_high - bar_y_low)
-    segments(bar_x + bar_w, y_zt, bar_x + bar_w + plot_w * 0.005, y_zt, xpd = NA)
-    text(bar_x + bar_w + plot_w * 0.012, y_zt,
-         formatC(zt, format = "g", digits = 2),
-         adj = 0, cex = 0.72, xpd = NA)
-  }
-  text(bar_x + bar_w/2, bar_y_high + (usr[4]-usr[3]) * 0.05,
-       expression(-log[10](q[adj])),
-       cex = 0.78, font = 2, xpd = NA, adj = 0.5)
+        adj = 0, font = 2, cex = 1.55, col = "grey20")
 }
 
 # ---- Layout + render ----
@@ -281,9 +224,9 @@ lay <- rbind(
   c(6, 6, 7, 7)
 )
 layout(lay, heights = c(1.00, 0.12, 1.35))
-par(mai = c(0.70, 0.78, 0.70, 0.20),
-    mgp = c(2.5, 0.6, 0), oma = c(0.4, 0.4, 2.4, 0.4),
-    cex.axis = 1.05, cex.lab = 1.15, font.main = 2)
+par(mai = c(0.78, 0.92, 0.82, 0.20),
+    mgp = c(2.7, 0.6, 0), oma = c(0.4, 0.4, 2.9, 0.4),
+    cex.axis = 1.28, cex.lab = 1.45, font.main = 2)
 
 # Row 1: gene exemplars (panels 1-4). Only the first panel carries the "A" label.
 panel_letters <- c("A", "", "", "")
@@ -303,11 +246,11 @@ legend("center",
        col    = c(adjustcolor("grey50", 0.6), "red", "blue", "blue"),
        pch    = c(19, NA, NA, NA),
        lty    = c(NA, 2, 1, 3),
-       lwd    = c(NA, 2.0, 2.0, 1.0),
-       horiz  = TRUE, bty = "o", box.col = "grey70", box.lwd = 0.5,
-       bg = "white", cex = 0.95, xpd = NA,
-       seg.len = 0.9, text.width = 0.10,
-       x.intersp = 0.2)
+       lwd    = c(NA, 2.8, 2.8, 1.4),
+       horiz  = TRUE, bty = "o", box.col = "grey60", box.lwd = 0.8,
+       bg = "white", cex = 1.28, xpd = NA,
+       seg.len = 1.4, text.width = 0.135,
+       x.intersp = 0.3)
 
 # Row 3: Venn (panel 6) + KEGG (panel 7)
 draw_venn_panel(length(venn$k1_only), length(venn$both),
@@ -316,8 +259,8 @@ draw_kegg_panel(ek, max_terms = 10)
 
 # Outer figure title (positioned closer to the gene panels)
 mtext("Single-harmonic (1H) vs. Two-harmonic (2H) cosinor fits on GTEx Liver exemplar genes",
-      outer = TRUE, side = 3, line = 0.3, adj = 0.5,
-      font = 2, cex = 1.20)
+      outer = TRUE, side = 3, line = 0.5, adj = 0.5,
+      font = 2, cex = 1.60)
 
 dev.off()
 cat(sprintf("Wrote %s (%.1f KB)\n", FIG_PATH, file.size(FIG_PATH)/1024))
