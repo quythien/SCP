@@ -127,13 +127,14 @@ render_gene <- function(gene, status, letter_label) {
   }
   box()
 
-  # Centered main title = gene name (bold); subtitle further below for spacing
-  title(main = gene, adj = 0.5, font.main = 2, cex.main = 1.65, line = 1.65)
+  # Centered main title = gene name (bold); subtitle sits lower with a clear
+  # gap so the bold gene name never touches the q-value line.
+  title(main = gene, adj = 0.5, font.main = 2, cex.main = 1.65, line = 2.05)
   # Single subtitle line: q-values only (no status label; that's in caption)
-  mtext(bquote(q[1*H] == .(formatC(q1, format="g", digits=2)) ~~ "  " ~~
+  mtext(bquote(q[1*H] == .(formatC(q1, format="g", digits=2)) ~~ " " ~~
                q[2*H] == .(formatC(q2, format="g", digits=2))),
-        side = 3, line = 0.30, adj = 0.5, cex = 1.00, col = "grey20")
-  # Optional sub-panel letter (only printed when letter_label != "")
+        side = 3, line = 0.35, adj = 0.5, cex = 0.90, col = "grey20")
+  # Optional sub-panel letter on the SAME line as the gene-name title (left).
   if (nzchar(letter_label)) {
     mtext(letter_label, side = 3, line = 2.05, at = par("usr")[1],
           adj = 0, font = 2, cex = 1.55, col = "grey20")
@@ -160,7 +161,8 @@ draw_venn_panel <- function(n_k1only, n_both, n_k2only, n_total) {
        cex = 1.20, col = "grey25")
   title(main = "Rhythmicity Biomarker overlap in GTEx Liver (FDR 5%)",
         adj = 0.5, font.main = 2, cex.main = 1.52, line = 1.5)
-  mtext("B", side = 3, line = 2.7, at = par("usr")[1],
+  # Panel letter on the SAME line as the title (left edge).
+  mtext("B", side = 3, line = 1.5, at = par("usr")[1],
         adj = 0, font = 2, cex = 1.55, col = "grey20")
 }
 
@@ -200,32 +202,30 @@ draw_kegg_panel <- function(ek, max_terms = 10) {
 
   bp <- barplot(val, horiz = TRUE, names.arg = labs, las = 1,
                 col = pal, border = NA,
-                xlab = expression(-log[10](P)),
+                xlab = expression(-log[10]("P-value")),
                 cex.names = 1.22, cex.lab = 1.45, cex.axis = 1.22,
-                xlim = c(0, max(val) * 1.12), main = "")
+                xlim = c(0, max(val) * 1.08), main = "")
   # Subtle vertical reference grid behind the bars
   grid(nx = NULL, ny = NA, lty = "dotted", col = "grey80")
   barplot(val, horiz = TRUE, col = pal, border = NA, add = TRUE, axes = FALSE)
-  # Value label at the end of each bar
-  text(val, bp, sprintf("%.1f", val), pos = 4, offset = 0.35,
-       cex = 0.95, col = "grey25", xpd = NA)
   title(main = "KEGG enrichment (K=2-only)",
         adj = 0.5, font.main = 2, cex.main = 1.55, line = 1.7)
-  mtext("C", side = 3, line = 2.7, at = par("usr")[1],
+  # Panel letter on the SAME line as the title (left edge).
+  mtext("C", side = 3, line = 1.7, at = par("usr")[1],
         adj = 0, font = 2, cex = 1.55, col = "grey20")
 }
 
 # ---- Layout + render ----
 # 3 rows now: row 1 = gene exemplars; row 2 = horizontal legend strip; row 3 = Venn + KEGG
-pdf(FIG_PATH, width = 12.0, height = 9.6)
+pdf(FIG_PATH, width = 13.6, height = 9.6)
 lay <- rbind(
   c(1, 2, 3, 4),
   c(5, 5, 5, 5),
   c(6, 6, 7, 7)
 )
 layout(lay, heights = c(1.00, 0.12, 1.35))
-par(mai = c(0.78, 0.92, 0.82, 0.20),
-    mgp = c(2.7, 0.6, 0), oma = c(0.4, 0.4, 2.9, 0.4),
+par(mai = c(0.78, 0.84, 0.86, 0.14),
+    mgp = c(2.6, 0.6, 0), oma = c(0.4, 0.4, 2.3, 0.4),
     cex.axis = 1.28, cex.lab = 1.45, font.main = 2)
 
 # Row 1: gene exemplars (panels 1-4). Only the first panel carries the "A" label.
@@ -259,7 +259,7 @@ draw_kegg_panel(ek, max_terms = 10)
 
 # Outer figure title (positioned closer to the gene panels)
 mtext("Single-harmonic (1H) vs. Two-harmonic (2H) cosinor fits on GTEx Liver exemplar genes",
-      outer = TRUE, side = 3, line = 0.5, adj = 0.5,
+      outer = TRUE, side = 3, line = 0.12, adj = 0.5,
       font = 2, cex = 1.60)
 
 dev.off()
