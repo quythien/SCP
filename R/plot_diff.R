@@ -264,10 +264,10 @@ plotDiffPower <- function(res_list,
         cex.axis = 1.35, cex.lab = 1.55, font.main = 2, cex.main = 1.45)
   } else {
     par(mfrow = c(n_comps, n_ep),
-        mai   = c(1.05, 1.05, 0.70, 0.20),
+        mai   = c(1.10, 1.12, 0.60, 0.45),
         mgp   = c(3.2, 0.65, 0),
-        oma   = c(0, 0, 2.4, 0),
-        cex.axis = 1.25, cex.lab = 1.45, font.main = 2, cex.main = 1.35)
+        oma   = c(0, 0, 2.9, 0),
+        cex.axis = 1.50, cex.lab = 1.70, font.main = 2, cex.main = 1.55)
   }
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
@@ -341,16 +341,24 @@ plotDiffPower <- function(res_list,
       row_label <- sprintf("%s — %s", ep, comp_label)
 
       # ---- Panel A: marginal power vs n ----
+      # The marginal-only Fig 2 layout (stratified = FALSE) carries far fewer
+      # panels than the 18-panel stratified grid, so it can afford larger lines,
+      # points, titles and legends. Keep the stratified path at its tuned sizes.
+      paA_lwd    <- if (stratified) 2.2  else 2.8
+      paA_pt     <- if (stratified) 1.0  else 1.3
+      paA_titcex <- if (stratified) 1.30 else 1.55
+      paA_legcex <- if (stratified) 0.60 else 1.05
+      paA_ntxt   <- if (stratified) 0.85 else 1.10
       par(mgp = c(3.2, 0.65, 0))
       letter_panel <- LETTERS[match(ep, endpoints)]
       matplot(ss_disp, 100 * marginal_mean[disp_idx, , drop = FALSE],
-              type = "b", pch = 19, lwd = 2.2,
+              type = "b", pch = 19, lwd = paA_lwd, cex = paA_pt,
               col = thresh_cols, lty = 1,
               xlim = c(0, max(ss_disp) * 1.05), ylim = c(0, 100),
               xlab = "Sample size (n)", ylab = "Power (%)",
               main = "")
       title(main = sprintf("%s   %s - Power vs Sample Size", letter_panel, ep),
-            adj = 0.5, font.main = 2, cex.main = 1.30, line = 0.4)
+            adj = 0.5, font.main = 2, cex.main = paA_titcex, line = 0.6)
       for (t in seq_len(n_thresh)) {
         add_se_bars(ss_disp, 100 * marginal_mean[disp_idx, t],
                     100 * marginal_se[disp_idx, t], col = thresh_cols[t])
@@ -362,14 +370,14 @@ plotDiffPower <- function(res_list,
         # Place the "n = ..." annotation just left of the line, high
         # on the y-axis, well clear of the bottom-right FDR legend.
         text(vline_n, 95, sprintf("n = %d", vline_n),
-             col = "steelblue", cex = 0.85, adj = c(1.05, 0.5), font = 2)
+             col = "steelblue", cex = paA_ntxt, adj = c(1.05, 0.5), font = 2)
       }
       grid()
       if (identical(ep, endpoints[1])) {
         legend("bottomright", thresh_labels,
-               col = thresh_cols, lty = 1, pch = 19, lwd = 2.2,
-               cex = 0.60, bty = "o", box.col = "grey70", box.lwd = 0.5,
-               inset = 0.01, y.intersp = 0.85, bg = "white")
+               col = thresh_cols, lty = 1, pch = 19, lwd = paA_lwd,
+               cex = paA_legcex, bty = "o", box.col = "grey50", box.lwd = 0.8,
+               inset = 0.02, y.intersp = 0.95, bg = "white")
       }
 
       if (stratified) {
@@ -448,7 +456,8 @@ plotDiffPower <- function(res_list,
     }
   }
 
-  mtext(main_title, outer = TRUE, side = 3, line = 0.2, cex = 1.4, font = 2)
+  mtext(main_title, outer = TRUE, side = 3, line = 0.3,
+        cex = if (stratified) 1.4 else 1.9, font = 2)
 
   invisible(panel_data)
 }
