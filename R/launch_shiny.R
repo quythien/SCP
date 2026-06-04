@@ -38,6 +38,7 @@ launchShiny <- function(..., install_deps = TRUE, species_all = FALSE) {
   # gracefully inside the app if its package is absent.
   cran_pkgs <- c(
     shiny           = "the app interface (required)",
+    DT              = "interactive sortable gene table",
     writexl         = "Excel (.xlsx) gene-table export",
     shinyscreenshot = "full-app screenshot capture"
   )

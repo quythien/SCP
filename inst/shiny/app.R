@@ -180,6 +180,9 @@ ui <- fluidPage(
     /* compact gene table so the K=2 columns fit without wrapping */
     #gene_table table { font-size: 0.84em; margin-bottom: 0; }
     #gene_table th, #gene_table td { padding: 3px 7px; white-space: nowrap; }
+    #gene_table_dt { font-size: 0.84em; }
+    #gene_table_dt table.dataTable th, #gene_table_dt table.dataTable td { padding: 3px 7px; white-space: nowrap; }
+    #gene_table_dt .dataTables_wrapper { margin-top: 2px; }
   "))),
   div(class = "center-titles",
       titlePanel("Power Evaluation and Study Design for Circadian Biomarker Detection"),
@@ -339,8 +342,7 @@ ui <- fluidPage(
         fluidRow(
           column(7,
             tags$b("Top rhythmic genes"),
-            div(style = "max-height: 340px; overflow-y: auto; margin-top:6px;",
-                tableOutput("gene_table")),
+            div(style = "margin-top:6px;", uiOutput("gene_table_ui")),
             div(style = "margin-top:6px;",
                 helpText(em("Downloads include ALL fitted genes with full parameters (p, BH q, amplitude, sigma, r-tilde, peak, mesor).")),
                 downloadButton("dl_genes",      "Download all genes (CSV)"),
@@ -1452,32 +1454,67 @@ server <- function(input, output, session) {
     )
   })
 
-  output$gene_table <- renderTable({
-    g <- gene_tbl_pass(); req(g)
-    if (!nrow(g)) return(data.frame(Note = "No genes pass the chosen threshold."))
-    out <- head(g, 100L)
+  # The ranked table as a tidy numeric data.frame (K-aware columns). Numeric
+  # p/q/peaks are kept numeric so click-to-sort orders them correctly; display
+  # rounding/sig-figs are applied at render time, not baked into strings.
+  .gene_table_df <- function(max_rows = 500L) {
+    g <- gene_tbl_pass(); if (is.null(g) || !nrow(g)) return(NULL)
+    out <- head(g, max_rows)
     is_k2 <- isTRUE(any(out$K2)) && any(is.finite(out$p_2h))
-    # Short headers under K=2 so the extra columns fit one row.
     if (is_k2) {
       pks <- mapply(.twoharm_peaks, out$Amp, out$Peak_h, out$A2, out$phi2)
-      df <- data.frame(Gene = out$Gene,
-                       a = formatC(out$p,   format = "e", digits = 1),
-                       b = formatC(out$q,   format = "e", digits = 1),
-                       c = formatC(out$p_2h, format = "e", digits = 1),
-                       d = round(out$rtilde, 2),
-                       e = round(pks["peak1", ], 1),
-                       f = round(pks["peak2", ], 1),
+      df <- data.frame(Gene = out$Gene, out$p, out$q, out$p_2h,
+                       round(out$rtilde, 2), round(pks["peak1", ], 1), round(pks["peak2", ], 1),
                        check.names = FALSE, stringsAsFactors = FALSE)
       names(df) <- c("Gene", "p (joint)", "q", "p (2nd)", "r̃", "Peak1", "Peak2")
     } else {
-      df <- data.frame(Gene = out$Gene,
-                       a = formatC(out$p, format = "e", digits = 2),
-                       b = formatC(out$q, format = "e", digits = 2),
-                       c = round(out$rtilde, 2),
-                       d = out$Peak_h,
+      df <- data.frame(Gene = out$Gene, out$p, out$q, round(out$rtilde, 2), out$Peak_h,
                        check.names = FALSE, stringsAsFactors = FALSE)
       names(df) <- c("Gene", "p-value", "q-value", "r̃ (A/σ)", "Peak (h)")
     }
+    attr(df, "sci_cols") <- if (is_k2) c("p (joint)", "q", "p (2nd)") else c("p-value", "q-value")
+    df
+  }
+
+  # Holder: an interactive DataTable when DT is available (click headers to sort
+  # asc/desc like Excel, choose how many rows to show, reset order), otherwise
+  # the static scrollable table below.
+  output$gene_table_ui <- renderUI({
+    if (requireNamespace("DT", quietly = TRUE))
+      tagList(DT::DTOutput("gene_table_dt"),
+              div(style = "margin-top:4px; font-size:0.85em;",
+                  actionLink("gtbl_reset", HTML("&#8635; Reset sort/order"))))
+    else
+      div(style = "max-height: 340px; overflow-y: auto;", tableOutput("gene_table"))
+  })
+
+  if (requireNamespace("DT", quietly = TRUE)) {
+    output$gene_table_dt <- DT::renderDT({
+      input$gtbl_reset                                   # reset re-renders to default order
+      df <- .gene_table_df()
+      if (is.null(df))
+        return(DT::datatable(data.frame(Note = "No genes pass the chosen threshold."),
+                             rownames = FALSE, options = list(dom = "t")))
+      sci <- attr(df, "sci_cols")
+      dt <- DT::datatable(
+        df, rownames = FALSE, selection = "none", class = "compact stripe hover",
+        options = list(
+          pageLength   = 20,
+          lengthMenu   = list(c(10, 20, 50, 100, 300, -1), c("10", "20", "50", "100", "300", "All")),
+          order        = list(list(1, "asc")),           # default: p-value ascending
+          scrollX      = TRUE,
+          dom          = "lftip",                         # length, filter, table, info, pagination
+          columnDefs   = list(list(className = "dt-right", targets = seq_len(ncol(df)) - 1L))))
+      DT::formatSignif(dt, sci, 2)
+    }, server = TRUE)
+  }
+
+  # Static fallback (used only when DT is not installed).
+  output$gene_table <- renderTable({
+    df <- .gene_table_df(100L)
+    if (is.null(df)) return(data.frame(Note = "No genes pass the chosen threshold."))
+    sci <- attr(df, "sci_cols")
+    for (cc in sci) df[[cc]] <- formatC(df[[cc]], format = "e", digits = 2)
     df
   }, striped = TRUE, hover = TRUE, width = "100%", digits = 3)
 
