@@ -467,6 +467,14 @@ server <- function(input, output, session) {
                       selected = if ("human" %in% sp) "human" else sp[1])
   })
 
+  # Land on GTEx Adrenal (passive) the first time the app opens. This is a
+  # one-shot: the cascade below applies these preferred values only while
+  # `startup` is TRUE (cleared once the first full selection resolves), so it
+  # never overrides the user's later navigation.
+  startup <- reactiveVal(TRUE)
+  .pick   <- function(choices, prefer, fallback)
+    if (!is.null(prefer) && prefer %in% choices) prefer else fallback
+
   # Use tissue_canonical for the user-facing tissue dropdown when available
   .tissue_display <- function(m) {
     if ("tissue_canonical" %in% names(m)) m$tissue_canonical else m$tissue
@@ -477,8 +485,9 @@ server <- function(input, output, session) {
     m <- manifest()
     req(m, input$species)
     designs <- sort(unique(m$design[m$species == input$species]))
-    updateSelectInput(session, "design_filter", choices = .cap_choices(designs),
-                      selected = if ("active" %in% designs) "active" else designs[1])
+    sel <- if (isolate(startup())) .pick(designs, "passive", designs[1])
+           else if ("active" %in% designs) "active" else designs[1]
+    updateSelectInput(session, "design_filter", choices = .cap_choices(designs), selected = sel)
   })
 
   observeEvent(list(input$species, input$design_filter), {
@@ -486,7 +495,8 @@ server <- function(input, output, session) {
     req(m, input$species, input$design_filter)
     sub <- m[m$species == input$species & m$design == input$design_filter, , drop = FALSE]
     ts <- sort(unique(.tissue_display(sub)))
-    updateSelectInput(session, "tissue", choices = ts, selected = ts[1])
+    sel <- if (isolate(startup())) .pick(ts, "Adrenal", ts[1]) else ts[1]
+    updateSelectInput(session, "tissue", choices = ts, selected = sel)
   })
 
   observeEvent(list(input$species, input$design_filter, input$tissue), {
@@ -495,7 +505,8 @@ server <- function(input, output, session) {
     sub <- m[m$species == input$species & m$design == input$design_filter, , drop = FALSE]
     sub <- sub[.tissue_display(sub) == input$tissue, , drop = FALSE]
     ds <- sort(unique(sub$dataset))
-    updateSelectInput(session, "dataset", choices = ds, selected = ds[1])
+    sel <- if (isolate(startup())) .pick(ds, "GTEx", ds[1]) else ds[1]
+    updateSelectInput(session, "dataset", choices = ds, selected = sel)
   })
 
   observeEvent(list(input$species, input$design_filter, input$tissue, input$dataset), {
@@ -505,7 +516,9 @@ server <- function(input, output, session) {
              m$dataset == input$dataset, , drop = FALSE]
     sub <- sub[.tissue_display(sub) == input$tissue, , drop = FALSE]
     cd <- sort(unique(sub$condition))
-    updateSelectInput(session, "condition", choices = .cap_choices(cd), selected = cd[1])
+    sel <- if (isolate(startup())) .pick(cd, "All", cd[1]) else cd[1]
+    updateSelectInput(session, "condition", choices = .cap_choices(cd), selected = sel)
+    if (isolate(startup())) startup(FALSE)        # default applied; stop overriding navigation
   })
 
   # ---- custom pilot upload ------------------------------------------------
