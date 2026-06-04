@@ -153,7 +153,7 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
   }
   phase_vec <- phase_vec[!is.na(phase_vec)]
 
-  # Build options — pass resolved vectors directly
+  # Build options, pass resolved vectors directly
   opts <- list(
     ngenes        = nrow(boot_df),
     prop_rhythmic = prop_rhythmic,
@@ -343,7 +343,7 @@ runBootstrapDesignGrid <- function(pilot_data,
   if (verbose) cat("Bootstrapping parameters...\n")
   boot_list <- bootstrapParams(param_df, nboot, seed = seed)
 
-  # Step 3: Sweep over (b, N, B) — bootstrap draws parallelized via mclapply.
+  # Step 3: Sweep over (b, N, B), bootstrap draws parallelized via mclapply.
   # Each draw is independent (different seed); results combined into boot_power_arr.
   fdr_threshold <- min(analysis.opts$fdr_thresholds)
 
@@ -668,7 +668,7 @@ plotBootstrapDesignGrid <- function(result,
   axis(1, at = seq_len(n_N), labels = N_values)
   axis(2, at = seq_len(n_B), labels = B_values, las = 1)
 
-  # Cell annotations — explicitly mark infeasible (N, B) pairs
+  # Cell annotations, explicitly mark infeasible (N, B) pairs
   for (n_idx in seq_len(n_N)) {
     for (B_idx in seq_len(n_B)) {
       val <- pm_pct[n_idx, B_idx]

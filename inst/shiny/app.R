@@ -925,10 +925,7 @@ server <- function(input, output, session) {
           else p$phase <- rep_len(p$phase, n_sigma)
         }
       }
-      # Use the pilot's full gene count (matches the manuscript figure scripts)
-      # Build sample-size grid from user-chosen min/max/step. Guard against an
-      # inverted range (n_min > n_max), which would make seq() throw "wrong sign
-      # in 'by'": swap so the grid is always ascending, and force a positive step.
+      # Sample-size grid from min/max/step; swap if min > max, keep step positive.
       n_lo   <- as.integer(input$n_min)
       n_hi   <- as.integer(input$n_max)
       n_by   <- max(1L, as.integer(input$n_step))
@@ -976,8 +973,7 @@ server <- function(input, output, session) {
 
       # Use the same seed as the manuscript figure scripts (GLOBAL_SEED = 2025)
       K_val <- as.integer(input$K)
-      # Advance the bar per sample size (and per sim when sensitivity is on) so
-      # it moves smoothly instead of sitting frozen during the long sim call.
+      # Step the progress bar per sample size (x2 when sensitivity is on).
       n_steps  <- length(n_grid) * (if (isTRUE(input$eff_sens)) 2L else 1L)
       step_amt <- 0.8 / max(n_steps, 1L)
       run_sim <- function(bio, label) tryCatch(
@@ -996,9 +992,8 @@ server <- function(input, output, session) {
       )
       # Panel A: paired (A, sigma) draw -> realistic marginal power (p is paired).
       res <- run_sim(p, if (isTRUE(input$eff_sens)) "Panel A" else "Simulating")
-      # Effect-size sensitivity (Panels B/C): unpaired draw -> wide r-tilde, so
-      # the stratified panels span the full effect-size range. Re-derived from
-      # the same rhythm_fit table at the same threshold (no extra fitting).
+      # Panels B/C: unpaired draw for wide r-tilde, re-sliced from the same
+      # rhythm_fit at the same threshold (no extra fitting).
       if (isTRUE(input$eff_sens) && !inherits(res, "sim_error")) {
         p_unpaired <- .app_apply_threshold(p, input$rhy_stat,
                                            as.numeric(input$rhy_thresh),
@@ -1016,9 +1011,8 @@ server <- function(input, output, session) {
     res <- sim_result()
     if (is.null(res)) { plot.new(); title(main = "Run a simulation first."); return(invisible()) }
     if (inherits(res, "sim_error")) { plot.new(); title(main = sprintf("Simulation error: %s", res$error %||% "unknown")); return(invisible()) }
-    # A NaN power means zero detections in those replicates (0/0). Render it as 0
-    # so plotting never hits a non-finite 'invalid graphics state' (which blanked
-    # Panel A and crashed the device on weak/edge-case runs).
+    # NaN power = 0/0 (no detections); render as 0 so plotting can't hit a
+    # non-finite graphics state.
     .san <- function(x) {
       if (is.null(x) || inherits(x, "sim_error")) return(x)
       for (f in c("marginal_power","marginal_FDR","marginal_TD","marginal_FD",
@@ -1028,13 +1022,12 @@ server <- function(input, output, session) {
     }
     res <- .san(res); res$.bc <- .san(res$.bc)
     tfd <- as.numeric(input$target_fdr); tpw <- as.numeric(input$target_power)
-    # Panel A always shows FDR 1/5/10/20% + the user's threshold (post-hoc, free);
-    # the blue vline + recommended-N stay tied to the chosen FDR.
+    # Panel A shows FDR 1/5/10/20% plus the chosen one; vline + recommended-N
+    # track the chosen FDR.
     fdr_lines <- sort(unique(c(0.01, 0.05, 0.10, 0.20, tfd)))
     bc <- res$.bc
     if (!is.null(bc) && !inherits(bc, "sim_error")) {
-      # Vertical stack: each panel sized + styled like the single Panel A view,
-      # so the three panels look identical in scale, just stacked.
+      # Stack the three panels vertically at the same scale as the single view.
       SCP::plotSingleCohortPower(bc, panel_a_res = res, panels = c("A", "B", "C"),
                                   vertical = TRUE,
                                   fdr_thresholds = fdr_lines, panel_fdr = tfd, vline_fdr = tfd,
@@ -1052,10 +1045,7 @@ server <- function(input, output, session) {
     tryCatch(.draw_power(),
              error = function(e) { plot.new(); title(main = sprintf("Plot error: %s", conditionMessage(e))) })
   },
-  # Both views are fixed-width and centered (via CSS) so they don't stretch
-  # across the whole right pane on wide screens. The 3-panel view stacks the
-  # panels vertically, each rendered large (Figure-3-like) rather than squished
-  # side by side; single Panel A stays compact.
+  # Fixed width (centered via CSS); the 3-panel view stacks tall, Panel A stays compact.
   width  = function() 680L,
   height = function() if (isTRUE(input$eff_sens)) 1450L else 470L)
 
@@ -1069,9 +1059,8 @@ server <- function(input, output, session) {
       d <- .fig_dims(); grDevices::pdf(file, width = d[1], height = d[2]); on.exit(grDevices::dev.off())
       tryCatch(.draw_power(), error = function(e) { plot.new(); title(conditionMessage(e)) })
     })
-  # Open a PNG device that works on headless servers. The default png() device
-  # needs an X11 display (absent on shinyapps.io / most Linux deploys), so prefer
-  # the cairo backend, then ragg, then fall back to the stock device.
+  # PNG device for headless servers: cairo, then ragg, then the stock device
+  # (the default png() needs an X11 display).
   .open_png <- function(file, width, height, res = 120) {
     if (isTRUE(capabilities("cairo"))) {
       grDevices::png(file, width = width, height = height, res = res, type = "cairo")
@@ -1088,9 +1077,8 @@ server <- function(input, output, session) {
       tryCatch(.draw_power(), error = function(e) { plot.new(); title(conditionMessage(e)) })
     })
 
-  # Capture the ENTIRE app UI (inputs, summary, plot, everything you would
-  # scroll to) into one PNG via html2canvas, so it can be emailed as a single
-  # snapshot. This works regardless of viewport/scroll, unlike a browser print.
+  # Snapshot the whole app UI to one PNG via shinyscreenshot (html2canvas),
+  # independent of scroll position.
   observeEvent(input$capture_app, {
     if (!requireNamespace("shinyscreenshot", quietly = TRUE)) {
       showNotification(
@@ -1101,8 +1089,7 @@ server <- function(input, output, session) {
     shinyscreenshot::screenshot(filename = "SCP_app_view", timer = 0)
   })
 
-  # Capture just the gene-explorer region (clock panel + table + cosinor) as one
-  # PNG, mirroring the power-curve capture but scoped to this card.
+  # Snapshot just the gene-explorer card (clock panel + table + cosinor).
   observeEvent(input$capture_explorer, {
     if (!requireNamespace("shinyscreenshot", quietly = TRUE)) {
       showNotification(
@@ -1120,17 +1107,14 @@ server <- function(input, output, session) {
     req(res)
     tpw <- as.numeric(input$target_power)
     tfd <- as.numeric(input$target_fdr)
-    # Use the runner's stored marginal_power matrix [N x nsims] — this is
-    # exactly what the runner prints to the console at each N and what
-    # plotSingleCohortPower's Panel A renders, so the text cannot drift
-    # from the plot.
+    # Read the runner's marginal_power matrix [N x nsims], the same source Panel A
+    # plots, so the text can't drift from the figure.
     mp <- res$marginal_power
     if (is.null(mp)) {
       return(div(style = "color:#a33; font-size: 0.95em;",
                  "Simulation did not return a marginal_power matrix."))
     }
-    # Typographic hierarchy: a bold headline number, then a smaller caption,
-    # so the box reads cleanly instead of one long oversized sentence.
+    # Bold headline number over a small caption.
     head_style <- "font-size: 1.55em; font-weight: 600; color:#2c7fb8; line-height: 1.2;"
     sub_style  <- "font-size: 0.92em; color:#556; margin-top: 3px; line-height: 1.3;"
     mean_pow <- rowMeans(mp, na.rm = TRUE)
@@ -1164,10 +1148,9 @@ server <- function(input, output, session) {
     )
   })
 
-  # ======================= Rhythmic gene explorer =========================
-  # Core clock genes with common aliases (datasets use either the official HGNC
-  # symbol or the common name, e.g. ARNTL vs BMAL1). Matching is alias-aware so a
-  # gene is recognised whichever name the pilot/upload uses. All upper-case.
+  # ---- Rhythmic gene explorer --------------------------------------------
+  # Core clock genes with their common aliases (e.g. ARNTL vs BMAL1), so a gene
+  # matches whichever name the pilot uses.
   .CLOCK_ALIASES <- list(
     ARNTL  = c("ARNTL","BMAL1","MOP3"),
     ARNTL2 = c("ARNTL2","BMAL2","MOP9"),
@@ -1194,17 +1177,15 @@ server <- function(input, output, session) {
     p <- pilot(); req(p); rf <- p$rhythm_fit
     if (is.null(rf) || !nrow(rf)) return(NULL)
     n_total <- p$rhythm_denom %||% p$ngenes %||% nrow(rf)
-    # K=2 pilots carry p_joint (joint two-harmonic F-test, the manuscript's K=2
-    # detector). Option A: rank + threshold the explorer on p_joint for K=2; fall
-    # back to the cosinor p (pvalue = p_K1) for K=1 (and old un-enriched K=2).
+    # K=2 pilots carry p_joint (the two-harmonic F-test); rank on it when present,
+    # else on the cosinor p.
     is_k2 <- !is.null(rf$p_joint) && any(is.finite(rf$p_joint))
     pp    <- if (is_k2) rf$p_joint else rf$pvalue
     ord   <- order(pp)
     rf <- rf[ord, , drop = FALSE]; pp <- pp[ord]
     n  <- nrow(rf); i <- seq_len(n)
     q  <- pmin(rev(cummin(rev(pp * n_total / i))), 1)
-    # Robust to pilots whose rhythm_fit predates the gene/symbol/mesor columns:
-    # fall back to a row index for the ID, the ID as the gene name, NA mesor.
+    # Fall back gracefully for older pilots missing gene/symbol/mesor columns.
     gene_id <- if (!is.null(rf$gene))   as.character(rf$gene)   else as.character(i)
     gene_nm <- if (!is.null(rf$symbol)) as.character(rf$symbol) else gene_id
     mesor_v <- if (!is.null(rf$mesor))  rf$mesor                else rep(NA_real_, n)
@@ -1224,9 +1205,8 @@ server <- function(input, output, session) {
       stringsAsFactors = FALSE)
   })
 
-  # K=2 identifiability notice: shown only when the detector is K=2. Confirms a
-  # working two-harmonic fit, or explains the K=1 fallback when the sampling
-  # design has too few distinct time points to identify the 12h second harmonic.
+  # Notice shown under K=2: confirms a working two-harmonic fit, or explains the
+  # K=1 fallback when the design has too few distinct time points.
   output$k2_status <- renderUI({
     if (!isTRUE(input$K == "2")) return(NULL)
     p <- pilot(); if (is.null(p)) return(NULL)
@@ -1256,7 +1236,7 @@ server <- function(input, output, session) {
     sprintf("%s < %s", metric, input$rhy_thresh %||% "0.01")
   })
 
-  # Live banner so it is obvious the explorer reflects the left-panel threshold.
+  # Banner echoing the threshold and how many genes pass it.
   output$explorer_thresh <- renderUI({
     g <- gene_tbl()
     if (is.null(g)) return(HTML("<em>Select a pilot to explore its rhythmic genes.</em>"))
@@ -1274,9 +1254,8 @@ server <- function(input, output, session) {
                          selected = if (length(ch)) ch[[1]] else "", server = TRUE)
   })
 
-  # Times of the (up to two) peaks of the fitted curve. For K=1 this is just the
-  # cosinor acrophase; for K=2 it returns the two local maxima of the
-  # two-harmonic waveform (the "two peaks" a bimodal gene actually shows).
+  # Peak time(s) of the fitted curve: the acrophase for K=1, or the two local
+  # maxima of the two-harmonic waveform for K=2.
   .twoharm_peaks <- function(A1, phi1, A2 = NA, phi2 = NA, period = 24) {
     w <- 2 * pi / period
     t <- seq(0, period, length.out = 289)[-289]            # 0..<24 at 5-min grid
@@ -1290,19 +1269,14 @@ server <- function(input, output, session) {
       peak2 = if (length(pk) >= 2L) pk[2] else NA_real_)
   }
 
-  # Fitted cosinor curve: mesor-anchored if stored, else mean-centered; +/-1.96s
-  # noise ribbon; peak(s) marked. `compact` (clock small-multiples) shows only the
-  # gene title + peak; the full p/q/peak/(A/sigma) subtitle is reserved for the
-  # large single-gene detail plot where there is room (avoids title collisions).
-  # `pts` (optional list(t, y)) overlays each sample's actual expression on the
-  # fit -- available for uploaded data (raw matrix in session); bundled pilots
-  # store no raw data so they show the fitted curve + noise band only.
+  # Fitted cosinor curve with a +/-1.96-sigma noise band and the peak(s) marked.
+  # `compact` trims labels for the clock small-multiples; `pts` overlays sample
+  # points (uploads only, where the raw matrix is in session).
   .draw_cos <- function(row, period = 24, compact = FALSE, pts = NULL) {
     t <- seq(0, period, length.out = 240); w <- 2 * pi / period
     m0 <- if (!is.null(row$Mesor) && is.finite(row$Mesor)) row$Mesor else 0
     y  <- m0 + row$Amp * cos(w * (t - row$Peak_h))
-    # K=2 pilots: add the second harmonic so the curve shows the real (possibly
-    # bimodal / asymmetric) two-harmonic waveform, not a pure sinusoid.
+    # Add the second harmonic for K=2 so the curve can be bimodal/asymmetric.
     if (!is.null(row$A2) && is.finite(row$A2) && !is.null(row$phi2) && is.finite(row$phi2))
       y <- y + row$A2 * cos(2 * w * (t - row$phi2))
     band <- 1.96 * row$Sigma
@@ -1322,8 +1296,7 @@ server <- function(input, output, session) {
     pk <- .twoharm_peaks(row$Amp, row$Peak_h, row$A2, row$phi2, period)
     abline(v = pk[["peak1"]], lty = 2, col = "grey50")
     if (is.finite(pk[["peak2"]])) abline(v = pk[["peak2"]], lty = 2, col = "grey50")
-    # stats subtitle on every panel; compact (clock small-multiples) drops q and
-    # uses a smaller font so the line fits a narrow panel without overlapping.
+    # Stats subtitle; compact drops q and shrinks the font for narrow panels.
     pk_txt <- if (is.finite(pk[["peak2"]]))
       sprintf("peaks %.1f, %.1fh", pk[["peak1"]], pk[["peak2"]])
     else sprintf("peak %.1fh", pk[["peak1"]])
@@ -1334,9 +1307,8 @@ server <- function(input, output, session) {
     mtext(sub, side = 3, line = 0.35, cex = if (compact) 0.78 else 0.92, col = "grey25")
   }
 
-  # Clock genes passing the threshold (alias-aware, deduped). Select the top 12
-  # by significance (so the strongest show when capped), then display them in
-  # ALPHABETICAL order for a predictable, consistent layout.
+  # Clock genes passing the threshold (deduped), top 12 by significance, then
+  # sorted alphabetically for a stable layout.
   clock_genes <- reactive({
     g <- gene_tbl_pass(); if (is.null(g) || !nrow(g)) return(NULL)
     canon <- .clock_canon(g$Gene)
@@ -1347,16 +1319,13 @@ server <- function(input, output, session) {
     pr <- utils::head(pr, 12L)
     pr[order(toupper(pr$Gene)), , drop = FALSE]      # plot alphabetically
   })
-  # Layout: <=4 columns; rows wrap. FIXED per-panel size so 1-2 genes render at a
-  # consistent aspect instead of stretching across the full width.
+  # Up to 4 columns; fixed per-panel size so 1-2 genes don't stretch full-width.
   .CLOCK_PW <- 210L; .CLOCK_PH <- 188L
   .clock_grid <- function() {
     n <- tryCatch(nrow(clock_genes()), error = function(e) 0L)
     n <- if (is.null(n) || is.na(n)) 0L else n
     if (n < 1L) return(list(n = 0L, nc = 1L, nr = 1L))
-    # Balanced columns so no count leaves a lonely/ragged bottom row (max 12):
-    # 1-3 -> 1 row; 4 -> 2x2 block; 5-6 -> 3 cols; 7-8 -> 4 cols; 9 -> 3x3;
-    # 10-12 -> 4 cols.
+    # Column counts chosen to avoid a ragged bottom row (1-3:1 row, 4:2x2, 9:3x3).
     nc <- if (n <= 3L) n
           else if (n == 4L) 2L
           else if (n <= 6L) 3L
@@ -1366,8 +1335,7 @@ server <- function(input, output, session) {
     list(n = n, nc = nc, nr = ceiling(n / nc))
   }
   # layout() matrix at half-cell resolution (2*nc sub-columns) so a partial last
-  # row is padded with blank cells on both sides -> its panels sit CENTERED
-  # (e.g. n=10 -> bottom row [blank, P, P, blank]) instead of left-aligned.
+  # row pads with blanks on both sides and its panels sit centered.
   .clock_layout_mat <- function(n, nc) {
     nr <- ceiling(n / nc); drawn <- 0L; rows <- vector("list", nr)
     for (r in seq_len(nr)) {
@@ -1382,10 +1350,8 @@ server <- function(input, output, session) {
   output$clock_panel <- renderPlot({
     pr <- clock_genes()
     if (is.null(pr) || !nrow(pr)) {
-      # No clock gene passes the threshold (common for a small uploaded gene
-      # subset). Draw the message with zero plot margins: the fallback device
-      # is short (see height fn) and R's DEFAULT margins exceed it, which would
-      # otherwise throw "figure margins too large" instead of showing the note.
+      # Zero margins: the fallback device is short, and default margins would
+      # overflow it ("figure margins too large") instead of showing the note.
       op <- par(mar = c(0, 0, 0, 0)); on.exit(par(op))
       plot.new()
       text(0.5, 0.5, sprintf("No core clock genes pass %s in this pilot.",
@@ -1425,8 +1391,7 @@ server <- function(input, output, session) {
     if (!nrow(g)) return(data.frame(Note = "No genes pass the chosen threshold."))
     out <- head(g, 100L)
     is_k2 <- isTRUE(any(out$K2)) && any(is.finite(out$p_2h))
-    # Compact headers under K=2 so all columns fit one row (the K=2 context is
-    # already shown by the banner above, so the headers can be short).
+    # Short headers under K=2 so the extra columns fit one row.
     if (is_k2) {
       pks <- mapply(.twoharm_peaks, out$Amp, out$Peak_h, out$A2, out$phi2)
       df <- data.frame(Gene = out$Gene,
@@ -1450,8 +1415,7 @@ server <- function(input, output, session) {
     df
   }, striped = TRUE, hover = TRUE, width = "100%", digits = 3)
 
-  # Full export: ALL fitted genes (the pilot's complete rhythm_fit, p-sorted)
-  # with every parameter and a clean column order/labels.
+  # Export every fitted gene (full rhythm_fit, p-sorted) with all parameters.
   gene_export <- reactive({
     g <- gene_tbl(); req(g)
     is_k2 <- isTRUE(any(g$K2)) && any(is.finite(g$p_2h))
@@ -1464,9 +1428,8 @@ server <- function(input, output, session) {
         peak_hours = g$Peak_h, mesor = g$Mesor,
         stringsAsFactors = FALSE)
     } else {
-      # K=2: ONE mesor; TWO harmonic amplitudes (A1,A2) + acrophases (phi1,phi2);
-      # TWO derived waveform peaks (peak1,peak2 = the actual maxima). pvalue is
-      # the joint F(4,N-5); p_1st/2nd_harmonic are the component tests.
+      # K=2: one mesor, two harmonics (A1/phi1, A2/phi2), two waveform peaks.
+      # pvalue is the joint F(4,N-5); p_1st/2nd are the component tests.
       pks <- mapply(.twoharm_peaks, g$Amp, g$Peak_h, g$A2, g$phi2)
       data.frame(
         gene = g$Gene, gene_id = g$ID,
@@ -1526,8 +1489,7 @@ server <- function(input, output, session) {
     mesor_line <- if (is.finite(r$Mesor)) sprintf("%.3f\n", r$Mesor)
                   else "(not stored for this pilot)\n"
     if (is_k2) {
-      # Full two-harmonic readout: both harmonics' (A, phi), both waveform peaks,
-      # and all three p-values; r-tilde is the 1st-harmonic effect size A1/sigma.
+      # Two-harmonic readout: both (A, phi), both peaks, all three p-values.
       pk <- .twoharm_peaks(r$Amp, r$Peak_h, r$A2, r$phi2)
       paste0(
         sprintf("Gene       : %s  (%s)\n", r$Gene, r$ID),
@@ -1555,11 +1517,10 @@ server <- function(input, output, session) {
     }
   })
 
-  # Reset: reload the session to a clean blank state from anywhere (recovers a
-  # stuck/frozen UI without restarting the R process).
+  # Reload the session to a clean state (recovers a stuck UI without restarting R).
   observeEvent(input$reset_app, { session$reload() })
 
-  # ======================= Pathway enrichment (Enrichr) ===================
+  # ---- Pathway enrichment ------------------------------------------------
   # Human-readable label for the chosen ontology.
   .enrich_lib_label <- function(db, sp) {
     org <- if (identical(sp, "mouse")) "mouse" else "human"
@@ -1580,8 +1541,8 @@ server <- function(input, output, session) {
     }
     if (identical(input$species, "mouse")) "mouse" else "human"
   }
-  # The tested-gene universe (background) for the loaded pilot, in its native ID
-  # space: bundled pilots store $tested_genes; uploads use the raw matrix genes.
+  # Background gene universe: bundled pilots store $tested_genes, uploads use the
+  # raw matrix's gene names.
   .enrich_universe <- function() {
     p <- pilot(); if (is.null(p)) return(NULL)
     p$tested_genes %||% (if (!is.null(p$.raw_expr)) rownames(p$.raw_expr) else NULL)
@@ -1686,8 +1647,7 @@ server <- function(input, output, session) {
             main = sprintf("Top %d enriched terms (%s)", nrow(r), e$lib),
             cex.main = 1.2, xlim = c(0, max(val) * 1.02))
   },
-  # fixed width (centered via CSS) so it doesn't over-stretch; height grows with
-  # the number of bars so they stay a readable thickness.
+  # Fixed width (centered via CSS); height grows with the number of bars.
   width  = function() 760L,
   height = function() {
     r <- tryCatch(enrich_top(), error = function(e) NULL)

@@ -166,7 +166,7 @@ summarizeDCPPairs <- function(rds_paths,
     }
 
     # ------------------------------------------------------------------
-    # 7. DM (differential mesor) — run DCP_DiffPar Par="M" on joint genes
+    # 7. DM (differential mesor), run DCP_DiffPar Par="M" on joint genes
     # ------------------------------------------------------------------
     dm_counts <- setNames(rep(NA_integer_, length(p_thresholds) + length(fdr_thresholds)),
                           c(sprintf("DM_p%s", p_tags), sprintf("DM_FDR%s", fdr_tags)))
@@ -222,7 +222,7 @@ summarizeDCPPairs <- function(rds_paths,
         tod_sd_g1   = round(sd(t1), 2),
         tod_min_g2  = round(min(t2), 1), tod_max_g2 = round(max(t2), 1),
         tod_sd_g2   = round(sd(t2), 2),
-        # r = A/sigma — top-300 rhythmic genes (cross-tissue comparable)
+        # r = A/sigma, top-300 rhythmic genes (cross-tissue comparable)
         r_median_top300_g1 = round(r1[1], 3),
         r_q25_top300_g1    = round(r1[2], 3),
         r_q75_top300_g1    = round(r1[3], 3),

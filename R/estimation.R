@@ -88,10 +88,8 @@ estimate_circadian_params = function(data, times, period = 24,
                                      verbose = TRUE) {
 
   if (verbose) {
-    cat("=== Estimating Circadian Parameters from Pilot Data ===\n")
-    cat("Genes:", nrow(data), "\n")
-    cat("Samples:", ncol(data), "\n")
-    cat("Time points:", length(unique(times)), "\n\n")
+    cat(sprintf("Estimating circadian parameters: %d genes, %d samples, %d time points\n\n",
+                nrow(data), ncol(data), length(unique(times))))
   }
 
   G = nrow(data)
@@ -203,7 +201,7 @@ estimate_circadian_params = function(data, times, period = 24,
   )
 
   if (verbose) {
-    cat("\n=== Parameter Estimates ===\n")
+    cat("\nParameter estimates:\n")
     cat(sprintf("Mesor: %.2f ± %.2f\n", params$M_mean, params$M_sd))
     cat(sprintf("Amplitude (rhythmic): %.3f ± %.3f (median: %.3f)\n",
                 params$A_mean, params$A_sd, params$A_median))
@@ -638,10 +636,8 @@ estCircadianParam2H <- function(data, times, period = 24,
   top_k   <- as.integer(top_k)
 
   if (verbose) {
-    cat("=== Estimating Two-Harmonic Cosinor Parameters from Pilot Data ===\n")
-    cat("Genes:", ngenes, "\n")
-    cat("Samples:", N, "\n")
-    cat("Time points:", length(unique(times)), "\n\n")
+    cat(sprintf("Estimating two-harmonic cosinor parameters: %d genes, %d samples, %d time points\n\n",
+                ngenes, N, length(unique(times))))
   }
 
   # Build the K=2 cosinor design matrix once: columns
@@ -936,7 +932,7 @@ estCircadianParamFMM <- function(data, times, period = 24,
   if (!requireNamespace("FMM", quietly = TRUE))
     stop("estCircadianParamFMM requires the FMM package. Install with install.packages('FMM').")
 
-  # Step 1a: cosinor fit on all genes — needed for residual sigma estimates
+  # Step 1a: cosinor fit on all genes, needed for residual sigma estimates
   # (used downstream as F_sigma in simulation). The cosinor p-value is NOT used
   # for screening; the detect_FMM screen below replaces it. This keeps the noise
   # estimate consistent with previous pipelines while letting detect_FMM define
@@ -970,7 +966,7 @@ estCircadianParamFMM <- function(data, times, period = 24,
   # Step 2: fit FMM per top-K gene to extract (omega, alpha, A) parameters.
   #
   # SCALE CONVENTION: timePoints in radians [0, 2*pi]. This matters because
-  # FMM::fitFMM does NOT internally rescale timePoints — the returned omega
+  # FMM::fitFMM does NOT internally rescale timePoints, the returned omega
   # and alpha are in the input scale. Verified empirically: on a known
   # signal with true omega=0.3, fitting in radians recovers omega=0.30,
   # while fitting on [0,1] gives omega=0.046 (off by ~7x and meaningless
@@ -1033,13 +1029,13 @@ estCircadianParamFMM <- function(data, times, period = 24,
   }
 
   # Step 4: assemble baseline (mesor and lOD distributions across ALL genes,
-  # same as estCircadianParam — these aren't FMM-specific)
+  # same as estCircadianParam, these aren't FMM-specific)
   lBaselineExpr_emp <- pdf_$M[!is.na(pdf_$M)]
   sigma_valid       <- pdf_$sigma[!is.na(pdf_$sigma) & pdf_$sigma > 0]
   lOD_emp           <- log(sigma_valid)
 
   # prop_rhythmic from detect_FMM screen (matches detector used downstream)
-  # — full screen-pass count, not just top-K
+  #, full screen-pass count, not just top-K
   prop_rhythmic_emp <- mean(!is.na(fmm_pvals) & fmm_pvals < min_rhythm_pval,
                              na.rm = TRUE)
 
@@ -1290,7 +1286,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
 
   if (n_dr_pilot < min_pilot && verbose) {
     warning(sprintf(
-      paste0("Only %d DR genes found in pilot (rhythmic in exactly one group) — ",
+      paste0("Only %d DR genes found in pilot (rhythmic in exactly one group), ",
              "fewer than the recommended minimum of %d.\n",
              "  DR power will be near zero and estimates unreliable.\n",
              "  --> Remove 'DR' from test_types in CircadianDesignOptions() to skip this endpoint,\n",
@@ -1299,7 +1295,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   }
   if (n_dp_pilot < min_pilot && verbose) {
     warning(sprintf(
-      paste0("Only %d DP genes found in pilot (jointly rhythmic & |Δφ|>%.1fh) — ",
+      paste0("Only %d DP genes found in pilot (jointly rhythmic & |Δφ|>%.1fh), ",
              "fewer than the recommended minimum of %d.\n",
              "  DP power will be near zero and estimates unreliable.\n",
              "  --> Remove 'DP' from test_types in CircadianDesignOptions() to skip this endpoint,\n",
@@ -1308,7 +1304,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   }
   if (n_dm_pilot < min_pilot && verbose) {
     warning(sprintf(
-      paste0("Only %d DM genes found in pilot (jointly rhythmic & significant mesor diff) — ",
+      paste0("Only %d DM genes found in pilot (jointly rhythmic & significant mesor diff), ",
              "fewer than the recommended minimum of %d.\n",
              "  DM power will be near zero and estimates unreliable.\n",
              "  --> Remove 'DM' from test_types in CircadianDesignOptions() to skip this endpoint,\n",
@@ -1360,7 +1356,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   )
 
   if (verbose) {
-    cat("\n=== Two-Group Empirical Differential Parameter Estimates ===\n")
+    cat("\nTwo-group empirical differential parameter estimates\n")
     cat(sprintf("  Group 1 rhythmic: %.1f%%   Group 2 rhythmic: %.1f%%\n",
                 100 * p1$prop_rhythmic, 100 * p2$prop_rhythmic))
     cat(sprintf("  Jointly rhythmic: %.1f%%\n", 100 * prop_joint))

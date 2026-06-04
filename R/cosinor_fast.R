@@ -27,10 +27,10 @@
 # point rounding (max difference < 2e-12 in practice; see test results).
 #
 # Arguments:
-#   data            — G x N matrix (genes x samples)
-#   times           — numeric vector length N
-#   period          — circadian period (default 24)
-#   min_rhythm_pval — threshold for is_rhythmic flag (default 0.01)
+#   data           : G x N matrix (genes x samples)
+#   times          : numeric vector length N
+#   period         : circadian period (default 24)
+#   min_rhythm_pval: threshold for is_rhythmic flag (default 0.01)
 # ---------------------------------------------------------------------------
 fitCosinorAll_fast <- function(data, times, period = 24, min_rhythm_pval = 0.01) {
 

@@ -140,9 +140,7 @@ printDensitySummary <- function(density_results) {
   FD_avg <- density_results$FD_avg
   FDC_avg <- density_results$FDC_avg
 
-  cat("\n====================================================================\n")
-  cat(sprintf("%s POWER: SUBJECTS VS TIME POINTS\n", density_results$test_type))
-  cat("====================================================================\n\n")
+  cat(sprintf("\n%s power: subjects vs time points\n\n", density_results$test_type))
 
   for (j in seq_along(n_time_points)) {
     nt <- n_time_points[j]
@@ -392,10 +390,8 @@ plotDRPowerStratified <- function(results_file, output_file = NULL, test_name = 
   dev.off()
 
   # Print summary table
-  cat("\n====================================================================\n")
-  cat(sprintf("%s MARGINAL POWER AT DIFFERENT FDR THRESHOLDS\n", test_name))
-  cat("(FDR applied only to tested genes, matching runner.R logic)\n")
-  cat("====================================================================\n\n")
+  cat(sprintf("\n%s marginal power at different FDR thresholds\n", test_name))
+  cat("(FDR applied only to tested genes, matching runner.R logic)\n\n")
 
   cat(sprintf("%-10s |", "n"))
   for (t in 1:n_thresholds) cat(sprintf(" %-8s |", threshold_labels[t]))

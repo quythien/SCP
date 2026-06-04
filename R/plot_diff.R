@@ -13,8 +13,8 @@ if (!exists("add_se_bars")) {
 # Row order: DR comp1, DR comp2, DP comp1, DP comp2, DM comp1, DM comp2
 # Columns: (A) marginal power vs n | (B) TD by r-stratum | (C) power by r-stratum
 #
-# Input: res_list — named list of two runSimsDiff() outputs (raw format)
-#        comp_labels — character(2) labels for the two comparisons
+# Input: res_list, named list of two runSimsDiff() outputs (raw format)
+#        comp_labels, character(2) labels for the two comparisons
 
 # ----------------------------------------------------------------------
 # Internal: convert raw runSimsDiff() output to stratified arrays
@@ -383,7 +383,7 @@ plotDiffPower <- function(res_list,
       }
 
       if (stratified) {
-      # ---- Panel B: power by r-stratum — bold() needed for bquote titles ----
+      # ---- Panel B: power by r-stratum, bold() needed for bquote titles ----
       par(mgp = c(5.0, 0.65, 0))
       matplot(seq_len(n_strata_plt),
               100 * t(mean_pow_plt[disp_idx, , drop = FALSE]),

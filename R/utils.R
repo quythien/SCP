@@ -532,7 +532,7 @@ estimate_r_from_data = function(dcp_results, top_n = 100,
 #'
 #' @export
 print.estimate_r_from_data = function(x, ...) {
-  cat("=== Signal-to-Noise Ratio (r) Estimation ===\n")
+  cat("Signal-to-noise ratio (r) estimation\n")
   cat(sprintf("Based on top %d rhythmic genes (ranked by DR q-value)\n", x$top_n))
   cat(sprintf("Group used: %s\n", x$group_used))
   cat(sprintf("Valid r values: %d\n\n", x$n_valid))
@@ -676,7 +676,7 @@ prepCircadianData <- function(expr,
 
   # --- 3. Align pheno and extract times ---
   if (is.character(times) && length(times) == 1) {
-    # times is a column name — extract from pheno
+    # times is a column name, extract from pheno
     if (is.null(pheno))
       stop("'times' is a column name but 'pheno' was not provided.")
     time_col_use <- times
@@ -728,7 +728,7 @@ prepCircadianData <- function(expr,
     norm_desc <- "log2(CPM + 1) from raw CPM"
 
   } else {
-    # log2: already normalized — just ensure numeric matrix
+    # log2: already normalized, just ensure numeric matrix
     norm_desc <- "as-is (already log2-scale)"
   }
 
