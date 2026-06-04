@@ -1180,15 +1180,22 @@ server <- function(input, output, session) {
     if (is.null(rf) || !nrow(rf)) return(NULL)
     n_total <- p$rhythm_denom %||% p$ngenes %||% nrow(rf)
     rf <- rf[order(rf$pvalue), , drop = FALSE]
-    i  <- seq_len(nrow(rf))
+    n  <- nrow(rf)
+    i  <- seq_len(n)
     q  <- pmin(rev(cummin(rev(rf$pvalue * n_total / i))), 1)
+    # Robust to pilots whose rhythm_fit predates the gene/symbol/mesor columns
+    # (e.g. the older K=2 _2H pilots): fall back to a row index for the ID, use
+    # the ID as the gene name, and NA mesor -- all length-n so the table builds.
+    gene_id <- if (!is.null(rf$gene))   as.character(rf$gene)   else as.character(i)
+    gene_nm <- if (!is.null(rf$symbol)) as.character(rf$symbol) else gene_id
+    mesor_v <- if (!is.null(rf$mesor))  rf$mesor                else rep(NA_real_, n)
     data.frame(
-      Gene   = if (!is.null(rf$symbol)) rf$symbol else rf$gene,
-      ID     = rf$gene,
+      Gene   = gene_nm,
+      ID     = gene_id,
       p      = rf$pvalue, q = q,
       Amp    = rf$A, Sigma = rf$sigma, rtilde = rf$A / rf$sigma,
       Peak_h = round(rf$phi %% 24, 2),
-      Mesor  = if (!is.null(rf$mesor)) rf$mesor else NA_real_,
+      Mesor  = mesor_v,
       stringsAsFactors = FALSE)
   })
 
