@@ -348,6 +348,12 @@ ui <- fluidPage(
           ),
           column(5,
             tags$b("Gene detail"),
+            fluidRow(
+              column(7, selectInput("gene_sort", "Sort list by",
+                                    choices = c("p-value" = "p"), selected = "p")),
+              column(5, div(style = "margin-top:26px;",
+                            checkboxInput("gene_sort_rev", "Reverse order", value = FALSE)))
+            ),
             selectizeInput("gene_pick", "Look up a gene (symbol or ID)",
                            choices = NULL, multiple = FALSE,
                            options = list(placeholder = "type a gene symbol...")),
@@ -1245,13 +1251,46 @@ server <- function(input, output, session) {
                  .thresh_label(), format(np, big.mark = ",")))
   })
 
-  # Populate the gene lookup (server-side; rhythmic gene set can be large).
+  # Sort-field choices adapt to K=1 vs K=2 (the two-harmonic-only fields appear
+  # only when a K=2 fit is active).
+  observe({
+    g  <- gene_tbl()
+    k2 <- !is.null(g) && isTRUE(g$K2[1])
+    ch <- stats::setNames("p", if (k2) "p-value (joint F-test)" else "p-value (cosinor)")
+    ch <- c(ch, "q-value (BH FDR)" = "q")
+    if (k2) ch <- c(ch, "1st-harmonic p-value" = "p_K1", "2nd-harmonic p-value" = "p_2h")
+    ch <- c(ch, "Peak 1 (h)" = "peak1")
+    if (k2) ch <- c(ch, "Peak 2 (h)" = "peak2")
+    ch <- c(ch, "Effect size r-tilde (A/sigma)" = "rtilde",
+                "Amplitude A1" = "Amp", "Gene symbol (A-Z)" = "Gene")
+    sel <- isolate(input$gene_sort); if (is.null(sel) || !(sel %in% ch)) sel <- "p"
+    updateSelectInput(session, "gene_sort", choices = ch, selected = sel)
+  })
+
+  # Populate the gene lookup (server-side; rhythmic gene set can be large),
+  # ordered by the chosen sort field/direction; the readout label echoes it.
   observe({
     g <- gene_tbl()
-    ch <- if (is.null(g) || !nrow(g)) character(0)
-          else stats::setNames(g$ID, sprintf("%s  (p=%.1e)", g$Gene, g$p))
-    updateSelectizeInput(session, "gene_pick", choices = ch,
-                         selected = if (length(ch)) ch[[1]] else "", server = TRUE)
+    if (is.null(g) || !nrow(g)) {
+      updateSelectizeInput(session, "gene_pick", choices = character(0),
+                           selected = "", server = TRUE)
+      return()
+    }
+    g   <- g[.gene_sort_order(g, input$gene_sort, isTRUE(input$gene_sort_rev)), , drop = FALSE]
+    fld <- input$gene_sort %||% "p"
+    lab <- switch(fld,
+      q      = sprintf("%s  (q=%.1e)",   g$Gene, g$q),
+      p_K1   = sprintf("%s  (p1=%.1e)",  g$Gene, g$p_K1),
+      p_2h   = sprintf("%s  (p2h=%.1e)", g$Gene, g$p_2h),
+      rtilde = sprintf("%s  (r=%.2f)",   g$Gene, g$rtilde),
+      Amp    = sprintf("%s  (A=%.2f)",   g$Gene, g$Amp),
+      peak1  = sprintf("%s  (pk1=%.1fh)",g$Gene, g$Peak_h),
+      Gene   = g$Gene,
+      sprintf("%s  (p=%.1e)", g$Gene, g$p))
+    ch  <- stats::setNames(g$ID, lab)
+    cur <- isolate(input$gene_pick)
+    sel <- if (!is.null(cur) && nzchar(cur) && cur %in% ch) cur else ch[[1]]
+    updateSelectizeInput(session, "gene_pick", choices = ch, selected = sel, server = TRUE)
   })
 
   # Peak time(s) of the fitted curve: the acrophase for K=1, or the two local
@@ -1267,6 +1306,33 @@ server <- function(input, output, session) {
     pk <- t[ism][order(-y[ism])]
     c(peak1 = if (length(pk) >= 1L) pk[1] else (phi1 %% period),
       peak2 = if (length(pk) >= 2L) pk[2] else NA_real_)
+  }
+
+  # Row order for the gene-lookup list. Each field has a natural (sensible)
+  # default direction (p/q/peaks ascending, effect size/amplitude descending,
+  # symbol A-Z); the "Reverse order" checkbox flips it. Peak times for K=2 are
+  # the two-harmonic waveform maxima (computed lazily, only when a peak sort is
+  # chosen) so they match the gene table.
+  .gene_sort_order <- function(g, field, rev) {
+    field <- field %||% "p"
+    pk <- NULL
+    if (field %in% c("peak1", "peak2")) {
+      pk <- if (isTRUE(g$K2[1]))
+              t(mapply(.twoharm_peaks, g$Amp, g$Peak_h, g$A2, g$phi2))
+            else cbind(peak1 = g$Peak_h, peak2 = rep(NA_real_, nrow(g)))
+    }
+    spec <- switch(field,
+      p      = list(k = g$p,             d = FALSE),
+      q      = list(k = g$q,             d = FALSE),
+      p_K1   = list(k = g$p_K1,          d = FALSE),
+      p_2h   = list(k = g$p_2h,          d = FALSE),
+      rtilde = list(k = g$rtilde,        d = TRUE),
+      Amp    = list(k = g$Amp,           d = TRUE),
+      peak1  = list(k = pk[, "peak1"],   d = FALSE),
+      peak2  = list(k = pk[, "peak2"],   d = FALSE),
+      Gene   = list(k = toupper(g$Gene), d = FALSE),
+      list(k = g$p, d = FALSE))
+    order(spec$k, decreasing = xor(isTRUE(spec$d), isTRUE(rev)), na.last = TRUE)
   }
 
   # Fitted cosinor curve with a +/-1.96-sigma noise band and the peak(s) marked.
