@@ -331,7 +331,7 @@ ui <- fluidPage(
           uiOutput("pilot_links")
         ),
         column(5,
-          h4("Sampling design (TOD distribution)"),
+          h4("Sampling design (TOD distribution)", style = "text-align:center;"),
           plotOutput("tod_plot", height = "auto", width = "auto")
         )
       ),
