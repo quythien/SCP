@@ -49,19 +49,31 @@ options(repos = BiocManager::repositories())
 remotes::install_local("SCP", upgrade = "never")
 ```
 
-A browser window opens with cascading dropdowns (species → dataset → tissue
-→ condition), sliders for target power and FDR, a sampling-design panel,
-and a one-click "Run simulation" button. Power curve and recommended sample
-size render in 2-5 seconds per click. All 127 bundled pilots are
-immediately available.
+The app has two linked halves. **Circadian Power Study** (left) drives the
+sample-size calculation: cascading dropdowns (species → dataset → tissue →
+condition), a pilot rhythmicity threshold, the sampling design (active
+timecourse or passive time-of-death), a sample-size grid, and sliders for
+target power and FDR. One click on "Run simulation" draws the FDR-controlled
+power curve and reads off the recommended sample size in a few seconds.
+**Circadian Biomarker Detection** (right) explores the pilot itself: a core
+clock-gene cosinor panel, a ranked table of rhythmic genes with BH q-values and
+effect sizes, a per-gene cosinor view, and pathway enrichment (KEGG / Reactome /
+GO). On launch the app opens on the GTEx Adrenal (passive) pilot so there is
+something to look at right away; all 161 bundled pilots are available from the
+dropdowns.
 
-The Shiny app runs entirely on your machine, no account or hosting needed.
+![Power curve for the GTEx Adrenal (passive) pilot, the app's default view](man/figures/app_power_curve_adrenal.png)
 
-You can also calibrate from **your own pilot** via the "Upload my own pilot"
-option (an expression matrix CSV with genes in rows + samples in columns, and a
-one-column time-of-day CSV). A ready-made example (2,500 genes x 60 samples,
-**simulated to resemble a GTEx Adrenal pilot** so it is freely shareable) ships
-with the package:
+The app runs entirely on your machine, no account or hosting needed.
+
+You can also calibrate from **your own pilot** via "Upload my own pilot": an
+expression-matrix CSV (genes in rows, samples in columns, up to 5 GB) and a
+one-column time-of-day CSV. The upload is fit on the fly for both the
+single-harmonic (K = 1) and two-harmonic (K = 2) detectors, gene IDs are mapped
+to symbols where an annotation package is available, and the gene table and
+enrichment work on your data exactly as on a bundled pilot. A ready-made example
+pilot (**simulated to resemble a GTEx Adrenal pilot** so it is freely shareable)
+ships with the package:
 
 ```r
 system.file("extdata/example/example_expression.csv", package = "SCP")
@@ -173,7 +185,7 @@ If you use SCP in your research, please cite:
 
 ```
 Pham, T. Q. (2026). SCP: Simulation-Based Circadian Power Analysis.
-  R package version 0.4.16. https://github.com/quythien/SCP
+  R package, latest version at https://github.com/quythien/SCP
 ```
 
 A `CITATION.cff` is provided.
