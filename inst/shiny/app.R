@@ -352,6 +352,8 @@ ui <- fluidPage(
         # so it is obvious the explorer reflects the left-panel threshold.
         div(style = "padding:6px 10px; background:#eef4fb; border-radius:4px; margin-bottom:8px;",
             uiOutput("explorer_thresh")),
+        # K=2 identifiability notice (only appears when the detector is K=2)
+        uiOutput("k2_status"),
         tags$b("Core clock genes"),
         plotOutput("clock_panel", height = "auto", width = "auto"),
         uiOutput("clock_note"),
@@ -632,7 +634,11 @@ server <- function(input, output, session) {
       # fit (built at upload) so the detector simulates from real (A2, phi2)
       # truth; fall back to the K=1 fit if the 2H fit was unavailable.
       up <- uploaded_pilot()
-      base <- if (isTRUE(input$K == "2") && !is.null(up$.pilot2)) up$.pilot2 else up
+      want_k2 <- isTRUE(input$K == "2")
+      base <- if (want_k2 && !is.null(up$.pilot2)) up$.pilot2 else up
+      # Flag when K=2 was requested but the uploaded design can't identify it.
+      if (want_k2 && is.null(up$.pilot2) && !is.null(base))
+        attr(base, "k2_unavailable") <- TRUE
       return(.app_apply_threshold(base, input$rhy_stat,
                                   as.numeric(input$rhy_thresh)))
     }
@@ -652,18 +658,23 @@ server <- function(input, output, session) {
       .read_pilot(input$species, input$dataset,
                   actual_tissue, input$condition, K = K_req),
       error = function(e) {
-        if (K_req == 2L)
-          showNotification(
-            paste0("No two-harmonic (K=2) pilot has been built for this dataset. ",
-                   "Switch to K = 1, or build a K=2 variant."),
-            type = "warning", duration = 8)
-        else
+        if (K_req == 2L) {
+          # K=2 not available (the 16 pilots whose sampling design cannot identify
+          # a 12h second harmonic). Fall back to K=1 so the panel still works; the
+          # k2_status note (right panel) explains why, instead of a blank screen.
+          fb <- tryCatch(.read_pilot(input$species, input$dataset,
+                                     actual_tissue, input$condition, K = 1L),
+                         error = function(e2) NULL)
+          if (!is.null(fb)) attr(fb, "k2_unavailable") <- TRUE
+          fb
+        } else {
           showNotification(
             sprintf("Could not load pilot [%s / %s / %s / %s]: %s",
                     input$species, input$dataset, actual_tissue, input$condition,
                     conditionMessage(e)),
             type = "error", duration = 12)
-        NULL
+          NULL
+        }
       }
     )
     if (!is.null(p) && !inherits(p, "CircadianBioOptions"))
@@ -1238,6 +1249,24 @@ server <- function(input, output, session) {
       Mesor  = mesor_v,
       A2     = A2_v, phi2 = phi2_v, K2 = is_k2,
       stringsAsFactors = FALSE)
+  })
+
+  # K=2 identifiability notice: shown only when the detector is K=2. Confirms a
+  # working two-harmonic fit, or explains the K=1 fallback when the sampling
+  # design has too few distinct time points to identify the 12h second harmonic.
+  output$k2_status <- renderUI({
+    if (!isTRUE(input$K == "2")) return(NULL)
+    p <- pilot(); if (is.null(p)) return(NULL)
+    rf <- p$rhythm_fit
+    nt <- length(unique(round((p$times %||% p$cts %||% numeric(0)) %% 24, 3)))
+    has_k2 <- !is.null(rf$A2) && any(is.finite(rf$A2)) && !isTRUE(attr(p, "k2_unavailable"))
+    if (has_k2)
+      div(style = "padding:7px 12px; background:#e9f5ea; border-left:4px solid #4a9c5d; border-radius:0 4px 4px 0; margin-bottom:8px; font-size:0.9em;",
+          HTML(sprintf("<b>Two-harmonic (K=2) fit active.</b> The sampling design identifies the second harmonic (%d distinct time points).", nt)))
+    else
+      div(style = "padding:7px 12px; background:#fff3cd; border-left:4px solid #d68f00; border-radius:0 4px 4px 0; margin-bottom:8px; font-size:0.9em;",
+          HTML(sprintf("<b>Two-harmonic (K=2) not identifiable for this dataset.</b> Its sampling design (%d distinct time point%s) cannot separately estimate the 12-hour second harmonic (the 5-parameter fit is rank-deficient). The panel and simulation use the single-harmonic (K=1) fit; switch the detector to K=1 to hide this notice.",
+                       nt, if (nt == 1L) "" else "s")))
   })
 
   # Genes passing the chosen alpha_pilot (matches the summary's prop_rhythmic).
