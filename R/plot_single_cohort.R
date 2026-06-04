@@ -44,6 +44,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                                  cex_main = 1.50, cex_lab = 1.60, cex_axis = 1.45,
                                  line_lwd = 2, pt_cex = 0.95, legend_cex = NULL,
                                  title_cex = 1.65, oma_top = 2.4,
+                                 legend_pos = "topleft", se_cap = 0.3,
                                  vertical = FALSE,
                                  panel_c_legend = FALSE,
                                  width = 15, height = 5.5) {
@@ -264,20 +265,22 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   mai_left  <- 0.85 + (if (needs_strata) 2.8 else 1.25) * extra_lab
   # B/C carry long vertical (las=2) stratum labels under which the r-tilde
   # x-title sits, so they need much more bottom room at large fonts.
-  mai_bot   <- 0.85 + (if (needs_strata) 3.6 else 0.6) * extra_lab
-  mgp_bc1   <- 4.6 + 6.0 * extra_lab             # x/y-title line for B/C (clears las=2 labels)
+  mai_bot   <- 1.03 + (if (needs_strata) 3.6 else 0.6) * extra_lab
+  mgp_bc1   <- 5.2 + 6.0 * extra_lab             # x/y-title line for B/C (clears las=2 labels, extra gap to ticks)
   # Outer top oma needs ~3 lines for the cex=1.5 title to clear the top edge.
   # vertical = TRUE stacks the panels in one column (each full width), which
   # gives the r-tilde x-axis far more room than the cramped 1x3 layout.
   par(mfrow = if (isTRUE(vertical)) c(length(panels), 1L) else c(1L, length(panels)),
-      mai = c(mai_bot, mai_left, 0.55, 0.50),
+      mai = c(mai_bot, mai_left, 0.52, 0.28),
       mgp = c(3.2, 0.65, 0), oma = c(0, 0, oma_top, 0),
       cex.axis = cex_axis, cex.lab = cex_lab, cex.main = cex_main, font.main = 2)
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
   sample_legend_n <- length(disp_idx)
-  sample_legend_cols <- if (sample_legend_n > 24L) 3L else if (sample_legend_n > 12L) 2L else 1L
-  sample_legend_cex <- if (sample_legend_n > 24L) 0.72 else if (sample_legend_n > 12L) 0.85 else 1.05
+  # Wrap the per-n key into columns once it has more than a few entries so it
+  # stays short; small text + short line samples keep the box from getting wide.
+  sample_legend_cols <- if (sample_legend_n > 16L) 3L else if (sample_legend_n > 6L) 2L else 1L
+  sample_legend_cex <- if (sample_legend_n > 24L) 0.70 else if (sample_legend_n > 12L) 0.80 else 0.85
   # A caller-supplied legend_cex scales the adaptive value up/down uniformly so
   # the larger manuscript figures can carry bigger keys without the app (which
   # leaves legend_cex NULL) changing at all.
@@ -298,22 +301,23 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
           xlab = "Sample size (n)", ylab = "Power (%)",
           main = "")
   title(main = "A   Power vs Sample Size",
-        adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.6)
+        adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.95)
   for (t in seq_len(n_thresh)) {
     add_se_bars(ss_disp_a, 100 * marginal_mean[disp_idx_a, t],
-                100 * marginal_se[disp_idx_a, t], col = thresh_cols[t])
+                100 * marginal_se[disp_idx_a, t], col = thresh_cols[t],
+                bar_width = se_cap)
   }
   if (!is.null(reference_n)) {
     abline(v = reference_n, lty = 3, col = "darkgreen", lwd = 1.5)
   }
   abline(h = 80, lty = 2, col = "grey50", lwd = 1.2)
   grid()
-  legend("topleft", title = NULL, legend = thresh_labels,
+  legend(legend_pos, title = NULL, legend = thresh_labels,
          col = thresh_cols, lty = 1, pch = 19, lwd = line_lwd,
          cex = panel_a_legend_cex, bty = "o", bg = "white", box.col = "grey50", box.lwd = 0.8,
          text.col = "black", title.col = "black",
-         inset = c(0.02, 0.02), y.intersp = 1.0, title.adj = 0,
-         seg.len = 1.4, x.intersp = 0.7)
+         inset = c(0.02, 0.02), y.intersp = 0.88, title.adj = 0,
+         seg.len = 1.1, x.intersp = 0.5)
   if (!is.na(vline_n)) {
     abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.5)
     # Place "n=NNN" to the RIGHT of the dashed line, low in the plot (y=35).
@@ -336,22 +340,22 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
           xaxt = "n")
   title(main = bquote(bold("B   ") * bold("Stratified Power") ~
                        bold(.(sprintf("(%s)", fdr_label)))),
-        adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.5)
+        adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.95)
   axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = max(1.15, cex_axis * 0.8))
   for (j in disp_idx) {
     points(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
            pch = 19, col = size_colors[j], cex = pt_cex)
     add_se_bars(seq_len(n_strata_plt), 100 * mean_pow_plt[j, ],
-                100 * se_pow_plt[j, ], col = size_colors[j])
+                100 * se_pow_plt[j, ], col = size_colors[j], bar_width = se_cap)
   }
   grid()
-  legend("topleft", title = NULL, legend = paste0("n = ", sample_sizes[disp_idx]),
+  legend(legend_pos, title = NULL, legend = paste0("n = ", sample_sizes[disp_idx]),
          col = size_colors[disp_idx], lty = 1, lwd = 2,
          cex = sample_legend_cex, bty = "o", bg = "white",
          box.col = "grey50", box.lwd = 0.8,
          text.col = "black", title.col = "black",
-         inset = c(0.02, 0.02), y.intersp = 0.95, title.adj = 0,
-         seg.len = 1.2, x.intersp = 0.6, ncol = sample_legend_cols)
+         inset = c(0.02, 0.02), y.intersp = 0.85, title.adj = 0,
+         seg.len = 0.7, x.intersp = 0.35, ncol = sample_legend_cols)
   }  # end Panel B
 
   if ("C" %in% panels) {
@@ -367,7 +371,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
        xaxt = "n")
   title(main = bquote(bold("C   ") * bold("True Discoveries") ~
                        bold(.(sprintf("(%s)", fdr_label)))),
-        adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.5)
+        adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.95)
   axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = max(1.15, cex_axis * 0.8))
 
   step_x <- rep(seq(0.5, n_strata_plt + 0.5, by = 1), each = 2)
@@ -378,7 +382,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   for (j in disp_idx) {
     lines(seq_len(n_strata_plt), mean_TD_plt[j, ], col = size_colors[j], lwd = line_lwd)
     points(seq_len(n_strata_plt), mean_TD_plt[j, ], pch = 19, col = size_colors[j], cex = pt_cex)
-    add_se_bars(seq_len(n_strata_plt), mean_TD_plt[j, ], se_TD_plt[j, ], col = size_colors[j])
+    add_se_bars(seq_len(n_strata_plt), mean_TD_plt[j, ], se_TD_plt[j, ], col = size_colors[j],
+                bar_width = se_cap)
   }
   grid()
   # Panel C legend is off by default: the n-by-colour key is already shown in
@@ -399,7 +404,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   }  # end Panel C
 
   if (nchar(title) > 0)
-    mtext(title, outer = TRUE, side = 3, line = 0.3, cex = title_cex, font = 2)
+    mtext(title, outer = TRUE, side = 3, line = 0.12, cex = title_cex, font = 2)
 
   invisible(list(marginal_mean = marginal_mean, marginal_se = marginal_se,
                  mean_TD = mean_TD, mean_pow = mean_pow))

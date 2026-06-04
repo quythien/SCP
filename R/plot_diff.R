@@ -264,9 +264,9 @@ plotDiffPower <- function(res_list,
         cex.axis = 1.35, cex.lab = 1.55, font.main = 2, cex.main = 1.45)
   } else {
     par(mfrow = c(n_comps, n_ep),
-        mai   = c(1.10, 1.12, 0.60, 0.45),
-        mgp   = c(3.2, 0.65, 0),
-        oma   = c(0, 0, 2.9, 0),
+        mai   = c(1.10, 0.95, 0.50, 0.26),
+        mgp   = c(3.0, 0.65, 0),
+        oma   = c(0, 0, 2.0, 0),
         cex.axis = 1.50, cex.lab = 1.70, font.main = 2, cex.main = 1.55)
   }
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
@@ -349,6 +349,7 @@ plotDiffPower <- function(res_list,
       paA_titcex <- if (stratified) 1.30 else 1.55
       paA_legcex <- if (stratified) 0.60 else 1.05
       paA_ntxt   <- if (stratified) 0.85 else 1.10
+      paA_secap  <- if (stratified) 0.3  else 0.55
       par(mgp = c(3.2, 0.65, 0))
       letter_panel <- LETTERS[match(ep, endpoints)]
       matplot(ss_disp, 100 * marginal_mean[disp_idx, , drop = FALSE],
@@ -361,7 +362,8 @@ plotDiffPower <- function(res_list,
             adj = 0.5, font.main = 2, cex.main = paA_titcex, line = 0.6)
       for (t in seq_len(n_thresh)) {
         add_se_bars(ss_disp, 100 * marginal_mean[disp_idx, t],
-                    100 * marginal_se[disp_idx, t], col = thresh_cols[t])
+                    100 * marginal_se[disp_idx, t], col = thresh_cols[t],
+                    bar_width = paA_secap)
       }
       vline_n <- n80_by_comp[[ci]][ep]
       abline(h = 80, lty = 2, col = "grey50", lwd = 1.3)
@@ -456,8 +458,8 @@ plotDiffPower <- function(res_list,
     }
   }
 
-  mtext(main_title, outer = TRUE, side = 3, line = 0.3,
-        cex = if (stratified) 1.4 else 1.9, font = 2)
+  mtext(main_title, outer = TRUE, side = 3, line = 0.12,
+        cex = if (stratified) 1.4 else 1.5, font = 2)
 
   invisible(panel_data)
 }
