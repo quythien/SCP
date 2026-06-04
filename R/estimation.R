@@ -506,21 +506,31 @@ estCircadianParam <- function(data, times, period = 24,
 #'   two-harmonic.
 #' @keywords internal
 .build_rhythm_fit2h <- function(p_K1, A1, phi1, A2, phi2, sigma,
-                                gene = NULL, mesor = NULL, cap = .pilot_rhythm_cap) {
+                                gene = NULL, mesor = NULL,
+                                p_joint = NULL, p_2h = NULL,
+                                cap = .pilot_rhythm_cap) {
   keep <- is.finite(p_K1) & p_K1 < cap &
           is.finite(A1) & A1 > 0 &
           is.finite(sigma) & sigma > 0
-  g <- if (!is.null(gene)) gene[keep] else as.character(which(keep))
-  m <- if (!is.null(mesor)) mesor[keep] else rep(NA_real_, sum(keep))
+  g  <- if (!is.null(gene))    gene[keep]  else as.character(which(keep))
+  m  <- if (!is.null(mesor))   mesor[keep] else rep(NA_real_, sum(keep))
+  # Three K=2 p-values: pvalue = 1st-harmonic F-test (the pre-screen, kept for
+  # cross-K consistency with alpha_pilot); p_joint = the joint two-harmonic
+  # F(4, N-5) test (the manuscript's K=2 detector); p_2h = 2nd-harmonic-only
+  # test (flags genuinely non-sinusoidal genes).
+  pj <- if (!is.null(p_joint)) p_joint[keep] else rep(NA_real_, sum(keep))
+  p2 <- if (!is.null(p_2h))    p_2h[keep]    else rep(NA_real_, sum(keep))
   df <- data.frame(
-    gene   = g,
-    pvalue = p_K1[keep],
-    A      = A1[keep],
-    phi    = phi1[keep],
-    A2     = A2[keep],
-    phi2   = phi2[keep],
-    sigma  = sigma[keep],
-    mesor  = m,
+    gene    = g,
+    pvalue  = p_K1[keep],
+    p_joint = pj,
+    p_2h    = p2,
+    A       = A1[keep],
+    phi     = phi1[keep],
+    A2      = A2[keep],
+    phi2    = phi2[keep],
+    sigma   = sigma[keep],
+    mesor   = m,
     stringsAsFactors = FALSE
   )
   df[order(df$pvalue), , drop = FALSE]
@@ -841,7 +851,8 @@ estCircadianParam2H <- function(data, times, period = 24,
   # length-guarded so a subset/transform never produces a wrong mapping.
   gene_ids_2h <- if (!is.null(rownames(data)) && length(p_K1) == nrow(data)) rownames(data) else NULL
   opts$rhythm_fit  <- .build_rhythm_fit2h(p_K1, A1_g, phi1_g, A2_g, phi2_g, sigma_hat,
-                                          gene = gene_ids_2h, mesor = Mhat)
+                                          gene = gene_ids_2h, mesor = Mhat,
+                                          p_joint = pvals, p_2h = p_2h_only)
   opts$pilot_cap   <- .pilot_rhythm_cap
   opts$alpha_pilot <- min_rhythm_pval
   opts$pilot_top_k <- top_k
