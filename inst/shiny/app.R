@@ -7,6 +7,14 @@ suppressPackageStartupMessages({
   library(SCP)
 })
 
+# Uploaded expression matrices (genes x samples) routinely exceed Shiny's 5 MB
+# default upload cap, forcing users to pre-subset their genes. Raise it to
+# 5 GB so a full pilot CSV uploads as-is. (Per-session option; set once here so
+# it applies however the app is launched.) Note: the file is read into memory,
+# so the real ceiling is host RAM and any reverse-proxy body limit, not this
+# number. Kept finite (not Inf) so a runaway upload cannot exhaust memory.
+options(shiny.maxRequestSize = 5 * 1024^3)
+
 `%||%` <- function(a, b) if (!is.null(a) && length(a) > 0L) a else b
 
 # Capitalize the first letter for DISPLAY only; underlying values are unchanged.
@@ -254,6 +262,7 @@ ui <- fluidPage(
                     "The app also auto-detects the species from your IDs and suggests one. ",
                     "Any other organism, gene symbols, or probe IDs are used as-is.")),
         helpText(em("Once both files load, the pilot is fit on the fly (5-15 sec). ",
+                    "Upload limit 5 GB, so a full gene matrix can be used as-is. ",
                     "See the expected file layout on the right.")),
         verbatimTextOutput("upload_status")
       ),
@@ -546,6 +555,21 @@ server <- function(input, output, session) {
         attr(bio, "id_type")  <- sm$type
         attr(bio, "detected") <- sm$detected
         attr(bio, "n_mapped") <- sm$n_mapped
+        # Also fit a two-harmonic (K=2) variant so the K=2 detector has a real
+        # second-harmonic truth to simulate from. Without this, selecting K=2
+        # on an uploaded pilot changed nothing (the K=1 fit carries no A2/phi2,
+        # so the simulator generated single-harmonic data either way). Embedded
+        # on the K=1 object as `$.pilot2`; pilot() selects it when K=2. Fails
+        # gracefully (NULL) when N < 6 or no gene passes the rhythmic pre-screen.
+        bio$.pilot2 <- tryCatch({
+          b2 <- SCP::estCircadianParam2H(mat, tod, paired_sigma = TRUE, verbose = FALSE)
+          b2$times     <- tod
+          b2$.raw_expr <- mat
+          b2$rhythm_fit <- .upload_symbols(b2$rhythm_fit,
+                                           do_map  = isTRUE(input$upload_map_sym),
+                                           species = input$upload_species %||% "auto")$rf
+          b2
+        }, error = function(e) NULL)
         incProgress(1)
         bio
       })
@@ -571,12 +595,15 @@ server <- function(input, output, session) {
       map_note <- if (!isTRUE(input$upload_map_sym)) "Mapping off (showing original IDs)."
                   else if (n_mapped > 0) sprintf("Mapped %d IDs to symbols.", n_mapped)
                   else "No IDs needed mapping (already symbols / no annotation match)."
+      k2_note  <- if (!is.null(res$.pilot2))
+                    "Two-harmonic (K=2) fit ready: switch the detector to K=2 to use it."
+                  else "Two-harmonic (K=2) fit unavailable (need N>=6 and rhythmic genes); K=2 falls back to K=1."
       uploaded_pilot_state$msg <- sprintf(
-        "OK: %d genes fit, %d rhythmic (%.0f%%). Median r-tilde = %.2f.\n%s\n%s",
+        "OK: %d genes fit, %d rhythmic (%.0f%%). Median r-tilde = %.2f.\n%s\n%s\n%s",
         res$ngenes %||% NA_integer_,
         length(res$amplitude %||% numeric(0)),
         100 * (res$prop_rhythmic %||% NA_real_),
-        stats::median(rt_up, na.rm = TRUE), sugg, map_note)
+        stats::median(rt_up, na.rm = TRUE), sugg, map_note, k2_note)
     }
   })
 
@@ -601,8 +628,12 @@ server <- function(input, output, session) {
   pilot <- reactive({
     if (isTRUE(input$pilot_source == "upload")) {
       # Uploaded pilots carry a rhythm_fit table too, so honor the threshold
-      # slider just like bundled pilots.
-      return(.app_apply_threshold(uploaded_pilot(), input$rhy_stat,
+      # slider just like bundled pilots. For K=2, use the embedded two-harmonic
+      # fit (built at upload) so the detector simulates from real (A2, phi2)
+      # truth; fall back to the K=1 fit if the 2H fit was unavailable.
+      up <- uploaded_pilot()
+      base <- if (isTRUE(input$K == "2") && !is.null(up$.pilot2)) up$.pilot2 else up
+      return(.app_apply_threshold(base, input$rhy_stat,
                                   as.numeric(input$rhy_thresh)))
     }
     req(input$species, input$dataset, input$tissue, input$condition)
@@ -1179,23 +1210,33 @@ server <- function(input, output, session) {
     p <- pilot(); req(p); rf <- p$rhythm_fit
     if (is.null(rf) || !nrow(rf)) return(NULL)
     n_total <- p$rhythm_denom %||% p$ngenes %||% nrow(rf)
-    rf <- rf[order(rf$pvalue), , drop = FALSE]
-    n  <- nrow(rf)
-    i  <- seq_len(n)
-    q  <- pmin(rev(cummin(rev(rf$pvalue * n_total / i))), 1)
-    # Robust to pilots whose rhythm_fit predates the gene/symbol/mesor columns
-    # (e.g. the older K=2 _2H pilots): fall back to a row index for the ID, use
-    # the ID as the gene name, and NA mesor -- all length-n so the table builds.
+    # K=2 pilots carry p_joint (joint two-harmonic F-test, the manuscript's K=2
+    # detector). Option A: rank + threshold the explorer on p_joint for K=2; fall
+    # back to the cosinor p (pvalue = p_K1) for K=1 (and old un-enriched K=2).
+    is_k2 <- !is.null(rf$p_joint) && any(is.finite(rf$p_joint))
+    pp    <- if (is_k2) rf$p_joint else rf$pvalue
+    ord   <- order(pp)
+    rf <- rf[ord, , drop = FALSE]; pp <- pp[ord]
+    n  <- nrow(rf); i <- seq_len(n)
+    q  <- pmin(rev(cummin(rev(pp * n_total / i))), 1)
+    # Robust to pilots whose rhythm_fit predates the gene/symbol/mesor columns:
+    # fall back to a row index for the ID, the ID as the gene name, NA mesor.
     gene_id <- if (!is.null(rf$gene))   as.character(rf$gene)   else as.character(i)
     gene_nm <- if (!is.null(rf$symbol)) as.character(rf$symbol) else gene_id
     mesor_v <- if (!is.null(rf$mesor))  rf$mesor                else rep(NA_real_, n)
+    A2_v    <- if (!is.null(rf$A2))     rf$A2                   else rep(NA_real_, n)
+    phi2_v  <- if (!is.null(rf$phi2))   rf$phi2                 else rep(NA_real_, n)
+    p2h_v   <- if (!is.null(rf$p_2h))   rf$p_2h                 else rep(NA_real_, n)
     data.frame(
       Gene   = gene_nm,
       ID     = gene_id,
-      p      = rf$pvalue, q = q,
+      p      = pp, q = q,
+      p_K1   = rf$pvalue,                 # 1st-harmonic F-test (the pre-screen)
+      p_2h   = p2h_v,                     # 2nd-harmonic-only F-test
       Amp    = rf$A, Sigma = rf$sigma, rtilde = rf$A / rf$sigma,
-      Peak_h = round(rf$phi %% 24, 2),
+      Peak_h = round(rf$phi %% 24, 2),    # phi1 = 1st-harmonic acrophase
       Mesor  = mesor_v,
+      A2     = A2_v, phi2 = phi2_v, K2 = is_k2,
       stringsAsFactors = FALSE)
   })
 
@@ -1231,8 +1272,24 @@ server <- function(input, output, session) {
                          selected = if (length(ch)) ch[[1]] else "", server = TRUE)
   })
 
+  # Times of the (up to two) peaks of the fitted curve. For K=1 this is just the
+  # cosinor acrophase; for K=2 it returns the two local maxima of the
+  # two-harmonic waveform (the "two peaks" a bimodal gene actually shows).
+  .twoharm_peaks <- function(A1, phi1, A2 = NA, phi2 = NA, period = 24) {
+    w <- 2 * pi / period
+    t <- seq(0, period, length.out = 289)[-289]            # 0..<24 at 5-min grid
+    y <- A1 * cos(w * (t - phi1))
+    if (!is.null(A2) && is.finite(A2) && !is.null(phi2) && is.finite(phi2))
+      y <- y + A2 * cos(2 * w * (t - phi2))
+    yl <- c(y[length(y)], y[-length(y)]); yr <- c(y[-1], y[1])
+    ism <- y > yl & y >= yr                                # circular local maxima
+    pk <- t[ism][order(-y[ism])]
+    c(peak1 = if (length(pk) >= 1L) pk[1] else (phi1 %% period),
+      peak2 = if (length(pk) >= 2L) pk[2] else NA_real_)
+  }
+
   # Fitted cosinor curve: mesor-anchored if stored, else mean-centered; +/-1.96s
-  # noise ribbon; peak marked. `compact` (clock small-multiples) shows only the
+  # noise ribbon; peak(s) marked. `compact` (clock small-multiples) shows only the
   # gene title + peak; the full p/q/peak/(A/sigma) subtitle is reserved for the
   # large single-gene detail plot where there is room (avoids title collisions).
   # `pts` (optional list(t, y)) overlays each sample's actual expression on the
@@ -1241,7 +1298,12 @@ server <- function(input, output, session) {
   .draw_cos <- function(row, period = 24, compact = FALSE, pts = NULL) {
     t <- seq(0, period, length.out = 240); w <- 2 * pi / period
     m0 <- if (!is.null(row$Mesor) && is.finite(row$Mesor)) row$Mesor else 0
-    y  <- m0 + row$Amp * cos(w * (t - row$Peak_h)); band <- 1.96 * row$Sigma
+    y  <- m0 + row$Amp * cos(w * (t - row$Peak_h))
+    # K=2 pilots: add the second harmonic so the curve shows the real (possibly
+    # bimodal / asymmetric) two-harmonic waveform, not a pure sinusoid.
+    if (!is.null(row$A2) && is.finite(row$A2) && !is.null(row$phi2) && is.finite(row$phi2))
+      y <- y + row$A2 * cos(2 * w * (t - row$phi2))
+    band <- 1.96 * row$Sigma
     ylab <- if (m0 != 0) "Expression (log2)" else "Expression (centered)"
     yl   <- range(c(y + band, y - band, if (!is.null(pts)) pts$y))
     plot(t, y, type = "n", ylim = yl,
@@ -1254,14 +1316,19 @@ server <- function(input, output, session) {
     if (!is.null(pts)) points(pts$t %% period, pts$y, pch = 19,
                               col = "#2c7fb899", cex = 1.1)   # actual sample points
     lines(t, y, lwd = 2.5, col = "#2c7fb8")
-    abline(v = row$Peak_h, lty = 2, col = "grey50")
+    # mark peak(s): one dashed line for K=1, two for a bimodal K=2 waveform.
+    pk <- .twoharm_peaks(row$Amp, row$Peak_h, row$A2, row$phi2, period)
+    abline(v = pk[["peak1"]], lty = 2, col = "grey50")
+    if (is.finite(pk[["peak2"]])) abline(v = pk[["peak2"]], lty = 2, col = "grey50")
     # stats subtitle on every panel; compact (clock small-multiples) drops q and
     # uses a smaller font so the line fits a narrow panel without overlapping.
+    pk_txt <- if (is.finite(pk[["peak2"]]))
+      sprintf("peaks %.1f, %.1fh", pk[["peak1"]], pk[["peak2"]])
+    else sprintf("peak %.1fh", pk[["peak1"]])
     sub <- if (compact)
-      sprintf("p=%.0e  peak %.1fh  A/s=%.1f", row$p, row$Peak_h, row$rtilde)
+      sprintf("p=%.0e  %s  A/s=%.1f", row$p, pk_txt, row$rtilde)
     else
-      sprintf("p=%.1e   q=%.1e   peak=%.1fh   A/s=%.2f",
-              row$p, row$q, row$Peak_h, row$rtilde)
+      sprintf("p=%.1e   q=%.1e   %s   A/s=%.2f", row$p, row$q, pk_txt, row$rtilde)
     mtext(sub, side = 3, line = 0.35, cex = if (compact) 0.78 else 0.92, col = "grey25")
   }
 
@@ -1312,8 +1379,17 @@ server <- function(input, output, session) {
 
   output$clock_panel <- renderPlot({
     pr <- clock_genes()
-    if (is.null(pr) || !nrow(pr)) { plot.new()
-      title(sprintf("No core clock genes pass %s in this pilot.", .thresh_label())); return() }
+    if (is.null(pr) || !nrow(pr)) {
+      # No clock gene passes the threshold (common for a small uploaded gene
+      # subset). Draw the message with zero plot margins: the fallback device
+      # is short (see height fn) and R's DEFAULT margins exceed it, which would
+      # otherwise throw "figure margins too large" instead of showing the note.
+      op <- par(mar = c(0, 0, 0, 0)); on.exit(par(op))
+      plot.new()
+      text(0.5, 0.5, sprintf("No core clock genes pass %s in this pilot.",
+                             .thresh_label()), cex = 1.1)
+      return()
+    }
     gd <- .clock_grid()
     layout(.clock_layout_mat(gd$n, gd$nc))
     op <- par(mar = c(3.3, 3.4, 3.4, 0.7), mgp = c(1.9, 0.6, 0))
@@ -1322,7 +1398,7 @@ server <- function(input, output, session) {
   },
   # device sized to the grid -> each panel keeps a fixed ratio for any gene count
   width  = function() { gd <- .clock_grid(); if (gd$n < 1L) 460L else gd$nc * .CLOCK_PW },
-  height = function() { gd <- .clock_grid(); if (gd$n < 1L) 130L else gd$nr * .CLOCK_PH })
+  height = function() { gd <- .clock_grid(); if (gd$n < 1L) 160L else gd$nr * .CLOCK_PH })
 
   output$clock_note <- renderUI({
     g <- gene_tbl_pass(); if (is.null(g)) return(NULL)
@@ -1346,16 +1422,25 @@ server <- function(input, output, session) {
     g <- gene_tbl_pass(); req(g)
     if (!nrow(g)) return(data.frame(Note = "No genes pass the chosen threshold."))
     out <- head(g, 100L)
-    # "r̃" = r + combining tilde -> renders as r-tilde; "σ" = sigma.
-    tcol <- "r̃ (A/σ)"
-    # p/q as scientific-notation strings so tiny values show as e.g. 4.8e-38
-    # instead of rounding to 0; r-tilde/peak stay numeric.
+    tcol <- "r̃ (A/σ)"   # r + combining tilde; sigma
+    is_k2 <- isTRUE(any(out$K2)) && any(is.finite(out$p_2h))
+    # K=2: p-value column is the joint two-harmonic F-test (Option A); add the
+    # 2nd-harmonic-only p and BOTH peaks of the bimodal waveform.
+    pcol <- if (is_k2) "p-value (joint K=2)" else "p-value"
     df <- data.frame(Gene = out$Gene,
-                     `p-value` = formatC(out$p, format = "e", digits = 2),
+                     pp = formatC(out$p, format = "e", digits = 2),
                      `q-value` = formatC(out$q, format = "e", digits = 2),
-                     x = round(out$rtilde, 2), `Peak (h)` = out$Peak_h,
                      check.names = FALSE, stringsAsFactors = FALSE)
-    names(df)[names(df) == "x"] <- tcol
+    names(df)[names(df) == "pp"] <- pcol
+    if (is_k2) df[["p (2nd harm)"]] <- formatC(out$p_2h, format = "e", digits = 2)
+    df[[tcol]] <- round(out$rtilde, 2)
+    if (is_k2) {
+      pks <- mapply(.twoharm_peaks, out$Amp, out$Peak_h, out$A2, out$phi2)
+      df[["Peak 1 (h)"]] <- round(pks["peak1", ], 2)
+      df[["Peak 2 (h)"]] <- round(pks["peak2", ], 2)
+    } else {
+      df[["Peak (h)"]] <- out$Peak_h
+    }
     df
   }, striped = TRUE, hover = TRUE, width = "100%", digits = 3)
 
@@ -1363,17 +1448,32 @@ server <- function(input, output, session) {
   # with every parameter and a clean column order/labels.
   gene_export <- reactive({
     g <- gene_tbl(); req(g)
-    data.frame(
-      gene        = g$Gene,
-      gene_id     = g$ID,
-      pvalue      = g$p,
-      qvalue_BH   = g$q,
-      amplitude   = g$Amp,
-      sigma       = g$Sigma,
-      r_tilde     = g$rtilde,
-      peak_hours  = g$Peak_h,
-      mesor       = g$Mesor,
-      stringsAsFactors = FALSE)
+    is_k2 <- isTRUE(any(g$K2)) && any(is.finite(g$p_2h))
+    if (!is_k2) {
+      # K=1: one harmonic, one peak (= the acrophase).
+      data.frame(
+        gene       = g$Gene, gene_id = g$ID,
+        pvalue     = g$p, qvalue_BH = g$q,
+        amplitude  = g$Amp, sigma = g$Sigma, r_tilde = g$rtilde,
+        peak_hours = g$Peak_h, mesor = g$Mesor,
+        stringsAsFactors = FALSE)
+    } else {
+      # K=2: ONE mesor; TWO harmonic amplitudes (A1,A2) + acrophases (phi1,phi2);
+      # TWO derived waveform peaks (peak1,peak2 = the actual maxima). pvalue is
+      # the joint F(4,N-5); p_1st/2nd_harmonic are the component tests.
+      pks <- mapply(.twoharm_peaks, g$Amp, g$Peak_h, g$A2, g$phi2)
+      data.frame(
+        gene = g$Gene, gene_id = g$ID,
+        pvalue_joint = g$p, qvalue_BH = g$q,
+        p_1st_harmonic = g$p_K1, p_2nd_harmonic = g$p_2h,
+        mesor = g$Mesor,
+        A1 = g$Amp,  phi1_hours = g$Peak_h,
+        A2 = g$A2,   phi2_hours = g$phi2,
+        sigma = g$Sigma, r_tilde = g$rtilde,
+        peak1_hours = round(pks["peak1", ], 3),
+        peak2_hours = round(pks["peak2", ], 3),
+        stringsAsFactors = FALSE)
+    }
   })
   .gene_fname <- function() gsub("[^A-Za-z0-9]+", "_",
       paste(if (isTRUE(input$pilot_source == "upload")) "upload" else input$species %||% "pilot",
