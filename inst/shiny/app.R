@@ -1457,9 +1457,9 @@ server <- function(input, output, session) {
   # The ranked table as a tidy numeric data.frame (K-aware columns). Numeric
   # p/q/peaks are kept numeric so click-to-sort orders them correctly; display
   # rounding/sig-figs are applied at render time, not baked into strings.
-  .gene_table_df <- function(max_rows = 500L) {
+  .gene_table_df <- function(max_rows = NULL) {
     g <- gene_tbl_pass(); if (is.null(g) || !nrow(g)) return(NULL)
-    out <- head(g, max_rows)
+    out <- if (is.null(max_rows)) g else head(g, max_rows)
     is_k2 <- isTRUE(any(out$K2)) && any(is.finite(out$p_2h))
     if (is_k2) {
       pks <- mapply(.twoharm_peaks, out$Amp, out$Peak_h, out$A2, out$phi2)
