@@ -1659,6 +1659,15 @@ server <- function(input, output, session) {
     for (pk in c("clusterProfiler", "AnnotationDbi", orgdb))
       if (!requireNamespace(pk, quietly = TRUE))
         return(list(err = sprintf("Package '%s' is not installed (needed for enrichment).", pk)))
+    # Reactome is optional and pulls a ~450 MB annotation DB, so it is not
+    # installed up front. Ask for it on demand only when Reactome is chosen.
+    if (identical(input$enrich_db %||% "kegg", "reactome") &&
+        (!requireNamespace("ReactomePA", quietly = TRUE) ||
+         !requireNamespace("reactome.db", quietly = TRUE)))
+      return(list(err = paste0("The Reactome ontology needs the ReactomePA + reactome.db packages ",
+                  "(a one-time ~450 MB annotation download). Install them once with: ",
+                  "BiocManager::install(c('ReactomePA','reactome.db'))  -- or just use KEGG/GO, ",
+                  "which need no extra download.")))
     org <- getExportedValue(orgdb, orgdb)
     to_entrez <- function(ids) {
       ids <- unique(ids[!is.na(ids) & nzchar(ids)])
