@@ -38,7 +38,6 @@ launchShiny <- function(..., install_deps = TRUE, species_all = FALSE) {
   # gracefully inside the app if its package is absent.
   cran_pkgs <- c(
     shiny           = "the app interface (required)",
-    enrichR         = "pathway enrichment (KEGG/Reactome/GO)",
     writexl         = "Excel (.xlsx) gene-table export",
     shinyscreenshot = "full-app screenshot capture"
   )
@@ -47,8 +46,11 @@ launchShiny <- function(..., install_deps = TRUE, species_all = FALSE) {
   # upload are needed, so by default we install just the two most common
   # (human, mouse) and let `bioc_pkgs` cover the rest when species_all = TRUE.
   bioc_core <- c(
-    org.Hs.eg.db = "human gene IDs -> symbols (uploads)",
-    org.Mm.eg.db = "mouse gene IDs -> symbols (uploads)"
+    org.Hs.eg.db  = "human gene IDs -> symbols (uploads)",
+    org.Mm.eg.db  = "mouse gene IDs -> symbols (uploads)",
+    clusterProfiler = "pathway enrichment (KEGG/GO) with a custom background",
+    ReactomePA    = "Reactome pathway enrichment",
+    reactome.db   = "Reactome pathway annotations (ReactomePA dep)"
   )
   bioc_extra <- c(
     org.Rn.eg.db    = "rat gene IDs -> symbols (uploads)",
