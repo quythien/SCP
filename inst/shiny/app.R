@@ -7,12 +7,7 @@ suppressPackageStartupMessages({
   library(SCP)
 })
 
-# Uploaded expression matrices (genes x samples) routinely exceed Shiny's 5 MB
-# default upload cap, forcing users to pre-subset their genes. Raise it to
-# 5 GB so a full pilot CSV uploads as-is. (Per-session option; set once here so
-# it applies however the app is launched.) Note: the file is read into memory,
-# so the real ceiling is host RAM and any reverse-proxy body limit, not this
-# number. Kept finite (not Inf) so a runaway upload cannot exhaust memory.
+# Lift the 5 MB default upload cap to 5 GB so a full gene matrix uploads as-is.
 options(shiny.maxRequestSize = 5 * 1024^3)
 
 `%||%` <- function(a, b) if (!is.null(a) && length(a) > 0L) a else b
@@ -22,14 +17,12 @@ options(shiny.maxRequestSize = 5 * 1024^3)
   x <- as.character(x)
   ifelse(nchar(x) > 0L, paste0(toupper(substr(x, 1, 1)), substr(x, 2, nchar(x))), x)
 }
-# Named choices vector: shown label = capitalized, value = original (lowercase)
-# so dropdowns read "Human"/"Active" while the loader keys stay "human"/"active".
+# Dropdowns read "Human"/"Active"; loader keys stay "human"/"active".
 .cap_choices <- function(v) stats::setNames(as.character(v), .cap1(v))
 
 
-# When SCP_SHINY_DEMO=1, the app reads pilots from ./pilots/ next to app.R
-# instead of system.file("extdata","pilots", package = "SCP"). This is the
-# slim 86-pilot subset bundled for the shinyapps.io free-tier demo.
+# SCP_SHINY_DEMO=1 reads the slim 86-pilot subset from ./pilots/ (shinyapps.io
+# demo) instead of the installed extdata/pilots.
 .demo_mode    <- nzchar(Sys.getenv("SCP_SHINY_DEMO"))
 .demo_pilots  <- file.path(getwd(), "pilots")
 
@@ -70,10 +63,8 @@ options(shiny.maxRequestSize = 5 * 1024^3)
   !is.null(out)
 }
 
-# Safe worker count for parallel::mclapply. Caps at `cap`, leaves one core
-# free, and is robust to environments where detectCores() returns NA (common
-# in containers / shinyapps.io). mclapply uses fork(), which is unsupported on
-# Windows, so force serial (1 core) there.
+# Worker count for mclapply: cap, leave a core free, handle detectCores()==NA,
+# and fall back to serial on Windows (no fork()).
 .safe_cores <- function(cap = 4L) {
   if (.Platform$OS.type == "windows") return(1L)
   nc <- tryCatch(parallel::detectCores(logical = FALSE), error = function(e) NA_integer_)
@@ -83,11 +74,10 @@ options(shiny.maxRequestSize = 5 * 1024^3)
   max(1L, min(as.integer(cap), nc - 1L))
 }
 
-# Re-select the rhythmicity threshold from a pilot's stored per-gene table
-# (rhythm_fit). Self-contained so it works in both demo mode (raw readRDS) and
-# packaged mode. Mirrors SCP:::.reslice_pilot: rhythm_fit is p-sorted and capped,
-# so thresholding is a prefix slice; the top-300 candidates drive the effect-size
-# distribution. Pilots built before rhythm_fit existed are returned unchanged.
+# Re-slice a pilot's rhythm_fit at a new threshold (mirrors SCP:::.reslice_pilot,
+# inlined so it also works on raw readRDS in demo mode). rhythm_fit is p-sorted,
+# so this is a prefix slice; the top-300 drive the effect-size distribution.
+# Legacy pilots without rhythm_fit pass through unchanged.
 .app_apply_threshold <- function(p, stat = "p", thresh = 0.01, paired_sigma = TRUE) {
   if (is.null(p)) return(p)
   rf <- p$rhythm_fit
@@ -104,13 +94,12 @@ options(shiny.maxRequestSize = 5 * 1024^3)
   cand  <- rf[sval < thresh, , drop = FALSE]
   K     <- min(as.integer(p$pilot_top_k %||% 300L), nrow(cand))
   estim <- if (K > 0L) cand[seq_len(K), , drop = FALSE] else cand[0, , drop = FALSE]
-  # Stable denominator (see .reslice_pilot): the pilot's full gene count,
-  # immune to p$ngenes being overwritten with the sim gene count (2000).
+  # Full gene count as denominator, immune to p$ngenes later holding the sim count.
   denom <- p$rhythm_denom %||% p$ngenes %||% nrow(rf)
   p$rhythm_denom   <- denom
   p$prop_rhythmic  <- nrow(cand) / denom
   if ("A2" %in% names(rf)) {
-    # Two-harmonic pilot: keep all five fields gene-index-aligned (length K).
+    # Two-harmonic pilot: keep the five fields gene-aligned.
     p$amplitude      <- estim$A
     p$phase          <- estim$phi
     p$sigma_rhythmic <- estim$sigma
@@ -122,23 +111,16 @@ options(shiny.maxRequestSize = 5 * 1024^3)
     p$sigma_rhythmic <- estim$sigma
     p$phase          <- estim$phi[is.finite(estim$phi)]
   }
-  # paired_sigma=TRUE keeps (A, sigma) gene-paired (realistic narrow r-tilde,
-  # the marginal / Panel-A behavior). FALSE decouples sigma -> wide r-tilde
-  # (stratified Panel-B/C). The app defaults to paired for recommended-N.
+  # paired_sigma=TRUE keeps (A, sigma) paired (narrow r-tilde, Panel A); FALSE
+  # shuffles sigma for the wide stratified range (Panels B/C). Default: paired.
   if (!isTRUE(paired_sigma) && length(p$sigma_rhythmic) > 1L)
     p$sigma_rhythmic <- sample(p$sigma_rhythmic)
   p$paired_sigma <- isTRUE(paired_sigma)
   p
 }
 
-# Detect the gene-ID type of a pilot's rhythm_fit$gene and (optionally) attach a
-# `symbol` column. ENSG -> human symbol, ENSMUSG -> mouse symbol when the
-# annotation packages are installed; everything else (real symbols, probe IDs,
-# or pseudo-names like "Gene123") is kept verbatim so a name is always present.
-# Returns list(rf = <rhythm_fit + symbol>, type = <human-readable id type>).
-# Supported organisms for upload ID->symbol mapping. Each maps only when its
-# Bioconductor annotation package is installed; unmatched/unmapped IDs keep their
-# original name, so a usable gene label is always present.
+# Ensembl-style ID -> gene symbol per organism, used when an upload's IDs match
+# `pat` and the annotation package is installed. Unmapped IDs keep their name.
 .SPECIES_MAP <- list(
   human       = list(pkg = "org.Hs.eg.db",    key = "ENSEMBL", col = "SYMBOL",   pat = "^ENSG[0-9]+",       lab = "human (Ensembl)"),
   mouse       = list(pkg = "org.Mm.eg.db",    key = "ENSEMBL", col = "SYMBOL",   pat = "^ENSMUSG[0-9]+",    lab = "mouse (Ensembl)"),
@@ -155,8 +137,8 @@ options(shiny.maxRequestSize = 5 * 1024^3)
   if (is.null(rf) || !nrow(rf) || !("gene" %in% names(rf)))
     return(list(rf = rf, type = "unknown", detected = NA_character_, n_mapped = 0L))
   g <- as.character(rf$gene); sym <- g
-  # Always auto-detect the dominant ID pattern (independent of the user's choice)
-  # so we can SUGGEST a species even when they pre-selected one or left it on auto.
+  # Detect the dominant ID pattern regardless of the user's choice, so we can
+  # suggest a species.
   hits     <- vapply(.SPECIES_MAP, function(s) mean(grepl(s$pat, g)), numeric(1))
   dom      <- which.max(hits)
   detected <- if (length(dom) && hits[dom] > 0.5) names(.SPECIES_MAP)[dom] else NA_character_
@@ -192,11 +174,12 @@ ui <- fluidPage(
     .center-titles h1, .center-titles h2, .center-titles h3, .center-titles h4, .center-titles p {
       text-align: center;
     }
-    /* center the power-curve figure so the single-panel view doesn't stretch
-       across the whole right pane */
+    /* center the figures in the right pane */
     #power_curve img { display: block; margin-left: auto; margin-right: auto; }
-    /* center the fixed-size plots so they don't jam left / over-stretch */
     #clock_panel img, #gene_cosinor img, #enrich_plot img, #tod_plot img { display: block; margin-left: auto; margin-right: auto; }
+    /* compact gene table so the K=2 columns fit without wrapping */
+    #gene_table table { font-size: 0.84em; margin-bottom: 0; }
+    #gene_table th, #gene_table td { padding: 3px 7px; white-space: nowrap; }
   "))),
   div(class = "center-titles",
       titlePanel("Power Evaluation and Study Design for Circadian Biomarker Detection"),
@@ -312,12 +295,9 @@ ui <- fluidPage(
                    class = "btn-primary btn-block", width = "100%"),
       uiOutput("stale_banner"),
       hr(),
-      # Reset to a clean blank state from ANY point (clears a stuck/frozen UI).
       actionButton("reset_app", "Reset app", class = "btn-block", width = "100%",
                    icon = icon("rotate-left")),
       helpText(em("Reload everything to the starting state.")),
-      # Whole-screen snapshot, always available (the explorer also has a
-      # panel-scoped capture button of its own).
       actionButton("capture_app", "Capture full screen (PNG)", class = "btn-block",
                    width = "100%", icon = icon("camera")),
       helpText(em("Save the entire app view as one image."))
@@ -348,11 +328,9 @@ ui <- fluidPage(
                            "the shaded band is ± 1.96σ (noise). Bundled pilots store fit ",
                            "estimates only, so they show the curve; uploaded data also overlays each ",
                            "sample's actual expression as points."))),
-        # Live banner: echoes the current alpha_pilot / statistic + rhythmic count
-        # so it is obvious the explorer reflects the left-panel threshold.
+        # Banner echoing the current threshold + rhythmic count.
         div(style = "padding:6px 10px; background:#eef4fb; border-radius:4px; margin-bottom:8px;",
             uiOutput("explorer_thresh")),
-        # K=2 identifiability notice (only appears when the detector is K=2)
         uiOutput("k2_status"),
         tags$b("Core clock genes"),
         plotOutput("clock_panel", height = "auto", width = "auto"),
@@ -378,12 +356,12 @@ ui <- fluidPage(
           )
         )
       ),
-      # ---- Pathway enrichment (Metascape-style; Enrichr hypergeometric + BH) ----
+      # ---- Pathway enrichment (clusterProfiler hypergeometric + BH) ----
       div(style = "background:#fbfcfe; border:1px solid #e3e9f0; border-radius:6px; padding:14px 16px; margin-top:10px;",
         h4("Pathway enrichment", style = "margin-top:0;"),
-        helpText(em(paste0("Over-representation of the rhythmic gene set (genes passing the threshold ",
-                           "on the left) against the chosen ontology, via Enrichr (hypergeometric + ",
-                           "Benjamini-Hochberg). Top significant terms shown as -log10(P). Requires internet."))),
+        helpText(em(paste0("Over-representation of the rhythmic gene set (genes passing the threshold on ",
+                           "the left) against the chosen ontology, via clusterProfiler (hypergeometric + ",
+                           "Benjamini-Hochberg). Top significant terms shown as -log10(P). KEGG requires internet; GO/Reactome run offline."))),
         fluidRow(
           column(3,
             selectInput("enrich_db", "Ontology",
@@ -397,12 +375,21 @@ ui <- fluidPage(
                         choices = c("Auto (from pilot)" = "auto", "Human" = "human", "Mouse" = "mouse"),
                         selected = "auto")),
           column(3,
+            radioButtons("enrich_bg", "Background",
+                         choices = c("Tested genes (this pilot)" = "tested", "All genes (genome-wide)" = "all"),
+                         selected = "tested")),
+          column(3,
+            selectInput("enrich_top", "Show top", choices = c(10, 15, 20), selected = 15))
+        ),
+        helpText(em(paste0("Background: 'Tested genes' restricts the universe to genes measured in this ",
+                           "pilot (or your uploaded matrix), the rigorous choice used in the paper; ",
+                           "'All genes' is the genome-wide default and gives smaller p-values."))),
+        fluidRow(
+          column(4,
             selectInput("enrich_sig", "Significance cutoff",
                         choices = c("Adjusted P < 0.05" = "adj_0.05", "Adjusted P < 0.01" = "adj_0.01",
                                     "P < 0.05" = "p_0.05", "P < 0.01" = "p_0.01"),
-                        selected = "adj_0.05")),
-          column(3,
-            selectInput("enrich_top", "Show top", choices = c(10, 15, 20), selected = 15))
+                        selected = "adj_0.05"))
         ),
         actionButton("run_enrich", "Run enrichment", class = "btn-primary"),
         plotOutput("enrich_plot", height = "auto", width = "auto"),
@@ -428,8 +415,7 @@ ui <- fluidPage(
         br(),
         helpText(em("Click 'Run simulation' to compute the power curve."))
       ),
-      # Format guide for the upload tab: fills the empty right panel so users can
-      # see exactly how to lay out the two CSVs before they run anything.
+      # Upload format guide, shown in the right panel before a run.
       conditionalPanel(
         condition = "input.pilot_source == 'upload' && input.run == 0",
         hr(),
@@ -538,31 +524,22 @@ server <- function(input, output, session) {
       mat <- as.matrix(ex)
       mode(mat) <- "numeric"
       withProgress(message = "Fitting pilot...", value = 0.3, {
-        # estCircadianParam (not estimate_circadian_params) returns a full
-        # CircadianBioOptions with amplitude/sigma/phase + the rhythm_fit table,
-        # so uploaded pilots support the simulation AND the threshold knob.
+        # Full CircadianBioOptions (amplitude/sigma/phase + rhythm_fit), so the
+        # upload drives both the simulation and the threshold knob.
         bio <- SCP::estCircadianParam(mat, tod, paired_sigma = TRUE, verbose = FALSE)
         incProgress(0.7)
         bio$times <- tod
-        # Keep the uploaded matrix in-session so the gene cosinor plot can overlay
-        # each sample's actual expression (bundled pilots store no raw data, so
-        # this is upload-only). Not used by the simulator.
+        # Keep the matrix in-session so the gene plot can overlay sample points.
         bio$.raw_expr <- mat
-        # Map IDs to symbols using the user-selected species (or auto-detect);
-        # unmapped IDs keep their original name. `detected` is the auto-detected
-        # species regardless of the user's choice, used to suggest below.
         sm <- .upload_symbols(bio$rhythm_fit, do_map = isTRUE(input$upload_map_sym),
                               species = input$upload_species %||% "auto")
         bio$rhythm_fit <- sm$rf
         attr(bio, "id_type")  <- sm$type
         attr(bio, "detected") <- sm$detected
         attr(bio, "n_mapped") <- sm$n_mapped
-        # Also fit a two-harmonic (K=2) variant so the K=2 detector has a real
-        # second-harmonic truth to simulate from. Without this, selecting K=2
-        # on an uploaded pilot changed nothing (the K=1 fit carries no A2/phi2,
-        # so the simulator generated single-harmonic data either way). Embedded
-        # on the K=1 object as `$.pilot2`; pilot() selects it when K=2. Fails
-        # gracefully (NULL) when N < 6 or no gene passes the rhythmic pre-screen.
+        # K=2 variant so the two-harmonic detector has real (A2, phi2) truth to
+        # simulate from. pilot() picks it up via $.pilot2 when K=2; NULL when the
+        # fit can't be made (N < 6, or no gene passes the pre-screen).
         bio$.pilot2 <- tryCatch({
           b2 <- SCP::estCircadianParam2H(mat, tod, paired_sigma = TRUE, verbose = FALSE)
           b2$times     <- tod
@@ -587,8 +564,7 @@ server <- function(input, output, session) {
       detected <- attr(res, "detected")
       sel      <- input$upload_species %||% "auto"
       labof    <- function(k) if (!is.na(k) && k %in% names(.SPECIES_MAP)) .SPECIES_MAP[[k]]$lab else NA
-      # Suggestion line: the app's auto-detected species, flagged if it differs
-      # from the user's selection (Metascape-style guidance).
+      # Suggest the auto-detected species, flagged when it differs from the choice.
       sugg <- if (is.na(detected)) "Auto-detect: IDs look like gene symbols/names already."
               else if (sel == "auto") sprintf("Auto-detected %s.", labof(detected))
               else if (sel == detected) sprintf("Matches detected species (%s).", labof(detected))
@@ -613,12 +589,10 @@ server <- function(input, output, session) {
 
   output$upload_status <- renderText({ uploaded_pilot_state$msg })
 
-  # Resolve canonical tissue back to the actual manifest tissue value
+  # Map the canonical display tissue back to the raw manifest value. Don't filter
+  # on condition here: it can lag during the dropdown cascade.
   .resolve_actual_tissue <- function() {
     m <- manifest()
-    # Resolve the canonical display name back to the actual manifest tissue
-    # WITHOUT filtering on condition: condition may lag during the dropdown
-    # cascade, and tissue resolution must not depend on it.
     sub <- m[m$species  == input$species  &
              m$design   == input$design_filter &
              m$dataset  == input$dataset, , drop = FALSE]
@@ -645,10 +619,8 @@ server <- function(input, output, session) {
     req(input$species, input$dataset, input$tissue, input$condition)
     actual_tissue <- .resolve_actual_tissue()
     K_req <- as.integer(input$K %||% 1L)
-    # Only attempt a load when the full (species, dataset, tissue, condition)
-    # combo actually exists. During the dropdown cascade the condition (or
-    # dataset) briefly lags the tissue selection; wait silently for a
-    # consistent state instead of throwing a transient "no pilot matches" error.
+    # Load only when the full combo exists. The dropdown cascade briefly leaves
+    # condition/dataset lagging tissue; wait it out rather than erroring.
     m0 <- manifest()
     combo_ok <- nrow(m0[m0$species == input$species & m0$dataset == input$dataset &
                         m0$tissue == actual_tissue & m0$condition == input$condition, ,
@@ -659,9 +631,8 @@ server <- function(input, output, session) {
                   actual_tissue, input$condition, K = K_req),
       error = function(e) {
         if (K_req == 2L) {
-          # K=2 not available (the 16 pilots whose sampling design cannot identify
-          # a 12h second harmonic). Fall back to K=1 so the panel still works; the
-          # k2_status note (right panel) explains why, instead of a blank screen.
+          # No K=2 variant for this pilot: fall back to K=1 so the panel still
+          # works; the k2_status note explains why instead of a blank screen.
           fb <- tryCatch(.read_pilot(input$species, input$dataset,
                                      actual_tissue, input$condition, K = 1L),
                          error = function(e2) NULL)
@@ -679,10 +650,8 @@ server <- function(input, output, session) {
     )
     if (!is.null(p) && !inherits(p, "CircadianBioOptions"))
       class(p) <- c("CircadianBioOptions", class(p))
-    # Apply the user-selected rhythmicity threshold so prop_rhythmic and the
-    # effect-size distribution reflect alpha_pilot. Never let a threshold
-    # hiccup blank out a successfully-loaded pilot: fall back to the loaded
-    # object and surface the error.
+    # Re-slice at the chosen threshold; on failure keep the loaded pilot rather
+    # than blanking the panel.
     p <- tryCatch(
       .app_apply_threshold(p, input$rhy_stat, as.numeric(input$rhy_thresh)),
       error = function(e) {
@@ -694,7 +663,7 @@ server <- function(input, output, session) {
     p
   })
 
-  # Track what was last simulated so we can warn when settings drift
+  # Snapshot of the last run, to warn when settings drift afterward.
   last_run_state <- reactiveVal(NULL)
 
   current_state <- reactive({
@@ -782,10 +751,8 @@ server <- function(input, output, session) {
         }
       }
     }
-    # Fallback: if the chosen threshold admitted no rhythmic genes (common for
-    # weak tissues at FDR 5%), characterise the pilot's overall effect-size
-    # distribution from the full rhythm_fit candidate pool so the summary never
-    # reads NA. prop_rhythmic still reports the honest (possibly 0%) value.
+    # If no gene passed the threshold (weak tissues at FDR 5%), summarise r-tilde
+    # from the full rhythm_fit pool so it isn't NA. prop_rhythmic stays honest.
     if (!is.finite(r_med) && !is.null(p$rhythm_fit) &&
         nrow(p$rhythm_fit) > 0L && !is.null(p$rhythm_fit$A)) {
       rfr <- p$rhythm_fit$A / p$rhythm_fit$sigma
@@ -794,9 +761,8 @@ server <- function(input, output, session) {
         r_med <- median(rfr); r_q25 <- quantile(rfr, 0.25); r_q75 <- quantile(rfr, 0.75)
       }
     }
-    # prop_rhythmic is already re-derived at the selected threshold in pilot()
-    # via the stored rhythm_fit table; fall back to the per-gene p-vector or the
-    # baked value for pilots built before rhythm_fit existed.
+    # prop_rhythmic was already set at the chosen threshold in pilot(); for legacy
+    # pilots without rhythm_fit, recompute from the raw p-vector.
     prop_at_fdr <- p$prop_rhythmic %||% NA_real_
     if (is.null(p$rhythm_fit) && !is.null(p$raw$pvalue)) {
       pv <- as.numeric(p$raw$pvalue)
@@ -916,21 +882,18 @@ server <- function(input, output, session) {
       n_cores <- .safe_cores(4L)
       incProgress(0.2, detail = "Setting up design")
 
-      # Defensive numeric coercion: some pilots may store fields as character / list
+      # Coerce numeric fields (some pilots store them as character/list).
       .as_num <- function(x) suppressWarnings(as.numeric(x))
       for (fld in c("amplitude", "sigma_rhythmic", "phase",
                     "lBaselineExpr", "lOD")) {
         if (!is.null(p[[fld]])) p[[fld]] <- .as_num(p[[fld]])
       }
-      # Fixed simulation gene count: matches the manuscript figure scripts
-      # (NGENES_SIM = 2000) and keeps the interactive app responsive. The
-      # runner resamples the per-gene baseline vectors to this length.
+      # 2000 sim genes, as in the manuscript scripts; the runner resamples the
+      # per-gene vectors to this length.
       p$ngenes <- 2000L
       if (!is.null(p$period)) p$period <- .as_num(p$period)
-      # Apply the user's pilot rhythmicity threshold to redefine the rhythmic
-      # gene set (top-K = 300 by p-value among genes passing the threshold).
-      # This means the sidebar threshold actually drives which genes' empirical
-      # (amplitude, sigma, phase) populate the simulation distribution.
+      # Redefine the rhythmic set at the sidebar threshold (top-300 by p among
+      # passing genes), so the threshold drives the simulated effect-size pool.
       if (!is.null(p$raw) && !is.null(p$raw$A) && !is.null(p$raw$pvalue)) {
         thresh <- as.numeric(input$rhy_thresh)
         stat <- if (isTRUE(input$rhy_stat == "q"))
@@ -947,13 +910,11 @@ server <- function(input, output, session) {
         p$lOD            <- log(p$raw$sigma[good])
         p$lBaselineExpr  <- p$raw$M
       }
-      # Harmonize amplitude / phase to match sigma_rhythmic length when the
-      # pilot was built with mismatched gene-sets (caught in some agent-
-      # ingested GTEx pilots: amplitude length 1122 vs sigma 300).
+      # Match amplitude/phase length to sigma_rhythmic (some pilots were built
+      # with mismatched gene sets, e.g. amplitude 1122 vs sigma 300).
       if (!is.null(p$amplitude) && !is.null(p$sigma_rhythmic)) {
         n_sigma <- length(p$sigma_rhythmic)
         if (length(p$amplitude) != n_sigma && n_sigma > 0L) {
-          # Truncate or recycle to match sigma
           if (length(p$amplitude) > n_sigma)
             p$amplitude <- p$amplitude[seq_len(n_sigma)]
           else
@@ -1054,6 +1015,18 @@ server <- function(input, output, session) {
   .draw_power <- function() {
     res <- sim_result()
     if (is.null(res)) { plot.new(); title(main = "Run a simulation first."); return(invisible()) }
+    if (inherits(res, "sim_error")) { plot.new(); title(main = sprintf("Simulation error: %s", res$error %||% "unknown")); return(invisible()) }
+    # A NaN power means zero detections in those replicates (0/0). Render it as 0
+    # so plotting never hits a non-finite 'invalid graphics state' (which blanked
+    # Panel A and crashed the device on weak/edge-case runs).
+    .san <- function(x) {
+      if (is.null(x) || inherits(x, "sim_error")) return(x)
+      for (f in c("marginal_power","marginal_FDR","marginal_TD","marginal_FD",
+                  "strat_power","strat_TD","strat_FD","strat_FDR"))
+        if (!is.null(x[[f]])) x[[f]][!is.finite(x[[f]])] <- 0
+      x
+    }
+    res <- .san(res); res$.bc <- .san(res$.bc)
     tfd <- as.numeric(input$target_fdr); tpw <- as.numeric(input$target_power)
     # Panel A always shows FDR 1/5/10/20% + the user's threshold (post-hoc, free);
     # the blue vline + recommended-N stay tied to the chosen FDR.
@@ -1451,24 +1424,28 @@ server <- function(input, output, session) {
     g <- gene_tbl_pass(); req(g)
     if (!nrow(g)) return(data.frame(Note = "No genes pass the chosen threshold."))
     out <- head(g, 100L)
-    tcol <- "r̃ (A/σ)"   # r + combining tilde; sigma
     is_k2 <- isTRUE(any(out$K2)) && any(is.finite(out$p_2h))
-    # K=2: p-value column is the joint two-harmonic F-test (Option A); add the
-    # 2nd-harmonic-only p and BOTH peaks of the bimodal waveform.
-    pcol <- if (is_k2) "p-value (joint K=2)" else "p-value"
-    df <- data.frame(Gene = out$Gene,
-                     pp = formatC(out$p, format = "e", digits = 2),
-                     `q-value` = formatC(out$q, format = "e", digits = 2),
-                     check.names = FALSE, stringsAsFactors = FALSE)
-    names(df)[names(df) == "pp"] <- pcol
-    if (is_k2) df[["p (2nd harm)"]] <- formatC(out$p_2h, format = "e", digits = 2)
-    df[[tcol]] <- round(out$rtilde, 2)
+    # Compact headers under K=2 so all columns fit one row (the K=2 context is
+    # already shown by the banner above, so the headers can be short).
     if (is_k2) {
       pks <- mapply(.twoharm_peaks, out$Amp, out$Peak_h, out$A2, out$phi2)
-      df[["Peak 1 (h)"]] <- round(pks["peak1", ], 2)
-      df[["Peak 2 (h)"]] <- round(pks["peak2", ], 2)
+      df <- data.frame(Gene = out$Gene,
+                       a = formatC(out$p,   format = "e", digits = 1),
+                       b = formatC(out$q,   format = "e", digits = 1),
+                       c = formatC(out$p_2h, format = "e", digits = 1),
+                       d = round(out$rtilde, 2),
+                       e = round(pks["peak1", ], 1),
+                       f = round(pks["peak2", ], 1),
+                       check.names = FALSE, stringsAsFactors = FALSE)
+      names(df) <- c("Gene", "p (joint)", "q", "p (2nd)", "r̃", "Peak1", "Peak2")
     } else {
-      df[["Peak (h)"]] <- out$Peak_h
+      df <- data.frame(Gene = out$Gene,
+                       a = formatC(out$p, format = "e", digits = 2),
+                       b = formatC(out$q, format = "e", digits = 2),
+                       c = round(out$rtilde, 2),
+                       d = out$Peak_h,
+                       check.names = FALSE, stringsAsFactors = FALSE)
+      names(df) <- c("Gene", "p-value", "q-value", "r̃ (A/σ)", "Peak (h)")
     }
     df
   }, striped = TRUE, hover = TRUE, width = "100%", digits = 3)
@@ -1583,21 +1560,14 @@ server <- function(input, output, session) {
   observeEvent(input$reset_app, { session$reload() })
 
   # ======================= Pathway enrichment (Enrichr) ===================
-  # Enrichr library for (ontology, species). Human/mouse share the GO + Reactome
-  # libraries (gene-symbol based); KEGG is species-specific.
-  .enrichr_db <- function(db, species) {
-    mouse <- identical(species, "mouse")
-    switch(db,
-      kegg     = if (mouse) "KEGG_2019_Mouse" else "KEGG_2021_Human",
-      reactome = "Reactome_2022",
-      gobp     = "GO_Biological_Process_2023",
-      gomf     = "GO_Molecular_Function_2023",
-      gocc     = "GO_Cellular_Component_2023",
-      "KEGG_2021_Human")
+  # Human-readable label for the chosen ontology.
+  .enrich_lib_label <- function(db, sp) {
+    org <- if (identical(sp, "mouse")) "mouse" else "human"
+    switch(db, kegg = sprintf("KEGG (%s)", org), reactome = sprintf("Reactome (%s)", org),
+      gobp = "GO Biological Process", gomf = "GO Molecular Function",
+      gocc = "GO Cellular Component", "KEGG")
   }
-  # Resolve the gene-set species: explicit choice, else inferred from the pilot
-  # (bundled species, or the uploaded data's detected/selected species). Enrichr's
-  # main site is human/mouse; anything else falls back to human symbols.
+  # Resolve the gene-set species: explicit choice, else inferred from the pilot.
   .enrich_species <- function() {
     s <- input$enrich_species %||% "auto"
     if (s != "auto") return(s)
@@ -1610,36 +1580,70 @@ server <- function(input, output, session) {
     }
     if (identical(input$species, "mouse")) "mouse" else "human"
   }
+  # The tested-gene universe (background) for the loaded pilot, in its native ID
+  # space: bundled pilots store $tested_genes; uploads use the raw matrix genes.
+  .enrich_universe <- function() {
+    p <- pilot(); if (is.null(p)) return(NULL)
+    p$tested_genes %||% (if (!is.null(p$.raw_expr)) rownames(p$.raw_expr) else NULL)
+  }
 
-  # Network query runs ONLY on the button (cached); the significance cutoff and
-  # top-N re-filter the cached result instantly without re-querying Enrichr.
+  # clusterProfiler over-representation (matches the paper: enrichKEGG/enrichGO/
+  # enrichPathway with a custom universe). Runs on the button.
   enrich_res <- eventReactive(input$run_enrich, {
     g <- gene_tbl_pass()
     validate(need(!is.null(g) && nrow(g) > 0,
                   "No rhythmic genes at the current threshold to enrich."))
-    if (!requireNamespace("enrichR", quietly = TRUE))
-      return(list(err = "The 'enrichR' package is not installed."))
-    # enrichR's setEnrichrSite()/enrichr() rely on options set in the package's
-    # .onAttach (enrichR.sites, .sites.base.address, .live). Calling via :: alone
-    # leaves them unset -> setEnrichrSite() does gsub(NULL,...) -> "invalid
-    # 'pattern' argument". Attaching the package runs .onAttach and initialises
-    # them (and does the connection check). Guard so it only happens once.
-    if (is.null(getOption("enrichR.sites.base.address")))
-      suppressMessages(suppressWarnings(library(enrichR)))
     sp    <- .enrich_species()
-    genes <- unique(g$Gene)
-    if (sp == "human") genes <- toupper(genes)   # HUGO symbols are upper-case
-    lib   <- .enrichr_db(input$enrich_db, sp)
-    out <- withProgress(message = "Querying Enrichr...", value = 0.4, {
+    orgdb <- if (sp == "mouse") "org.Mm.eg.db" else "org.Hs.eg.db"
+    for (pk in c("clusterProfiler", "AnnotationDbi", orgdb))
+      if (!requireNamespace(pk, quietly = TRUE))
+        return(list(err = sprintf("Package '%s' is not installed (needed for enrichment).", pk)))
+    org <- getExportedValue(orgdb, orgdb)
+    to_entrez <- function(ids) {
+      ids <- unique(ids[!is.na(ids) & nzchar(ids)])
+      kt  <- if (mean(grepl("^ENS", ids)) > 0.5) "ENSEMBL" else "SYMBOL"
+      keys <- sub("\\..*", "", ids)
+      m <- suppressMessages(tryCatch(AnnotationDbi::mapIds(org, keys = keys, column = "ENTREZID",
+                                     keytype = kt, multiVals = "first"), error = function(e) NULL))
+      unique(m[!is.na(m)])
+    }
+    # background
+    want_tested <- identical(input$enrich_bg %||% "tested", "tested")
+    uni_ids <- if (want_tested) .enrich_universe() else NULL
+    bg_used <- if (want_tested && !is.null(uni_ids)) "tested" else "all"
+    fg  <- to_entrez(unique(g$Gene))
+    if (!length(fg)) return(list(err = "No rhythmic genes could be mapped to Entrez IDs."))
+    uni <- if (identical(bg_used, "tested")) to_entrez(uni_ids) else NULL
+    db  <- input$enrich_db %||% "kegg"
+    organism <- if (sp == "mouse") "mmu" else "hsa"
+    ek <- withProgress(message = "Running enrichment...", value = 0.4, {
       tryCatch({
-        enrichR::setEnrichrSite("Enrichr")
-        r <- enrichR::enrichr(genes, lib)[[1]]
+        r <- switch(db,
+          kegg     = clusterProfiler::enrichKEGG(fg, organism = organism, universe = uni,
+                                                 pvalueCutoff = 1, qvalueCutoff = 1, minGSSize = 3),
+          reactome = ReactomePA::enrichPathway(fg, organism = if (sp == "mouse") "mouse" else "human",
+                                               universe = uni, pvalueCutoff = 1, qvalueCutoff = 1,
+                                               minGSSize = 3, readable = TRUE),
+          gobp     = clusterProfiler::enrichGO(fg, OrgDb = org, ont = "BP", universe = uni,
+                                               pvalueCutoff = 1, qvalueCutoff = 1, minGSSize = 3, readable = TRUE),
+          gomf     = clusterProfiler::enrichGO(fg, OrgDb = org, ont = "MF", universe = uni,
+                                               pvalueCutoff = 1, qvalueCutoff = 1, minGSSize = 3, readable = TRUE),
+          gocc     = clusterProfiler::enrichGO(fg, OrgDb = org, ont = "CC", universe = uni,
+                                               pvalueCutoff = 1, qvalueCutoff = 1, minGSSize = 3, readable = TRUE),
+          clusterProfiler::enrichKEGG(fg, organism = organism, universe = uni, pvalueCutoff = 1))
         incProgress(1); r
       }, error = function(e) e)
     })
-    if (inherits(out, "error"))
-      return(list(err = sprintf("Enrichr query failed (internet?): %s", conditionMessage(out))))
-    list(res = out, lib = lib, species = sp, n_genes = length(genes))
+    if (inherits(ek, "error"))
+      return(list(err = sprintf("Enrichment failed%s: %s",
+                                if (db == "kegg") " (KEGG needs internet)" else "", conditionMessage(ek))))
+    rd <- if (is.null(ek)) data.frame() else as.data.frame(ek)
+    df <- if (!nrow(rd)) data.frame() else data.frame(
+      Term = rd$Description, P.value = rd$pvalue, Adjusted.P.value = rd$p.adjust,
+      Overlap = paste0(rd$Count, "/", sub(".*/", "", rd$GeneRatio)),
+      Genes = rd$geneID, stringsAsFactors = FALSE)
+    list(res = df, lib = .enrich_lib_label(db, sp), species = sp,
+         n_genes = length(fg), bg = bg_used, n_uni = length(uni))
   })
 
   # All terms passing the user's significance cutoff (>= 3 genes), p-sorted.
@@ -1693,11 +1697,14 @@ server <- function(input, output, session) {
 
   output$enrich_note <- renderUI({
     e <- enrich_res()
-    if (is.null(e)) return(helpText(em("Pick an ontology, set the cutoff, and click 'Run enrichment'. Requires internet.")))
+    if (is.null(e)) return(helpText(em("Pick an ontology and background, set the cutoff, and click 'Run enrichment'.")))
     if (!is.null(e$err)) return(helpText(em(e$err)))
     nsig <- if (is.null(enrich_sig())) 0L else nrow(enrich_sig())
-    helpText(em(sprintf("Enrichr library: %s. %d genes submitted (%s). %d terms significant at %s; showing top %d. x-axis = -log10(P).",
-                        e$lib, e$n_genes, e$species, nsig,
+    bg <- if (identical(e$bg, "tested"))
+            sprintf("tested-gene background (%s genes)", format(e$n_uni, big.mark = ","))
+          else "genome-wide background"
+    helpText(em(sprintf("clusterProfiler %s, %s. %d rhythmic genes submitted. %d terms significant at %s; showing top %d. x-axis = -log10(P).",
+                        e$lib, bg, e$n_genes, nsig,
                         gsub("_", " ", input$enrich_sig %||% "adj 0.05"),
                         min(nsig, as.integer(input$enrich_top %||% 15L)))))
   })
