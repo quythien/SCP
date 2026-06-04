@@ -1545,16 +1545,37 @@ server <- function(input, output, session) {
     row <- g[g$ID == input$gene_pick, , drop = FALSE]
     if (!nrow(row)) return("Gene not in the rhythmic set (p >= 0.2).")
     r <- row[1, ]
-    paste0(
-      sprintf("Gene      : %s  (%s)\n", r$Gene, r$ID),
-      sprintf("p-value   : %.3e\n", r$p),
-      sprintf("q (BH)    : %.3e\n", r$q),
-      sprintf("Amplitude : %.3f\n", r$Amp),
-      sprintf("Sigma     : %.3f\n", r$Sigma),
-      sprintf("r-tilde   : %.2f   (A/sigma)\n", r$rtilde),
-      sprintf("Peak      : %.2f h\n", r$Peak_h),
-      if (is.finite(r$Mesor)) sprintf("Mesor     : %.3f\n", r$Mesor)
-      else                    "Mesor     : (not stored for this pilot)\n")
+    is_k2 <- isTRUE(r$K2) && is.finite(r$A2)
+    mesor_line <- if (is.finite(r$Mesor)) sprintf("%.3f\n", r$Mesor)
+                  else "(not stored for this pilot)\n"
+    if (is_k2) {
+      # Full two-harmonic readout: both harmonics' (A, phi), both waveform peaks,
+      # and all three p-values; r-tilde is the 1st-harmonic effect size A1/sigma.
+      pk <- .twoharm_peaks(r$Amp, r$Peak_h, r$A2, r$phi2)
+      paste0(
+        sprintf("Gene       : %s  (%s)\n", r$Gene, r$ID),
+        sprintf("p (joint)  : %.3e   <- two-harmonic detector\n", r$p),
+        sprintf("q (BH)     : %.3e\n", r$q),
+        sprintf("p (1st h.) : %.3e\n", r$p_K1),
+        sprintf("p (2nd h.) : %.3e\n", r$p_2h),
+        sprintf("A1 / phi1  : %.3f / %.2f h   (1st harmonic)\n", r$Amp, r$Peak_h),
+        sprintf("A2 / phi2  : %.3f / %.2f h   (2nd harmonic)\n", r$A2, r$phi2),
+        sprintf("Sigma      : %.3f\n", r$Sigma),
+        sprintf("r-tilde    : %.2f   (A1/sigma)\n", r$rtilde),
+        sprintf("Peak 1     : %.2f h\n", pk[["peak1"]]),
+        if (is.finite(pk[["peak2"]])) sprintf("Peak 2     : %.2f h\n", pk[["peak2"]]) else "",
+        sprintf("Mesor      : %s", mesor_line))
+    } else {
+      paste0(
+        sprintf("Gene      : %s  (%s)\n", r$Gene, r$ID),
+        sprintf("p-value   : %.3e\n", r$p),
+        sprintf("q (BH)    : %.3e\n", r$q),
+        sprintf("Amplitude : %.3f\n", r$Amp),
+        sprintf("Sigma     : %.3f\n", r$Sigma),
+        sprintf("r-tilde   : %.2f   (A/sigma)\n", r$rtilde),
+        sprintf("Peak      : %.2f h\n", r$Peak_h),
+        sprintf("Mesor     : %s", mesor_line))
+    }
   })
 
   # Reset: reload the session to a clean blank state from anywhere (recovers a
