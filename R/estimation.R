@@ -2,7 +2,7 @@
 #'
 #' @description
 #' Fits a cosinor model to each gene in the pilot dataset, selects the
-#' top-K rhythmic genes (ranked by p-value, K = min(300, n_rhythmic)),
+#' top-K rhythmic genes (ranked by p-value, K = min(top_k, n_rhythmic)),
 #' and returns empirical distributions of mesor, amplitude, phase, and
 #' noise as a \code{CircadianBioOptions} object for use in downstream
 #' simulation and power analysis.
@@ -11,6 +11,9 @@
 #' @param times Numeric vector of sample time points (hours), length = \code{ncol(data)}.
 #' @param period Circadian period in hours (default 24).
 #' @param min_rhythm_pval P-value threshold for classifying a gene as rhythmic (default 0.01).
+#' @param top_k Number of highest-signal genes forming the effect-size
+#'   distribution (default 300). Capped (with a warning) to the number of
+#'   rhythmic genes if larger; \code{Inf} or \code{"all"} uses every candidate.
 #' @param verbose Print estimation summary (default TRUE).
 #'
 #' @return A \code{CircadianBioOptions} S3 object (27 fields) including:
@@ -29,6 +32,51 @@
 #' @param x Numeric. Angle(s) in radians.
 #' @return Numeric. Angle(s) mapped to \code{[0, 2pi)}.
 adjust.to.2pi = function(x) x %% (2 * pi)
+
+#' Is a top_k specification the "use all candidates" sentinel?
+#'
+#' @param top_k A positive number, \code{Inf}, \code{NULL}, or the string
+#'   \code{"all"} (case-insensitive).
+#' @return \code{TRUE} when \code{top_k} means "keep every rhythmic candidate"
+#'   (i.e. no cap), \code{FALSE} for a finite positive cap.
+#' @keywords internal
+.top_k_is_all <- function(top_k) {
+  is.null(top_k) ||
+    (is.character(top_k) && identical(tolower(trimws(top_k)), "all")) ||
+    (is.numeric(top_k) && length(top_k) == 1L && is.infinite(top_k))
+}
+
+#' Resolve a top_k specification to an integer cap
+#'
+#' @description
+#' Maps the user-facing \code{top_k} (a positive number, \code{Inf},
+#' \code{NULL}, or \code{"all"}) onto an integer cap in \code{[0, n_cand]}.
+#' The \code{Inf}/\code{NULL}/\code{"all"} forms select every rhythmic
+#' candidate (no cap).
+#'
+#' @param top_k Cap specification (default in callers is \code{300}).
+#' @param n_cand Number of rhythmic-candidate genes available.
+#' @param warn Logical; if \code{TRUE}, emit a warning when a finite
+#'   \code{top_k} exceeds \code{n_cand} and is capped to it (default FALSE,
+#'   so silent re-slicing does not spam warnings).
+#' @return Integer cap, at most \code{n_cand}.
+#' @keywords internal
+.resolve_top_k <- function(top_k, n_cand, warn = FALSE) {
+  n_cand <- as.integer(n_cand)
+  if (.top_k_is_all(top_k)) return(n_cand)
+  if (!is.numeric(top_k) || length(top_k) != 1L || is.na(top_k) || top_k <= 0)
+    stop("'top_k' must be a positive number, Inf, or \"all\". Got: ",
+         paste(format(top_k), collapse = ", "))
+  top_k <- as.integer(top_k)
+  if (top_k > n_cand) {
+    if (isTRUE(warn))
+      warning(sprintf(
+        "top_k = %d exceeds the %d rhythmic gene(s) available; using all %d.",
+        top_k, n_cand, n_cand), call. = FALSE)
+    return(n_cand)
+  }
+  top_k
+}
 
 #' Fit a Cosinor Model to a Single Gene by OLS
 #'
@@ -85,6 +133,7 @@ one_cosinor_OLS = function(tod, y, period = 24, compute.phase.CI = FALSE, CI.lev
 
 estimate_circadian_params = function(data, times, period = 24,
                                      min_rhythm_pval = 0.01,
+                                     top_k = 300L,
                                      verbose = TRUE) {
 
   if (verbose) {
@@ -127,9 +176,11 @@ estimate_circadian_params = function(data, times, period = 24,
   rhythmic_genes = pvals < min_rhythm_pval & !is.na(A_vals) & A_vals > 0
   n_cand <- sum(rhythmic_genes, na.rm = TRUE)
 
-  # G_R: top min(300, |G_R^cand|) by p-value (used for F_{A,sigma} and F_phi only)
-  # Ranking by p-value gives the strongest-signal genes, improving distribution stability
-  K <- min(300L, n_cand)
+  # G_R: top min(top_k, |G_R^cand|) by p-value (used for F_{A,sigma} and F_phi only)
+  # Ranking by p-value gives the strongest-signal genes, improving distribution stability.
+  # top_k > n_cand caps to n_cand (with a warning); "all"/Inf/NULL keeps every
+  # candidate.
+  K <- .resolve_top_k(top_k, n_cand, warn = TRUE)
   if (K > 0) {
     cand_idx     <- which(rhythmic_genes)
     top_idx      <- cand_idx[order(pvals[cand_idx])][seq_len(K)]
@@ -315,8 +366,13 @@ rayleigh_test_circular = function(angles, period = 24) {
 #' @param period Period in the same units as \code{times} (default 24 hours).
 #' @param min_rhythm_pval Uncorrected cosinor p-value threshold for the
 #'   rhythmic-candidate set (default 0.01). Used to compute prop_rhythmic
-#'   and to select the top-K (K = min(300, n_rhythmic)) genes whose
+#'   and to select the top-K (K = min(top_k, n_rhythmic)) genes whose
 #'   amplitudes, phases, and noise drive simulation truth.
+#' @param top_k Number of highest-signal genes (ranked by cosinor p-value)
+#'   that form the effect-size distribution (amplitude, phase, noise).
+#'   Default 300. If \code{top_k} exceeds the number of rhythmic genes, it is
+#'   capped to that number with a warning. \code{Inf} or \code{"all"} uses
+#'   every rhythmic candidate.
 #' @param prop_DR,prop_DP,prop_DM Proportions of differentially-rhythmic,
 #'   differentially-phased, and differentially-mesor genes (defaults
 #'   0.15, 0.10, 0.00). Capped automatically at prop_rhythmic.
@@ -351,6 +407,7 @@ rayleigh_test_circular = function(angles, period = 24) {
 #' @export
 estCircadianParam <- function(data, times, period = 24,
                               min_rhythm_pval = 0.01,
+                              top_k = 300L,
                               prop_DR = 0.15, prop_DP = 0.10,
                               prop_DM = 0.00, mesor_diff = c(0.5, 2.0),
                               phase_diff = c(-6, 6), amp_diff = c(0.5, 2),
@@ -375,6 +432,7 @@ estCircadianParam <- function(data, times, period = 24,
 
   params <- estimate_circadian_params(data, times, period = period,
                                       min_rhythm_pval = min_rhythm_pval,
+                                      top_k = top_k,
                                       verbose = verbose)
 
   ngenes <- nrow(data)
@@ -445,7 +503,9 @@ estCircadianParam <- function(data, times, period = 24,
   obj$rhythm_fit  <- .build_rhythm_fit(params$raw)
   obj$pilot_cap   <- .pilot_rhythm_cap
   obj$alpha_pilot <- min_rhythm_pval
-  obj$pilot_top_k <- 300L     # top-K cap used to form the effect-size distribution
+  # top-K cap used to form the effect-size distribution; Inf means "all
+  # candidates" so downstream re-slicing (scp_load_pilot, Shiny) stays uncapped.
+  obj$pilot_top_k <- if (.top_k_is_all(top_k)) Inf else as.integer(top_k)
   obj
 }
 
@@ -1146,6 +1206,10 @@ circular_difference <- function(phi1, phi2, period = 24) {
 #' @param times_1,times_2 Numeric collection times for each group.
 #' @param period Period in hours (default 24).
 #' @param min_rhythm_pval Marginal p-value screen defining the rhythmic pilot set.
+#' @param top_k Number of highest-signal genes (per group, ranked by cosinor
+#'   p-value) forming each group's effect-size distribution (default 300).
+#'   Capped (with a warning) to a group's rhythmic-gene count if larger;
+#'   \code{Inf} or \code{"all"} uses every rhythmic candidate.
 #' @param phase_shift_threshold Minimum phase difference (hours) for the DP class.
 #' @param prop_DM Optional target proportion of differential-MESOR genes.
 #' @param mesor_diff Optional MESOR difference for the DM component.
@@ -1158,6 +1222,7 @@ circular_difference <- function(phi1, phi2, period = 24) {
 estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
                                       period = 24,
                                       min_rhythm_pval = 0.01,
+                                      top_k = 300L,
                                       phase_shift_threshold = 2,
                                       prop_DM = NULL,
                                       mesor_diff = NULL,
@@ -1172,11 +1237,13 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   if (verbose) cat("\n--- Fitting group 1 ---\n")
   p1 <- estimate_circadian_params(data_1, times_1, period = period,
                                    min_rhythm_pval = min_rhythm_pval,
+                                   top_k = top_k,
                                    verbose = verbose)
 
   if (verbose) cat("\n--- Fitting group 2 ---\n")
   p2 <- estimate_circadian_params(data_2, times_2, period = period,
                                    min_rhythm_pval = min_rhythm_pval,
+                                   top_k = top_k,
                                    verbose = verbose)
 
   ngenes     <- nrow(data_1)

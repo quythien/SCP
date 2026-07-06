@@ -74,9 +74,31 @@ options(shiny.maxRequestSize = 5 * 1024^3)
   max(1L, min(as.integer(cap), nc - 1L))
 }
 
+# Sanitize the sidebar top-K number stored on the pilot as $pilot_top_k.
+# Blank / non-positive input falls back to the default 300. The value is
+# capped to the available rhythmic-gene count downstream (min() in the reslice).
+.app_top_k_val <- function(x) {
+  x <- suppressWarnings(as.integer(x))
+  if (length(x) != 1L || is.na(x) || x < 1L) return(300L)
+  x
+}
+
+# Notify (de-duplicated) when the requested top-K exceeded the number of
+# rhythmic genes available, so the effect-size pool was capped to all of them.
+.app_topk_notice <- function(p, requested) {
+  if (is.null(p) || is.null(p$amplitude)) return(invisible())
+  avail <- length(p$amplitude)
+  if (is.finite(requested) && avail > 0L && requested > avail)
+    shiny::showNotification(
+      sprintf("Only %d rhythmic gene(s) available; using all (top-K = %d requested).",
+              avail, requested),
+      type = "warning", duration = 6, id = "topk_cap")
+  invisible()
+}
+
 # Re-slice a pilot's rhythm_fit at a new threshold (mirrors SCP:::.reslice_pilot,
 # inlined so it also works on raw readRDS in demo mode). rhythm_fit is p-sorted,
-# so this is a prefix slice; the top-300 drive the effect-size distribution.
+# so this is a prefix slice; the top-K drive the effect-size distribution.
 # Legacy pilots without rhythm_fit pass through unchanged.
 .app_apply_threshold <- function(p, stat = "p", thresh = 0.01, paired_sigma = TRUE) {
   if (is.null(p)) return(p)
@@ -92,7 +114,8 @@ options(shiny.maxRequestSize = 5 * 1024^3)
     if (thresh > cap) thresh <- cap                      # clamp raw-p to stored cap
   }
   cand  <- rf[sval < thresh, , drop = FALSE]
-  K     <- min(as.integer(p$pilot_top_k %||% 300L), nrow(cand))
+  # pilot_top_k may be Inf ("all"); min() keeps it finite before integer coercion.
+  K     <- as.integer(min(p$pilot_top_k %||% 300L, nrow(cand)))
   estim <- if (K > 0L) cand[seq_len(K), , drop = FALSE] else cand[0, , drop = FALSE]
   # Full gene count as denominator, immune to p$ngenes later holding the sim count.
   denom <- p$rhythm_denom %||% p$ngenes %||% nrow(rf)
@@ -207,7 +230,9 @@ ui <- fluidPage(
                                "0.10" = 0.10, "0.05" = 0.05, "0.01" = 0.01,
                                "0.001" = 0.001, "0.0001" = 0.0001),
                   selected = 0.05),
-      helpText(em("Defines which pilot genes count as 'rhythmic' for the simulation. The top-300 by p-value among genes passing this threshold drive the empirical effect-size distribution.")),
+      numericInput("pilot_top_k", "Effect-size genes (top-K)",
+                   value = 300, min = 1, step = 50),
+      helpText(em("Defines which pilot genes count as 'rhythmic' for the simulation. The strongest top-K genes by p-value among those passing the threshold drive the empirical effect-size distribution. If K exceeds the number of rhythmic genes, all of them are used.")),
       hr(),
       h4("Pilot"),
       radioButtons(
@@ -631,8 +656,11 @@ server <- function(input, output, session) {
       # Flag when K=2 was requested but the uploaded design can't identify it.
       if (want_k2 && is.null(up$.pilot2) && !is.null(base))
         attr(base, "k2_unavailable") <- TRUE
-      return(.app_apply_threshold(base, input$rhy_stat,
-                                  as.numeric(input$rhy_thresh)))
+      if (!is.null(base)) base$pilot_top_k <- .app_top_k_val(input$pilot_top_k)
+      res <- .app_apply_threshold(base, input$rhy_stat,
+                                  as.numeric(input$rhy_thresh))
+      .app_topk_notice(res, .app_top_k_val(input$pilot_top_k))
+      return(res)
     }
     req(input$species, input$dataset, input$tissue, input$condition)
     actual_tissue <- .resolve_actual_tissue()
@@ -668,6 +696,7 @@ server <- function(input, output, session) {
     )
     if (!is.null(p) && !inherits(p, "CircadianBioOptions"))
       class(p) <- c("CircadianBioOptions", class(p))
+    if (!is.null(p)) p$pilot_top_k <- .app_top_k_val(input$pilot_top_k)
     # Re-slice at the chosen threshold; on failure keep the loaded pilot rather
     # than blanking the panel.
     p <- tryCatch(
@@ -678,6 +707,7 @@ server <- function(input, output, session) {
         p
       }
     )
+    .app_topk_notice(p, .app_top_k_val(input$pilot_top_k))
     p
   })
 
@@ -688,6 +718,7 @@ server <- function(input, output, session) {
     list(species = input$species, dataset = input$dataset,
          tissue = input$tissue, condition = input$condition,
          rhy_stat = input$rhy_stat, rhy_thresh = input$rhy_thresh,
+         pilot_top_k = input$pilot_top_k,
          K = input$K, eff_sens = input$eff_sens, design = input$design,
          active_step = input$active_step,
          n_min = input$n_min, n_max = input$n_max, n_step = input$n_step,
@@ -910,7 +941,7 @@ server <- function(input, output, session) {
       # per-gene vectors to this length.
       p$ngenes <- 2000L
       if (!is.null(p$period)) p$period <- .as_num(p$period)
-      # Redefine the rhythmic set at the sidebar threshold (top-300 by p among
+      # Redefine the rhythmic set at the sidebar threshold (top-K by p among
       # passing genes), so the threshold drives the simulated effect-size pool.
       if (!is.null(p$raw) && !is.null(p$raw$A) && !is.null(p$raw$pvalue)) {
         thresh <- as.numeric(input$rhy_thresh)
@@ -920,7 +951,7 @@ server <- function(input, output, session) {
                 is.finite(p$raw$sigma) & p$raw$sigma > 0
         cand <- which(good & !is.na(stat) & stat < thresh)
         if (length(cand) == 0L) cand <- which(good)   # fallback
-        K <- min(300L, length(cand))
+        K <- as.integer(min(.app_top_k_val(input$pilot_top_k), length(cand)))
         topK <- cand[order(p$raw$pvalue[cand])][seq_len(K)]
         p$amplitude      <- p$raw$A[topK]
         p$sigma_rhythmic <- p$raw$sigma[topK]
