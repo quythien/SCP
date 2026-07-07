@@ -31,6 +31,10 @@ Defaults to \code{1.0}.}
 \eqn{\pi} gives a symmetric peak.  Does not affect amplitude-based power
 (beta-invariance); affects only peak-time (phase) estimation.}
 
+\item{alpha_fixed}{Optional numeric acrophase (radians) to force on every
+rhythmic gene, overriding the sampled per-gene phase. \code{NULL}
+(default) leaves phases sampled as usual.}
+
 \item{seed}{Optional integer random seed for reproducibility.}
 }
 \value{

@@ -19,6 +19,9 @@ plotFourierDeviation(
 
 \item{reference_n}{Reference N for Panel A (uses result$reference_n if NULL)}
 
+\item{panels}{Which panel(s) to draw: "A" (heatmap) and/or "B"
+(power vs N) (default "B").}
+
 \item{output_file}{Path for PDF output (NULL = screen)}
 }
 \description{

@@ -28,6 +28,7 @@
 #' @param harmonic_grid data.frame with columns alpha2, alpha3 (default: 4x3 grid)
 #' @param test_type     "DR", "DP", or "DM"
 #' @param verbose       Print progress
+#' @param mc.cores      Parallel cores (default 1).
 #'
 #' @return List with power arrays and summaries across harmonic levels
 runFourierDeviationPower <- function(bio.opts,
@@ -172,6 +173,8 @@ runFourierDeviationPower <- function(bio.opts,
 #' @param result      Output from runFourierDeviationPower()
 #' @param test_type   Test type label (uses result$test_type if NULL)
 #' @param reference_n Reference N for Panel A (uses result$reference_n if NULL)
+#' @param panels      Which panel(s) to draw: "A" (heatmap) and/or "B"
+#'   (power vs N) (default "B").
 #' @param output_file Path for PDF output (NULL = screen)
 plotFourierDeviation <- function(result,
                                  test_type   = NULL,
@@ -255,7 +258,7 @@ plotFourierDeviation <- function(result,
             names.arg = hg$label,
             col       = col_ramp[round(pm_at_ref * 99) + 1],
             ylim      = c(0, 100),
-            xlab      = "Harmonic (α₂, α₃)",
+            xlab      = "Harmonic (alpha2, alpha3)",
             ylab      = "Power (%)",
             main      = sprintf("Power at N=%d\n(%s test, FDR <= %.0f%%)",
                                 sample_sizes[ref_idx], test_type, 100 * fdr_thr),
@@ -268,7 +271,7 @@ plotFourierDeviation <- function(result,
   # -----------------------------------------------------------
   # Panel B: Power vs N lines, one per harmonic combination
   # -----------------------------------------------------------
-  # Identify pure cosinor (α₂=α₃=0) index
+  # Identify pure cosinor (alpha2=alpha3=0) index
   pure_idx <- which(hg$alpha2 == 0 & hg$alpha3 == 0)
 
   cols_h <- rainbow(n_harm, s = 0.7, v = 0.85)
@@ -308,7 +311,7 @@ plotFourierDeviation <- function(result,
   }
 
   legend("bottomright",
-         legend = sprintf("(α₂,α₃)=%s", hg$label),
+         legend = sprintf("(alpha2,alpha3)=%s", hg$label),
          col    = legend_cols,
          lty    = legend_lty,
          lwd    = legend_lwd,

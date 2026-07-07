@@ -40,8 +40,24 @@ simCircadianDiff(
 
 \item{lBaselineExpr}{Log baseline expression. Default: rnorm(ngenes, 5, 2)}
 
+\item{lBaselineExpr2}{As \code{lBaselineExpr} but for group 2. \code{NULL}
+(default) reuses group 1's distribution.}
+
 \item{lOD}{Log over-dispersion (noise). Default: rnorm(ngenes, -1, 0.3),
 so sigma = exp(lOD) ~ LogNormal(mu=-1, sd=0.3) with median ~0.37}
+
+\item{lOD2}{As \code{lOD} but for group 2. \code{NULL} (default) shares
+group 1 values.}
+
+\item{amplitude}{Amplitude distribution for rhythmic genes in group 1.}
+
+\item{amplitude2}{As \code{amplitude} but for group 2. \code{NULL}
+(default) reuses group 1's distribution.}
+
+\item{sigma_rhythmic}{Optional numeric vector of per-gene noise values for
+rhythmic genes (same length as \code{amplitude}); when supplied,
+amplitude and sigma are drawn jointly to preserve pilot A-sigma
+correlation.}
 
 \item{prop_rhythmic}{Overall proportion of rhythmic genes}
 
@@ -49,9 +65,18 @@ so sigma = exp(lOD) ~ LogNormal(mu=-1, sd=0.3) with median ~0.37}
 
 \item{prop_DP}{Proportion with differential phase (among rhythmic in both)}
 
+\item{prop_DM}{Proportion with differential mesor (both groups rhythmic,
+same amplitude/phase, different mean level).}
+
 \item{phase_diff}{Range of phase shift (hours) for DP genes}
 
+\item{dp_shift_mode}{\code{"fixed"} (use \code{phase_diff[2]}) or
+\code{"uniform"} (sample uniformly within the \code{phase_diff} range).}
+
 \item{amp_diff}{Unused; retained for interface compatibility}
+
+\item{mesor_diff}{Range of mesor shift for DM genes \code{c(min, max)}
+(additive, log-scale units).}
 
 \item{period}{Period (default 24)}
 
@@ -59,7 +84,14 @@ so sigma = exp(lOD) ~ LogNormal(mu=-1, sd=0.3) with median ~0.37}
 
 \item{cts}{TOD distribution for passive design}
 
+\item{cts2}{As \code{cts} but for group 2. \code{NULL} (default) reuses
+\code{cts}.}
+
 \item{sim.seed}{Random seed}
+
+\item{harmonics}{Numeric length-2 \code{c(alpha2, alpha3)} harmonic
+coefficients for non-cosinor signal generation (default \code{NULL},
+equivalent to \code{c(0, 0)}).}
 }
 \value{
 Named list with the following elements:

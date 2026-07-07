@@ -22,6 +22,13 @@ plotSingleCohortPower(
   cex_main = 1.5,
   cex_lab = 1.6,
   cex_axis = 1.45,
+  line_lwd = 2,
+  pt_cex = 0.95,
+  legend_cex = NULL,
+  title_cex = 1.65,
+  oma_top = 2.4,
+  legend_pos = "topleft",
+  se_cap = 0.3,
   vertical = FALSE,
   panel_c_legend = FALSE,
   width = 15,
@@ -40,11 +47,60 @@ marginal-power computation only. If NULL (default), Panel A is computed
 from \code{res}. Useful when the marginal summary should reflect a
 different empirical assumption than the effect-size-stratified panels.}
 
+\item{panels}{Character vector, which of panels "A" (marginal power vs
+n), "B" (true discoveries by r-stratum), "C" (stratified power by
+r-stratum) to draw (default all three).}
+
 \item{fdr_thresholds}{FDR levels for panel A (default c(0.01,0.05,0.10,0.20)).}
+
+\item{panel_fdr}{FDR threshold highlighted in panels B/C (default 0.05).}
+
+\item{vline_power}{Horizontal reference line for target power (default 0.80).}
+
+\item{vline_fdr}{FDR threshold marked with a reference guide (default 0.20).}
+
+\item{fdr}{Single-value alias that sets both \code{panel_fdr} and
+\code{vline_fdr} at once (back-compat convenience; default NULL).}
 
 \item{p.adjust.method}{Correction method (default "BH").}
 
 \item{reference_n}{Reference sample size for annotations (default NULL = none).}
+
+\item{display_sizes}{Sample sizes to show in all panels (NULL = all).}
+
+\item{r_max}{Upper bound (r = A/sigma units) for the r-strata
+breakpoints; \code{NULL} adapts to the 95th percentile of observed r
+(default 5).}
+
+\item{cex_main}{Title character expansion (default 1.50).}
+
+\item{cex_lab}{Axis-label character expansion (default 1.60).}
+
+\item{cex_axis}{Axis-tick character expansion (default 1.45).}
+
+\item{line_lwd}{Line width for power curves (default 2).}
+
+\item{pt_cex}{Point character expansion for plotted markers (default 0.95).}
+
+\item{legend_cex}{Legend text character expansion; \code{NULL} (default)
+picks a size automatically.}
+
+\item{title_cex}{Outer-title character expansion (default 1.65).}
+
+\item{oma_top}{Outer margin (lines) reserved above the panels for the
+title (default 2.4).}
+
+\item{legend_pos}{Legend position keyword passed to \code{legend()}
+(default "topleft").}
+
+\item{se_cap}{Maximum half-width (power units) drawn for standard-error
+bars, to keep long bars from overplotting neighboring panels (default 0.3).}
+
+\item{vertical}{Logical; if TRUE, stack panels vertically instead of the
+default horizontal 1 x length(panels) layout (default FALSE).}
+
+\item{panel_c_legend}{Logical; if TRUE, also draw the legend on panel C
+(default FALSE; panel A's legend is normally sufficient).}
 
 \item{width}{PDF width in inches (default 15).}
 

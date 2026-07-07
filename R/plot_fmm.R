@@ -61,13 +61,13 @@ plotFMMViolation <- function(x,
 
   full_df$snr_col <- factor(full_df$snr_col, levels = c("Strong","Moderate","Weak"))
 
-  # ── Color schemes ─────────────────────────────────────────────
+  # -- Color schemes ---------------------------------------------
   omega_levels <- as.character(sort(unique(full_df$omega[full_df$sweep_param=="omega"])))
   n_omega      <- length(omega_levels)
   omega_colors <- stats::setNames(
     grDevices::colorRampPalette(c("#08306B","#4292C6","#C6DBEF"))(n_omega),
     omega_levels)
-  # Parseable labels: "omega==0" renders as ω=0 via plotmath
+  # Parseable labels: "omega==0" renders as omega=0 via plotmath
   omega_labels <- stats::setNames(
     paste0("omega==", omega_levels),
     omega_levels)
@@ -77,11 +77,11 @@ plotFMMViolation <- function(x,
   beta_colors  <- stats::setNames(
     grDevices::colorRampPalette(c("#7F0000","#EF6548","#FEE8C8"))(n_beta),
     beta_levels)
-  # Parseable beta labels: "pi/4" renders as π/4
+  # Parseable beta labels: "pi/4" renders as pi/4
   beta_denom  <- c("0","pi/4","pi/2","3*pi/4","pi","5*pi/4","3*pi/2")
   beta_labels <- stats::setNames(beta_denom[seq_len(n_beta)], beta_levels)
 
-  # Alpha sweep color scheme (green palette: 0h dark → 20h light)
+  # Alpha sweep color scheme (green palette: 0h dark -> 20h light)
   has_alpha    <- "alpha" %in% full_df$sweep_param
   alpha_levels <- if (has_alpha)
     as.character(sort(unique(full_df$sweep_val[full_df$sweep_param=="alpha"]))) else character(0)
@@ -193,7 +193,7 @@ plotFMMViolation <- function(x,
 
     # 2. Move y-axis from left of empty panel (l=6) to left of Passive/Moderate (l=8)
     #    axis-l-2: y-axis for the entire Passive row, currently at l=6
-    #    panel-2-2: Passive/Moderate panel, at l=9 → its left gap is l=8
+    #    panel-2-2: Passive/Moderate panel, at l=9 -> its left gap is l=8
     al2_idx <- which(g$layout$name == "axis-l-2")
     if (length(al2_idx) > 0) {
       # Save the y-axis grob, then blank it at its original position
@@ -220,7 +220,7 @@ plotFMMViolation <- function(x,
     x_lab       = "",
     title_str   = expression(paste("(A) Waveform shape: varying ", omega,
                                     "   (fixed ", beta, " = ", pi, ")")),
-    legend_ncol = 4L   # horizontal: 7 omega values → 2 rows of 4+3
+    legend_ncol = 4L   # horizontal: 7 omega values -> 2 rows of 4+3
   )
 
   p_beta <- make_panel(
@@ -323,7 +323,7 @@ plotFMMDifferential <- function(x,
       N_min, N_max,
       paste(sort(unique(round(df$omega, 2))), collapse=", "))
   }
-  # SE → SD
+  # SE -> SD
   df$SD_DR <- df$SE_DR * sqrt(nsims)
   df$SD_DP <- df$SE_DP * sqrt(nsims)
   df$SD_DM <- df$SE_DM * sqrt(nsims)

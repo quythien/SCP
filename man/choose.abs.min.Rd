@@ -6,6 +6,13 @@
 \usage{
 choose.abs.min(mat = matrix(stats::rnorm(21), ncol = 3))
 }
+\arguments{
+\item{mat}{Numeric matrix; one candidate value per column, one case per row.}
+}
+\value{
+Numeric vector, length \code{nrow(mat)}: the smallest-magnitude
+  entry from each row (sign preserved).
+}
 \description{
 Choose the minimum absolute value from each row
 }

@@ -36,7 +36,7 @@ CircaPower = function(n = NULL, power = NULL, r = NULL,
     stop("Exactly one of n, r, power, and alpha must be NULL")
   }
   
-  # Based on F-test with ncp = r² × n × d
+  # Based on F-test with ncp = r^2 x n x d
   k = 2  # 2 parameters (cos, sin)
   df1 = k
   
@@ -329,7 +329,7 @@ plot_stratified_power = function(stratified_results) {
     geom_errorbar(aes(ymin = 0, ymax = power), width = 0.2) +
     labs(
       title = "Stratified Power by Effect Size",
-      x = "Effect Size Stratum (r = A/σ)",
+      x = "Effect Size Stratum (r = A/sigma)",
       y = "Power"
     ) +
     theme_bw() +
@@ -435,8 +435,8 @@ generate_power_report = function(power_results, output_file = NULL) {
 #'
 #' @param dcp_results List from DCP analysis containing DR and DP components
 #' @param top_n Number of top circadian genes to use (default: 100)
-#' @param rank_by Column to rank genes by (default: "p.overall" from DP results)
-#' @param group Which group to use for R^2 ("min" for minimum across groups, "1" or "2" for specific group)
+#' @param rank_by Column to rank genes by (default: "q.R2")
+#' @param use_group Which group's R^2 to use (1 or 2; default 1).
 #'
 #' @return List with median r, mean r, and individual r values
 #'
@@ -455,7 +455,7 @@ estimate_r_from_data = function(dcp_results, top_n = 100,
 
   # Extract DR (Differential Rhythm) results
   if (is.null(dcp_results$DR)) {
-    stop("dcp_results must contain DR component with R² values")
+    stop("dcp_results must contain DR component with R^2 values")
   }
 
   dr <- dcp_results$DR
@@ -469,11 +469,11 @@ estimate_r_from_data = function(dcp_results, top_n = 100,
 
   top_genes <- head(dr[order(dr[[rank_by]]), "gname"], top_n)
 
-  # Merge with DR data to get R² values
+  # Merge with DR data to get R^2 values
   dr_top <- merge(dr, data.frame(gname = top_genes), by = "gname")
 
-  # Calculate r from R² for each group: r = 1/sqrt(1/R² - 1)
-  # Handle edge cases where R² = 0 or R² = 1
+  # Calculate r from R^2 for each group: r = 1/sqrt(1/R^2 - 1)
+  # Handle edge cases where R^2 = 0 or R^2 = 1
   dr_top$r1 <- with(dr_top, {
     valid <- R2.1 > 0 & R2.1 < 1
     r <- ifelse(valid, 1/sqrt(1/R2.1 - 1), NA)

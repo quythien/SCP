@@ -24,7 +24,18 @@ CircadianDesignOptions(
 
 \item{cts}{Time-of-day distribution for passive design (numeric vector)}
 
+\item{B_values}{Optional vector of time-point counts (B) to sweep, in
+addition to \code{sample_sizes}; NULL runs a single B implied by \code{cts}.}
+
 \item{test_types}{Character vector of tests to run ("DR", "DP", "DM")}
+
+\item{omega}{FMM waveform shape parameter in (0, 1]. \code{omega = 1}
+(default) is the pure cosinor path; \code{omega < 1} simulates a
+non-sinusoidal waveform via \code{simCircadianFMM()}. \code{omega = 0} is
+not allowed.}
+
+\item{beta}{FMM orientation parameter (peak-location offset, default
+\code{pi}); only used when \code{omega < 1}, ignored for the cosinor path.}
 }
 \value{
 Object of class "CircadianDesignOptions"

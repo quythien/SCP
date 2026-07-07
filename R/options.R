@@ -1,18 +1,3 @@
-#' Simulation Options for PowerSim
-#'
-#' Configure simulation parameters for circadian power analysis
-#'
-#' @param ngenes Number of genes
-#' @param lBaselineExpr Log baseline expression (can be constant, vector, function, or "empirical")
-#' @param lOD Log over-dispersion (can be constant, vector, function, or "empirical")
-#' @param prop_rhythmic Proportion of rhythmic genes (default 0.25)
-#' @param amplitude Amplitude for rhythmic genes (can be constant, vector, or function)
-#' @param phase Phase for rhythmic genes (can be "uniform", constant, vector, or function)
-#' @param period Period (default 24)
-#' @param sim.seed Random seed
-#'
-#' @return List of simulation options
-
 #' Update simulation options (regenerate rhythmic genes)
 #' 
 #' @param sim.opts Simulation options from createSimOptions()
@@ -228,6 +213,11 @@ setPhase <- function(input, n_rhythmic, period) {
 #' @param sigma_rhythmic Optional numeric vector of per-gene noise values for
 #'   rhythmic genes (same length as \code{amplitude}). When provided, amplitude
 #'   and sigma are drawn jointly to preserve pilot A-sigma correlation.
+#' @param paired_sigma Logical. If \code{TRUE} and \code{sigma_rhythmic} is
+#'   supplied, expand \code{amplitude} and \code{sigma_rhythmic} jointly by the
+#'   same resampled gene index so their pilot-estimated pairwise correlation is
+#'   preserved; if \code{FALSE} (default), amplitude and sigma are expanded
+#'   independently.
 #' @param paired_omega Logical. If \code{TRUE} and \code{omega_rhythmic} is
 #'   supplied (same length as \code{amplitude}), expand omega using the same
 #'   shared gene-index used for amplitude/sigma so all three are paired per gene.
@@ -375,14 +365,14 @@ CircadianBioOptions <- function(ngenes = 5000,
   lOD_resolved  <- setOD(lOD,  ngenes)
   lOD2_resolved <- if (!is.null(lOD2)) setOD(lOD2, ngenes) else NULL
   # paired_sigma=TRUE: expand amplitude and sigma_rhythmic jointly using a shared
-  # index so each simulated rhythmic gene draws (A, σ) from the same pilot gene,
-  # preserving the empirical r̃ = A/σ distribution.
+  # index so each simulated rhythmic gene draws (A, sigma) from the same pilot gene,
+  # preserving the empirical r_tilde = A/sigma distribution.
   # paired_sigma=FALSE (default): original behaviour, amplitude expanded independently
-  # via setAmplitude, σ drawn from lOD in simulation (has_joint=FALSE).
+  # via setAmplitude, sigma drawn from lOD in simulation (has_joint=FALSE).
   #
   # If paired_omega = TRUE / paired_alpha = TRUE and the corresponding *_rhythmic
   # vector matches the amplitude length, we reuse the SAME ji index so that
-  # (A, σ, ω, α) for each simulated gene all come from the same pilot gene.
+  # (A, sigma, omega, alpha) for each simulated gene all come from the same pilot gene.
   amp_len_orig   <- if (is.numeric(amplitude)) length(amplitude) else NA_integer_
   paired_pairing <- !is.na(amp_len_orig) && amp_len_orig >= 2L
 
@@ -508,7 +498,15 @@ CircadianBioOptions <- function(ngenes = 5000,
 #' @param nsims Number of simulation replicates
 #' @param design "active" or "passive"
 #' @param cts Time-of-day distribution for passive design (numeric vector)
+#' @param B_values Optional vector of time-point counts (B) to sweep, in
+#'   addition to \code{sample_sizes}; NULL runs a single B implied by \code{cts}.
 #' @param test_types Character vector of tests to run ("DR", "DP", "DM")
+#' @param omega FMM waveform shape parameter in (0, 1]. \code{omega = 1}
+#'   (default) is the pure cosinor path; \code{omega < 1} simulates a
+#'   non-sinusoidal waveform via \code{simCircadianFMM()}. \code{omega = 0} is
+#'   not allowed.
+#' @param beta FMM orientation parameter (peak-location offset, default
+#'   \code{pi}); only used when \code{omega < 1}, ignored for the cosinor path.
 #'
 #' @return Object of class "CircadianDesignOptions"
 #' @export
@@ -521,8 +519,8 @@ CircadianDesignOptions <- function(sample_sizes = c(10, 20, 40, 60, 80, 100),
                                    omega      = 1.0,
                                    beta       = pi) {
   # omega: FMM waveform shape parameter.
-  #   omega = 1  (default) → pure cosinor simulation (traditional path).
-  #   omega < 1  → FMM non-sinusoidal simulation via simCircadianFMM().
+  #   omega = 1  (default) -> pure cosinor simulation (traditional path).
+  #   omega < 1  -> FMM non-sinusoidal simulation via simCircadianFMM().
   #   omega = 0  is not allowed (degenerate flat waveform).
   # beta: FMM orientation parameter (peak location offset, default pi).
   #   Only used when omega < 1; ignored for cosinor simulation.
@@ -578,6 +576,8 @@ CircadianDesignOptions <- function(sample_sizes = c(10, 20, 40, 60, 80, 100),
 #' @param r_strata Breakpoints for A/sigma stratification
 #' @param strata_labels Labels for strata (auto-generated if NULL)
 #' @param phase_shifts Phase shift magnitudes to sweep (for sensitivity analysis)
+#' @param DCmethod Differential-rhythmicity detector to report against,
+#'   one of "DCP" (default) or "CircaCompare".
 #'
 #' @return Object of class "CircadianAnalysisOptions"
 #' @export

@@ -14,11 +14,16 @@ testAnyDifferential(
 )
 }
 \arguments{
+\item{y1, y2}{Gene expression matrices for groups 1 and 2 (genes x samples).}
+
 \item{times1}{Time points for group 1}
 
 \item{times2}{Time points for group 2}
 
 \item{period}{Period (default 24)}
+
+\item{test_types}{Character vector of endpoints to test: any of
+\code{"DR"} (differential rhythmicity), \code{"DP"} (differential phase).}
 }
 \value{
 List with p_DR, p_DP

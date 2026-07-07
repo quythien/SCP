@@ -2,37 +2,18 @@
 % Please edit documentation in R/options.R
 \name{updateSimOptions}
 \alias{updateSimOptions}
-\title{Simulation Options for PowerSim}
+\title{Update simulation options (regenerate rhythmic genes)}
 \usage{
 updateSimOptions(sim.opts)
 }
 \arguments{
 \item{sim.opts}{Simulation options from createSimOptions()}
-
-\item{ngenes}{Number of genes}
-
-\item{lBaselineExpr}{Log baseline expression (can be constant, vector, function, or "empirical")}
-
-\item{lOD}{Log over-dispersion (can be constant, vector, function, or "empirical")}
-
-\item{prop_rhythmic}{Proportion of rhythmic genes (default 0.25)}
-
-\item{amplitude}{Amplitude for rhythmic genes (can be constant, vector, or function)}
-
-\item{phase}{Phase for rhythmic genes (can be "uniform", constant, vector, or function)}
-
-\item{period}{Period (default 24)}
-
-\item{sim.seed}{Random seed}
 }
 \value{
-List of simulation options
-Update simulation options (regenerate rhythmic genes)
-
 Updated simulation options with new seed and regenerated parameters
 }
 \description{
-Configure simulation parameters for circadian power analysis
+Update simulation options (regenerate rhythmic genes)
 }
 \note{
 Deprecated. Not called by any current runner function. Retained for

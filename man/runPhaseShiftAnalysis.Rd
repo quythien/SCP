@@ -23,6 +23,8 @@ runPhaseShiftAnalysis(
 \item{prop_DP}{Proportion of DP genes for each scenario (default 0.15)}
 
 \item{amp_diff}{Amplitude ratio range for DP genes (default c(0.5, 2))}
+
+\item{mc.cores}{Parallel cores (default 1).}
 }
 \value{
 List with 4D arrays [phase, size, stratum, sim] compatible with plotPhaseShiftWithSE()

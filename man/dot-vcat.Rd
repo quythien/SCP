@@ -2,19 +2,20 @@
 % Please edit documentation in R/validation.R
 \name{.vcat}
 \alias{.vcat}
-\title{Validation Suite for SCP Framework}
+\title{Print a pass/fail validation line}
 \usage{
 .vcat(label, pass, detail = NULL)
 }
-\description{
-Call runSCPValidation() to execute all checks. Nothing runs at source() time.
+\arguments{
+\item{label}{Character label for the check being reported.}
+
+\item{pass}{Logical; TRUE prints "PASS", FALSE prints "FAIL".}
+
+\item{detail}{Optional character detail line printed indented below.}
 }
-\details{
-Validations:
-  1. Type I error control under null
-  2. Analytical vs simulation agreement (single-cohort)
-  3. Phase effect size predicts power monotonically
-  4. Power curve increases with sample size
-  5. Differential power sanity (large > small effect; DR > subtle DP)
-  6. CircaPower analytical formula consistency
+\value{
+Invisibly \code{NULL}; called for its printing side effect.
+}
+\description{
+Print a pass/fail validation line
 }

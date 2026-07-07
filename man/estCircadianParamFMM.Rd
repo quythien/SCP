@@ -38,11 +38,25 @@ and to \code{prop_rhythmic}. Matches the downstream detect_FMM detector
 \item{top_k}{Cap on number of FMM-fitted genes (default 300, matches
 estCircadianParam's top-K logic).}
 
+\item{screen_K}{Harmonic order for the \code{detect_FMM} pre-screen
+(default 2, i.e. the K=2 harmonic LRT). Must match the downstream
+detector's harmonic order to keep truth-label generation and detection
+internally consistent.}
+
 \item{paired_sigma}{Logical (default TRUE). Forwarded to CircadianBioOptions.}
 
 \item{paired_omega}{Logical (default TRUE). Forwarded.}
 
 \item{paired_alpha}{Logical (default TRUE). Forwarded.}
+
+\item{prop_DR}{Target proportion of differential-rhythmicity genes,
+forwarded to CircadianBioOptions (default 0).}
+
+\item{prop_DP}{Target proportion of differential-phase genes, forwarded to
+CircadianBioOptions (default 0).}
+
+\item{prop_DM}{Target proportion of differential-MESOR genes, forwarded to
+CircadianBioOptions (default 0).}
 
 \item{mc.cores}{Parallel cores for FMM fitting (default 1).}
 

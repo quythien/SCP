@@ -10,9 +10,10 @@ not filename. All generators live under `examples/publication/` (plus the
 | `Fig1A_single_cohort_AdrenalGland.pdf`, `Fig1B_single_cohort_Liver.pdf` | `fig1_fig2_replot.R` (draws from cache) | uses `library(SCP)` |
 | `Fig2_differential_ADR_vs_LIV.pdf` | `fig1_fig2_replot.R` | draws from cache |
 | `Fig3_bootstrap_singlecohort.pdf` | **`fig3_bootstrap_subject.R`** (current, Efron subject bootstrap; Caudate control n=59 + GTEx Muscle n=748) | supersedes the old `fig5_bootstrap_sc.R` (Putamen SCZ + Thyroid, per-gene) |
-| `Fig4_twoharm_demo.pdf` | `two_harmonic/fig4_twoharm_demo.R` | GTEx v10 Liver |
-| `Fig5_twoharm_framework.pdf` | `two_harmonic/fig5_twoharm_framework.R` | GTEx v10 Liver |
+| `Fig4_twoharm_demo.pdf` | `two_harmonic/fig4_twoharm_demo.R` | GTEx v10 Liver; no `source()` calls, runs against the current tree |
+| `Fig5_twoharm_framework.pdf` | `two_harmonic/fig5_twoharm_framework.R` (**BROKEN**, see caveats) | GTEx v10 Liver |
 | `Fig6_active_BvsM.pdf` | `two_harmonic/fig6_v9_putamen_paired.R` (DELETED in cleanup commit `a1ac962`; recover via `git show a1ac962^:...`; writes directly to submission/figures, no rename) | Putamen control n=59, active B-sweep, K=1 + K=2 panels. Shipped PDF is a light hand-edit (added r-tilde, panel relabels). `fig6_cosinor_rebuild.R` is a different, non-adopted rebuild. |
+| `SuppFig_clock_gene_profiles.pdf`, `SuppFig_FMM_diagnostic.pdf` | **no generator on disk** (not even under `archive/`) | undocumented gap; regenerate or drop from the supplement |
 
 ## Fig 3 (bootstrap) reproduction — current
 
@@ -28,16 +29,57 @@ this server only. The corresponding package entry point is
 
 ## Reproducibility caveats
 
-- The *sim* generators for Figs 1–2 and 4–6 historically opened with
+- The *sim* generators for Figs 1-2 and 4-6 historically opened with
   `setwd("code"); source("setup.R")`, but `code/setup.R` was removed in the
   v0.4.0 release-prep commit. Only the *replot* scripts (`fig1_fig2_replot.R`,
-  `fig3_bootstrap_replot.R`) and the new `fig3_bootstrap_subject.R` run against
-  the current tree; the others need `source("code/setup.R")` swapped to
-  `library(SCP)` before they will run.
-- Fast C++ path (≈195× on cosinor fits) is off by default because the package
-  `NAMESPACE` lacks `useDynLib`; scripts activate it with
-  `library(Rcpp); dyn.load(system.file("libs","SCP.so",package="SCP")); .CPP_LOADED <- TRUE`.
+  `fig3_bootstrap_replot.R`), `two_harmonic/fig4_twoharm_demo.R`, and the new
+  `fig3_bootstrap_subject.R` run against the current tree.
+- **`fig5_twoharm_framework.pdf`'s generator is broken independently of the
+  `setup.R` issue.** `two_harmonic/fig5_twoharm_framework.R` directly sources
+  `code/utils.R`, `code/simulation.R`, `code/bootstrap_sim.R`, and
+  `code/detection.R` — all four were removed along with `code/setup.R`; only
+  `code/options.R`/`code/estimation.R`/`code/pilot_database.R`/
+  `code/plot_diff.R`/`code/plot_single_cohort.R`/`code/runner.R` survive in
+  `code/`. Swap these `source()` calls for `library(SCP)` (and confirm the
+  script only calls exported functions) before Fig 5 can be regenerated.
+- **`fig3_bootstrap_replot.R` is a landmine, not a harmless duplicate.** It
+  writes to the *same* `Fig3_bootstrap_singlecohort.pdf` path as
+  `fig3_bootstrap_subject.R`, but plots the old, superseded Putamen-SCZ /
+  Thyroid per-gene panels from a stale cache. Running it after the real
+  generator silently clobbers the current Fig 3 with obsolete data. Move it to
+  `archive/` (or delete) once Fig 3's provenance above is trusted.
+- **Orphan generators** under `examples/publication/` that are not referenced
+  anywhere in this file and are also broken via the `setup.R`/`code/*` pattern:
+  `fig1_single_cohort_power.R`, `fig2_paired_sims.R`,
+  `fig3_bvsm_method_comparison.R` (writes an unrelated `fig3_method_comparison.pdf`),
+  `fig4_sensitivity.R` (writes `fig4_sensitivity.pdf`, not the current Fig 4),
+  `fig6_phase_mse.R`. `suppT1_pilot_dataset_summary.R` (writes
+  `submission/tissue_signal_summary.csv`, Supp Table 1) is also unreferenced
+  but not broken. `fig5_bootstrap_sc.R` and `fig6_cosinor_rebuild.R` are
+  intentionally-deprecated/non-adopted alternates, not orphans.
+- Fast C++ path (about 195x on cosinor fits): as of the current session,
+  `NAMESPACE` now has `useDynLib(SCP, .registration = TRUE)` and
+  `importFrom(Rcpp, sourceCpp)`, so the compiled `.Call()` routines resolve
+  correctly for the first time. The path is still **not** engaged
+  automatically, though: every call site (`R/simulation.R`, `R/bootstrap_sim.R`,
+  `R/runner.R`) gates on a `.CPP_LOADED` flag that is checked but never set
+  anywhere in `R/`. Opt in manually with
+  `library(Rcpp); .CPP_LOADED <- TRUE` after `library(SCP)`.
 - Cached intermediate results and diagnostics live under gitignored `output/`.
+
+## Minimal consolidation recommendation
+
+There is no single script that regenerates every figure; a maintainer has to
+know which of ~15 scripts under `examples/publication/` (several dead) is
+current. Recommended: one `examples/publication/run_all_figures.R` (or
+Makefile) that (1) fails fast if anything it calls still references
+`code/setup.R` or a deleted `code/*.R` file, (2) runs exactly the six
+generators in the table above plus `suppT1_pilot_dataset_summary.R` and
+whatever regenerates the two missing SuppFigs, (3) writes only into
+`submission/figures/`, and (4) has `fig3_bootstrap_replot.R`,
+`fig5_bootstrap_sc.R`, `fig6_cosinor_rebuild.R`, and the orphan scripts above
+moved into `examples/publication/archive/` so they stop shadowing the current
+generator for the same output file.
 
 ## Fig 6 differential extension (advisor addition, 2026-07-07)
 

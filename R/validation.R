@@ -1,20 +1,14 @@
-#' Validation Suite for SCP Framework
-#'
-#' Call runSCPValidation() to execute all checks. Nothing runs at source() time.
-#'
-#' Validations:
-#'   1. Type I error control under null
-#'   2. Analytical vs simulation agreement (single-cohort)
-#'   3. Phase effect size predicts power monotonically
-#'   4. Power curve increases with sample size
-#'   5. Differential power sanity (large > small effect; DR > subtle DP)
-#'   6. CircaPower analytical formula consistency
-
 # ==============================================================================
 # Internal helper: pass/fail printer
 # ==============================================================================
+#' Print a pass/fail validation line
+#'
+#' @param label Character label for the check being reported.
+#' @param pass Logical; TRUE prints "PASS", FALSE prints "FAIL".
+#' @param detail Optional character detail line printed indented below.
+#' @return Invisibly \code{NULL}; called for its printing side effect.
 .vcat <- function(label, pass, detail = NULL) {
-  sym <- if (pass) "✓ PASS" else "✗ FAIL"
+  sym <- if (pass) "PASS" else "FAIL"
   cat(sprintf("%-40s %s\n", label, sym))
   if (!is.null(detail)) cat("   ", detail, "\n")
 }

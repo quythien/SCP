@@ -32,6 +32,15 @@ plotDiffPower(
 
 \item{fdr_thresholds}{FDR levels for panel A (default c(0.01,0.05,0.10,0.20)).}
 
+\item{panel_fdr}{FDR threshold used to draw the marginal power curve in
+the non-stratified layout (default 0.05).}
+
+\item{vline_power}{Horizontal reference line for target power, drawn at
+this value (default 0.80).}
+
+\item{vline_fdr}{FDR threshold marked with a reference guide on the
+power panels (default 0.20).}
+
 \item{display_sizes}{Sample sizes to show in all panels (NULL = all).}
 
 \item{stratified}{Logical (default FALSE). If FALSE, draws only the
@@ -41,6 +50,15 @@ strata panels in the original 3-column layout.}
 
 \item{r_break_width}{Width of r-strata bins (default 0.25). Ignored if
 stratified = FALSE.}
+
+\item{r_max}{Upper bound (in r = A/sigma units) for the r-strata
+breakpoints when \code{stratified = TRUE} (default 5).}
+
+\item{r_display_max}{Optional upper x-axis limit (r units) for the
+stratified panels; \code{NULL} (default) uses the full stratified range.}
+
+\item{main_title}{Outer plot title (default
+\code{"Differential Circadian Power Analysis"}).}
 
 \item{out_pdf}{Path for PDF. If NULL, plots to current device.}
 

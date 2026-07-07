@@ -9,7 +9,9 @@ SummarizeDR(result, test = "DRF", type = "p-value", val = 0.05, out = "long")
 \arguments{
 \item{result}{List of p-value vectors}
 
-\item{test}{Types of results}
+\item{test}{Test names}
+
+\item{type}{Types of results (e.g. "p-value")}
 
 \item{val}{Cutoffs}
 

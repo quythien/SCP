@@ -22,9 +22,39 @@ if (!exists("add_se_bars")) {
 #'   different empirical assumption than the effect-size-stratified panels.
 #' @param out_pdf    Path for PDF output. If NULL, plots to current device.
 #' @param title      Overall figure title (default empty).
+#' @param panels     Character vector, which of panels "A" (marginal power vs
+#'   n), "B" (true discoveries by r-stratum), "C" (stratified power by
+#'   r-stratum) to draw (default all three).
 #' @param fdr_thresholds FDR levels for panel A (default c(0.01,0.05,0.10,0.20)).
+#' @param panel_fdr  FDR threshold highlighted in panels B/C (default 0.05).
+#' @param vline_power Horizontal reference line for target power (default 0.80).
+#' @param vline_fdr  FDR threshold marked with a reference guide (default 0.20).
+#' @param fdr        Single-value alias that sets both \code{panel_fdr} and
+#'   \code{vline_fdr} at once (back-compat convenience; default NULL).
 #' @param p.adjust.method Correction method (default "BH").
 #' @param reference_n    Reference sample size for annotations (default NULL = none).
+#' @param display_sizes  Sample sizes to show in all panels (NULL = all).
+#' @param r_max      Upper bound (r = A/sigma units) for the r-strata
+#'   breakpoints; \code{NULL} adapts to the 95th percentile of observed r
+#'   (default 5).
+#' @param cex_main   Title character expansion (default 1.50).
+#' @param cex_lab    Axis-label character expansion (default 1.60).
+#' @param cex_axis   Axis-tick character expansion (default 1.45).
+#' @param line_lwd   Line width for power curves (default 2).
+#' @param pt_cex     Point character expansion for plotted markers (default 0.95).
+#' @param legend_cex Legend text character expansion; \code{NULL} (default)
+#'   picks a size automatically.
+#' @param title_cex  Outer-title character expansion (default 1.65).
+#' @param oma_top    Outer margin (lines) reserved above the panels for the
+#'   title (default 2.4).
+#' @param legend_pos Legend position keyword passed to \code{legend()}
+#'   (default "topleft").
+#' @param se_cap     Maximum half-width (power units) drawn for standard-error
+#'   bars, to keep long bars from overplotting neighboring panels (default 0.3).
+#' @param vertical   Logical; if TRUE, stack panels vertically instead of the
+#'   default horizontal 1 x length(panels) layout (default FALSE).
+#' @param panel_c_legend Logical; if TRUE, also draw the legend on panel C
+#'   (default FALSE; panel A's legend is normally sufficient).
 #' @param width      PDF width in inches (default 15).
 #' @param height     PDF height in inches (default 5.5).
 #' @return Invisibly returns list of data used per panel.
@@ -330,7 +360,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
 
   if ("B" %in% panels) {
   # ---- Panel B: stratified power by r, lines per n ----
-  # Increase mgp[1] so r̃ label clears the vertical (las=2) tick labels
+  # Increase mgp[1] so r_tilde label clears the vertical (las=2) tick labels
   par(mgp = c(mgp_bc1, 0.6, 0))
   matplot(seq_len(n_strata_plt), 100 * t(mean_pow_plt[disp_idx, , drop = FALSE]),
           type = "l", lwd = line_lwd, col = size_colors[disp_idx], lty = 1,

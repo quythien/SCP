@@ -84,17 +84,39 @@ sampleTimesFromDist <- function(n, cts) {
 #' @param n1 Sample size for group 1
 #' @param n2 Sample size for group 2
 #' @param lBaselineExpr Log baseline expression. Default: rnorm(ngenes, 5, 2)
+#' @param lBaselineExpr2 As \code{lBaselineExpr} but for group 2. \code{NULL}
+#'   (default) reuses group 1's distribution.
 #' @param lOD Log over-dispersion (noise). Default: rnorm(ngenes, -1, 0.3),
 #'   so sigma = exp(lOD) ~ LogNormal(mu=-1, sd=0.3) with median ~0.37
+#' @param lOD2 As \code{lOD} but for group 2. \code{NULL} (default) shares
+#'   group 1 values.
+#' @param amplitude Amplitude distribution for rhythmic genes in group 1.
+#' @param amplitude2 As \code{amplitude} but for group 2. \code{NULL}
+#'   (default) reuses group 1's distribution.
+#' @param sigma_rhythmic Optional numeric vector of per-gene noise values for
+#'   rhythmic genes (same length as \code{amplitude}); when supplied,
+#'   amplitude and sigma are drawn jointly to preserve pilot A-sigma
+#'   correlation.
 #' @param prop_rhythmic Overall proportion of rhythmic genes
 #' @param prop_DR Proportion with differential rhythmicity
 #' @param prop_DP Proportion with differential phase (among rhythmic in both)
+#' @param prop_DM Proportion with differential mesor (both groups rhythmic,
+#'   same amplitude/phase, different mean level).
 #' @param phase_diff Range of phase shift (hours) for DP genes
+#' @param dp_shift_mode \code{"fixed"} (use \code{phase_diff[2]}) or
+#'   \code{"uniform"} (sample uniformly within the \code{phase_diff} range).
 #' @param amp_diff Unused; retained for interface compatibility
+#' @param mesor_diff Range of mesor shift for DM genes \code{c(min, max)}
+#'   (additive, log-scale units).
 #' @param period Period (default 24)
 #' @param design "active" or "passive"
 #' @param cts TOD distribution for passive design
+#' @param cts2 As \code{cts} but for group 2. \code{NULL} (default) reuses
+#'   \code{cts}.
 #' @param sim.seed Random seed
+#' @param harmonics Numeric length-2 \code{c(alpha2, alpha3)} harmonic
+#'   coefficients for non-cosinor signal generation (default \code{NULL},
+#'   equivalent to \code{c(0, 0)}).
 #'
 #' @return Named list with the following elements:
 #'   \describe{
@@ -361,7 +383,7 @@ simCircadianDiff <- function(ngenes = 5000,
         times2 = cts
       }
     } else {
-      # Exclude endpoint (period ≡ 0 mod period) for true evenly-spaced coverage.
+      # Exclude endpoint (period == 0 mod period) for true evenly-spaced coverage.
       times1 = seq(0, period, length.out = n1 + 1L)[seq_len(n1)]
       times2 = seq(0, period, length.out = n2 + 1L)[seq_len(n2)]
     }
@@ -433,7 +455,7 @@ simCircadianDiff <- function(ngenes = 5000,
       2*amplitude1*amplitude2*cos(omega*(phase2-phase1))
   ) / sigma   # displacement relative to group-1 noise as reference
   effectsize_amp   = abs(amplitude2 - amplitude1) / sigma  # relative to group-1 noise
-  effectsize_mesor = abs(mesor2 - mesor) / sigma           # |Δμ| / sigma_g1
+  effectsize_mesor = abs(mesor2 - mesor) / sigma           # |Deltamu| / sigma_g1
 
   return(list(
     expr1 = expr1,
@@ -734,6 +756,9 @@ simCircadianSingleCohort2H <- function(bio.opts, cts, seed = NULL) {
 #' @param beta Numeric scalar.  FMM orientation (skewness) parameter. Default
 #'   \eqn{\pi} gives a symmetric peak.  Does not affect amplitude-based power
 #'   (beta-invariance); affects only peak-time (phase) estimation.
+#' @param alpha_fixed Optional numeric acrophase (radians) to force on every
+#'   rhythmic gene, overriding the sampled per-gene phase. \code{NULL}
+#'   (default) leaves phases sampled as usual.
 #' @param seed Optional integer random seed for reproducibility.
 #'
 #' @return Named list with:
@@ -812,7 +837,7 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
     .clip_omega <- function(x) pmin(pmax(x, 1e-4), 1 - 1e-4)
     # Resample omega_rhythmic to length n_rhythmic.
     # If paired with amplitude (same n_fitted) and we already drew `ji`,
-    # use the SAME ji index so (A, σ, ω) stay jointly paired per gene.
+    # use the SAME ji index so (A, sigma, omega) stay jointly paired per gene.
     .resample_paired <- function(vec) {
       if (!is.null(ji) && length(vec) == length(bio.opts$amplitude)) {
         vec[ji]
@@ -834,7 +859,7 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
       rep(omega, n_rhythmic)  # backward-compat scalar (no clip, caller validated)
     }
 
-    # Determine the "base" acrophase in radians (from phase_g, in hours, → radians)
+    # Determine the "base" acrophase in radians (from phase_g, in hours, -> radians)
     alpha_base_rad <- phase_g[rhythmic_id] * (2 * pi / 24)
 
     # von Mises sampler (Best & Fisher 1979 rejection method).
@@ -927,7 +952,7 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
                              method = "linear", rule = 2)$y
         expr[g, ] <- rnorm(N, fmm_signal, sigma_g[g])
       } else {
-        # omega=0 → flat (FMM degenerate)
+        # omega=0 -> flat (FMM degenerate)
         expr[g, ] <- rnorm(N, mesor_g[g], sigma_g[g])
       }
     } else {

@@ -6,6 +6,21 @@
 \usage{
 calculate_CI_A.phase.Taylor(XX.inv, A.t, phase.hat, A.hat, sigma.hat)
 }
+\arguments{
+\item{XX.inv}{Inverse of the design matrix cross-product (t(X) times X).}
+
+\item{A.t}{Contrast row vector selecting the cosinor coefficients.}
+
+\item{phase.hat}{Estimated phase (radians).}
+
+\item{A.hat}{Estimated amplitude.}
+
+\item{sigma.hat}{Estimated residual standard deviation.}
+}
+\value{
+List with \code{se.A.hat} and \code{se.phase.hat}, the delta-method
+  standard errors for amplitude and phase.
+}
 \description{
 Calculate CI for Amplitude and Phase (Taylor method)
 }

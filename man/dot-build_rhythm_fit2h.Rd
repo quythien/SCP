@@ -12,6 +12,9 @@
   phi2,
   sigma,
   gene = NULL,
+  mesor = NULL,
+  p_joint = NULL,
+  p_2h = NULL,
   cap = .pilot_rhythm_cap
 )
 }

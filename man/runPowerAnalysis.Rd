@@ -20,6 +20,8 @@ runPowerAnalysis(
 \item{analysis.opts}{CircadianAnalysisOptions}
 
 \item{test_type}{"DR" or "DP"}
+
+\item{verbose}{Print progress (default TRUE).}
 }
 \value{
 List compatible with plotWithSE()

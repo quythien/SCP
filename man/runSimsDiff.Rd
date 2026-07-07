@@ -49,6 +49,10 @@ per-group sample sizes (legacy flat API).}
 
 \item{verbose}{Print progress.}
 
+\item{harmonics}{Numeric length-2 \code{c(alpha2, alpha3)} harmonic
+coefficients for non-cosinor signal generation (legacy only; default
+\code{NULL}, equivalent to \code{c(0, 0)}).}
+
 \item{mc.cores}{Parallel cores.}
 
 \item{design.opts}{\code{CircadianDesignOptions} (used with legacy positional first arg).}
