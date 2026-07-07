@@ -389,7 +389,7 @@ runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
 
   for (j in seq_along(sample_sizes)) {
     n <- sample_sizes[j]
-    if (verbose) cat(sprintf("  >>> n = %d\n", n))
+    if (verbose) cat(sprintf("  n = %d\n", n))
 
     # Create single-n design for this iteration
     iter_design <- CircadianDesignOptions(
@@ -952,7 +952,7 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
 
   for (j in seq_along(sample_sizes)) {
     n <- sample_sizes[j]
-    if (verbose) cat(sprintf("  >>> n = %d\n", n))
+    if (verbose) cat(sprintf("  n = %d\n", n))
 
     cts_n <- if (design == "active" && !is.null(cts) && length(cts) != n) {
       sort(rep_len(cts, n))
@@ -1322,7 +1322,7 @@ printMethodGuidance <- function(methods = c("DCP","JTK","RAIN","MH"),
   tbl <- tbl[tbl$method %in% methods, ]
 
   if (verbose) {
-    cat("\n=== B vs m Method Guidance ===\n")
+    cat("\nB vs m method guidance\n")
     cat(sprintf("%-14s  %-26s  %-16s  %s\n",
                 "Method", "Recommended B", "Preference", "Statistical reason"))
     cat(strrep("-", 105), "\n")
@@ -1332,7 +1332,7 @@ printMethodGuidance <- function(methods = c("DCP","JTK","RAIN","MH"),
                   tbl$B_vs_m[i], tbl$reason[i]))
     }
     cat("\nKey: N-driven = B irrelevant, invest in N.\n")
-    cat("     ↑B = denser time coverage helps.  ↑m = more replicates help.\n\n")
+    cat("     more B = denser time coverage helps; more m = more replicates help.\n\n")
   }
   invisible(tbl)
 }
@@ -1408,7 +1408,7 @@ recommendDesign <- function(bio.opts,
   # ------------------------------------------------------------------
   # Step 2: Analytical estimates (CircaPower, DCP only, B-invariant)
   # ------------------------------------------------------------------
-  if (verbose) cat("=== Step 2: Analytical estimates (CircaPower / DCP) ===\n")
+  if (verbose) cat("Step 2: Analytical estimates (CircaPower / DCP)\n")
 
   # Median r from bio.opts
   if (!is.null(bio.opts$sigma_rhythmic) &&
@@ -1439,7 +1439,7 @@ recommendDesign <- function(bio.opts,
     cat(sprintf("  CircaPower n%d  = %s (DCP, any B)\n",
                 round(target_power * 100),
                 if (is.na(n80_analytical)) "not reached" else as.character(n80_analytical)))
-    cat("  Note: JTK, RAIN, MH have no closed-form — simulation required.\n\n")
+    cat("  Note: JTK, RAIN, MH have no closed-form; simulation required.\n\n")
   }
 
   # ------------------------------------------------------------------
@@ -1451,10 +1451,10 @@ recommendDesign <- function(bio.opts,
     if (!is.list(prior_result))
       stop("prior_result must be a list returned by runSingleCohortPower() or runDifferentialPower()")
     sim_result <- prior_result
-    if (verbose) cat("=== Step 3: Using prior simulation result ===\n\n")
+    if (verbose) cat("Step 3: Using prior simulation result\n\n")
 
   } else if (run_simulation) {
-    if (verbose) cat("=== Step 3: Running simulation ===\n")
+    if (verbose) cat("Step 3: Running simulation\n")
     if (mode == "single") {
       sim_result <- runSingleCohortGrid(
         bio.opts, design.opts, analysis.opts,
@@ -1469,13 +1469,13 @@ recommendDesign <- function(bio.opts,
       )
     }
   } else {
-    if (verbose) cat("=== Step 3: Skipped (run_simulation=FALSE) ===\n\n")
+    if (verbose) cat("Step 3: Skipped (run_simulation=FALSE)\n\n")
   }
 
   # ------------------------------------------------------------------
-  # Step 4: Synthesise recommendation — optimal B per method
+  # Step 4: Synthesise recommendation, optimal B per method
   # ------------------------------------------------------------------
-  if (verbose) cat(sprintf("=== Step 4: Recommendation at target power=%.0f%% ===\n",
+  if (verbose) cat(sprintf("Step 4: Recommendation at target power=%.0f%%\n",
                             target_power * 100))
 
   # Start with analytical recommendation for DCP
@@ -1589,7 +1589,7 @@ plot.SCPRecommendResult <- function(x, output_file = NULL, ...) {
 
 # Not exported. Called by recommendDesign() to sweep N x B x method x alpha2.
 # Returns SCPSingleResult with $power_df (N, B, method, alpha2, power, power_se)
-# and $n80_df — the compact format needed for the recommendation table.
+# and $n80_df, the compact format needed for the recommendation table.
 #' Single-cohort B-versus-m power grid (active designs)
 #'
 #' Sweeps sample size, number of time points, and detection method to produce
@@ -1699,7 +1699,7 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
   }
   n_failed <- sum(vapply(results, function(r) is.null(r) || inherits(r, "try-error"), logical(1)))
   if (n_failed > 0)
-    warning(sprintf("runSingleCohortGrid: %d/%d cells failed — set to NA",
+    warning(sprintf("runSingleCohortGrid: %d/%d cells failed, set to NA",
                     n_failed, length(results)))
   grid$power    <- vapply(results, safe_get, 0, "power")
   grid$power_se <- vapply(results, safe_get, 0, "power_se")
@@ -1924,7 +1924,7 @@ print.SCPDiffResult <- function(x, ...) {
 
 #' @export
 plot.SCPDiffResult <- function(x, output_file = NULL, ...) {
-  # x is a plain runSimsDiff() list — delegate to plotDiffPower() which
+  # x is a plain runSimsDiff() list, delegate to plotDiffPower() which
   # already knows how to consume this structure.
   endpoints <- intersect(c("DR", "DP", "DM"),
                          sub("^fdr_", "", grep("^fdr_", names(x), value = TRUE)))

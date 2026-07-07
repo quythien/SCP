@@ -252,8 +252,8 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
 
   # Top-K estimation set used for the effect-size distributions, mirroring the
   # estimator: K = min(pilot_top_k, n_cand) highest-signal genes (300 for K=1,
-  # 500 for K=2 by default).
-  K <- min(as.integer(p$pilot_top_k %||% 300L), n_cand)
+  # 500 for K=2 by default; Inf/"all" keeps every candidate).
+  K <- .resolve_top_k(p$pilot_top_k %||% 300L, n_cand)
   estim <- if (K > 0L) cand[seq_len(K), , drop = FALSE] else cand[0, , drop = FALSE]
 
   # Stable denominator: the pilot's full gene count, captured on first reslice

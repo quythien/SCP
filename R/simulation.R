@@ -238,7 +238,7 @@ simCircadianDiff <- function(ngenes = 5000,
     DP_genes = integer(0)
   }
 
-  # Differential Mesor (DM) — Type 5: both rhythmic, same A/phi, different mean
+  # Differential Mesor (DM), Type 5: both rhythmic, same A/phi, different mean
   if (n_DM > 0 && length(rhythmic_both) > 0) {
     DM_pool = setdiff(rhythmic_both, c(DR_genes, DP_genes))
     n_DM_actual = min(n_DM, length(DM_pool))
@@ -508,7 +508,7 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
   if (!is.null(seed)) set.seed(seed)
 
   # FMM path is also activated when bio.opts has per-gene FMM parameters
-  # (omega_dist, alpha_dist, omega_rhythmic, or alpha_rhythmic) — these are
+  # (omega_dist, alpha_dist, omega_rhythmic, or alpha_rhythmic), these are
   # only respected by simCircadianFMM, not the cosinor generator.
   has_fmm_per_gene <- !is.null(bio.opts$omega_dist) ||
                        !is.null(bio.opts$alpha_dist) ||
@@ -525,7 +525,7 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
   prop_rhythmic <- bio.opts$prop_rhythmic
   period        <- bio.opts$period %||% 24
   N             <- length(cts)
-  omega_circ    <- 2 * pi / period   # circular frequency — distinct from FMM omega param
+  omega_circ    <- 2 * pi / period   # circular frequency, distinct from FMM omega param
 
   has_joint <- !is.null(bio.opts$sigma_rhythmic) &&
                length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)
@@ -831,7 +831,7 @@ simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
                length(bio.opts$omega_rhythmic) > 0L) {
       .clip_omega(.resample_paired(bio.opts$omega_rhythmic))
     } else {
-      rep(omega, n_rhythmic)  # backward-compat scalar (no clip — caller validated)
+      rep(omega, n_rhythmic)  # backward-compat scalar (no clip, caller validated)
     }
 
     # Determine the "base" acrophase in radians (from phase_g, in hours, → radians)
@@ -987,7 +987,7 @@ simCircadianDiffFMM <- function(..., omega = 1.0, beta = pi) {
 
   # Step 1: run the cosinor simulation to get parameter assignments and times
   sim <- simCircadianDiff(...)
-  if (omega == 1.0) return(sim)   # omega=1 IS the cosinor — return as-is
+  if (omega == 1.0) return(sim)   # omega=1 IS the cosinor, return as-is
 
   gt    <- sim$ground_truth
   ngenes <- nrow(gt)

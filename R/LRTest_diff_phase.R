@@ -36,7 +36,7 @@ LRTest_diff_phase <- function(tt1, yy1, tt2, yy2, period = 24, FN = TRUE){
   phase1 <- fit1$phase
   phase2 <- fit2$phase
 
-  # Adjust phase for optimizer only — use local copies so originals are returned
+  # Adjust phase for optimizer only, use local copies so originals are returned
   phase1_opt <- phase1
   phase2_opt <- phase2
   if(phase2_opt - phase1_opt > period/2){

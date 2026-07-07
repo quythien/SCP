@@ -69,7 +69,7 @@ plotBvsMPower <- function(x,
   # Convert SE → SD
   df$power_sd <- df$power_se * sqrt(nsims)
 
-  # Dataset labels — auto-generate from dataset column if not provided
+  # Dataset labels, auto-generate from dataset column if not provided
   if (is.null(dataset_labels) && "dataset" %in% names(df)) {
     ds_vals <- sort(unique(as.character(df$dataset)))
     dataset_labels <- stats::setNames(ds_vals, ds_vals)

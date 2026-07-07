@@ -30,8 +30,8 @@ NCORES <- if (.Platform$OS.type == "windows") 1L else
 
 # What this tutorial covers
 
-`SCP` (Semiparametric Circadian Power) sizes circadian transcriptomics studies
-from a small pilot dataset. The workflow has four steps:
+`SCP` (Simulation-based Circadian Power analysis) sizes circadian
+transcriptomics studies from a small pilot dataset. The workflow has four steps:
 
 1. **Load a pilot dataset** (a gene-by-sample expression matrix with
    time-of-day per sample), or load one of the bundled pilots that already
@@ -49,11 +49,33 @@ GTEx Adrenal Gland pilot. It is intentionally small (NSIMS = 50, a coarse N
 grid) so it builds quickly. For publication-grade numbers use NSIMS >= 200 and
 a finer N grid.
 
+# Prefer not to code? Use the app
+
+Everything below is also available as a point-and-click app, no R scripting
+required:
+
+```{r launch-app, eval = FALSE}
+SCP::launchShiny()
+```
+
+A browser tab opens with two linked halves. The **Circadian Power Study** (left)
+is the sample-size calculator: choose a pilot from the dropdowns (or upload your
+own), pick a sampling design and your target power and FDR, and click *Run
+simulation* to get the power curve and the recommended N. The **Circadian
+Biomarker Detection** (right) explores the pilot's genes: a core clock-gene
+cosinor panel, a sortable table of rhythmic genes, a per-gene fit, and pathway
+enrichment. The app opens on the GTEx Adrenal (passive) pilot shown here, so the
+power curve below is exactly what you see after one click.
+
+The rest of this vignette covers the same workflow in R, which is what you want
+for scripted or reproducible analyses.
+
 # 1. Install and load
 
 ```{r install, eval = FALSE}
-# Install from a local tarball or a checkout of the repo:
-# install.packages("SCP_0.4.16.tar.gz", repos = NULL, type = "source")
+# Install the latest version from GitHub:
+# options(repos = BiocManager::repositories())   # resolves the Bioconductor dep
+# remotes::install_github("quythien/SCP", upgrade = "never")
 ```
 
 ```{r load-pkg}

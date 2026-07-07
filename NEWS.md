@@ -1,3 +1,28 @@
+# SCP 0.4.56
+
+## Shiny app
+
+* **Opens ready to use.** The app now launches on the GTEx Adrenal (passive)
+  pilot, so a power curve and the gene explorer are visible before any clicks.
+* **Biomarker explorer upgrades.** The rhythmic-gene table is sortable with
+  server-side paging and an adjustable row count; the gene-lookup list can be
+  sorted and reversed; enrichment controls sit on a single row. Reactome's
+  annotation database installs on demand rather than at launch.
+* **Uploads are fuller-featured.** The upload cap is raised to 5 GB, and an
+  uploaded pilot is fit for both the single-harmonic (K = 1) and two-harmonic
+  (K = 2) detectors, so switching the detector changes both the gene table and
+  the power curve. Enrichment uses the uploaded matrix's genes as background.
+
+## Bug fixes
+
+* The core clock-gene panel no longer errors ("figure margins too large") when
+  no clock gene passes the chosen threshold; it shows a short note instead.
+
+## Internal changes
+
+* Verbose console output and code comments were tidied (plain one-line
+  diagnostics in place of decorative banners); no change to results.
+
 # SCP 0.4.48
 
 ## Major changes

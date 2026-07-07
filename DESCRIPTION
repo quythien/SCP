@@ -37,6 +37,7 @@ LinkingTo:
 Suggests:
     shiny,
     shinyscreenshot,
+    DT,
     writexl,
     enrichR,
     org.Hs.eg.db,

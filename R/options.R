@@ -305,7 +305,7 @@ CircadianBioOptions <- function(ngenes = 5000,
 
   dp_shift_mode <- match.arg(dp_shift_mode)
 
-  # Require the three core distribution parameters — no hard-coded defaults.
+  # Require the three core distribution parameters, no hard-coded defaults.
   # Users must supply their own pilot data name (character string) or numeric
   # vector/scalar/function.  estCircadianParam() is the recommended entry point.
   if (is.null(lBaselineExpr))
@@ -377,7 +377,7 @@ CircadianBioOptions <- function(ngenes = 5000,
   # paired_sigma=TRUE: expand amplitude and sigma_rhythmic jointly using a shared
   # index so each simulated rhythmic gene draws (A, σ) from the same pilot gene,
   # preserving the empirical r̃ = A/σ distribution.
-  # paired_sigma=FALSE (default): original behaviour — amplitude expanded independently
+  # paired_sigma=FALSE (default): original behaviour, amplitude expanded independently
   # via setAmplitude, σ drawn from lOD in simulation (has_joint=FALSE).
   #
   # If paired_omega = TRUE / paired_alpha = TRUE and the corresponding *_rhythmic

@@ -52,7 +52,7 @@ runTwoStagePower <- function(pilot_data,
   stopifnot(inherits(bio_diff.opts, "CircadianBioOptions"))
   stopifnot(ncol(pilot_data) == length(pilot_times))
 
-  if (verbose) cat("\n=== Two-Stage Power Analysis ===\n")
+  if (verbose) cat("\nTwo-stage power analysis\n")
 
   # Step 1: Estimate parameters from pilot data
   bio_pilot <- estCircadianParam(
@@ -89,7 +89,7 @@ runTwoStagePower <- function(pilot_data,
 
   run_one_n <- function(j) {
     n <- sample_sizes[j]
-    if (verbose) cat(sprintf("  >>> n = %d\n", n))
+    if (verbose) cat(sprintf("  n = %d\n", n))
 
     # Expand cts to per-sample schedule: active designs require length(cts)==n1
     cts_n <- if (!is.null(design.opts$cts) && design.opts$design == "active") {
@@ -337,8 +337,8 @@ plotDesignComparison <- function(comparison,
   # Panel B: n₈₀ point + 95% interval
   #
   # Two rows, not four bars:
-  #   Row 1 — Two-stage:  a single point (no CI — point estimate only)
-  #   Row 2 — Bootstrap:  median point + 95% CI bar
+  #   Row 1, Two-stage:  a single point (no CI, point estimate only)
+  #   Row 2, Bootstrap:  median point + 95% CI bar
   #
   # This correctly represents bootstrap n₈₀ as ONE uncertain recommendation,
   # not three separate competing recommendations.
@@ -528,13 +528,13 @@ runGroundTruthComparison <- function(true_bio.opts,
   # ------------------------------------------------------------------
   # Step 1: Generate synthetic pilot from known true params
   # ------------------------------------------------------------------
-  if (verbose) cat("\n=== Ground Truth Calibration ===\n")
+  if (verbose) cat("\nGround truth calibration\n")
   if (verbose) cat(sprintf("Generating synthetic pilot (n=%d)...\n", n_pilot))
 
   pilot <- generatePilotData(true_bio.opts, n_pilot, pilot_times, seed = seed)
 
   # ------------------------------------------------------------------
-  # Step 2: Oracle (true) power — use exact known params
+  # Step 2: Oracle (true) power, use exact known params
   # ------------------------------------------------------------------
   if (verbose) cat("Computing oracle power (known truth)...\n")
 
@@ -564,7 +564,7 @@ runGroundTruthComparison <- function(true_bio.opts,
   }
 
   # ------------------------------------------------------------------
-  # Step 3: Two-stage — estimate from pilot, then simulate
+  # Step 3: Two-stage, estimate from pilot, then simulate
   # ------------------------------------------------------------------
   if (verbose) cat("Running two-stage on synthetic pilot...\n")
 
@@ -579,7 +579,7 @@ runGroundTruthComparison <- function(true_bio.opts,
   )
 
   # ------------------------------------------------------------------
-  # Step 4: Bootstrap — resample pilot params, simulate for each draw
+  # Step 4: Bootstrap, resample pilot params, simulate for each draw
   # ------------------------------------------------------------------
   if (verbose) cat("Running bootstrap on synthetic pilot...\n")
 
@@ -676,7 +676,7 @@ plotGroundTruthComparison <- function(gt_result,
   on.exit(par(old_par), add = TRUE)
 
   # -----------------------------------------------------------
-  # Panel A: Power curves — oracle vs two-stage vs bootstrap
+  # Panel A: Power curves, oracle vs two-stage vs bootstrap
   # -----------------------------------------------------------
   y_max <- min(1.05,
     max(c(gt_result$true_power_mean + gt_result$true_power_se,
@@ -712,7 +712,7 @@ plotGroundTruthComparison <- function(gt_result,
   lines(N, gt_result$true_power_mean,
         col = "black", lwd = 3, lty = 1)
 
-  # Oracle SE band — represents Monte Carlo variability from finite nsims,
+  # Oracle SE band, represents Monte Carlo variability from finite nsims,
   # NOT inferential uncertainty about the true power. Rendered very faintly
   # to avoid confusion with the bootstrap CI (which is inferential).
   polygon(c(N, rev(N)),

@@ -38,6 +38,7 @@ launchShiny <- function(..., install_deps = TRUE, species_all = FALSE) {
   # gracefully inside the app if its package is absent.
   cran_pkgs <- c(
     shiny           = "the app interface (required)",
+    DT              = "interactive sortable gene table",
     writexl         = "Excel (.xlsx) gene-table export",
     shinyscreenshot = "full-app screenshot capture"
   )
@@ -48,10 +49,11 @@ launchShiny <- function(..., install_deps = TRUE, species_all = FALSE) {
   bioc_core <- c(
     org.Hs.eg.db  = "human gene IDs -> symbols (uploads)",
     org.Mm.eg.db  = "mouse gene IDs -> symbols (uploads)",
-    clusterProfiler = "pathway enrichment (KEGG/GO) with a custom background",
-    ReactomePA    = "Reactome pathway enrichment",
-    reactome.db   = "Reactome pathway annotations (ReactomePA dep)"
+    clusterProfiler = "pathway enrichment (KEGG/GO) with a custom background"
   )
+  # ReactomePA + reactome.db power the optional "Reactome" ontology, but
+  # reactome.db is a ~450 MB annotation download, so they are NOT installed up
+  # front. The app prompts to install them on demand only if Reactome is chosen.
   bioc_extra <- c(
     org.Rn.eg.db    = "rat gene IDs -> symbols (uploads)",
     org.Dr.eg.db    = "zebrafish gene IDs -> symbols (uploads)",

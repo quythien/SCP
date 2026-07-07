@@ -246,11 +246,9 @@ runSCPValidation <- function(nsims    = 100L,
 
   set.seed(seed)
 
-  cat("========================================\n")
-  cat("  SCP VALIDATION SUITE\n")
-  cat(sprintf("  nsims=%d  n_test=%d  alpha=%.2f  seed=%d\n",
+  cat("SCP validation suite\n")
+  cat(sprintf("  nsims=%d  n_test=%d  alpha=%.2f  seed=%d\n\n",
               nsims, n_test, alpha, seed))
-  cat("========================================\n")
 
   v1 <- .val1_type_I_error(nsims = nsims, n = n_test,
                             ngenes = 500L, alpha = alpha)
@@ -269,9 +267,7 @@ runSCPValidation <- function(nsims    = 100L,
   v6 <- .val6_circapower(r_values = c(0.5, 1.0, 1.5, 2.0), alpha = alpha)
 
   # ---- Summary ----
-  cat("\n========================================\n")
-  cat("  SUMMARY\n")
-  cat("========================================\n")
+  cat("\nSummary\n")
 
   .vcat("Val 1 (Type I error)",           all(v1$Pass))
   .vcat("Val 2 (Analytical match)",        all(v2$Agreement))
@@ -279,8 +275,7 @@ runSCPValidation <- function(nsims    = 100L,
   .vcat("Val 4 (N monotonicity)",          all(diff(v4$Power) >= -0.03))
   .vcat("Val 5 (Diff power sanity)",       v5$pass_t1)
   .vcat("Val 6 (CircaPower consistency)",  all(diff(v6$n_for_80pct_power) <= 0))
-
-  cat("========================================\n\n")
+  cat("\n")
 
   invisible(list(v1 = v1, v2 = v2, v3 = v3, v4 = v4, v5 = v5, v6 = v6))
 }
