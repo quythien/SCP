@@ -38,6 +38,10 @@ Fourier harmonics; K=3+ for very sharp peaks.}
 \item{verbose}{Print progress (default TRUE).}
 
 \item{mc.cores}{Parallel cores (default 1).}
+
+\item{progress}{Optional callback \code{function(sample_size_index, n_sample_sizes)}
+invoked after each sample size completes (used by the Shiny app to
+advance its progress bar). \code{NULL} (default) disables the callback.}
 }
 \value{
 List with:

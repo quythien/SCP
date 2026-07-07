@@ -17,6 +17,9 @@
 #' @param cts TOD distribution for passive design (legacy only).
 #' @param test_types Which endpoints to evaluate: any of \code{"DR"}, \code{"DP"}, \code{"DM"}.
 #' @param verbose Print progress.
+#' @param harmonics Numeric length-2 \code{c(alpha2, alpha3)} harmonic
+#'   coefficients for non-cosinor signal generation (legacy only; default
+#'   \code{NULL}, equivalent to \code{c(0, 0)}).
 #' @param mc.cores Parallel cores.
 #' @param design.opts \code{CircadianDesignOptions} (used with legacy positional first arg).
 #' @param analysis.opts \code{CircadianAnalysisOptions}.
@@ -110,6 +113,16 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     dr_sigma_scale <- 1.0
     prop_DM        <- 0
     mesor_diff     <- c(0.5, 2.0)
+    fmm_omega      <- 1.0   # 1 = cosinor; legacy path has no FMM config to read
+    fmm_beta       <- pi
+    # phase_diff/amp_diff default to NULL in the signature (so the config-object
+    # path can tell "not supplied" apart from an explicit value); the legacy
+    # path has no CircadianBioOptions to fall back on, so apply the same
+    # defaults CircadianBioOptions() itself uses. Without this, any call that
+    # doesn't pass phase_diff explicitly crashes in simCircadianDiff() as soon
+    # as prop_DP > 0 (runif(n, NULL, NULL) silently returns numeric(0)).
+    if (is.null(phase_diff)) phase_diff <- c(-6, 6)
+    if (is.null(amp_diff))   amp_diff   <- c(0.5, 2)
   }
 
   # For passive design, use TOD distribution
@@ -340,6 +353,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
 #' @param design.opts   CircadianDesignOptions
 #' @param analysis.opts CircadianAnalysisOptions
 #' @param test_type     "DR" or "DP"
+#' @param verbose       Print progress (default TRUE).
 #'
 #' @return List compatible with plotWithSE()
 runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
@@ -528,6 +542,7 @@ runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
 #' @param analysis.opts CircadianAnalysisOptions (phase_shifts read from here)
 #' @param prop_DP       Proportion of DP genes for each scenario (default 0.15)
 #' @param amp_diff      Amplitude ratio range for DP genes (default c(0.5, 2))
+#' @param mc.cores      Parallel cores (default 1).
 #'
 #' @return List with 4D arrays [phase, size, stratum, sim] compatible with plotPhaseShiftWithSE()
 runPhaseShiftAnalysis <- function(bio.opts, design.opts, analysis.opts,
@@ -794,6 +809,9 @@ summaryRunPower <- function(powerOutput, verbose = TRUE) {
 #' @param harmonics     Numeric length-2: \code{c(alpha2, alpha3)} harmonic coefficients (default \code{c(0,0)}).
 #' @param verbose       Print progress (default TRUE).
 #' @param mc.cores      Parallel cores (default 1).
+#' @param progress      Optional callback \code{function(sample_size_index, n_sample_sizes)}
+#'   invoked after each sample size completes (used by the Shiny app to
+#'   advance its progress bar). \code{NULL} (default) disables the callback.
 #'
 #' @return List with:
 #'   \item{marginal_power}{Matrix [sample_sizes x nsims]}
@@ -1240,7 +1258,7 @@ circaPowerApproxN80 <- function(bio.opts, alpha = 0.05, target_power = 0.80,
       length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)) {
     r_vec <- bio.opts$amplitude / bio.opts$sigma_rhythmic
   } else {
-    # Fallback: assume sigma ≈ exp(median lOD)
+    # Fallback: assume sigma ~ exp(median lOD)
     sigma_med <- exp(median(bio.opts$lOD, na.rm = TRUE))
     r_vec     <- bio.opts$amplitude / sigma_med
   }
@@ -1269,9 +1287,12 @@ circaPowerApproxN80 <- function(bio.opts, alpha = 0.05, target_power = 0.80,
 #' @param bin_width Width of each r bin (default 0.25).
 #' @param r_min_pct Lower percentile of pilot r used as range floor (default 0
 #'   = always start from 0).
+#' @param r_pctile_cap Upper percentile of pilot r used as the range ceiling
+#'   before rounding up to the nearest \code{bin_width} (default 0.99).
 #' @return Numeric vector of breakpoints starting at 0 and ending at Inf.
 #' @export
-makeAdaptiveRStrata <- function(bio.opts, bin_width = 0.25, r_min_pct = 0) {
+makeAdaptiveRStrata <- function(bio.opts, bin_width = 0.25, r_min_pct = 0,
+                                r_pctile_cap = 0.99) {
   if (!is.null(bio.opts$sigma_rhythmic) &&
       length(bio.opts$sigma_rhythmic) == length(bio.opts$amplitude)) {
     r_vec <- bio.opts$amplitude / bio.opts$sigma_rhythmic
@@ -1280,7 +1301,7 @@ makeAdaptiveRStrata <- function(bio.opts, bin_width = 0.25, r_min_pct = 0) {
     r_vec     <- bio.opts$amplitude / sigma_med
   }
   r_vec  <- r_vec[is.finite(r_vec) & r_vec > 0]
-  r_max  <- quantile(r_vec, 0.99, na.rm = TRUE)
+  r_max  <- quantile(r_vec, r_pctile_cap, na.rm = TRUE)
   breaks <- seq(0, ceiling(r_max / bin_width) * bin_width, by = bin_width)
   c(breaks, Inf)
 }
@@ -1305,15 +1326,15 @@ printMethodGuidance <- function(methods = c("DCP","JTK","RAIN","MH"),
   tbl <- data.frame(
     method        = c("DCP",      "JTK",   "RAIN",  "MH",
                       "LimoRhyde","DODR"),
-    recommended_B = c("≥4, any",  "4–6",   "6–8",   "6 (or 3–4 if sinusoidal)",
-                      "≥4, any",  "≥4, any"),
-    B_vs_m        = c("N-driven", "↑m",    "↑B",    "↑B (if α₂≥0.5)",
+    recommended_B = c(">=4, any",  "4-6",   "6-8",   "6 (or 3-4 if sinusoidal)",
+                      ">=4, any",  ">=4, any"),
+    B_vs_m        = c("N-driven", "more m",    "more B",    "more B (if alpha2>=0.5)",
                       "N-driven", "N-driven"),
     reason        = c(
-      "NCP = N·r²/2 is B-invariant for equispaced B≥3; time points do not help",
+      "NCP = N*r^2/2 is B-invariant for equispaced B>=3; time points do not help",
       "Collapses replicates to per-ZT means before ranking; more m = stronger test",
       "Umbrella test uses individual observations; more ZTs improve rank resolution",
-      "Adaptive K=⌊(B-1)/2⌋: K=2 at B=6 captures harmonic signal; K≥5 over-fits",
+      "Adaptive K=floor((B-1)/2): K=2 at B=6 captures harmonic signal; K>=5 over-fits",
       "limma interaction model: power scales with N, not B",
       "Regression-based; power scales with N; B does not change sensitivity"
     ),
@@ -1484,7 +1505,7 @@ recommendDesign <- function(bio.opts,
     optimal_B = "any (B-invariant)",
     n_target  = n80_analytical %||% NA_real_,
     source    = "analytical",
-    note      = sprintf("B does not affect power; invest in N (n%d≈%s)",
+    note      = sprintf("B does not affect power; invest in N (n%d~%s)",
                         round(target_power * 100),
                         if (is.na(n80_analytical)) "not reached" else n80_analytical),
     stringsAsFactors = FALSE
@@ -1605,6 +1626,9 @@ plot.SCPRecommendResult <- function(x, output_file = NULL, ...) {
 #' @param plot Whether to draw the grid.
 #' @param output_file Optional output path for the plot.
 #' @param verbose Print progress.
+#' @param target_power Power threshold used to compute \code{n80_df} (despite
+#'   the name, the interpolated sample size is for this threshold, not
+#'   hardcoded to 80\%). Default 0.80.
 #' @return An \code{SCPSingleResult} with the power grid and N80 table.
 #' @export
 runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
@@ -1614,7 +1638,8 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
                                 mc.cores    = 1L,
                                 plot        = FALSE,
                                 output_file = NULL,
-                                verbose     = TRUE) {
+                                verbose     = TRUE,
+                                target_power = 0.80) {
 
   stopifnot(inherits(bio.opts,      "CircadianBioOptions"))
   stopifnot(inherits(design.opts,   "CircadianDesignOptions"))
@@ -1709,7 +1734,7 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
     function(sub) {
       n80 <- tryCatch({
         sub  <- sub[order(sub$N), ]
-        idx  <- which(sub$power >= 0.80)
+        idx  <- which(sub$power >= target_power)
         if (length(idx) == 0L) {
           NA_real_
         } else if (min(idx) == 1L) {
@@ -1718,7 +1743,7 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
           j2 <- min(idx); j1 <- j2 - 1L
           p1 <- sub$power[j1]; p2 <- sub$power[j2]
           n1 <- sub$N[j1];     n2 <- sub$N[j2]
-          ceiling(n1 + (0.80 - p1) / (p2 - p1) * (n2 - n1))
+          ceiling(n1 + (target_power - p1) / (p2 - p1) * (n2 - n1))
         }
       }, error = function(e) NA_real_)
       data.frame(method = sub$method[1], B = sub$B[1],
@@ -1804,7 +1829,7 @@ runSingleCohortPower <- function(bio.opts,
 print.SCPSingleResult <- function(x, ...) {
   cat("SCPSingleResult\n")
   cat(sprintf("  methods: %s\n", paste(unique(x$power_df$method), collapse = ", ")))
-  cat(sprintf("  N range: %d – %d\n", min(x$power_df$N), max(x$power_df$N)))
+  cat(sprintf("  N range: %d - %d\n", min(x$power_df$N), max(x$power_df$N)))
   cat(sprintf("  B values: %s\n", paste(sort(unique(x$power_df$B)), collapse = ", ")))
   cat(sprintf("  alpha2: %s\n", paste(sort(unique(x$power_df$alpha2)), collapse = ", ")))
   cat("\nn80 summary:\n")
@@ -1915,7 +1940,7 @@ print.SCPDiffResult <- function(x, ...) {
                               sub("^fdr_", "",
                                   names(x)[startsWith(names(x), "fdr_")])),
                     collapse = ", ")))
-  cat(sprintf("  N range:    %d – %d\n",
+  cat(sprintf("  N range:    %d - %d\n",
               min(x$sample_sizes), max(x$sample_sizes)))
   cat(sprintf("  nsims:      %d\n", x$nsims))
   cat(sprintf("  ngenes:     %d\n", x$ngenes))

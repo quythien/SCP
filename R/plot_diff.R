@@ -174,6 +174,12 @@ if (!exists("add_se_bars")) {
 #' @param comp_labels Character(2), display labels for the two comparisons.
 #' @param endpoints   Which endpoints to include (default c("DR","DP","DM")).
 #' @param fdr_thresholds FDR levels for panel A (default c(0.01,0.05,0.10,0.20)).
+#' @param panel_fdr   FDR threshold used to draw the marginal power curve in
+#'   the non-stratified layout (default 0.05).
+#' @param vline_power Horizontal reference line for target power, drawn at
+#'   this value (default 0.80).
+#' @param vline_fdr   FDR threshold marked with a reference guide on the
+#'   power panels (default 0.20).
 #' @param display_sizes  Sample sizes to show in all panels (NULL = all).
 #' @param stratified  Logical (default FALSE). If FALSE, draws only the
 #'   marginal power-vs-sample-size panel per endpoint (1 x n_endpoints layout
@@ -181,6 +187,12 @@ if (!exists("add_se_bars")) {
 #'   strata panels in the original 3-column layout.
 #' @param r_break_width  Width of r-strata bins (default 0.25). Ignored if
 #'   stratified = FALSE.
+#' @param r_max       Upper bound (in r = A/sigma units) for the r-strata
+#'   breakpoints when \code{stratified = TRUE} (default 5).
+#' @param r_display_max  Optional upper x-axis limit (r units) for the
+#'   stratified panels; \code{NULL} (default) uses the full stratified range.
+#' @param main_title  Outer plot title (default
+#'   \code{"Differential Circadian Power Analysis"}).
 #' @param out_pdf     Path for PDF. If NULL, plots to current device.
 #' @param width       PDF width in inches. Defaults adapt to stratified.
 #' @param height      PDF height in inches. Defaults adapt to stratified.
@@ -338,7 +350,7 @@ plotDiffPower <- function(res_list,
         }
       }
 
-      row_label <- sprintf("%s — %s", ep, comp_label)
+      row_label <- sprintf("%s - %s", ep, comp_label)
 
       # ---- Panel A: marginal power vs n ----
       # The marginal-only Fig 2 layout (stratified = FALSE) carries far fewer

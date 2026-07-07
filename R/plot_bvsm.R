@@ -45,7 +45,7 @@ plotBvsMPower <- function(x,
   if (!requireNamespace("ggplot2", quietly = TRUE))
     stop("Package 'ggplot2' is required for plotBvsMPower().")
 
-  # ── Extract tidy data frame ─────────────────────────────────────
+  # -- Extract tidy data frame -------------------------------------
   if (inherits(x, "SCPSingleResult")) {
     df <- x$power_df
   } else if (is.list(x) && !is.data.frame(x) &&
@@ -66,7 +66,7 @@ plotBvsMPower <- function(x,
   if ("alpha2" %in% names(df))
     df <- df[df$alpha2 == alpha2, , drop = FALSE]
 
-  # Convert SE → SD
+  # Convert SE -> SD
   df$power_sd <- df$power_se * sqrt(nsims)
 
   # Dataset labels, auto-generate from dataset column if not provided

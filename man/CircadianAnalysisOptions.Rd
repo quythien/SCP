@@ -38,6 +38,9 @@ CircadianAnalysisOptions(
 \item{strata_labels}{Labels for strata (auto-generated if NULL)}
 
 \item{phase_shifts}{Phase shift magnitudes to sweep (for sensitivity analysis)}
+
+\item{DCmethod}{Differential-rhythmicity detector to report against,
+one of "DCP" (default) or "CircaCompare".}
 }
 \value{
 Object of class "CircadianAnalysisOptions"

@@ -69,6 +69,12 @@ accepted as \code{lBaselineExpr}. No default, must be supplied.}
 rhythmic genes (same length as \code{amplitude}). When provided, amplitude
 and sigma are drawn jointly to preserve pilot A-sigma correlation.}
 
+\item{paired_sigma}{Logical. If \code{TRUE} and \code{sigma_rhythmic} is
+supplied, expand \code{amplitude} and \code{sigma_rhythmic} jointly by the
+same resampled gene index so their pilot-estimated pairwise correlation is
+preserved; if \code{FALSE} (default), amplitude and sigma are expanded
+independently.}
+
 \item{paired_omega}{Logical. If \code{TRUE} and \code{omega_rhythmic} is
 supplied (same length as \code{amplitude}), expand omega using the same
 shared gene-index used for amplitude/sigma so all three are paired per gene.}

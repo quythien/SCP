@@ -19,6 +19,9 @@ plotBootstrapDesignGrid(
 
 \item{fdr_threshold}{FDR threshold (label only)}
 
+\item{panels}{Which panel(s) to draw: "A" (power vs N) and/or "B" (heatmap)
+(default "A").}
+
 \item{output_file}{Path for PDF output (NULL = screen)}
 }
 \description{

@@ -6,6 +6,22 @@
 \usage{
 calculate_CI.M(XX.inv, A.t, r.full = 6, n, alpha = 0.05, sigma.hat)
 }
+\arguments{
+\item{XX.inv}{Inverse of the design matrix cross-product (t(X) times X).}
+
+\item{A.t}{Contrast row vector selecting the mesor.}
+
+\item{r.full}{Residual degrees-of-freedom offset (default 6).}
+
+\item{n}{Number of observations.}
+
+\item{alpha}{Significance level (default 0.05).}
+
+\item{sigma.hat}{Estimated residual standard deviation.}
+}
+\value{
+CI half-width (radius) for the mesor estimate.
+}
 \description{
 Calculate CI for Mesor
 }

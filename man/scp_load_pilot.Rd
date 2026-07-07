@@ -62,8 +62,9 @@ A \code{CircadianBioOptions} object with empirical
 }
 \description{
 Loads one standardized pilot object from the bundled pilot database.
-Each pilot is a pre-fit \code{CircadianBioOptions} S3 object (see
-\code{\link{estimate_circadian_params}}) and can be passed directly
+Each pilot is a pre-fit \code{CircadianBioOptions} S3 object (fit via
+the same cosinor pipeline as \code{\link{estCircadianParam}}) and can be
+passed directly
 to \code{runSimsSingleCohort()} or \code{runDifferentialPower()}.
 }
 \examples{

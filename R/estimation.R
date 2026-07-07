@@ -1,32 +1,3 @@
-#' Estimate Circadian Parameters from Pilot Data
-#'
-#' @description
-#' Fits a cosinor model to each gene in the pilot dataset, selects the
-#' top-K rhythmic genes (ranked by p-value, K = min(top_k, n_rhythmic)),
-#' and returns empirical distributions of mesor, amplitude, phase, and
-#' noise as a \code{CircadianBioOptions} object for use in downstream
-#' simulation and power analysis.
-#'
-#' @param data Gene expression matrix (genes x samples).
-#' @param times Numeric vector of sample time points (hours), length = \code{ncol(data)}.
-#' @param period Circadian period in hours (default 24).
-#' @param min_rhythm_pval P-value threshold for classifying a gene as rhythmic (default 0.01).
-#' @param top_k Number of highest-signal genes forming the effect-size
-#'   distribution (default 300). Capped (with a warning) to the number of
-#'   rhythmic genes if larger; \code{Inf} or \code{"all"} uses every candidate.
-#' @param verbose Print estimation summary (default TRUE).
-#'
-#' @return A \code{CircadianBioOptions} S3 object (27 fields) including:
-#'   \code{prop_rhythmic}, \code{lBaselineExpr}, \code{lOD}, \code{amplitude},
-#'   \code{sigma_rhythmic}, \code{cts}, \code{phase}, \code{prop_DR},
-#'   \code{prop_DP}, \code{prop_DM}, \code{phase_diff}, \code{amp_diff},
-#'   \code{mesor_diff}, \code{ngenes}, \code{period}, \code{sim.seed}.
-#'   Pass directly to \code{runSimsSingleCohort()} or \code{runDifferentialPower()}.
-#'
-#' @seealso \code{\link{estCircadianParamTwoGroup}} for two-group differential setup,
-#'   \code{\link{CircadianBioOptions}} for the options constructor.
-
-
 #' Wrap Angle to [0, 2pi)
 #'
 #' @param x Numeric. Angle(s) in radians.
@@ -253,13 +224,13 @@ estimate_circadian_params = function(data, times, period = 24,
 
   if (verbose) {
     cat("\nParameter estimates:\n")
-    cat(sprintf("Mesor: %.2f ± %.2f\n", params$M_mean, params$M_sd))
-    cat(sprintf("Amplitude (rhythmic): %.3f ± %.3f (median: %.3f)\n",
+    cat(sprintf("Mesor: %.2f +/- %.2f\n", params$M_mean, params$M_sd))
+    cat(sprintf("Amplitude (rhythmic): %.3f +/- %.3f (median: %.3f)\n",
                 params$A_mean, params$A_sd, params$A_median))
     cat(sprintf("Phase mean: %.1f h (concentration: %.2f)\n",
                 params$phi_mean, params$phi_concentration))
-    cat(sprintf("Noise (σ): %.3f ± %.3f\n", params$sigma_mean, params$sigma_sd))
-    cat(sprintf("Effect size (r = A/σ): %.3f ± %.3f (median: %.3f)\n",
+    cat(sprintf("Noise (sigma): %.3f +/- %.3f\n", params$sigma_mean, params$sigma_sd))
+    cat(sprintf("Effect size (r = A/sigma): %.3f +/- %.3f (median: %.3f)\n",
                 params$r_mean, params$r_sd, params$r_median))
     cat(sprintf("Proportion rhythmic: %.1f%%\n", 100 * params$prop_rhythmic))
     cat(sprintf("Phase distribution: %s\n",
@@ -943,9 +914,19 @@ estCircadianParam2H <- function(data, times, period = 24,
 #'   (so simulation truth and detection use the same model).
 #' @param top_k Cap on number of FMM-fitted genes (default 300, matches
 #'   estCircadianParam's top-K logic).
+#' @param screen_K Harmonic order for the \code{detect_FMM} pre-screen
+#'   (default 2, i.e. the K=2 harmonic LRT). Must match the downstream
+#'   detector's harmonic order to keep truth-label generation and detection
+#'   internally consistent.
 #' @param paired_sigma Logical (default TRUE). Forwarded to CircadianBioOptions.
 #' @param paired_omega Logical (default TRUE). Forwarded.
 #' @param paired_alpha Logical (default TRUE). Forwarded.
+#' @param prop_DR Target proportion of differential-rhythmicity genes,
+#'   forwarded to CircadianBioOptions (default 0).
+#' @param prop_DP Target proportion of differential-phase genes, forwarded to
+#'   CircadianBioOptions (default 0).
+#' @param prop_DM Target proportion of differential-MESOR genes, forwarded to
+#'   CircadianBioOptions (default 0).
 #' @param mc.cores Parallel cores for FMM fitting (default 1).
 #' @param verbose Print progress (default TRUE).
 #' @param ... Additional args passed to CircadianBioOptions().
@@ -1079,7 +1060,7 @@ estCircadianParamFMM <- function(data, times, period = 24,
   R2_emp             <- vapply(fits_ok, `[[`, numeric(1), "R2")
 
   # Step 3: empirical diagnostics
-  beta_hat        <- (1 - mean(omega_emp)) / mean(omega_emp)    # MoM for Beta(1, β)
+  beta_hat        <- (1 - mean(omega_emp)) / mean(omega_emp)    # MoM for Beta(1, beta)
   sigma_alpha_hat <- sd(alpha_emp) * 24 / (2 * pi)              # in hours
   R2_median       <- median(R2_emp, na.rm = TRUE)
 
@@ -1152,44 +1133,11 @@ estCircadianParamFMM <- function(data, times, period = 24,
 }
 
 
-#' Estimate CircadianBioOptions from Two-Group Pilot Data
+#' Signed circular difference between two phases
 #'
-#' @description Bridge function for two-group pilot data. Estimates circadian
-#' parameters separately for each group, then derives differential simulation
-#' hyperparameters (prop_DR, prop_DP, phase_diff, amp_diff) directly from the
-#' empirical between-group differences. This provides data-driven starting
-#' values for the simulation inputs, replacing the need to specify them by hand.
-#'
-#' @param data_1 Gene expression matrix (genes x samples) for group 1
-#' @param data_2 Gene expression matrix (genes x samples) for group 2
-#' @param times_1 Time points for group 1
-#' @param times_2 Time points for group 2
-#' @param period Circadian period (default 24)
-#' @param min_rhythm_pval P-value threshold for rhythmic classification (default 0.01)
-#' @param phase_shift_threshold Minimum |delta_phi| in hours to classify a
-#'   jointly-rhythmic gene as differentially phased (default 2 h)
-#' @param sim.seed Random seed
-#' @param verbose Print diagnostic summary
-#'
-#' @return A CircadianBioOptions object whose prop_DR, prop_DP, phase_diff, and
-#'   amp_diff are estimated from pilot data. A $diagnostics list is attached
-#'   with all intermediate estimates for user inspection and reporting.
-#'
-#' @details
-#' Estimation logic:
-#' \itemize{
-#'   \item prop_DR: fraction of all genes rhythmic in exactly one group
-#'         (xor of per-gene rhythmicity calls).
-#'   \item prop_DP: fraction of all genes that are (i) jointly rhythmic in
-#'         both groups AND (ii) have |circular phase difference| > phase_shift_threshold.
-#'   \item phase_diff: [Q25, Q75] of the signed empirical phase differences
-#'         delta_phi = phi_2 - phi_1 (circular, in hours) among DP genes.
-#'         Used as the Unif(phase_diff[1], phase_diff[2]) draw in simulation.
-#'   \item amp_diff: [Q25, Q75] of the amplitude ratio A_2/A_1 among jointly
-#'         rhythmic genes. Passed as amp_diff bounds.
-#' }
-#' Baseline distributions (lBaselineExpr, lOD, amplitude, phase) are taken
-#' from group 1, consistent with estCircadianParam() for a single group.
+#' @param phi1,phi2 Phases (same units as \code{period}, e.g. hours).
+#' @param period Period used to wrap the difference (default 24).
+#' @return \code{phi1 - phi2} wrapped to \code{[-period/2, period/2]}.
 circular_difference <- function(phi1, phi2, period = 24) {
   diff <- phi1 - phi2
   ((diff + period/2) %% period) - period/2
@@ -1277,7 +1225,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
     prop_joint * mean(dp_among_joint, na.rm = TRUE) else 0
 
   # prop_DM: jointly rhythmic genes with significant mesor difference -----------
-  # SE(M) ≈ sigma/sqrt(n) for OLS intercept; two-sample z-test on mesor difference
+  # SE(M) ~ sigma/sqrt(n) for OLS intercept; two-sample z-test on mesor difference
   n1 <- ncol(data_1); n2 <- ncol(data_2)
   se_mesor_diff <- sqrt(p1$raw$sigma^2 / n1 + p2$raw$sigma^2 / n2)
   valid_mesor   <- jointly & !is.na(p1$raw$M) & !is.na(p2$raw$M) &
@@ -1362,7 +1310,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   }
   if (n_dp_pilot < min_pilot && verbose) {
     warning(sprintf(
-      paste0("Only %d DP genes found in pilot (jointly rhythmic & |Δφ|>%.1fh), ",
+      paste0("Only %d DP genes found in pilot (jointly rhythmic & |Deltaphi|>%.1fh), ",
              "fewer than the recommended minimum of %d.\n",
              "  DP power will be near zero and estimates unreliable.\n",
              "  --> Remove 'DP' from test_types in CircadianDesignOptions() to skip this endpoint,\n",
@@ -1429,7 +1377,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
     cat(sprintf("  Jointly rhythmic: %.1f%%\n", 100 * prop_joint))
     cat(sprintf("  Estimated prop_DR  (rhythmic in exactly one group): %.4f\n",
                 prop_DR_emp))
-    cat(sprintf("  Estimated prop_DP  (jointly rhythmic & |Δφ|>%.1fh): %.4f\n",
+    cat(sprintf("  Estimated prop_DP  (jointly rhythmic & |Deltaphi|>%.1fh): %.4f\n",
                 phase_shift_threshold, prop_DP_emp))
     cat(sprintf("  Estimated phase_diff IQR (DP genes, n=%d): [%.2f, %.2f] h\n",
                 n_dp_pilot, phase_diff_emp[1], phase_diff_emp[2]))
@@ -1442,7 +1390,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
                 r1_snr["median"], r1_snr["q25"], r1_snr["q75"]))
     cat(sprintf("  Group 2 rhythmic genes  r: median=%.2f  IQR [%.2f, %.2f]\n",
                 r2_snr["median"], r2_snr["q25"], r2_snr["q75"]))
-    cat(sprintf("  Effective DP SNR (2r|sin(πΔφ/24)|): median=%.2f  IQR [%.2f, %.2f]\n",
+    cat(sprintf("  Effective DP SNR (2r|sin(piDeltaphi/24)|): median=%.2f  IQR [%.2f, %.2f]\n",
                 r_dp_snr["median"], r_dp_snr["q25"], r_dp_snr["q75"]))
     cat("  --> Compare these SNR values to the stratified power curves to\n")
     cat("      identify which fraction of your pilot genes will be detectable\n")
@@ -1456,15 +1404,15 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
     prop_rhythmic   = prop_union_rhy,
     period          = period,
     lBaselineExpr   = lBaselineExpr_emp,
-    lBaselineExpr2  = lBaselineExpr2_emp,  # F̂_M2: group-2 mesor distribution
+    lBaselineExpr2  = lBaselineExpr2_emp,  # F_hat_M2: group-2 mesor distribution
     lOD             = lOD_emp,
-    lOD2            = lOD_emp2,            # F̂_σ2: group-2 noise distribution
+    lOD2            = lOD_emp2,            # F_hat_sigma2: group-2 noise distribution
     amplitude       = amp_emp,
     sigma_rhythmic  = sigma_rhythmic_emp,
     paired_sigma    = paired_sigma,
-    cts             = times_1,             # F̂_TOD1: group-1 sampling time distribution
-    amplitude2      = amp_emp2,            # F̂_A2: used for g2-only DR genes
-    cts2            = times_2,             # F̂_TOD2: group-2 sampling time distribution
+    cts             = times_1,             # F_hat_TOD1: group-1 sampling time distribution
+    amplitude2      = amp_emp2,            # F_hat_A2: used for g2-only DR genes
+    cts2            = times_2,             # F_hat_TOD2: group-2 sampling time distribution
     phase           = phase_emp,
     prop_DR         = prop_DR_emp,
     prop_DP         = prop_DP_emp,

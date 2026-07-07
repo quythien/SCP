@@ -11,6 +11,7 @@ estCircadianParamTwoGroup(
   times_2,
   period = 24,
   min_rhythm_pval = 0.01,
+  top_k = 300L,
   phase_shift_threshold = 2,
   prop_DM = NULL,
   mesor_diff = NULL,
@@ -28,6 +29,11 @@ estCircadianParamTwoGroup(
 \item{period}{Period in hours (default 24).}
 
 \item{min_rhythm_pval}{Marginal p-value screen defining the rhythmic pilot set.}
+
+\item{top_k}{Number of highest-signal genes (per group, ranked by cosinor
+p-value) forming each group's effect-size distribution (default 300).
+Capped (with a warning) to a group's rhythmic-gene count if larger;
+\code{Inf} or \code{"all"} uses every rhythmic candidate.}
 
 \item{phase_shift_threshold}{Minimum phase difference (hours) for the DP class.}
 

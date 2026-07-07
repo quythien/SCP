@@ -389,36 +389,36 @@ SeqModelSel = function(action = c(1, 2), pv = c(0.01, 0.02), alpha = 0.05, metho
 
   if(method == "Fisher_BS"){
     p_combined = fishers.p(pv)
-    stop = StopRule(action, pv, alpha, "BS")
+    sr = StopRule(action, pv, alpha, "BS")
     if(p_combined<alpha){
-      stop= ifelse(stop$type=="arrhy", stop$one, stop$type)
+      stop_label = ifelse(sr$type=="arrhy", sr$one, sr$type)
     }else{
-      stop = "arrhy"
+      stop_label = "arrhy"
     }
   }else if(method == "Fisher_FS"){
     p_combined = fishers.p(pv)
-    stop = StopRule(action, pv, alpha, "FS")
+    sr = StopRule(action, pv, alpha, "FS")
     if(p_combined<alpha){
-      stop= ifelse(stop$type=="arrhy", stop$one, stop$type)
+      stop_label = ifelse(sr$type=="arrhy", sr$one, sr$type)
     }else{
-      stop = "arrhy"
+      stop_label = "arrhy"
     }
   }else if(method == "Sidak_BS"){
-    stop = StopRule(action, pv, alpha.adjust(alpha, length(pv), "sidak"), "BS")$type
+    stop_label = StopRule(action, pv, alpha.adjust(alpha, length(pv), "sidak"), "BS")$type
   }else if(method == "Sidak_FS"){
-    stop = StopRule(action, pv, alpha.adjust(alpha, length(pv), "sidak"), "FS")$type
+    stop_label = StopRule(action, pv, alpha.adjust(alpha, length(pv), "sidak"), "FS")$type
   }else if(method == "Nominal_BS"){
-    stop = StopRule(action, pv, alpha, "BS")$type
+    stop_label = StopRule(action, pv, alpha, "BS")$type
   }else if(method == "Nominal_FS"){
-    stop = StopRule(action, pv, alpha, "FS")$type
+    stop_label = StopRule(action, pv, alpha, "FS")$type
   }else if(method == "VDA"){
     is.rhy = pv<alpha
     if(sum(is.rhy)==2){
-      stop = stop.vda(2, action)
+      stop_label = stop.vda(2, action)
     }else if(sum(is.rhy)==0){
-      stop = stop.vda(0, action)
+      stop_label = stop.vda(0, action)
     }else{
-      stop = stop.vda(1, action)
+      stop_label = stop.vda(1, action)
     }
   }else if(method == "AWFisher"){
     if (!requireNamespace("AWFisher", quietly = TRUE))
@@ -427,16 +427,18 @@ SeqModelSel = function(action = c(1, 2), pv = c(0.01, 0.02), alpha = 0.05, metho
     aw.wight = p_combined$weights
     p_combined = p_combined$pvalues
     if(p_combined>alpha){
-      stop = stop.vda(0, action)
+      stop_label = stop.vda(0, action)
     }else if(sum(aw.wight)==2){
-      stop = stop.vda(2, action)
+      stop_label = stop.vda(2, action)
     }else if(aw.wight[1, 1]==1){
-      stop = stop.vda(1, action)
+      stop_label = stop.vda(1, action)
     }else{
-      stop = stop.vda(1, action)
+      stop_label = stop.vda(1, action)
     }
+  }else{
+    stop(sprintf("SeqModelSel: unrecognized method '%s'.", method))
   }
-  return(stop)
+  return(stop_label)
 }
 
 #' Stop Rule for Sequential Testing
@@ -1235,6 +1237,9 @@ DCP_Analyze <- function(expr1, expr2, times1, times2, alpha = 0.05,
 
 #' Get Phase from Beta Coefficients
 #'
+#' @param b1.x Cosine-term coefficient.
+#' @param b2.x Sine-term coefficient.
+#' @return List with \code{phase} (radians) and \code{tan} (the ratio used).
 get_phase = function(b1.x, b2.x){
   ph.x = atan(-b2.x/b1.x)
   if(b2.x>0){
@@ -1256,6 +1261,13 @@ get_phase = function(b1.x, b2.x){
 
 #' Calculate CI for Mesor
 #'
+#' @param XX.inv Inverse of the design matrix cross-product (t(X) times X).
+#' @param A.t Contrast row vector selecting the mesor.
+#' @param r.full Residual degrees-of-freedom offset (default 6).
+#' @param n Number of observations.
+#' @param alpha Significance level (default 0.05).
+#' @param sigma.hat Estimated residual standard deviation.
+#' @return CI half-width (radius) for the mesor estimate.
 calculate_CI.M = function(XX.inv, A.t, r.full = 6, n, alpha = 0.05, sigma.hat){
   CI.m.hat.radius = stats::qt(1-alpha/2, n-r.full)*sigma.hat*sqrt(A.t%*%XX.inv%*%t(A.t))
   return(CI.m.hat.radius)
@@ -1263,6 +1275,13 @@ calculate_CI.M = function(XX.inv, A.t, r.full = 6, n, alpha = 0.05, sigma.hat){
 
 #' Calculate CI for Amplitude and Phase (Taylor method)
 #'
+#' @param XX.inv Inverse of the design matrix cross-product (t(X) times X).
+#' @param A.t Contrast row vector selecting the cosinor coefficients.
+#' @param phase.hat Estimated phase (radians).
+#' @param A.hat Estimated amplitude.
+#' @param sigma.hat Estimated residual standard deviation.
+#' @return List with \code{se.A.hat} and \code{se.phase.hat}, the delta-method
+#'   standard errors for amplitude and phase.
 calculate_CI_A.phase.Taylor = function(XX.inv, A.t, phase.hat, A.hat, sigma.hat){
   var.new = A.t%*%XX.inv%*%t(A.t)
   var.beta1 = var.new[1, 1]
@@ -1280,6 +1299,9 @@ calculate_CI_A.phase.Taylor = function(XX.inv, A.t, phase.hat, A.hat, sigma.hat)
 
 #' Choose the minimum absolute value from each row
 #'
+#' @param mat Numeric matrix; one candidate value per column, one case per row.
+#' @return Numeric vector, length \code{nrow(mat)}: the smallest-magnitude
+#'   entry from each row (sign preserved).
 choose.abs.min = function(mat = matrix(stats::rnorm(21), ncol = 3)){
   abs.min.vec = apply(mat, 1, function(a){
     min.abs.idx = which.min(abs(a))
@@ -1356,7 +1378,7 @@ DCP_sim_data = function(ngene=1000, nsample=30, A1=c(1, 3), A2=c(1, 3),
 #'
 #' @param result List of p-value vectors
 #' @param test Test names
-#' @param test Types of results
+#' @param type Types of results (e.g. "p-value")
 #' @param val Cutoffs
 #' @param out "long" or "wide" format
 #'
@@ -1508,7 +1530,10 @@ run_DCP_pipeline <- function(expr1, expr2, times1, times2,
 #' @description Simplified wrapper that returns just p-values
 #' for integration with runSimsDiff()
 #'
+#' @param y1,y2 Gene expression matrices for groups 1 and 2 (genes x samples).
 #' @inheritParams run_DCP_pipeline
+#' @param test_types Character vector of endpoints to test: any of
+#'   \code{"DR"} (differential rhythmicity), \code{"DP"} (differential phase).
 #'
 #' @return List with p_DR, p_DP
 #' @export
@@ -1849,7 +1874,7 @@ detect_MH <- function(expr, times, period = 24) {
 # All return list(pval_DR, pval_DP, pval_DM).
 # NA for test types the method does not support.
 #
-# Method × test_type support:
+# Method x test_type support:
 #   DCP          DR  DP  --
 #   CircaCompare --  DP  DM
 #   LimoRhyde    DR  --  --

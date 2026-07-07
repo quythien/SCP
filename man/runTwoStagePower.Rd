@@ -32,6 +32,8 @@ runTwoStagePower(
 \item{test_type}{"DR", "DP", or "DM"}
 
 \item{verbose}{Print progress}
+
+\item{mc.cores}{Parallel cores (default 1).}
 }
 \value{
 List with marginal_power matrix [n_sizes x nsims] and sample_sizes

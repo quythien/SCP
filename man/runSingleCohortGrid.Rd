@@ -14,7 +14,8 @@ runSingleCohortGrid(
   mc.cores = 1L,
   plot = FALSE,
   output_file = NULL,
-  verbose = TRUE
+  verbose = TRUE,
+  target_power = 0.8
 )
 }
 \arguments{
@@ -35,6 +36,10 @@ runSingleCohortGrid(
 \item{output_file}{Optional output path for the plot.}
 
 \item{verbose}{Print progress.}
+
+\item{target_power}{Power threshold used to compute \code{n80_df} (despite
+the name, the interpolated sample size is for this threshold, not
+hardcoded to 80\%). Default 0.80.}
 }
 \value{
 An \code{SCPSingleResult} with the power grid and N80 table.

@@ -19,6 +19,9 @@ plotDesignComparison(
 
 \item{target_power}{Target power (horizontal reference line)}
 
+\item{panels}{Which panel(s) to draw: "A" (power curves) and/or "B"
+(recommended-N bar chart) (default both).}
+
 \item{output_file}{Path for PDF output (NULL = screen)}
 }
 \description{

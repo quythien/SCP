@@ -6,6 +6,14 @@
 \usage{
 get_phase(b1.x, b2.x)
 }
+\arguments{
+\item{b1.x}{Cosine-term coefficient.}
+
+\item{b2.x}{Sine-term coefficient.}
+}
+\value{
+List with \code{phase} (radians) and \code{tan} (the ratio used).
+}
 \description{
 Get Phase from Beta Coefficients
 }

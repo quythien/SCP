@@ -11,9 +11,9 @@ estimate_r_from_data(dcp_results, top_n = 100, rank_by = "q.R2", use_group = 1)
 
 \item{top_n}{Number of top circadian genes to use (default: 100)}
 
-\item{rank_by}{Column to rank genes by (default: "p.overall" from DP results)}
+\item{rank_by}{Column to rank genes by (default: "q.R2")}
 
-\item{group}{Which group to use for R^2 ("min" for minimum across groups, "1" or "2" for specific group)}
+\item{use_group}{Which group's R^2 to use (1 or 2; default 1).}
 }
 \value{
 List with median r, mean r, and individual r values

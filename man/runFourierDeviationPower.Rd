@@ -26,6 +26,8 @@ runFourierDeviationPower(
 \item{test_type}{"DR", "DP", or "DM"}
 
 \item{verbose}{Print progress}
+
+\item{mc.cores}{Parallel cores (default 1).}
 }
 \value{
 List with power arrays and summaries across harmonic levels

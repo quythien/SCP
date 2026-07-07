@@ -10,13 +10,14 @@ launchShiny(..., install_deps = TRUE, species_all = FALSE)
 \item{...}{Additional arguments passed to \code{shiny::runApp()}.}
 
 \item{install_deps}{Logical; if \code{TRUE} (default) install any missing
-optional app packages (enrichR, writexl, shinyscreenshot, org.Hs.eg.db,
-org.Mm.eg.db) before launching. Set \code{FALSE} to skip the check.}
+optional app packages before launching. Set \code{FALSE} to skip the
+check (missing features then degrade gracefully inside the app).}
 
-\item{species_all}{Logical; if \code{TRUE} also install annotation databases
-for rat, zebrafish, Drosophila, C. elegans, S. cerevisiae, P. falciparum, and
-Arabidopsis so upload gene-symbol mapping works for every supported species.
-Default \code{FALSE} installs only human + mouse.}
+\item{species_all}{Logical; if \code{TRUE} also install the annotation
+databases for rat, zebrafish, Drosophila, and Arabidopsis (in addition to
+human + mouse) so upload gene-symbol mapping works for every supported
+species. Default \code{FALSE} installs only human + mouse (the common case);
+the others install on demand or you can pass \code{TRUE} once.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for its side effect of
@@ -24,12 +25,22 @@ Invisibly returns \code{NULL}. Called for its side effect of
 }
 \description{
 Opens the bundled simulation-based power-analysis app in the user's
-default browser. The app lets the user pick a bundled pilot, set
-target power and FDR, and read off the recommended sample size for
-single-cohort rhythmicity detection.
+default browser. The app lets the user pick a bundled pilot (or upload
+their own), set target power and FDR, read off the recommended sample
+size, explore per-gene rhythmicity, and run pathway enrichment.
+}
+\details{
+On first launch the function checks for the app's optional helper packages
+and offers to install any that are missing (so the gene-symbol mapping,
+XLSX export, full-app capture, and pathway-enrichment features work out of
+the box). These are kept out of the package's hard dependencies so a plain
+\code{install.packages("SCP")} stays lightweight and the API works without
+the large Bioconductor annotation databases.
 }
 \examples{
 \dontrun{
   launchShiny()
+  launchShiny(species_all = TRUE)     # also install rat/zebrafish/fly/plant DBs
+  launchShiny(install_deps = FALSE)   # skip the dependency check
 }
 }

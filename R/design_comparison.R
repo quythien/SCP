@@ -35,6 +35,7 @@
 #' @param min_rhythm_pval Threshold for calling rhythmic genes in pilot
 #' @param test_type       "DR", "DP", or "DM"
 #' @param verbose         Print progress
+#' @param mc.cores        Parallel cores (default 1).
 #'
 #' @return List with marginal_power matrix [n_sizes x nsims] and sample_sizes
 runTwoStagePower <- function(pilot_data,
@@ -202,13 +203,13 @@ compareDesignApproaches <- function(two_stage_result,
     stringsAsFactors = FALSE
   )
 
-  # --- n₈₀ estimates ---
+  # --- n80 estimates ---
   # Two-stage: smallest N where power_mean >= target_power
   n80_ts_idx <- which(ts_power >= target_power)
   n80_ts <- if (length(n80_ts_idx) > 0) ts_sizes[min(n80_ts_idx)] else NA_integer_
 
-  # Bootstrap: across nboot draws, compute distribution of n₈₀
-  # For each bootstrap draw b, average over B → marginal power vs N curve
+  # Bootstrap: across nboot draws, compute distribution of n80
+  # For each bootstrap draw b, average over B -> marginal power vs N curve
   nboot <- bootstrap_result$nboot
 
   n80_boot_vec <- sapply(seq_len(nboot), function(b) {
@@ -249,6 +250,8 @@ compareDesignApproaches <- function(two_stage_result,
 #' @param comparison    Output from compareDesignApproaches()
 #' @param test_type     Test type label
 #' @param target_power  Target power (horizontal reference line)
+#' @param panels        Which panel(s) to draw: "A" (power curves) and/or "B"
+#'   (recommended-N bar chart) (default both).
 #' @param output_file   Path for PDF output (NULL = screen)
 plotDesignComparison <- function(comparison,
                                   test_type    = NULL,
@@ -311,7 +314,7 @@ plotDesignComparison <- function(comparison,
        sprintf("%.0f%%", 100 * target_power),
        col = "gray40", cex = 0.75, adj = 0)
 
-  # Vertical ticks at n₈₀
+  # Vertical ticks at n80
   n80_ts   <- comparison$n80_two_stage
   n80_boot <- comparison$n80_boot_median
   if (!is.na(n80_ts)) {
@@ -334,13 +337,13 @@ plotDesignComparison <- function(comparison,
   } # end Panel A
 
   # -----------------------------------------------------------
-  # Panel B: n₈₀ point + 95% interval
+  # Panel B: n80 point + 95% interval
   #
   # Two rows, not four bars:
   #   Row 1, Two-stage:  a single point (no CI, point estimate only)
   #   Row 2, Bootstrap:  median point + 95% CI bar
   #
-  # This correctly represents bootstrap n₈₀ as ONE uncertain recommendation,
+  # This correctly represents bootstrap n80 as ONE uncertain recommendation,
   # not three separate competing recommendations.
   # -----------------------------------------------------------
   if (!("B" %in% panels)) return(invisible(NULL))
@@ -720,14 +723,14 @@ plotGroundTruthComparison <- function(gt_result,
             rev(gt_result$true_power_mean + gt_result$true_power_se)),
           col = adjustcolor("black", 0.04), border = NA)
   text(max(N), gt_result$true_power_mean[length(N)] + gt_result$true_power_se[length(N)],
-       "(MC ±SE)", col = "gray50", cex = 0.65, adj = c(1, -0.3))
+       "(MC +/-SE)", col = "gray50", cex = 0.65, adj = c(1, -0.3))
 
   legend("bottomright",
          legend = c("Oracle (true params)",
                     "Two-stage estimate",
                     "Bootstrap mean",
                     "Bootstrap 95% CI",
-                    "Oracle ±SE (MC error)"),
+                    "Oracle +/-SE (MC error)"),
          col    = c("black", "steelblue", "darkorange",
                     adjustcolor("darkorange", 0.3),
                     adjustcolor("black", 0.25)),
@@ -772,7 +775,7 @@ plotGroundTruthComparison <- function(gt_result,
          col = "black",      pch = 15, cex = 1.5)
 
   legend("bottomright",
-         legend = c("Oracle (truth)", "Two-stage", "Bootstrap mean ± CI"),
+         legend = c("Oracle (truth)", "Two-stage", "Bootstrap mean +/- CI"),
          col    = c("black", "steelblue", "darkorange"),
          pch    = c(15, 17, 19),
          cex    = 0.85, bty = "n")

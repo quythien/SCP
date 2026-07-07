@@ -4,7 +4,12 @@
 \alias{makeAdaptiveRStrata}
 \title{Compute adaptive r-strata breakpoints with fixed bin width}
 \usage{
-makeAdaptiveRStrata(bio.opts, bin_width = 0.25, r_min_pct = 0)
+makeAdaptiveRStrata(
+  bio.opts,
+  bin_width = 0.25,
+  r_min_pct = 0,
+  r_pctile_cap = 0.99
+)
 }
 \arguments{
 \item{bio.opts}{\code{CircadianBioOptions} with amplitude and sigma_rhythmic.}
@@ -13,6 +18,9 @@ makeAdaptiveRStrata(bio.opts, bin_width = 0.25, r_min_pct = 0)
 
 \item{r_min_pct}{Lower percentile of pilot r used as range floor (default 0
 = always start from 0).}
+
+\item{r_pctile_cap}{Upper percentile of pilot r used as the range ceiling
+before rounding up to the nearest \code{bin_width} (default 0.99).}
 }
 \value{
 Numeric vector of breakpoints starting at 0 and ending at Inf.

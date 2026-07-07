@@ -30,6 +30,9 @@ Imports:
     parallel,
     grid,
     grDevices,
+    stats,
+    graphics,
+    utils,
     Rcpp
 LinkingTo:
     Rcpp,
@@ -54,6 +57,9 @@ Suggests:
     tidyr,
     AWFisher,
     DODR,
+    BiocManager,
+    knitr,
+    rmarkdown,
     testthat (>= 3.0.0)
 License: MIT + file LICENSE
 Encoding: UTF-8

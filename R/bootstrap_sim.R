@@ -500,7 +500,7 @@ runBootstrapDesignGrid <- function(pilot_data,
   }
 
   # Step 4: Aggregate summaries over bootstrap dimension
-  # Aggregate over dim 1 (bootstrap) manually to guarantee [n_N × n_B × n_tests]
+  # Aggregate over dim 1 (bootstrap) manually to guarantee [n_N x n_B x n_tests]
   # shape even when n_B=1 or n_tests=1 (apply() drops singleton dimensions).
   power_mean  <- array(apply(boot_power_arr, c(2,3,4), mean,     na.rm=TRUE), dim=c(n_N,n_B,n_tests))
   power_se    <- array(apply(boot_power_arr, c(2,3,4), sd,       na.rm=TRUE), dim=c(n_N,n_B,n_tests))
@@ -627,6 +627,8 @@ summaryBootstrapDesignGrid <- function(result,
 #' @param result Output from runBootstrapDesignGrid()
 #' @param test_type Test type to plot
 #' @param fdr_threshold FDR threshold (label only)
+#' @param panels Which panel(s) to draw: "A" (power vs N) and/or "B" (heatmap)
+#'   (default "A").
 #' @param output_file Path for PDF output (NULL = screen)
 plotBootstrapDesignGrid <- function(result,
                                     test_type     = "DR",
