@@ -36,7 +36,7 @@ length \code{ncol(data)}.}
 (default 0.01). Genes with p < this define the candidate set.}
 
 \item{top_k}{Cap on number of genes contributing to the joint
-\eqn{(A_1, \phi_1, A_2, \phi_2, \sigma)} distribution (default 300),
+\eqn{(A_1, \phi_1, A_2, \phi_2, \sigma)} distribution (default 500),
 ranked by F-test p-value.}
 
 \item{prop_DR, prop_DP, prop_DM}{Differential proportions (defaults 0.15,

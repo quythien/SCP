@@ -642,7 +642,7 @@ estCircadianParam <- function(data, times, period = 24,
 #' @param min_rhythm_pval P-value threshold for the joint 4-d.f. F-test
 #'   (default 0.01). Genes with p < this define the candidate set.
 #' @param top_k Cap on number of genes contributing to the joint
-#'   \eqn{(A_1, \phi_1, A_2, \phi_2, \sigma)} distribution (default 300),
+#'   \eqn{(A_1, \phi_1, A_2, \phi_2, \sigma)} distribution (default 500),
 #'   ranked by F-test p-value.
 #' @param prop_DR,prop_DP,prop_DM Differential proportions (defaults 0.15,
 #'   0.10, 0.00). Forwarded unchanged to \code{CircadianBioOptions}; note the

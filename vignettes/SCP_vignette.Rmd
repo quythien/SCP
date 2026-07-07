@@ -310,8 +310,10 @@ rec <- recommendDesign(
 # Bootstrap uncertainty
 
 When the pilot is small, the recommended N is itself uncertain.
-`runBootstrapDesignGrid()` resamples the pilot with replacement and re-estimates
-power on each draw, producing confidence bands. It is the most expensive routine;
+`runBootstrapDesignGrid()` resamples the pilot's subjects with replacement
+(the Efron nonparametric bootstrap; `resample = "subject"`, the default),
+refits the pilot summary, and re-estimates power on each draw, producing
+confidence bands. It is the most expensive routine;
 the call below is deliberately tiny so the vignette builds quickly. For real use,
 raise `nboot` (>= 50) and `nsims_inner` (>= 20).
 
