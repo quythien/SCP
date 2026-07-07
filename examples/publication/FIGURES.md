@@ -19,8 +19,8 @@ not filename. All generators live under `examples/publication/` (plus the
 `examples/publication/fig3_bootstrap_subject.R` regenerates Fig 3 end to end:
 Efron **subject** bootstrap (resample pilot subjects with replacement, carrying
 their collection times, refit per draw) on **Caudate control** (GSE160521, n=59)
-and **GTEx skeletal muscle** (n=748); reports point estimate + bootstrap
-mean ± 1.96 SD; `B_out=50`, `N_sim_inner=25`. Requires the raw pilot matrices
+and **GTEx skeletal muscle** (n=748); reports the projected power
+curve + the 2.5-97.5 percentile 95% bootstrap CI; `B_out=50`, `N_sim_inner=25`. Requires the raw pilot matrices
 (controlled-access GSE160521 CSVs + GTEx `CPM.all.norm.RData`), so it runs on
 this server only. The corresponding package entry point is
 `runBootstrapDesignGrid(..., resample = "subject")` (the default) in
