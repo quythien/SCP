@@ -95,6 +95,32 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 }
 
 
+#' Reproducible subject-resample indices for the subject bootstrap
+#'
+#' Draws \code{nboot} sets of \code{n_pilot} subject indices with replacement
+#' (Efron nonparametric bootstrap over subjects). The RNG state is saved and
+#' restored so the draws are reproducible from \code{seed} without disturbing
+#' the caller's random stream.
+#'
+#' @param n_pilot Number of pilot subjects (columns of the pilot matrix).
+#' @param nboot Number of bootstrap draws.
+#' @param seed Random seed.
+#'
+#' @return List of length \code{nboot}; each element is an integer index vector
+#'   of length \code{n_pilot}.
+.resampleSubjectIndices <- function(n_pilot, nboot, seed = 42) {
+  rng_state <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
+    .GlobalEnv$.Random.seed else NULL
+  set.seed(seed)
+  on.exit(
+    if (!is.null(rng_state))
+      assign(".Random.seed", rng_state, envir = .GlobalEnv),
+    add = TRUE
+  )
+  lapply(seq_len(nboot), function(b) sample(n_pilot, n_pilot, replace = TRUE))
+}
+
+
 # =====================================================================
 # Internal helper: build CircadianBioOptions from bootstrap draw
 # =====================================================================
@@ -231,6 +257,12 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 #' @param alpha2 Second-harmonic coefficient (default 0).
 #' @param alpha3 Third-harmonic coefficient (default 0).
 #' @param min_rhythm_pval P-value threshold for pilot rhythmicity (default 0.01).
+#' @param resample Resampling scheme for the outer bootstrap. \code{"subject"}
+#'   (default) is the Efron nonparametric bootstrap over pilot subjects: each
+#'   draw resamples subject columns with replacement (carrying their collection
+#'   times) and refits the pilot summary, matching the Section 2.3 description.
+#'   \code{"gene"} is the legacy scheme that fits once and resamples gene rows of
+#'   the fit; retained for backward compatibility and diagnostics only.
 #' @param verbose Print progress (default TRUE).
 #' @param mc.cores Parallel cores for inner simulation loop (default 1).
 #'
@@ -266,6 +298,7 @@ runBootstrapDesignGrid <- function(pilot_data,
                                    alpha2          = 0,
                                    alpha3          = 0,
                                    min_rhythm_pval = 0.01,
+                                   resample        = c("subject", "gene"),
                                    verbose         = TRUE,
                                    mc.cores        = 1L) {
 
@@ -334,14 +367,26 @@ runBootstrapDesignGrid <- function(pilot_data,
       sep = "\n"))
   }
 
-  # Step 1: Fit cosinor to pilot data
-  if (verbose) cat("\nFitting cosinor to pilot data...\n")
-  param_df <- fitCosinorAll(pilot_data, pilot_times, period = period,
-                            min_rhythm_pval = min_rhythm_pval)
-
-  # Step 2: Bootstrap parameter draws
-  if (verbose) cat("Bootstrapping parameters...\n")
-  boot_list <- bootstrapParams(param_df, nboot, seed = seed)
+  # Step 1-2: Prepare the resampled pilot draws.
+  #  resample = "subject" (default): Efron nonparametric bootstrap over pilot
+  #    SUBJECTS. Each draw resamples subject columns with replacement (carrying
+  #    their collection times) and REFITS the cosinor inside the worker loop,
+  #    matching the Section 2.3 description ("resample subjects with replacement,
+  #    recompute the pilot summary"). This is the pilot-uncertainty bootstrap.
+  #  resample = "gene": legacy scheme that fits once and resamples gene rows;
+  #    retained for backward compatibility and diagnostics only.
+  resample <- match.arg(resample)
+  if (identical(resample, "subject")) {
+    if (verbose) cat("\nResampling pilot subjects (subject bootstrap)...\n")
+    subj_idx  <- .resampleSubjectIndices(ncol(pilot_data), nboot, seed = seed)
+    boot_list <- NULL
+  } else {
+    if (verbose) cat("\nFitting cosinor to pilot data (gene bootstrap)...\n")
+    param_df  <- fitCosinorAll(pilot_data, pilot_times, period = period,
+                               min_rhythm_pval = min_rhythm_pval)
+    boot_list <- bootstrapParams(param_df, nboot, seed = seed)
+    subj_idx  <- NULL
+  }
 
   # Step 3: Sweep over (b, N, B), bootstrap draws parallelized via mclapply.
   # Each draw is independent (different seed); results combined into boot_power_arr.
@@ -350,7 +395,17 @@ runBootstrapDesignGrid <- function(pilot_data,
   if (verbose) cat(sprintf("Running %d bootstrap draws (mc.cores=%d)...\n", nboot, mc.cores))
 
   boot_results <- parallel::mclapply(seq_len(nboot), function(b) {
-    bio_b    <- .buildBioFromBoot(boot_list[[b]], bio_diff.opts)
+    if (identical(resample, "subject")) {
+      j          <- subj_idx[[b]]
+      refit_df   <- fitCosinorAll(pilot_data[, j, drop = FALSE], pilot_times[j],
+                                  period = period, min_rhythm_pval = min_rhythm_pval)
+      bio_b      <- .buildBioFromBoot(refit_df, bio_diff.opts)
+      boot_times <- pilot_times[j]     # passive TOD is resampled jointly with the subjects
+    } else {
+      bio_b      <- .buildBioFromBoot(boot_list[[b]], bio_diff.opts)
+      boot_times <- design_vector
+    }
+    bio_b$sim.seed <- seed + 1000L + b  # reproducible inner-simulation seed per draw
     result_b <- array(NA_real_, dim = c(n_N, n_B, n_tests))
 
     for (n_idx in seq_len(n_N)) {
@@ -369,7 +424,7 @@ runBootstrapDesignGrid <- function(pilot_data,
             cts_exp <- rep(time_pts, times = ceiling(actual_N / length(time_pts)))[1:actual_N]
           }
         } else {
-          cts_exp <- design_vector
+          cts_exp <- boot_times
         }
 
         bio_b_n        <- bio_b
