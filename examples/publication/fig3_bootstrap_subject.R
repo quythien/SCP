@@ -1,3 +1,9 @@
+#' Fig 3 generator: Efron SUBJECT bootstrap, single-cohort power uncertainty.
+#' Caudate control (GSE160521, n=59) vs GTEx skeletal muscle (n=748).
+#' Reports the point estimate (plug-in) + bootstrap mean + the 2.5-97.5 percentile
+#' 95% CI band (matching runBootstrapDesignGrid's percentile CI). B_out=50, N_sim_in=25.
+#' Requires controlled-access raw pilot matrices (server-only). Activate the fast
+#' C++ path before running (see FIGURES.md).
 suppressWarnings(suppressMessages({ library(Rcpp); library(SCP); library(parallel); library(readxl) }))
 dyn.load(system.file("libs","SCP.so",package="SCP")); .CPP_LOADED <- TRUE
 NGENES<-5000L; NBOOT<-50L; NSIMS<-25L; NSIMS_INNER<-25L; PVAL<-0.01; SEED<-2025L; CORES<-48L
@@ -13,8 +19,8 @@ efron<-function(mat,tod,N,label){
     r<-tryCatch({bio<-estCircadianParam(mat[,j,drop=FALSE],tod[j],min_rhythm_pval=PVAL,paired_sigma=TRUE,verbose=FALSE)
       bio$ngenes<-NGENES;pc(bio,N,tod[j],NSIMS_INNER,1L)},error=function(e)NULL)
     if(is.null(r))rep(NA,length(N)) else r},mc.cores=CORES))
-  mn<-rowMeans(S,na.rm=T);sdv<-apply(S,1,sd,na.rm=T)
-  list(label=label,n=n,N=N,plugin=plugin,mean=mn,lo=pmax(0,mn-1.96*sdv),hi=pmin(1,mn+1.96*sdv))}
+  list(label=label,n=n,N=N,plugin=plugin,mean=rowMeans(S,na.rm=T),
+       lo=apply(S,1,quantile,.025,na.rm=T),hi=apply(S,1,quantile,.975,na.rm=T))}  # 2.5-97.5 percentile CI
 KD<-"/home/qtp1/Projects/Circadian/Kyle/Kyle_multiBrainRegion"
 clin<-read.csv(file.path(KD,"DS_clinical_1221_rm97_rm231_matchIndex34.csv"),row.names=1);ctl<-clin[clin$Diagnostic.Category=="CONTROL",]
 f<-list.files(KD,pattern="^Caudate_CPMfiltered_logCPM.*csv$",full.names=TRUE);ex<-as.matrix(read.csv(f[1],row.names=1,check.names=FALSE))
@@ -23,22 +29,16 @@ load("/home/qtp1/Projects/Collaborative/GTEXdata/TOD Xiangning/data/CPM/CPM.all.
 df<-CPM.all.norm[["Muscle - Skeletal"]];ids<-as.character(colnames(df));hh<-sapply(strsplit(ids,"\\."),function(z)if(length(z)>=3)z[3] else NA)
 hr<-suppressWarnings(as.numeric(substr(hh,1,2))+as.numeric(substr(hh,3,4))/60);ok<-!is.na(hr)
 ms<-efron(as.matrix(df[,ok]),hr[ok],c(40L,80L,120L,160L,200L,240L,280L,320L),"GTEx Muscle-Skeletal (n=748)")
-saveRDS(list(caudate=cd,muscle=ms),"/tmp/fig3_prod.rds")
-# caption numbers check
-g<-function(p,i)round(100*c(p$plugin[i],p$mean[i],p$lo[i],p$hi[i]),1)
-cat("CAPTION CHECK (Caudate): N=40 plug/boot/CI=",paste(g(cd,which(cd$N==40)),collapse="/"),
-    " N=60=",paste(g(cd,which(cd$N==60)),collapse="/")," 80%crossN=",cd$N[which(cd$plugin>=.8)[1]],"\n")
-cat("CAPTION CHECK (Muscle):  N=80 plug/boot/CI=",paste(g(ms,which(ms$N==80)),collapse="/"),"\n")
-# figure
 cp<-"#0072B2";cb<-"#D55E00"
 pan<-function(p,lab,main,leg,xmax){N<-p$N;keep<-N<=xmax;N<-N[keep]
   plot(N,100*p$plugin[keep],type="l",lwd=2.4,col=cp,ylim=c(0,100),xlim=range(N),xlab="Sample size (n)",ylab="Power (%)",main="",xaxt="n")
   axis(1,at=N,cex.axis=0.8,gap.axis=-1);abline(h=80,lty=2,col="grey60")
   title(main=sprintf("%s   %s",lab,main),line=0.5,cex.main=1.02,font.main=2)
-  lines(N,100*p$mean[keep],lwd=1.4,col=cb,lty=2);arrows(N,100*p$lo[keep],N,100*p$hi[keep],code=3,angle=90,length=0.035,lwd=1.7,col=cb);points(N,100*p$mean[keep],pch=19,col=cb,cex=0.7)
-  if(leg)legend("bottomright",c("Point estimate","Bootstrap mean ± 95% CI"),col=c(cp,cb),lwd=c(2.4,1.7),lty=c(1,2),pch=c(NA,19),bty="o",box.col="grey65",cex=0.6,inset=0.02,y.intersp=0.9,seg.len=1.4)}
+  lines(N,100*p$mean[keep],lwd=1.4,col=cb,lty=2)
+  arrows(N,100*p$lo[keep],N,100*p$hi[keep],code=3,angle=90,length=0.035,lwd=1.7,col=cb);points(N,100*p$mean[keep],pch=19,col=cb,cex=0.7)
+  if(leg)legend("bottomright",c("Point estimate","Bootstrap mean, 95% CI"),col=c(cp,cb),lwd=c(2.4,1.7),lty=c(1,2),pch=c(NA,19),bty="o",box.col="grey65",cex=0.6,inset=0.02,y.intersp=0.9,seg.len=1.4)}
 for(dest in c("submission/figures/Fig3_bootstrap_singlecohort.pdf","output/main_figures/Fig3_bootstrap_singlecohort.pdf")){
+  dir.create(dirname(dest),recursive=TRUE,showWarnings=FALSE)
   cairo_pdf(dest,width=7.8,height=3.8);par(mfrow=c(1,2),mar=c(4,4.2,2.6,1.2),mgp=c(2.5,0.7,0),oma=c(0,0,2,0))
   pan(cd,"A","Caudate control (n=59)",FALSE,220);pan(ms,"B","GTEx Muscle-Skeletal (n=748)",TRUE,320)
   mtext("Bootstrap Uncertainty in Single-Cohort Power Estimates",outer=TRUE,side=3,line=0.3,font=2,cex=1.05);dev.off()}
-cat("FIGURE WRITTEN\n")
