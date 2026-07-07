@@ -87,7 +87,8 @@ fitCosinorAll_fast <- function(data, times, period = 24, min_rhythm_pval = 0.01)
   yhat     <- tcrossprod(coef, X)             # G x N
   resid    <- data - yhat                     # G x N
   RSS_g    <- rowSums(resid^2)
-  sigma_hat <- sqrt(RSS_g / (length(times) - 3))
+  df_resid  <- length(times) - 3
+  sigma_hat <- if (df_resid > 0) sqrt(RSS_g / df_resid) else rep(NA_real_, length(RSS_g))
 
   r_hat <- A_hat / pmax(sigma_hat, 1e-6)
 

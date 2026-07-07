@@ -41,7 +41,7 @@ fitCosinorAll <- function(data, times, period = 24, min_rhythm_pval = 0.01) {
   G <- nrow(data)
   omega <- 2 * pi / period
 
-  results <- lapply(1:G, function(g) {
+  results <- lapply(seq_len(G), function(g) {
     y <- data[g, ]
     tryCatch({
       fit   <- one_cosinor_OLS(times, y, period, compute.phase.CI = FALSE)
@@ -421,7 +421,7 @@ runBootstrapDesignGrid <- function(pilot_data,
           time_pts <- .selectTimePoints(design_vector, B)
           cts_exp  <- rep(time_pts, each = m)
           if (length(cts_exp) != actual_N) {
-            cts_exp <- rep(time_pts, times = ceiling(actual_N / length(time_pts)))[1:actual_N]
+            cts_exp <- rep(time_pts, times = ceiling(actual_N / length(time_pts)))[seq_len(actual_N)]
           }
         } else {
           cts_exp <- boot_times
@@ -476,7 +476,11 @@ runBootstrapDesignGrid <- function(pilot_data,
               result_b[n_idx, B_idx, t_idx] <- mean(powers, na.rm = TRUE)
             }
           }
-        }, error = function(e) NULL)  # NA stays in result_b on error
+        }, error = function(e) {          # NA stays in result_b on error
+          warning(sprintf("runBootstrapDesignGrid: cell (n_idx=%d, B_idx=%d) failed (left NA): %s",
+                          n_idx, B_idx, conditionMessage(e)))
+          NULL
+        })
       }
     }
     result_b

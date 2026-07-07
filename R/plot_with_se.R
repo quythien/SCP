@@ -45,8 +45,15 @@ add_se_bars <- function(x, y, se, col, bar_width = 0.3) {
 plotWithSE <- function(results_file, output_file, test_name = "DR",
                        analysis.opts = NULL) {
 
-  load(results_file)
-  if (exists("dp_power_raw")) dr_power_raw <- dp_power_raw
+  .res_env <- new.env()
+  load(results_file, envir = .res_env)
+  dr_power_raw <- if (exists("dr_power_raw", envir = .res_env, inherits = FALSE)) {
+    get("dr_power_raw", envir = .res_env)
+  } else if (exists("dp_power_raw", envir = .res_env, inherits = FALSE)) {
+    get("dp_power_raw", envir = .res_env)
+  } else {
+    stop("results_file must contain 'dr_power_raw' or 'dp_power_raw'.")
+  }
 
   sample_sizes  <- dr_power_raw$sample_sizes
   nsims         <- dr_power_raw$nsims
@@ -75,8 +82,8 @@ plotWithSE <- function(results_file, output_file, test_name = "DR",
   TD_arr    <- array(NA, dim = c(n_sizes, n_strata, n_thresholds, nsims))
   FD_arr    <- array(NA, dim = c(n_sizes, n_strata, n_thresholds, nsims))
 
-  for (j in 1:n_sizes) {
-    for (s in 1:nsims) {
+  for (j in seq_len(n_sizes)) {
+    for (s in seq_len(nsims)) {
       pvals <- dr_power_raw$pvalues[j, , s]
 
       if (nested_gt) {
@@ -95,9 +102,9 @@ plotWithSE <- function(results_file, output_file, test_name = "DR",
       tested <- pvals < 1
       if (sum(tested) > 0) qvals[tested] <- p.adjust(pvals[tested], method = "BH")
 
-      for (t in 1:n_thresholds) {
+      for (t in seq_len(n_thresholds)) {
         discoveries <- qvals <= fdr_thresholds[t]
-        for (k in 1:n_strata) {
+        for (k in seq_len(n_strata)) {
           in_stratum <- xgr == k
           td <- sum(discoveries & is_target & in_stratum, na.rm = TRUE)
           fd <- sum(discoveries & is_null & in_stratum, na.rm = TRUE)
@@ -116,14 +123,14 @@ plotWithSE <- function(results_file, output_file, test_name = "DR",
   marginal_sim <- array(NA, dim = c(n_sizes, n_thresholds, nsims))
   TD_sim       <- array(NA, dim = c(n_sizes, n_thresholds, nsims))
 
-  for (j in 1:n_sizes) {
-    for (s in 1:nsims) {
+  for (j in seq_len(n_sizes)) {
+    for (s in seq_len(nsims)) {
       if (nested_gt) {
         total_targets_s <- sum(dr_power_raw$is_target_list[[j]][[s]], na.rm = TRUE)
       } else {
         total_targets_s <- sum(dr_power_raw$is_target_list[[1]], na.rm = TRUE)
       }
-      for (t in 1:n_thresholds) {
+      for (t in seq_len(n_thresholds)) {
         td_total <- sum(TD_arr[j, , t, s], na.rm = TRUE)
         TD_sim[j, t, s] <- td_total
         marginal_sim[j, t, s] <- if (total_targets_s > 0) td_total / total_targets_s else NA
@@ -151,15 +158,15 @@ plotWithSE <- function(results_file, output_file, test_name = "DR",
   mean_power_A <- apply(dr_power_raw$strat_power, c(1, 2), mean, na.rm = TRUE)
   se_power_A   <- apply(dr_power_raw$strat_power, c(1, 2), function(x) sd(x, na.rm = TRUE) / sqrt(sum(!is.na(x))))
 
-  matplot(1:n_strata, t(100 * mean_power_A),
+  matplot(seq_len(n_strata), t(100 * mean_power_A),
           type = "l", lwd = 2, col = size_colors, lty = 1,
           xlim = c(0.5, n_strata + 0.5), ylim = c(0, 100),
           xlab = "r = A/sigma", ylab = "Stratified Power (%)",
           main = sprintf("%s Power by r (FDR 5%%)", test_name), xaxt = "n")
-  axis(1, at = 1:n_strata, labels = strata_labels, las = 2, cex.axis = 0.6)
-  for (j in 1:n_sizes) {
-    points(1:n_strata, 100 * mean_power_A[j, ], pch = 19, col = size_colors[j], cex = 0.6)
-    add_se_bars(1:n_strata, 100 * mean_power_A[j, ], 100 * se_power_A[j, ], col = size_colors[j])
+  axis(1, at = seq_len(n_strata), labels = strata_labels, las = 2, cex.axis = 0.6)
+  for (j in seq_len(n_sizes)) {
+    points(seq_len(n_strata), 100 * mean_power_A[j, ], pch = 19, col = size_colors[j], cex = 0.6)
+    add_se_bars(seq_len(n_strata), 100 * mean_power_A[j, ], 100 * se_power_A[j, ], col = size_colors[j])
   }
   abline(h = 80, lty = 2, col = "gray")
   grid()
@@ -170,23 +177,23 @@ plotWithSE <- function(results_file, output_file, test_name = "DR",
   idx_n60 <- which.min(abs(sample_sizes - reference_n))
   mean_power_B <- matrix(NA, nrow = n_strata, ncol = n_thresholds)
   se_power_B   <- matrix(NA, nrow = n_strata, ncol = n_thresholds)
-  for (t in 1:n_thresholds) {
-    for (k in 1:n_strata) {
+  for (t in seq_len(n_thresholds)) {
+    for (k in seq_len(n_strata)) {
       vals <- power_arr[idx_n60, k, t, ]
       mean_power_B[k, t] <- mean(vals, na.rm = TRUE)
       se_power_B[k, t]   <- sd(vals, na.rm = TRUE) / sqrt(sum(!is.na(vals)))
     }
   }
 
-  matplot(1:n_strata, 100 * mean_power_B,
+  matplot(seq_len(n_strata), 100 * mean_power_B,
           type = "b", pch = 19, lwd = 2, col = threshold_colors, lty = 1,
           xlim = c(0.5, n_strata + 0.5), ylim = c(0, 100),
           xlab = "r = A/sigma", ylab = "Stratified Power (%)",
           main = sprintf("%s Power by r at Different FDR (n=%d)", test_name, sample_sizes[idx_n60]),
           xaxt = "n")
-  axis(1, at = 1:n_strata, labels = strata_labels, las = 2, cex.axis = 0.6)
-  for (t in 1:n_thresholds) {
-    add_se_bars(1:n_strata, 100 * mean_power_B[, t], 100 * se_power_B[, t], col = threshold_colors[t])
+  axis(1, at = seq_len(n_strata), labels = strata_labels, las = 2, cex.axis = 0.6)
+  for (t in seq_len(n_thresholds)) {
+    add_se_bars(seq_len(n_strata), 100 * mean_power_B[, t], 100 * se_power_B[, t], col = threshold_colors[t])
   }
   abline(h = 80, lty = 2, col = "gray")
   grid()
@@ -215,7 +222,7 @@ plotWithSE <- function(results_file, output_file, test_name = "DR",
           xlim = c(0, max(sample_sizes) * 1.1), ylim = c(0, 100),
           xlab = "Sample Size (per group)", ylab = "Marginal Power (%)",
           main = sprintf("%s Power vs Sample Size by FDR", test_name))
-  for (t in 1:n_thresholds) {
+  for (t in seq_len(n_thresholds)) {
     add_se_bars(sample_sizes, 100 * marginal_mean[, t], 100 * marginal_se[, t], col = threshold_colors[t])
   }
   abline(h = 80, lty = 2, col = "gray")
@@ -228,15 +235,15 @@ plotWithSE <- function(results_file, output_file, test_name = "DR",
   se_TD_E   <- apply(dr_power_raw$strat_TD, c(1, 2), function(x) sd(x, na.rm = TRUE) / sqrt(sum(!is.na(x))))
 
   y_max_E <- max(mean_TD_E + se_TD_E, na.rm = TRUE) * 1.1
-  matplot(1:n_strata, t(mean_TD_E),
+  matplot(seq_len(n_strata), t(mean_TD_E),
           type = "l", lwd = 2, col = size_colors, lty = 1,
           xlim = c(0.5, n_strata + 0.5), ylim = c(0, y_max_E),
           xlab = "r = A/sigma", ylab = "Mean True Discoveries (per sim)",
           main = sprintf("%s True Discoveries by r (FDR 5%%)", test_name), xaxt = "n")
-  axis(1, at = 1:n_strata, labels = strata_labels, las = 2, cex.axis = 0.6)
-  for (j in 1:n_sizes) {
-    points(1:n_strata, mean_TD_E[j, ], pch = 19, col = size_colors[j], cex = 0.6)
-    add_se_bars(1:n_strata, mean_TD_E[j, ], se_TD_E[j, ], col = size_colors[j])
+  axis(1, at = seq_len(n_strata), labels = strata_labels, las = 2, cex.axis = 0.6)
+  for (j in seq_len(n_sizes)) {
+    points(seq_len(n_strata), mean_TD_E[j, ], pch = 19, col = size_colors[j], cex = 0.6)
+    add_se_bars(seq_len(n_strata), mean_TD_E[j, ], se_TD_E[j, ], col = size_colors[j])
   }
   grid()
   legend("topright", paste0("n=", sample_sizes), col = size_colors, lty = 1, lwd = 2, cex = 0.6)
@@ -269,12 +276,12 @@ plotWithSE <- function(results_file, output_file, test_name = "DR",
   # Print summary
   cat(sprintf("\n%s MARGINAL POWER (mean +/- SE across %d simulations)\n", test_name, nsims))
   cat(sprintf("%-10s |", "n"))
-  for (t in 1:n_thresholds) cat(sprintf(" %-14s |", threshold_labels[t]))
+  for (t in seq_len(n_thresholds)) cat(sprintf(" %-14s |", threshold_labels[t]))
   cat("\n")
   cat(paste0(rep("-", 15 + n_thresholds * 18), collapse = ""), "\n")
-  for (j in 1:n_sizes) {
+  for (j in seq_len(n_sizes)) {
     cat(sprintf("n = %-6d |", sample_sizes[j]))
-    for (t in 1:n_thresholds) {
+    for (t in seq_len(n_thresholds)) {
       cat(sprintf(" %5.1f%% +/- %4.1f%% |", 100 * marginal_mean[j, t], 100 * marginal_se[j, t]))
     }
     cat("\n")
@@ -340,8 +347,8 @@ plotPhaseShiftWithSE <- function(results_file, output_file,
   # Panel A: Power vs r by Phase Shift (at n=60)
   mean_power_n60 <- array(NA, dim = c(n_phase, n_r_strata))
   se_power_n60   <- array(NA, dim = c(n_phase, n_r_strata))
-  for (p in 1:n_phase) {
-    for (k in 1:n_r_strata) {
+  for (p in seq_len(n_phase)) {
+    for (k in seq_len(n_r_strata)) {
       vals <- strat_power[p, idx_n60, k, ]
       mean_power_n60[p, k] <- mean(vals, na.rm = TRUE)
       se_power_n60[p, k]   <- sd(vals, na.rm = TRUE) / sqrt(sum(!is.na(vals)))
@@ -351,7 +358,7 @@ plotPhaseShiftWithSE <- function(results_file, output_file,
   # Panel C: Power vs Phase Shift by r stratum (at n=60)
   power_by_phase    <- matrix(NA, nrow = n_phase, ncol = length(show_r_idx))
   se_by_phase       <- matrix(NA, nrow = n_phase, ncol = length(show_r_idx))
-  for (p in 1:n_phase) {
+  for (p in seq_len(n_phase)) {
     for (ri in seq_along(show_r_idx)) {
       k <- show_r_idx[ri]
       vals <- strat_power[p, idx_n60, k, ]
@@ -362,9 +369,9 @@ plotPhaseShiftWithSE <- function(results_file, output_file,
 
   # Panel D: Per-simulation marginal power: [size, phase, sim]
   marginal_sim <- array(NA, dim = c(n_size, n_phase, nsims))
-  for (j in 1:n_size) {
-    for (p in 1:n_phase) {
-      for (s in 1:nsims) {
+  for (j in seq_len(n_size)) {
+    for (p in seq_len(n_phase)) {
+      for (s in seq_len(nsims)) {
         td  <- sum(strat_TD[p, j, , s], na.rm = TRUE)
         tgt <- sum(strat_n_targets[p, j, , s], na.rm = TRUE)
         marginal_sim[j, p, s] <- if (tgt > 0) td / tgt else NA
@@ -382,7 +389,7 @@ plotPhaseShiftWithSE <- function(results_file, output_file,
   phase_colors <- rainbow(length(show_phase_idx), s = 0.6, v = 0.8)
 
   # --- Panel A: Power vs r by Phase Shift (n=60) ---
-  matplot(1:n_r_strata, 100 * t(mean_power_n60[show_phase_idx, ]),
+  matplot(seq_len(n_r_strata), 100 * t(mean_power_n60[show_phase_idx, ]),
           type = "b", pch = 19, lwd = 2,
           col = phase_colors, lty = 1,
           xlim = c(0.5, n_r_strata + 0.5), ylim = c(0, 100),
@@ -390,10 +397,10 @@ plotPhaseShiftWithSE <- function(results_file, output_file,
           ylab = "Power (%)",
           main = "Power vs r by Phase Shift (n=60)",
           xaxt = "n")
-  axis(1, at = 1:n_r_strata, labels = strata_labels, las = 2, cex.axis = 0.6)
+  axis(1, at = seq_len(n_r_strata), labels = strata_labels, las = 2, cex.axis = 0.6)
   for (ii in seq_along(show_phase_idx)) {
     p <- show_phase_idx[ii]
-    add_se_bars(1:n_r_strata, 100 * mean_power_n60[p, ], 100 * se_power_n60[p, ], col = phase_colors[ii])
+    add_se_bars(seq_len(n_r_strata), 100 * mean_power_n60[p, ], 100 * se_power_n60[p, ], col = phase_colors[ii])
   }
   abline(h = 80, lty = 2, col = "gray")
   grid()
@@ -471,8 +478,8 @@ plotPhaseShiftWithSE <- function(results_file, output_file,
   par(mai = c(0.9, 1.0, 0.5, 0.2))
 
   min_shift <- rep(NA, n_r_strata)
-  for (k in 1:n_r_strata) {
-    for (p in 1:n_phase) {
+  for (k in seq_len(n_r_strata)) {
+    for (p in seq_len(n_phase)) {
       if (phase_shifts[p] == 0) next
       pwr <- mean(strat_power[p, idx_n60, k, ], na.rm = TRUE)
       if (!is.na(pwr) && pwr >= 0.80) {
@@ -494,7 +501,7 @@ plotPhaseShiftWithSE <- function(results_file, output_file,
   }
 
   # Only show strata that have at least some target genes (non-NA power somewhere)
-  has_data <- sapply(1:n_r_strata, function(k) {
+  has_data <- sapply(seq_len(n_r_strata), function(k) {
     any(!is.na(strat_power[, idx_n60, k, ]), na.rm = TRUE)
   })
 
@@ -513,7 +520,7 @@ plotPhaseShiftWithSE <- function(results_file, output_file,
                 las = 2, cex.names = 0.6)
 
   # Add labels
-  for (i in 1:n_r_strata) {
+  for (i in seq_len(n_r_strata)) {
     if (!has_data[i]) next
     if (is.na(min_shift[i])) {
       text(bp[i], bar_vals[i] + 0.3, "N/R", cex = 0.55, font = 3, col = "gray40")

@@ -138,7 +138,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
   }
 
   # Gene names
-  gene_names = paste0("Gene", 1:ngenes)
+  gene_names = paste0("Gene", seq_len(ngenes))
 
   # Capture bio.opts for use inside mclapply closure
   bio_opts_inner <- if (exists("bio.opts", inherits = FALSE)) bio.opts else NULL
@@ -280,6 +280,10 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
         }, error = function(e) {
           warning(sprintf("CircaCompare failed for sim %d, n=%d: %s", i, n, e$message))
         })
+      } else {
+        stop(sprintf(paste0("runSimsDiff: DCmethod '%s' is not implemented in the ",
+                            "simulation engine (only \"DCP\" and \"CircaCompare\" are supported)."),
+                     DCmethod))
       }
 
       # BH adjustment over all ngenes (including untested genes with pval=1 sentinel).
@@ -424,7 +428,7 @@ runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
 
     pvalues[j, , ] <- pval
 
-    for (i in 1:nsims) {
+    for (i in seq_len(nsims)) {
       diff_type       <- sim_out$diff_type[[i]]
       effectsize_DR1  <- sim_out$effectsize[[i]]$DR1
       effectsize_DR2  <- sim_out$effectsize[[i]]$DR2
@@ -462,7 +466,7 @@ runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
       discoveries <- fdr[, i] <= alpha
 
       # Stratified quantities (per r-stratum)
-      for (k in 1:n_r_strata) {
+      for (k in seq_len(n_r_strata)) {
         in_stratum <- xgr == k
         TD    <- sum(discoveries & Zg2 == 1 & in_stratum, na.rm = TRUE)
         FD    <- sum(discoveries & Zg == 0 & in_stratum, na.rm = TRUE)
@@ -495,7 +499,7 @@ runPowerAnalysis <- function(bio.opts, design.opts, analysis.opts,
 
     if (verbose) {
       cat(sprintf("    n=%d: ", n))
-      for (k in 1:n_r_strata) {
+      for (k in seq_len(n_r_strata)) {
         mean_p <- mean(strat_power[j, k, ], na.rm = TRUE)
         if (!is.nan(mean_p)) cat(sprintf("%s=%.0f%% ", strata_labels[k], 100 * mean_p))
       }
@@ -1871,7 +1875,7 @@ plot.SCPSingleResult <- function(x, output_file = NULL, ...) {
 #' @param bio.opts      CircadianBioOptions from estCircadianParamTwoGroup()
 #' @param design.opts   CircadianDesignOptions (sample_sizes, design, cts)
 #' @param analysis.opts CircadianAnalysisOptions
-#' @param methods       Any of "DCP","CircaCompare","LimoRhyde","DODR"
+#' @param methods       Any of "DCP","CircaCompare"
 #' @param test_types    Any of "DR","DP","DM" (silently NA if method lacks support)
 #' @param alpha2        Scalar or vector swept for both groups
 #' @param alpha3        Scalar or vector swept for both groups
@@ -1902,7 +1906,7 @@ runDifferentialPower <- function(bio.opts,
   stopifnot(inherits(design.opts,   "CircadianDesignOptions"))
   stopifnot(inherits(analysis.opts, "CircadianAnalysisOptions"))
 
-  methods    <- match.arg(methods,    c("DCP","CircaCompare","LimoRhyde","DODR"), several.ok = TRUE)
+  methods    <- match.arg(methods,    c("DCP","CircaCompare"), several.ok = TRUE)
   test_types <- match.arg(test_types, c("DR","DP","DM"), several.ok = TRUE)
 
   if (length(methods) > 1L) {

@@ -25,7 +25,7 @@ runDifferentialPower(
 
 \item{analysis.opts}{CircadianAnalysisOptions}
 
-\item{methods}{Any of "DCP","CircaCompare","LimoRhyde","DODR"}
+\item{methods}{Any of "DCP","CircaCompare"}
 
 \item{test_types}{Any of "DR","DP","DM" (silently NA if method lacks support)}
 

@@ -228,7 +228,7 @@ simCircadianDiff <- function(ngenes = 5000,
   n_DM = round(ngenes * prop_DM)
 
   # Assign categories
-  gene_idx = 1:ngenes
+  gene_idx = seq_len(ngenes)
 
   # Differential Rhythmicity (DR): rhythmic in g1 only or g2 only
   if (n_DR > 0) {
@@ -405,7 +405,7 @@ simCircadianDiff <- function(ngenes = 5000,
   } else {
     expr1 = matrix(NA, nrow = ngenes, ncol = n1)
     expr2 = matrix(NA, nrow = ngenes, ncol = n2)
-    for (g in 1:ngenes) {
+    for (g in seq_len(ngenes)) {
       mu1 = mesor[g] + amplitude1[g] * cos(omega * times1 - omega * phase1[g])
       if (a2 != 0) mu1 = mu1 + amplitude1[g] * a2 * cos(2 * omega * times1 - 2 * omega * phase1[g])
       if (a3 != 0) mu1 = mu1 + amplitude1[g] * a3 * cos(3 * omega * times1 - 3 * omega * phase1[g])
@@ -417,9 +417,9 @@ simCircadianDiff <- function(ngenes = 5000,
     }
   }
 
-  rownames(expr1) = rownames(expr2) = paste0("Gene", 1:ngenes)
-  colnames(expr1) = paste0("G1_", 1:n1)
-  colnames(expr2) = paste0("G2_", 1:n2)
+  rownames(expr1) = rownames(expr2) = paste0("Gene", seq_len(ngenes))
+  colnames(expr1) = paste0("G1_", seq_len(n1))
+  colnames(expr2) = paste0("G2_", seq_len(n2))
 
   # Create detailed ground truth
   # Calculate phase difference with wrap-around correction
@@ -427,7 +427,7 @@ simCircadianDiff <- function(ngenes = 5000,
   phase_diff_calc[phase_diff_calc > 12] = phase_diff_calc[phase_diff_calc > 12] - 24
 
   ground_truth = data.frame(
-    gene = 1:ngenes,
+    gene = seq_len(ngenes),
     diff_type = diff_type,
     diff_type_label = c("Non-rhythmic both", "Rhythmic both (same)",
                      "DR: G1 only", "DR: G2 only",

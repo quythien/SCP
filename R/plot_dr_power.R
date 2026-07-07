@@ -179,14 +179,20 @@ printDensitySummary <- function(density_results) {
 #'   producing a plot.
 plotDRPowerStratified <- function(results_file, output_file = NULL, test_name = "DR") {
 
-  # Load saved results
-  load(results_file)
-  
+  # Load saved results into a dedicated environment (avoid picking up a
+  # like-named object from the caller's / global scope)
+  .res_env <- new.env()
+  load(results_file, envir = .res_env)
+
   # Handle both dr_power_raw and dp_power_raw naming
-  if (exists("dp_power_raw")) {
-    dr_power_raw <- dp_power_raw
+  dr_power_raw <- if (exists("dr_power_raw", envir = .res_env, inherits = FALSE)) {
+    get("dr_power_raw", envir = .res_env)
+  } else if (exists("dp_power_raw", envir = .res_env, inherits = FALSE)) {
+    get("dp_power_raw", envir = .res_env)
+  } else {
+    stop("results_file must contain 'dr_power_raw' or 'dp_power_raw'.")
   }
-  
+
   sample_sizes <- dr_power_raw$sample_sizes
   nsims <- dr_power_raw$nsims
   strata_labels <- dr_power_raw$strata_labels
@@ -216,8 +222,8 @@ plotDRPowerStratified <- function(results_file, output_file = NULL, test_name = 
     FD = array(NA, dim = c(n_sizes, n_strata, n_thresholds, nsims))
   )
 
-  for (j in 1:n_sizes) {
-    for (s in 1:nsims) {
+  for (j in seq_len(n_sizes)) {
+    for (s in seq_len(nsims)) {
       pvals <- dr_power_raw$pvalues[j, , s]
 
       # Get ground truth for this sample size and simulation
@@ -240,10 +246,10 @@ plotDRPowerStratified <- function(results_file, output_file = NULL, test_name = 
         qvals[tested] <- p.adjust(pvals[tested], method = "BH")
       }
 
-      for (t in 1:n_thresholds) {
+      for (t in seq_len(n_thresholds)) {
         discoveries <- qvals <= fdr_thresholds[t]
 
-        for (k in 1:n_strata) {
+        for (k in seq_len(n_strata)) {
           in_stratum <- xgr == k
           power_by_threshold$TD[j, k, t, s] <- sum(discoveries & is_target & in_stratum, na.rm = TRUE)
           power_by_threshold$FD[j, k, t, s] <- sum(discoveries & is_null & in_stratum, na.rm = TRUE)
@@ -261,14 +267,14 @@ plotDRPowerStratified <- function(results_file, output_file = NULL, test_name = 
   marginal_power <- matrix(NA, nrow = n_sizes, ncol = n_thresholds)
   TD_total <- matrix(NA, nrow = n_sizes, ncol = n_thresholds)
 
-  for (j in 1:n_sizes) {
+  for (j in seq_len(n_sizes)) {
     # Count total targets for this sample size
     if (nested_gt) {
-      total_targets_j <- sum(sapply(1:nsims, function(s) sum(dr_power_raw$is_target_list[[j]][[s]], na.rm = TRUE)))
+      total_targets_j <- sum(sapply(seq_len(nsims), function(s) sum(dr_power_raw$is_target_list[[j]][[s]], na.rm = TRUE)))
     } else {
       total_targets_j <- sum(dr_power_raw$is_target_list[[1]], na.rm = TRUE) * nsims
     }
-    for (t in 1:n_thresholds) {
+    for (t in seq_len(n_thresholds)) {
       TD_total[j, t] <- sum(power_by_threshold$TD[j, , t, ], na.rm = TRUE)
       marginal_power[j, t] <- if (total_targets_j > 0) TD_total[j, t] / total_targets_j else NA
     }
@@ -286,12 +292,12 @@ plotDRPowerStratified <- function(results_file, output_file = NULL, test_name = 
   # Panel A: Power by r (multiple n lines) at FDR 5%
   #---------------------------------------------------------------------------
   mean_power <- apply(dr_power_raw$strat_power, c(1, 2), mean, na.rm = TRUE)
-  matplot(1:length(strata_labels), t(100 * mean_power),
+  matplot(seq_along(strata_labels), t(100 * mean_power),
           type = "l", lwd = 2, col = size_colors, lty = 1,
           xlim = c(0.5, length(strata_labels) + 0.5), ylim = c(0, 100),
           xlab = "r = A/sigma", ylab = "Stratified Power (%)",
           main = sprintf("%s Power by r (FDR 5%%)", test_name), xaxt = "n")
-  axis(1, at = 1:length(strata_labels), labels = strata_labels, las = 2, cex.axis = 0.6)
+  axis(1, at = seq_along(strata_labels), labels = strata_labels, las = 2, cex.axis = 0.6)
   abline(h = 80, lty = 2, col = "gray")
   grid()
   legend("bottomright", paste0("n=", sample_sizes), col = size_colors, lty = 1, lwd = 2, cex = 0.6)
@@ -302,19 +308,19 @@ plotDRPowerStratified <- function(results_file, output_file = NULL, test_name = 
   #---------------------------------------------------------------------------
   idx_n60 <- which.min(abs(sample_sizes - 60))
   power_by_r_threshold <- matrix(NA, nrow = length(strata_labels), ncol = n_thresholds)
-  for (t in 1:n_thresholds) {
-    for (k in 1:length(strata_labels)) {
+  for (t in seq_len(n_thresholds)) {
+    for (k in seq_along(strata_labels)) {
       power_by_r_threshold[k, t] <- mean(power_by_threshold$power[idx_n60, k, t, ], na.rm = TRUE)
     }
   }
 
-  matplot(1:length(strata_labels), 100 * power_by_r_threshold,
+  matplot(seq_along(strata_labels), 100 * power_by_r_threshold,
           type = "b", pch = 19, lwd = 2, col = threshold_colors, lty = 1,
           xlim = c(0.5, length(strata_labels) + 0.5), ylim = c(0, 100),
           xlab = "r = A/sigma", ylab = "Stratified Power (%)",
           main = sprintf("%s Power by r at Different FDR (n=%d)", test_name, sample_sizes[idx_n60]),
           xaxt = "n")
-  axis(1, at = 1:length(strata_labels), labels = strata_labels, las = 2, cex.axis = 0.6)
+  axis(1, at = seq_along(strata_labels), labels = strata_labels, las = 2, cex.axis = 0.6)
   abline(h = 80, lty = 2, col = "gray")
   grid()
   legend("bottomright", threshold_labels, col = threshold_colors, lty = 1, pch = 19, lwd = 2, cex = 0.7)
@@ -394,13 +400,13 @@ plotDRPowerStratified <- function(results_file, output_file = NULL, test_name = 
   cat("(FDR applied only to tested genes, matching runner.R logic)\n\n")
 
   cat(sprintf("%-10s |", "n"))
-  for (t in 1:n_thresholds) cat(sprintf(" %-8s |", threshold_labels[t]))
+  for (t in seq_len(n_thresholds)) cat(sprintf(" %-8s |", threshold_labels[t]))
   cat("\n")
   cat(paste0(rep("-", 15 + n_thresholds * 12), collapse = ""), "\n")
 
-  for (j in 1:n_sizes) {
+  for (j in seq_len(n_sizes)) {
     cat(sprintf("n = %-7d |", sample_sizes[j]))
-    for (t in 1:n_thresholds) cat(sprintf(" %7.1f%% |", 100 * marginal_power[j, t]))
+    for (t in seq_len(n_thresholds)) cat(sprintf(" %7.1f%% |", 100 * marginal_power[j, t]))
     cat("\n")
   }
 
