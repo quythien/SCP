@@ -18,6 +18,7 @@ runBootstrapDesignGrid(
   alpha2 = 0,
   alpha3 = 0,
   min_rhythm_pval = 0.01,
+  resample = c("subject", "gene"),
   verbose = TRUE,
   mc.cores = 1L
 )
@@ -50,6 +51,13 @@ even in \code{mode = "single"}, differential proportion fields are read from her
 \item{alpha3}{Third-harmonic coefficient (default 0).}
 
 \item{min_rhythm_pval}{P-value threshold for pilot rhythmicity (default 0.01).}
+
+\item{resample}{Resampling scheme for the outer bootstrap. \code{"subject"}
+(default) is the Efron nonparametric bootstrap over pilot subjects: each draw
+resamples subject columns with replacement (carrying their collection times)
+and refits the pilot summary, matching the Section 2.3 description. \code{"gene"}
+is the legacy scheme that fits once and resamples gene rows of the fit; retained
+for backward compatibility and diagnostics only.}
 
 \item{verbose}{Print progress (default TRUE).}
 
