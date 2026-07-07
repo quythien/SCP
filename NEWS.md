@@ -1,3 +1,38 @@
+# SCP 0.4.57
+
+## Release hardening
+
+* **Package now passes `R CMD check` with no errors.** Added the missing
+  `useDynLib` and namespace imports so the compiled cosinor path is reachable
+  via `.Call()`; declared the vignette builder and its suggested packages;
+  moved `stats`/`graphics`/`utils` to Imports; excluded stray top-level files
+  from the build. Non-ASCII characters in console output and comments were
+  converted to ASCII.
+* **Subject bootstrap is the default** for `runBootstrapDesignGrid()`
+  (`resample = "subject"`); the reported band is the 2.5-97.5 percentile
+  bootstrap interval. See the README "Bootstrap uncertainty" section.
+* **More parameters exposed.** `runSingleCohortGrid(target_power=)` and
+  `makeAdaptiveRStrata(r_pctile_cap=)` are now arguments rather than hardcoded
+  constants; `estCircadianParam*()` accept a user-settable `top_k`.
+
+## Bug fixes
+
+* `SeqModelSel()` no longer returns a function object on an unrecognized
+  `method` string (a shadowed `stop` variable); it now errors clearly.
+* The legacy flat-argument path of `runSimsDiff()` no longer errors on missing
+  waveform/effect-size defaults.
+* Differential simulation now errors on an unimplemented `DCmethod` instead of
+  silently reporting near-zero power.
+* Removed documented-but-unimplemented options (`DCP_DiffR2()`
+  "permutation"/"bootstrap"; differential "LimoRhyde"/"DODR") so the documented
+  interface matches the implementation.
+* Residual-noise estimation guards against zero degrees of freedom at exactly
+  three sampled times.
+* Bootstrap and ground-truth grids now warn on a failed cell instead of
+  silently leaving it `NA`.
+* Loop bounds use `seq_len()`/`seq_along()` and result-file loading uses an
+  isolated environment, removing 0-length and scope-leak edge cases.
+
 # SCP 0.4.56
 
 ## Shiny app

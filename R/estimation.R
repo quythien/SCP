@@ -115,7 +115,7 @@ estimate_circadian_params = function(data, times, period = 24,
   G = nrow(data)
 
   # Fit cosinor to each gene
-  fits = lapply(1:G, function(g) {
+  fits = lapply(seq_len(G), function(g) {
     tryCatch({
       one_cosinor_OLS(times, data[g, ], period, compute.phase.CI = FALSE)
     }, error = function(e) {
@@ -130,14 +130,16 @@ estimate_circadian_params = function(data, times, period = 24,
   pvals = sapply(fits, function(x) x$pvalue)
 
   # Estimate sigma from residuals
-  sigma_vals = sapply(1:G, function(g) {
+  sigma_vals = sapply(seq_len(G), function(g) {
     y = data[g, ]
     fit = fits[[g]]
     if (any(is.na(c(fit$M, fit$A, fit$phi)))) return(NA)
 
     omega = 2 * pi / period
     yhat = fit$M + fit$A * cos(omega * times - omega * fit$phi)
-    sqrt(sum((y - yhat)^2, na.rm = TRUE) / (length(y) - 3))
+    df_resid = length(y) - 3
+    if (df_resid <= 0) return(NA_real_)
+    sqrt(sum((y - yhat)^2, na.rm = TRUE) / df_resid)
   })
 
   # Effect size

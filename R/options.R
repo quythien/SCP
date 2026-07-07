@@ -551,7 +551,7 @@ CircadianDesignOptions <- function(sample_sizes = c(10, 20, 40, 60, 80, 100),
 .make_strata_labels <- function(r_strata) {
   n <- length(r_strata) - 1
   labels <- character(n)
-  for (i in 1:n) {
+  for (i in seq_len(n)) {
     lo <- r_strata[i]
     hi <- r_strata[i + 1]
     if (is.infinite(hi)) {

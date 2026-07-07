@@ -19,7 +19,7 @@ DCP_DiffR2(
 \arguments{
 \item{x}{Output from DCP_Rhythmicity(x1, x2)}
 
-\item{method}{One of "LR" (recommended), "permutation", "bootstrap", "LR_sigma2"}
+\item{method}{One of "LR" (recommended) or "LR_sigma2"}
 
 \item{TOJR}{TOJR output. If NULL, rhythm.joint object in x will be used}
 

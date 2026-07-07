@@ -761,7 +761,7 @@ LR_deltaR2 <- function(tt1, yy1, tt2, yy2, period = 24, FN=TRUE){
 #' Tests for differential rhythmicity between two groups using R^2 difference
 #'
 #' @param x Output from DCP_Rhythmicity(x1, x2)
-#' @param method One of "LR" (recommended), "permutation", "bootstrap", "LR_sigma2"
+#' @param method One of "LR" (recommended) or "LR_sigma2"
 #' @param TOJR TOJR output. If NULL, rhythm.joint object in x will be used
 #' @param alpha P-value cutoff
 #' @param nSampling Number of samplings for permutation/bootstrap
@@ -783,8 +783,8 @@ LR_deltaR2 <- function(tt1, yy1, tt2, yy2, period = 24, FN=TRUE){
 DCP_DiffR2 = function(x, method = "LR", TOJR = NULL,  alpha = 0.05,  nSampling=1000,
                      Sampling.save = NULL, Sampling.file.label = "gII_vs_gI",
                      p.adjust.method = "BH", parallel.ncores = 1){
-  stopifnot('method should be one of "LR", "permutation", "bootstrap", "LR_sigma2". ' =
-                method %in% c("LR", "permutation", "bootstrap", "LR_sigma2"))
+  stopifnot('method should be one of "LR" or "LR_sigma2". ' =
+                method %in% c("LR", "LR_sigma2"))
 
   if(is.null(TOJR)){
     overlap.g = x$rhythm.joint$gname[x$rhythm.joint$TOJR!="arrhy"]
@@ -838,28 +838,6 @@ DCP_DiffR2 = function(x, method = "LR", TOJR = NULL,  alpha = 0.05,  nSampling=1
     }, mc.cores = parallel.ncores)
     diffR2.tab = do.call(rbind.data.frame, res.list)
 
-  }else if(method == "permutation"){
-    if(!is.null(Sampling.save)){
-      if(!dir.exists(Sampling.save)){
-        dir.create(file.path(Sampling.save), recursive = TRUE)
-        message(paste0("Directory created. Permutation results will be saved in ", Sampling.save))
-      }
-    }
-    res.tab = diff_rhythmicity_permutation(x1.overlap,x2.overlap,t1,t2,overlap.g, period,
-                                           x1.rhythm, x2.rhythm, nSampling,
-                                           Sampling.save, Sampling.file.label, parallel.ncores, alpha)
-    diffR2.tab = res.tab[, c("gname", "delta.R2", "p.R2")]
-  }else if(method == "bootstrap"){
-    if(!is.null(Sampling.save)){
-      if(!dir.exists(Sampling.save)){
-        dir.create(file.path(Sampling.save), recursive = TRUE)
-        message(paste0("Directory created. Bootstrap results will be saved in ", Sampling.save))
-      }
-    }
-    res.tab = diff_rhythmicity_bootstrap(x1.overlap,x2.overlap,t1,t2,overlap.g, period,
-                                        x1.rhythm, x2.rhythm, nSampling,
-                                        Sampling.save, Sampling.file.label, parallel.ncores, alpha)
-    diffR2.tab = res.tab[, c("gname", "delta.R2", "p.R2")]
   }
 
   diffR2.tab$q.R2 = stats::p.adjust(diffR2.tab$p.R2, p.adjust.method)
@@ -1160,7 +1138,7 @@ DCP_Analyze <- function(expr1, expr2, times1, times2, alpha = 0.05,
   ngenes <- nrow(expr1)
 
   if (is.null(gene_names)) {
-    gene_names <- paste0("Gene", 1:ngenes)
+    gene_names <- paste0("Gene", seq_len(ngenes))
   }
 
   # Prepare data in the format expected by DCP_Rhythmicity
@@ -1205,7 +1183,7 @@ DCP_Analyze <- function(expr1, expr2, times1, times2, alpha = 0.05,
 
   # For genes not DR, test DP
   # Match by gene name: dp_results rows correspond to "both"-classified genes
-  # (a subset of ngenes), so positional indexing into dp_results by 1:ngenes
+  # (a subset of ngenes), so positional indexing into dp_results by seq_len(ngenes)
   # would silently pick wrong rows. Always index by gname.
   non_dr <- setdiff(seq_len(ngenes), dr_idx)
   if (length(non_dr) > 0L && nrow(dp_results) > 0L &&
@@ -1435,7 +1413,7 @@ SummarizeDR = function(result, test = "DRF", type = "p-value", val = 0.05, out =
 #' @export
 format_for_DCP <- function(expr_matrix, times, gene_names = NULL) {
   if (is.null(gene_names)) {
-    gene_names = paste0("Gene", 1:nrow(expr_matrix))
+    gene_names = paste0("Gene", seq_len(nrow(expr_matrix)))
   }
   
   list(
@@ -1597,7 +1575,7 @@ detect_CircaCompare <- function(expr1, times1, expr2, times2,
   }
 
   ngenes <- nrow(expr1)
-  if (is.null(gene_names)) gene_names <- paste0("Gene", 1:ngenes)
+  if (is.null(gene_names)) gene_names <- paste0("Gene", seq_len(ngenes))
 
   n1 <- ncol(expr1)
   n2 <- ncol(expr2)
@@ -1673,7 +1651,7 @@ detect_JTK <- function(expr, times, gene_names = NULL, period = 24) {
   }
 
   ngenes <- nrow(expr)
-  if (is.null(gene_names)) gene_names <- paste0("Gene", 1:ngenes)
+  if (is.null(gene_names)) gene_names <- paste0("Gene", seq_len(ngenes))
 
   # MetaCycle::meta2d expects data.frame: first column = gene IDs, then expression
   inDF <- data.frame(CycID = gene_names, as.data.frame(expr),
@@ -1735,7 +1713,7 @@ detect_RAIN <- function(expr, times, gene_names = NULL, period = 24) {
   }
 
   ngenes <- nrow(expr)
-  if (is.null(gene_names)) gene_names <- paste0("Gene", 1:ngenes)
+  if (is.null(gene_names)) gene_names <- paste0("Gene", seq_len(ngenes))
 
   # Sort by time (RAIN expects time-ordered data)
   ord <- order(times)

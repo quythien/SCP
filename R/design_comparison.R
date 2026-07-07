@@ -613,7 +613,11 @@ runGroundTruthComparison <- function(true_bio.opts,
         sim_out <- runSimsDiff(bio_b, iter_design, analysis.opts)
         powers  <- .computeMarginalPower(sim_out, test_type, fdr_threshold, nsims_inner)
         boot_power_mat[b, j] <- mean(powers, na.rm = TRUE)
-      }, error = function(e) NULL)
+      }, error = function(e) {
+        warning(sprintf("runGroundTruthComparison: bootstrap b=%d, n=%d failed (cell left NA): %s",
+                        b, n, conditionMessage(e)))
+        NULL
+      })
     }
   }
 
