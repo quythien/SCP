@@ -9,6 +9,7 @@ estCircadianParam(
   times,
   period = 24,
   min_rhythm_pval = 0.01,
+  top_k = 300L,
   prop_DR = 0.15,
   prop_DP = 0.1,
   prop_DM = 0,
@@ -35,8 +36,14 @@ pass hours (0 to 24 scale).}
 
 \item{min_rhythm_pval}{Uncorrected cosinor p-value threshold for the
 rhythmic-candidate set (default 0.01). Used to compute prop_rhythmic
-and to select the top-K (K = min(300, n_rhythmic)) genes whose
+and to select the top-K (K = min(top_k, n_rhythmic)) genes whose
 amplitudes, phases, and noise drive simulation truth.}
+
+\item{top_k}{Number of highest-signal genes (ranked by cosinor p-value)
+that form the effect-size distribution (amplitude, phase, noise).
+Default 300. If \code{top_k} exceeds the number of rhythmic genes, it is
+capped to that number with a warning. \code{Inf} or \code{"all"} uses
+every rhythmic candidate.}
 
 \item{prop_DR, prop_DP, prop_DM}{Proportions of differentially-rhythmic,
 differentially-phased, and differentially-mesor genes (defaults
