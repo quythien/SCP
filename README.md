@@ -173,6 +173,26 @@ detect_cosinor(expr, times, K = 2)   # two-harmonic (ultradian extension)
 Identifiability requires at least `2K + 1` distinct sampling phases per
 period (`B >= 3` for `K = 1`, `B >= 5` for `K = 2`).
 
+## Bootstrap uncertainty
+
+Quantifying uncertainty in a projected power curve is a two-step call:
+
+```r
+# 1. Compute: resample pilot SUBJECTS with replacement (Efron subject bootstrap;
+#    resample = "subject", the default), refit the pilot summary on each draw,
+#    and re-estimate power across the (N, B) grid.
+boot <- runBootstrapDesignGrid(pilot_data, pilot_times,
+                               boot.opts, analysis.opts, bio_diff.opts)
+
+# 2. Plot: the bootstrap-mean curve plus the pointwise 95% bootstrap CI.
+plotBootstrapDesignGrid(boot)
+```
+
+`runBootstrapDesignGrid()` returns the arrays (`power_mean`, and `power_ci_lo` /
+`power_ci_hi`, the 2.5th / 97.5th percentiles of the outer resamples);
+`plotBootstrapDesignGrid()` draws the mean line and that 95% bootstrap CI band.
+The Shiny app wires the two together, so the figure appears automatically there.
+
 ## Documentation
 
 - Runnable vignette: `vignettes/SCP_tutorial.Rmd`

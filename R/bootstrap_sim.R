@@ -676,7 +676,7 @@ plotBootstrapDesignGrid <- function(result,
        ylim  = c(0, y_max),
        xlab  = "N per group",
        ylab  = "Power",
-       main  = sprintf("Bootstrap Power vs N\n(%s test, FDR <= %.0f%%)", test_type, 100 * fdr_thr),
+       main  = sprintf("Bootstrap Power vs N (%s, FDR <= %.0f%%)\nline: bootstrap mean, band: 95%% bootstrap CI", test_type, 100 * fdr_thr),
        las   = 1, xaxt = "n")
   axis(1, at = N_values)
   abline(h = 0.80, lty = 2, col = "gray40")
