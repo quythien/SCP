@@ -12,7 +12,7 @@ not filename. All generators live under `examples/publication/` (plus the
 | `Fig3_bootstrap_singlecohort.pdf` | **`fig3_bootstrap_subject.R`** (current, Efron subject bootstrap; Caudate control n=59 + GTEx Muscle n=748) | supersedes the old `fig5_bootstrap_sc.R` (Putamen SCZ + Thyroid, per-gene) |
 | `Fig4_twoharm_demo.pdf` | `two_harmonic/fig4_twoharm_demo.R` | GTEx v10 Liver |
 | `Fig5_twoharm_framework.pdf` | `two_harmonic/fig5_twoharm_framework.R` | GTEx v10 Liver |
-| `Fig6_active_BvsM.pdf` | `fig6_cosinor_rebuild.R` (edited variant; hand-renamed from `Fig6_active_design.pdf`) | Putamen control n=59, active B-sweep |
+| `Fig6_active_BvsM.pdf` | `two_harmonic/fig6_v9_putamen_paired.R` (DELETED in cleanup commit `a1ac962`; recover via `git show a1ac962^:...`; writes directly to submission/figures, no rename) | Putamen control n=59, active B-sweep, K=1 + K=2 panels. Shipped PDF is a light hand-edit (added r-tilde, panel relabels). `fig6_cosinor_rebuild.R` is a different, non-adopted rebuild. |
 
 ## Fig 3 (bootstrap) reproduction — current
 
@@ -38,3 +38,13 @@ this server only. The corresponding package entry point is
   `NAMESPACE` lacks `useDynLib`; scripts activate it with
   `library(Rcpp); dyn.load(system.file("libs","SCP.so",package="SCP")); .CPP_LOADED <- TRUE`.
 - Cached intermediate results and diagnostics live under gitignored `output/`.
+
+## Fig 6 differential extension (advisor addition, 2026-07-07)
+
+`fig6_differential_Bsweep.R` tests whether B-invariance also holds for the
+differential endpoints (DR, differential rhythmicity; DP, differential phase;
+DM, differential mesor) under a balanced active design. Pilot: GTEx
+Adrenal-vs-Liver paired (same as Fig 2); B in {4,6,8,12,24}, N in
+{24,48,96,144,192,240}, NSIMS=80, BH-FDR 0.05. Result: all three endpoints are
+B-invariant (spread <=0.3 percentage points across B). Output:
+`output/diagnostics/Fig6_differential_Bsweep.pdf`.
