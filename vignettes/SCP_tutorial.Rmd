@@ -30,19 +30,25 @@ NCORES <- if (.Platform$OS.type == "windows") 1L else
 
 # What this tutorial covers
 
-`SCP` (Simulation-based Circadian Power analysis) sizes circadian
-transcriptomics studies from a small pilot dataset. The workflow has four steps:
+Planning a circadian transcriptomics study comes down to a practical question:
+how many samples, collected at what times of day, do you need to reliably detect
+the rhythmic genes you care about? `SCP` (Simulation-based Circadian Power
+analysis) answers that from a small *pilot* dataset, a modest preliminary
+experiment in a comparable tissue. The workflow has four steps:
 
-1. **Load a pilot dataset** (a gene-by-sample expression matrix with
-   time-of-day per sample), or load one of the bundled pilots that already
-   ships with the package.
-2. **Estimate empirical parameter distributions** (amplitude A, noise sigma,
-   acrophase phi, proportion of rhythmic genes) with `estCircadianParam()`.
+1. **Load a pilot dataset** (a gene-by-sample expression matrix with the
+   time-of-day at which each sample was collected), or load one of the pilots
+   that already ships with the package.
+2. **Estimate empirical parameter distributions** for the pilot genes (their
+   amplitude A, noise sigma, acrophase phi = the time of day each gene peaks,
+   and the fraction that are rhythmic) with `estCircadianParam()`.
 3. **Simulate cohorts** at candidate sample sizes and run a detector with
    `runSimsSingleCohort()` (cosinor F-test, K = 1 single harmonic or K = 2
    two-harmonic).
-4. **Plot the power curve** and read off the smallest N that hits the target
-   power at the target FDR.
+4. **Plot the power curve** and read off the smallest N that reaches your target
+   power (the chance of detecting a gene that truly is rhythmic) while keeping
+   the false discovery rate (FDR, the share of flagged genes that are not really
+   rhythmic) at the level you set.
 
 This vignette walks the whole loop in under a minute using a bundled
 GTEx Adrenal Gland pilot. It is intentionally small (NSIMS = 50, a coarse N
@@ -104,8 +110,9 @@ cat(sprintf("Pilot: %d genes, %.1f%% rhythmic, period = %g h\n",
 
 # 3. Inspect the effect-size distribution
 
-The key effect size is the per-gene signal-to-noise ratio
-`r_tilde = A / sigma`. Power scales monotonically with `r_tilde`.
+The effect size that matters here is each gene's signal-to-noise ratio,
+`r_tilde = A / sigma` (rhythm amplitude over noise): the larger it is, the
+easier that gene is to detect.
 
 ```{r r-dist}
 r_tilde <- bio$amplitude / bio$sigma_rhythmic
