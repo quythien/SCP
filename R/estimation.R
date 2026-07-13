@@ -123,7 +123,6 @@ estimate_circadian_params = function(data, times, period = 24,
     })
   })
 
-  # Extract parameters
   M_vals = sapply(fits, function(x) x$M)
   A_vals = sapply(fits, function(x) x$A)
   phi_vals = sapply(fits, function(x) x$phi)
@@ -253,14 +252,11 @@ circular_mean = function(angles, period = 24) {
   angles = angles[!is.na(angles)]
   if (length(angles) == 0) return(NA)
 
-  # Convert to radians
   omega = 2 * pi / period
   radians = omega * angles
 
-  # Circular mean
   mean_angle = atan2(mean(sin(radians)), mean(cos(radians)))
 
-  # Convert back to hours
   (mean_angle / omega) %% period
 }
 
@@ -275,7 +271,6 @@ circular_concentration = function(angles, period = 24) {
   angles = angles[!is.na(angles)]
   if (length(angles) == 0) return(NA)
 
-  # Convert to radians
   omega = 2 * pi / period
   radians = omega * angles
 
@@ -297,7 +292,6 @@ rayleigh_test_circular = function(angles, period = 24) {
   n = length(angles)
   if (n < 5) return(list(statistic = NA, pvalue = NA))
 
-  # Convert to radians
   omega = 2 * pi / period
   radians = omega * angles
 

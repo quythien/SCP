@@ -17,6 +17,35 @@ uncertainty into confidence intervals on every power estimate. A curated
 database of public circadian pilots and a Shiny app are bundled for
 point-and-click planning.
 }
+\section{Main functions}{
+
+\strong{Pilot database:} \code{\link{scp_pilots}}, \code{\link{scp_load_pilot}},
+  \code{\link{scp_pilot_search}}.
+
+\strong{Calibrate your own pilot:} \code{\link{estCircadianParam}},
+  \code{\link{estCircadianParam2H}}, \code{\link{estCircadianParamTwoGroup}},
+  \code{\link{prepCircadianData}}.
+
+\strong{Design and options:} \code{\link{CircadianBioOptions}},
+  \code{\link{CircadianDesignOptions}}, \code{\link{CircadianAnalysisOptions}},
+  \code{\link{CircadianBootstrapOptions}}.
+
+\strong{Run power analysis:} \code{\link{runSimsSingleCohort}},
+  \code{\link{runDifferentialPower}}, \code{\link{runBootstrapDesignGrid}},
+  \code{\link{npower}}, \code{\link{circaPowerApproxN80}},
+  \code{\link{recommendDesign}}.
+
+\strong{Plot results:} \code{\link{plotSingleCohortPower}},
+  \code{\link{plotDiffPower}}, \code{\link{plotBootstrapDesignGrid}}.
+
+\strong{Detect rhythmicity:} \code{\link{detect_cosinor}}.
+
+\strong{Simulate and helpers:} \code{\link{simCircadianSingleCohort2H}},
+  \code{\link{makeAdaptiveRStrata}}.
+
+\strong{App:} \code{\link{launchShiny}}.
+}
+
 \seealso{
 Useful links:
 \itemize{
@@ -29,4 +58,3 @@ Useful links:
 \strong{Maintainer}: Thien Quy Pham \email{quythien14@gmail.com} (University of Pittsburgh)
 
 }
-\keyword{internal}

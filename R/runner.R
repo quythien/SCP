@@ -137,7 +137,6 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     cts = cts %% 24
   }
 
-  # Gene names
   gene_names = paste0("Gene", seq_len(ngenes))
 
   # Capture bio.opts for use inside mclapply closure
@@ -512,7 +511,6 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
   # CircaPower n80 estimate from median r
   n0_circapower <- circaPowerApproxN80(bio.opts, alpha = alpha)
 
-  # Storage
   pvalues         <- array(NA_real_, dim = c(length(sample_sizes), ngenes, nsims))
   r_values_list   <- vector("list", length(sample_sizes))
   for (.j in seq_along(sample_sizes)) r_values_list[[.j]] <- vector("list", nsims)
