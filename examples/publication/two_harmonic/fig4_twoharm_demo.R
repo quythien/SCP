@@ -2,16 +2,6 @@
 # =============================================================================
 # Fig 4 - Two-harmonic motivation on GTEx Liver  (rebuild)
 #
-# Row 1 (4 panels): exemplar genes ARNTL / RORC / HADHA / TPP1
-#   - x-axis: TOD shifted to [-6, 18] convention
-#   - main title (centered): gene name
-#   - subtitle: detection mode + q-values
-#   - vertical dotted lines at numerical K=2 fit peaks; "Peaks at h, h" annotation
-#
-# Row 2 (2 panels):
-#   - Venn at BH-FDR < 0.05 on Liver (K=1 / K=2 labels, no "(DCP)")
-#   - KEGG dot plot with separate count + -log10(q) gradient legends
-#
 # Pilot: GTEx Liver  |  Output: submission/figures/Fig4_twoharm_demo.pdf
 # =============================================================================
 
@@ -113,7 +103,7 @@ render_gene <- function(gene, status, letter_label) {
   lines(tt_plot, c2, col = "blue", lwd = 2.9, lty = 1)
   axis(1, at = seq(TOD_MIN, TOD_MAX, 6))
 
-  # Peak markers from K=2 fit; in-plot label positioned lower (~85% of plot height)
+  # Peak markers from K=2 fit
   pks <- find_peaks_2H(b2)
   in_range <- pks$t >= TOD_MIN & pks$t < TOD_MAX
   pk_t <- pks$t[in_range]; pk_v <- pks$v[in_range]
@@ -127,14 +117,10 @@ render_gene <- function(gene, status, letter_label) {
   }
   box()
 
-  # Centered main title = gene name (bold); subtitle sits lower with a clear
-  # gap so the bold gene name never touches the q-value line.
   title(main = gene, adj = 0.5, font.main = 2, cex.main = 1.65, line = 2.05)
-  # Single subtitle line: q-values only (no status label; that's in caption)
   mtext(bquote(q[1*H] == .(formatC(q1, format="g", digits=2)) ~~ " " ~~
                q[2*H] == .(formatC(q2, format="g", digits=2))),
         side = 3, line = 0.35, adj = 0.5, cex = 0.90, col = "grey20")
-  # Optional sub-panel letter on the SAME line as the gene-name title (left).
   if (nzchar(letter_label)) {
     mtext(letter_label, side = 3, line = 2.05, at = par("usr")[1],
           adj = 0, font = 2, cex = 1.55, col = "grey20")
@@ -161,7 +147,6 @@ draw_venn_panel <- function(n_k1only, n_both, n_k2only, n_total) {
        cex = 1.20, col = "grey25")
   title(main = "Rhythmicity Biomarker overlap in GTEx Liver (FDR 5%)",
         adj = 0.5, font.main = 2, cex.main = 1.52, line = 1.5)
-  # Panel letter on the SAME line as the title (left edge).
   mtext("B", side = 3, line = 1.5, at = par("usr")[1],
         adj = 0, font = 2, cex = 1.55, col = "grey20")
 }
@@ -172,7 +157,7 @@ draw_venn_panel <- function(n_k1only, n_both, n_k2only, n_total) {
 # SCP Shiny app's enrichment view; the dot-plot gene-ratio/count/colour
 # encoding is dropped in favour of a single, directly readable significance bar.
 draw_kegg_panel <- function(ek, max_terms = 10) {
-  par(mar = c(5.2, 17.5, 4.6, 2.4))    # wide left margin for pathway labels
+  par(mar = c(5.2, 17.5, 4.6, 2.4))
   df_e <- as.data.frame(ek)
   # Drop KEGG "Human Diseases" category. These pathway gene sets share genes
   # with metabolism/proteostasis/immunity categories already represented in
@@ -196,8 +181,6 @@ draw_kegg_panel <- function(ek, max_terms = 10) {
   val  <- -log10(df_e$.p)
   labs <- df_e$Description
 
-  # Metascape-style orange gradient: paler = less significant (bottom),
-  # darker = more significant (top).
   pal <- colorRampPalette(c("#fee0b6", "#f1a340", "#b35806"))(nrow(df_e))
 
   bp <- barplot(val, horiz = TRUE, names.arg = labs, las = 1,
@@ -205,18 +188,15 @@ draw_kegg_panel <- function(ek, max_terms = 10) {
                 xlab = expression(-log[10]("P-value")),
                 cex.names = 1.22, cex.lab = 1.45, cex.axis = 1.22,
                 xlim = c(0, max(val) * 1.08), main = "")
-  # Subtle vertical reference grid behind the bars
   grid(nx = NULL, ny = NA, lty = "dotted", col = "grey80")
   barplot(val, horiz = TRUE, col = pal, border = NA, add = TRUE, axes = FALSE)
   title(main = "KEGG enrichment (K=2-only)",
         adj = 0.5, font.main = 2, cex.main = 1.55, line = 1.7)
-  # Panel letter on the SAME line as the title (left edge).
   mtext("C", side = 3, line = 1.7, at = par("usr")[1],
         adj = 0, font = 2, cex = 1.55, col = "grey20")
 }
 
 # ---- Layout + render ----
-# 3 rows now: row 1 = gene exemplars; row 2 = horizontal legend strip; row 3 = Venn + KEGG
 pdf(FIG_PATH, width = 13.6, height = 9.6)
 lay <- rbind(
   c(1, 2, 3, 4),
@@ -228,14 +208,14 @@ par(mai = c(0.78, 0.84, 0.86, 0.14),
     mgp = c(2.6, 0.6, 0), oma = c(0.4, 0.4, 2.3, 0.4),
     cex.axis = 1.28, cex.lab = 1.45, font.main = 2)
 
-# Row 1: gene exemplars (panels 1-4). Only the first panel carries the "A" label.
+# Row 1: gene exemplars (panels 1-4)
 panel_letters <- c("A", "", "", "")
 for (i in seq_along(exemplar_genes)) {
   g <- exemplar_genes[[i]]
   render_gene(g[1], g[2], panel_letters[i])
 }
 
-# Row 2: condensed horizontal legend strip (panel 5), boxed and centered
+# Row 2: legend strip (panel 5)
 par(mar = c(0, 0, 0, 0))
 plot.new(); plot.window(xlim = c(0, 1), ylim = c(0, 1))
 legend("center",
@@ -257,7 +237,7 @@ draw_venn_panel(length(venn$k1_only), length(venn$both),
                 length(venn$k2_only), venn$n_total)
 draw_kegg_panel(ek, max_terms = 10)
 
-# Outer figure title (positioned closer to the gene panels)
+# Outer figure title
 mtext("Single-harmonic (1H) vs. Two-harmonic (2H) cosinor fits on GTEx Liver exemplar genes",
       outer = TRUE, side = 3, line = 0.12, adj = 0.5,
       font = 2, cex = 1.60)
