@@ -220,8 +220,8 @@ is the number of true rhythmic genes recovered per effect-size band.
 
 ### c. Differential power (DR, DP, DM)
 
-For a two-group study you often care not about rhythms in one group but about
-how rhythms *differ* between groups. SCP scores three kinds of difference:
+In a two-group study you often care less about the rhythms within either group
+than about how those rhythms *differ* between them. SCP scores three kinds of difference:
 **DR** (differential rhythmicity, a gene oscillates in one group but not the
 other), **DP** (differential phase, it oscillates in both but its peak time
 shifts), and **DM** (differential mesor, where the **mesor** is the rhythm
