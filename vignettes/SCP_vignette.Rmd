@@ -23,7 +23,8 @@ set.seed(2026)
 
 # Simulations run in parallel; single-core is impractically slow. We use a few
 # cores here (fork on Linux/macOS; 1 on Windows, which cannot fork).
-NCORES <- if (.Platform$OS.type == "windows") 1L else
+NCORES <- if (nzchar(Sys.getenv("_R_CHECK_LIMIT_CORES_"))) 2L else  # R CMD check caps at 2
+          if (.Platform$OS.type == "windows") 1L else
             max(1L, min(4L, parallel::detectCores() - 1L))
 ```
 
@@ -41,12 +42,12 @@ planning questions:
    time points (B) versus replicates per time point (m = N/B)?
 4. **Bootstrap uncertainty**: how wide are power estimates when the pilot is small?
 
-Simulations are calibrated from real pilot data: SCP estimates the empirical
+Simulations are calibrated from real pilot data. SCP estimates the empirical
 distributions of gene-level amplitude (A), noise (sigma), phase, and the
 proportion of rhythmic genes, then simulates cohorts under the cosinor model (a
-cosine wave fitted to each gene's expression over the day) and scores them with
-FDR-controlled detection (holding down the fraction of false positives among the
-genes it flags). Every chunk below runs as-is on the bundled pilots and example
+cosine wave fitted to each gene's expression over the day). Detection is
+FDR-controlled, meaning it holds down the fraction of false positives among the
+genes it flags. Every chunk below runs as-is on the bundled pilots and example
 data.
 
 ---
@@ -190,8 +191,8 @@ data.frame(N        = res$sample_sizes,
 # Differential power (DR, DP, DM)
 
 For two-group studies, estimate a two-group pilot with
-`estCircadianParamTwoGroup()` and run `runDifferentialPower()`. Here we use the
-two arms of the bundled demo matrix (Adrenal vs Liver) as the two groups.
+`estCircadianParamTwoGroup()` and run `runDifferentialPower()`. The example below
+treats the two arms of the bundled demo matrix (Adrenal vs Liver) as the two groups.
 
 ```{r diff, message = FALSE}
 bio_diff <- estCircadianParamTwoGroup(

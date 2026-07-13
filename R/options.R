@@ -1,54 +1,3 @@
-#' Update simulation options (regenerate rhythmic genes)
-#' 
-#' @param sim.opts Simulation options from createSimOptions()
-#' @return Updated simulation options with new seed and regenerated parameters
-#' @note Deprecated. Not called by any current runner function. Retained for
-#'   backward compatibility only.
-updateSimOptions <- function(sim.opts) {
-  .Deprecated("CircadianBioOptions")
-  
-  # Increment seed
-  new_seed = sim.opts$sim.seed + 1
-  set.seed(new_seed)
-  
-  ngenes = sim.opts$ngenes
-  n_rhythmic = round(ngenes * sim.opts$prop_rhythmic)
-  
-  # Regenerate amplitude from original specification
-  if (is.null(sim.opts$amplitude_spec)) {
-    # Fallback to default if not stored (shouldn't happen)
-    amplitude_new = pmax(rnorm(n_rhythmic, mean = 0.3, sd = 0.2), 0.05)
-  } else if (is.function(sim.opts$amplitude_spec)) {
-    amplitude_new = sim.opts$amplitude_spec(n_rhythmic)
-  } else if (is.numeric(sim.opts$amplitude_spec)) {
-    # Was a vector, resample
-    amplitude_new = sample(sim.opts$amplitude_spec, n_rhythmic, replace = TRUE)
-  } else {
-    amplitude_new = setAmplitude(sim.opts$amplitude_spec, n_rhythmic)
-  }
-  
-  # Regenerate phase from original specification
-  if (is.null(sim.opts$phase_spec)) {
-    phase_new = runif(n_rhythmic, 0, sim.opts$period)
-  } else if (is.function(sim.opts$phase_spec)) {
-    phase_new = sim.opts$phase_spec(n_rhythmic)
-  } else if (sim.opts$phase_spec == "uniform") {
-    phase_new = runif(n_rhythmic, 0, sim.opts$period)
-  } else if (is.numeric(sim.opts$phase_spec)) {
-    phase_new = sample(sim.opts$phase_spec, n_rhythmic, replace = TRUE)
-  } else {
-    phase_new = setPhase(sim.opts$phase_spec, n_rhythmic, sim.opts$period)
-  }
-  
-  # Update options with new values
-  sim.opts$amplitude = amplitude_new
-  sim.opts$phase = phase_new
-  sim.opts$sim.seed = new_seed
-  
-  return(sim.opts)
-}
-
-
 # =====================================================================
 # Built-in Pilot Data Loader
 # =====================================================================
@@ -702,36 +651,6 @@ CircadianBootstrapOptions <- function(design_vector,
   )
   class(opts) <- "CircadianBootstrapOptions"
   opts
-}
-
-
-#' Update CircadianBioOptions (like modifyList but preserves class)
-#'
-#' @param opts Existing CircadianBioOptions
-#' @param ... Named arguments to override
-#' @return Updated CircadianBioOptions
-updateBioOptions <- function(opts, ...) {
-  stopifnot(inherits(opts, "CircadianBioOptions"))
-  updates <- list(...)
-  # Re-call constructor with merged args
-  current_args <- opts[c("ngenes", "prop_rhythmic", "period",
-                         "prop_DR", "prop_DP", "prop_DM",
-                         "phase_diff", "amp_diff", "dp_shift_mode",
-                         "dr_amp_scale", "dr_sigma_scale",
-                         "mesor_diff", "sim.seed")]
-  # Use _spec versions for distribution params
-  current_args$lBaselineExpr  <- opts$lBaselineExpr_spec
-  current_args$lBaselineExpr2 <- opts$lBaselineExpr2
-  current_args$lOD            <- opts$lOD_spec
-  current_args$lOD2           <- opts$lOD2
-  current_args$amplitude      <- opts$amplitude_spec
-  current_args$sigma_rhythmic <- opts$sigma_rhythmic
-  current_args$amplitude2     <- opts$amplitude2
-  current_args$phase          <- opts$phase_spec
-  current_args$cts            <- opts$cts
-  current_args$cts2           <- opts$cts2
-  merged <- modifyList(current_args, updates)
-  do.call(CircadianBioOptions, merged)
 }
 
 

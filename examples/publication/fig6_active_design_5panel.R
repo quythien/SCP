@@ -190,7 +190,6 @@ draw_cde(diff$N_GRID, diff$power$DP, diff$se$DP, diff$B_GRID, "D",
          "Differential phase (DP)")
 draw_cde(diff$N_GRID, diff$power$DM, diff$se$DM, diff$B_GRID, "E",
          "Differential mesor (DM)")
-# Two-line title: bold main (analysis + dataset), lighter subtitle (panel content)
 mtext(bquote("Active design B vs m trade-off (Putamen control, n = 59, " *
              tilde(r) * " = 1.06)"),
       outer = TRUE, side = 3, line = 1.2, font = 2, cex = 1.18)

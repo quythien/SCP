@@ -53,3 +53,4 @@ Input: SCPSingleResult from runSingleCohortGrid() or a tidy data.frame
 with columns N, B, alpha2, power, power_se.
 Plot B vs m Trade-off Power Grid
 }
+\keyword{internal}

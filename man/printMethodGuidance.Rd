@@ -19,3 +19,4 @@ Prints a table explaining how each detection method responds to B (time
 points) vs m (replicates per ZT). Called automatically by recommendDesign()
 and runSingleCohortPower() when verbose=TRUE.
 }
+\keyword{internal}

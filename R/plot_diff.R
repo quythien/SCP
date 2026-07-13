@@ -353,9 +353,6 @@ plotDiffPower <- function(res_list,
       row_label <- sprintf("%s - %s", ep, comp_label)
 
       # ---- Panel A: marginal power vs n ----
-      # The marginal-only Fig 2 layout (stratified = FALSE) carries far fewer
-      # panels than the 18-panel stratified grid, so it can afford larger lines,
-      # points, titles and legends. Keep the stratified path at its tuned sizes.
       paA_lwd    <- if (stratified) 2.2  else 2.8
       paA_pt     <- if (stratified) 1.0  else 1.3
       paA_titcex <- if (stratified) 1.30 else 1.55
@@ -381,8 +378,6 @@ plotDiffPower <- function(res_list,
       abline(h = 80, lty = 2, col = "grey50", lwd = 1.3)
       if (!is.na(vline_n) && is.finite(vline_n)) {
         abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.8)
-        # Place the "n = ..." annotation just left of the line, high
-        # on the y-axis, well clear of the bottom-right FDR legend.
         text(vline_n, 95, sprintf("n = %d", vline_n),
              col = "steelblue", cex = paA_ntxt, adj = c(1.05, 0.5), font = 2)
       }

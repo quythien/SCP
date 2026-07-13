@@ -41,7 +41,6 @@ Main Functions:
   DCP_Rhythmicity() - Single/two-group rhythmicity analysis with TOJR
   DCP_DiffR2()      - Differential rhythmicity test (DR)
   DCP_DiffPar()     - Differential parameter tests (DP, DA)
-  DCP_Analyze()     - Complete differential analysis workflow
 
 Author: Based on DiffCircadian package
 Date: 2025-02-12
@@ -50,6 +49,7 @@ Fit Sinusoidal Curve
 Fit a sine curve where tt is time, and yy is expression value.
 }
 \examples{
+\dontrun{
 set.seed(32608)
 n <- 50
 tt <- runif(n,0,24)
@@ -58,5 +58,7 @@ Phase <- 6
 Offset <- 3
 yy <- Amp * sin(2*pi/24 * (tt + Phase)) + Offset + rnorm(n,0,1)
 fitSinCurve(tt, yy)
+}
 
 }
+\keyword{internal}

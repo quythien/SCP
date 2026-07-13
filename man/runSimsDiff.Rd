@@ -74,3 +74,4 @@ flat-argument API (retained for back-compatibility).
 \seealso{
 \code{\link{runDifferentialPower}} (user-facing wrapper)
 }
+\keyword{internal}

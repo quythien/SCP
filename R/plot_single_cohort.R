@@ -285,21 +285,11 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   panels <- intersect(c("A", "B", "C"), panels)
   if (length(panels) == 0L) panels <- c("A", "B", "C")
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
-  # Scale left/bottom margins with the label font so the "Power (%)" y-title
-  # is not clipped at large cex (e.g. the enlarged Shiny fonts). Anchored at
-  # ~1.55 so the manuscript figures (default cex) are essentially unchanged.
   extra_lab    <- max(0, cex_lab - 1.55)
-  needs_strata <- any(c("B", "C") %in% panels)   # panels with vertical r-tilde tick labels
-  # B/C push both axis titles out via a larger mgp[1] (to clear the vertical
-  # tick labels), so they also need a wider left margin than Panel A.
+  needs_strata <- any(c("B", "C") %in% panels)
   mai_left  <- 0.85 + (if (needs_strata) 2.8 else 1.25) * extra_lab
-  # B/C carry long vertical (las=2) stratum labels under which the r-tilde
-  # x-title sits, so they need much more bottom room at large fonts.
   mai_bot   <- 1.03 + (if (needs_strata) 3.6 else 0.6) * extra_lab
-  mgp_bc1   <- 5.2 + 6.0 * extra_lab             # x/y-title line for B/C (clears las=2 labels, extra gap to ticks)
-  # Outer top oma needs ~3 lines for the cex=1.5 title to clear the top edge.
-  # vertical = TRUE stacks the panels in one column (each full width), which
-  # gives the r-tilde x-axis far more room than the cramped 1x3 layout.
+  mgp_bc1   <- 5.2 + 6.0 * extra_lab
   par(mfrow = if (isTRUE(vertical)) c(length(panels), 1L) else c(1L, length(panels)),
       mai = c(mai_bot, mai_left, 0.52, 0.28),
       mgp = c(3.2, 0.65, 0), oma = c(0, 0, oma_top, 0),
@@ -307,13 +297,8 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   on.exit({ if (!is.null(out_pdf)) dev.off() }, add = TRUE)
 
   sample_legend_n <- length(disp_idx)
-  # Wrap the per-n key into columns once it has more than a few entries so it
-  # stays short; small text + short line samples keep the box from getting wide.
   sample_legend_cols <- if (sample_legend_n > 16L) 3L else if (sample_legend_n > 6L) 2L else 1L
   sample_legend_cex <- if (sample_legend_n > 24L) 0.70 else if (sample_legend_n > 12L) 0.80 else 0.85
-  # A caller-supplied legend_cex scales the adaptive value up/down uniformly so
-  # the larger manuscript figures can carry bigger keys without the app (which
-  # leaves legend_cex NULL) changing at all.
   if (!is.null(legend_cex)) {
     sample_legend_cex <- sample_legend_cex * (legend_cex / 1.05)
     panel_a_legend_cex <- legend_cex
@@ -350,9 +335,6 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
          seg.len = 1.1, x.intersp = 0.5)
   if (!is.na(vline_n)) {
     abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.5)
-    # Place "n=NNN" to the RIGHT of the dashed line, low in the plot (y=35).
-    # Above the bottom-right legend (~y=0-25) but below the curves' high-N
-    # asymptote, so it is clearly visible in white space.
     text(vline_n, 35, sprintf("n=%d", vline_n),
          col = "steelblue", cex = panel_a_legend_cex, adj = c(-0.10, 0.5), font = 2)
   }
@@ -360,7 +342,6 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
 
   if ("B" %in% panels) {
   # ---- Panel B: stratified power by r, lines per n ----
-  # Increase mgp[1] so r_tilde label clears the vertical (las=2) tick labels
   par(mgp = c(mgp_bc1, 0.6, 0))
   matplot(seq_len(n_strata_plt), 100 * t(mean_pow_plt[disp_idx, , drop = FALSE]),
           type = "l", lwd = line_lwd, col = size_colors[disp_idx], lty = 1,
@@ -416,9 +397,6 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                 bar_width = se_cap)
   }
   grid()
-  # Panel C legend is off by default: the n-by-colour key is already shown in
-  # Panel B, so repeating it in C is redundant. Set panel_c_legend = TRUE to
-  # restore it (e.g. when C is plotted on its own).
   if (isTRUE(panel_c_legend)) {
     legend("topleft", title = NULL,
            legend = c(paste0("n = ", sample_sizes[disp_idx]), "Target gene count"),

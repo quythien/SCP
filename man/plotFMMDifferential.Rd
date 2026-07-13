@@ -48,3 +48,4 @@ does not affect power (beta-invariance of DCP amplitude testing).
 \seealso{
 \code{\link{simCircadianDiffFMM}}, \code{\link{plotFMMViolation}}
 }
+\keyword{internal}

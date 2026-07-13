@@ -48,3 +48,4 @@ Sweeps N x B x alpha2 x alpha3 x method and returns a tidy power table.
 B values come from design.opts$B_values; if NULL, B is inferred from cts.
 Automatically calls plot() and npower() unless plot=FALSE.
 }
+\keyword{internal}

@@ -28,3 +28,4 @@ JTK_CYCLE is designed for evenly-spaced time series. For passive
          designs with uneven sampling, MetaCycle handles the conversion
          internally, but power may be reduced compared to evenly-spaced data.
 }
+\keyword{internal}

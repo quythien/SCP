@@ -63,3 +63,4 @@ Plot FMM Waveform Robustness: Single-Cohort
 \seealso{
 \code{\link{simCircadianFMM}}, \code{\link{plotFMMDifferential}}
 }
+\keyword{internal}

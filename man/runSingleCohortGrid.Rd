@@ -49,3 +49,4 @@ Sweeps sample size, number of time points, and detection method to produce
 the power grid used by \code{\link{recommendDesign}}. Active (balanced)
 designs only.
 }
+\keyword{internal}

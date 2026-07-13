@@ -29,10 +29,13 @@ Based on CircaPower's analytical approach.
 Quick analytical power for single-group rhythmicity
 }
 \examples{
+\dontrun{
 # How many samples for 80\% power?
 CircaPower(n = NULL, power = 0.8, r = 1.5)
 
 # What power with n=24?
 CircaPower(n = 24, power = NULL, r = 1.2)
+}
 
 }
+\keyword{internal}

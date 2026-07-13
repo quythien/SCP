@@ -98,6 +98,7 @@ avoiding the Davies-supremum calibration problem of a direct
 nonlinear FMM fit.
 }
 \examples{
+\dontrun{
 set.seed(1)
 n  <- 48
 tt <- seq(0, 24*(1-1/n), length.out = n)
@@ -107,6 +108,7 @@ expr <- rbind(
   arrhythmic  = rnorm(n, 0, 0.5)
 )
 detect_FMM(expr, tt, K = 2)
+}
 
 }
 \references{
@@ -120,3 +122,4 @@ Singer, J. M., Hughey, J. J. (2019). LimoRhyde: a flexible approach for
 Hughes, M. E. et al. (2017). Guidelines for genome-scale analysis of
   biological rhythms. J Biol Rhythms 32(5), 380-393.
 }
+\keyword{internal}

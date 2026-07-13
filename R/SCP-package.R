@@ -15,7 +15,32 @@
 #' database of public circadian pilots and a Shiny app are bundled for
 #' point-and-click planning.
 #'
-#' @keywords internal
+#' @section Main functions:
+#' \strong{Pilot database:} \code{\link{scp_pilots}}, \code{\link{scp_load_pilot}},
+#'   \code{\link{scp_pilot_search}}.
+#'
+#' \strong{Calibrate your own pilot:} \code{\link{estCircadianParam}},
+#'   \code{\link{estCircadianParam2H}}, \code{\link{estCircadianParamTwoGroup}},
+#'   \code{\link{prepCircadianData}}.
+#'
+#' \strong{Design and options:} \code{\link{CircadianBioOptions}},
+#'   \code{\link{CircadianDesignOptions}}, \code{\link{CircadianAnalysisOptions}},
+#'   \code{\link{CircadianBootstrapOptions}}.
+#'
+#' \strong{Run power analysis:} \code{\link{runSimsSingleCohort}},
+#'   \code{\link{runDifferentialPower}}, \code{\link{runBootstrapDesignGrid}},
+#'   \code{\link{npower}}, \code{\link{circaPowerApproxN80}},
+#'   \code{\link{recommendDesign}}.
+#'
+#' \strong{Plot results:} \code{\link{plotSingleCohortPower}},
+#'   \code{\link{plotDiffPower}}, \code{\link{plotBootstrapDesignGrid}}.
+#'
+#' \strong{Detect rhythmicity:} \code{\link{detect_cosinor}}.
+#'
+#' \strong{Simulate and helpers:} \code{\link{simCircadianSingleCohort2H}},
+#'   \code{\link{makeAdaptiveRStrata}}.
+#'
+#' \strong{App:} \code{\link{launchShiny}}.
 #' @importFrom Rcpp sourceCpp
 #' @import stats
 #' @import graphics
@@ -25,14 +50,9 @@
 #' @useDynLib SCP, .registration = TRUE
 "_PACKAGE"
 
-## Non-standard-evaluation column names used inside ggplot2::aes()/base
-## plotting calls throughout R/plot_*.R and R/utils.R. These are data.frame
-## column names resolved at plot time, not missing objects; R CMD check
-## cannot tell the difference statically, hence the whitelist below.
-## Deliberately NOT included: dp_power_raw, dp_phase_results,
-## density_results, diff_rhythmicity_permutation, diff_rhythmicity_bootstrap
-## -- those are genuine bugs (see audit notes), not NSE bindings, and must
-## keep surfacing in R CMD check until fixed.
+## These names are data-frame columns referenced inside ggplot2 aes() and base
+## plotting calls, resolved when a plot is drawn. R CMD check reads them as
+## undefined variables, so listing them here silences that false alarm.
 utils::globalVariables(c(
   "B", "B_fac", "DM", "DP", "DR", "N", "N_jit",
   "dataset", "label", "n", "n_A", "n_B",

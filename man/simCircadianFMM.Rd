@@ -73,3 +73,4 @@ Rueda C, Rodriguez-Collado A, Peddada SD (2019).
 \code{\link{simCircadianSingleCohort}}, \code{\link{estCircadianParam}},
   \code{\link{plotFMMViolation}}
 }
+\keyword{internal}

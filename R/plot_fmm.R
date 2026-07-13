@@ -42,7 +42,7 @@
 #'
 #' @return Invisibly returns the combined patchwork object.
 #' @seealso \code{\link{simCircadianFMM}}, \code{\link{plotFMMDifferential}}
-#' @export
+#' @keywords internal
 plotFMMViolation <- function(x,
                               nsims             = 30L,
                               omega_fixed       = 0.5,
@@ -126,7 +126,6 @@ plotFMMViolation <- function(x,
                                   levels = c("Active (B=12, 2h)","Passive"))
     sub_df$snr_col     <- factor(sub_df$snr_col, levels = c("Strong","Moderate","Weak"))
 
-    # Apply x-jitter by offsetting N per sweep level (helps when lines overlap)
     if (jitter_x > 0) {
       lev_idx <- as.integer(sub_df$sweep_fac)
       n_lev   <- length(fac_levels)
@@ -136,7 +135,6 @@ plotFMMViolation <- function(x,
       sub_df$N_jit <- sub_df$N
     }
 
-    # Build facet_grid plot with legend inside the empty panel
     p <- ggplot2::ggplot(sub_df, ggplot2::aes(
         x = N_jit, y = 100 * power, colour = sweep_fac,
         group = interaction(sweep_fac, dataset))) +
@@ -220,7 +218,7 @@ plotFMMViolation <- function(x,
     x_lab       = "",
     title_str   = expression(paste("(A) Waveform shape: varying ", omega,
                                     "   (fixed ", beta, " = ", pi, ")")),
-    legend_ncol = 4L   # horizontal: 7 omega values -> 2 rows of 4+3
+    legend_ncol = 4L
   )
 
   p_beta <- make_panel(
@@ -242,7 +240,7 @@ plotFMMViolation <- function(x,
       title_str   = expression("(C) Location parameter " * alpha *
                                 ":  active = flat  |  passive = varies with TOD"),
       legend_ncol = 3L,
-      jitter_x    = 2.5   # separate overlapping lines in passive panels
+      jitter_x    = 2.5
     )
     combined <- p_omega / p_beta / p_alpha +
       patchwork::plot_layout(heights = c(1,1,1)) +
@@ -302,7 +300,7 @@ plotFMMViolation <- function(x,
 #'
 #' @return Invisibly returns the ggplot object.
 #' @seealso \code{\link{simCircadianDiffFMM}}, \code{\link{plotFMMViolation}}
-#' @export
+#' @keywords internal
 plotFMMDifferential <- function(x,
                                  nsims         = 20L,
                                  dataset_label = NULL,

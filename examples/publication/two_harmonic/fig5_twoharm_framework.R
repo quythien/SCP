@@ -33,7 +33,7 @@ ALPHA_GRID <- c(0.01, 0.05, 0.10, 0.20)
 NSIMS      <- 100
 NGENES_SIM <- 2000
 NCORES     <- min(12, parallel::detectCores() - 4)
-# 0.25-step bins matching Fig 1B convention; cap at r_max = 3
+# 0.25-step bins; cap at r_max = 3
 R_BREAKS   <- c(seq(0, 3, by = 0.25), Inf)
 R_LABELS   <- c(sprintf("(%g,%g]", head(R_BREAKS, -2), R_BREAKS[seq(2, length(R_BREAKS)-1)]),
                 ">3")
@@ -188,7 +188,7 @@ interp_n80 <- function(N_vals, p_vals, target = VLINE_POWER) {
 idx_vfdr <- which.min(abs(ALPHA_GRID - VLINE_FDR))
 vline_n  <- interp_n80(DISPLAY_N_A, pwr_mean[, idx_vfdr])
 
-# ---- Render: 2-panel layout matching Fig 1B per-panel proportions ----
+# ---- Render: 2-panel layout ----
 pdf(FIG_PATH, width = 7.5, height = 4.5)
 par(mfrow = c(1, 2), mai = c(1.30, 0.80, 0.50, 0.15),
     mgp = c(2.4, 0.55, 0), oma = c(0, 0, 2.4, 0),
@@ -204,7 +204,6 @@ matplot(DISPLAY_N_A, 100 * pwr_mean, type = "o", pch = 19, lwd = 2,
 title(main = "A   Power vs Sample Size",
       adj = 0.5, font.main = 2, cex.main = 1.00, line = 0.3)
 for (a in seq_along(ALPHA_GRID)) {
-  # +/-1 SE bars (matches Fig 1A convention via add_se_bars helper).
   lo <- 100 * (pwr_mean[, a] - pwr_se[, a])
   hi <- 100 * (pwr_mean[, a] + pwr_se[, a])
   ok <- is.finite(lo) & is.finite(hi) & pwr_se[, a] > 0
@@ -225,7 +224,7 @@ legend("bottomright", paste0("FDR ", round(100*ALPHA_GRID), "%"),
        cex = 0.55, bty = "o", box.col = "grey70", box.lwd = 0.5,
        inset = 0.01, y.intersp = 0.85, bg = "white")
 
-# ---- Panel B: mgp[1] sets xlab distance below the rotated bracket tick labels
+# ---- Panel B ----
 par(mgp = c(3.6, 0.55, 0))
 size_colors <- rainbow(length(DISPLAY_N_B), s = 0.6, v = 0.8)
 matplot(seq_along(R_LABELS), 100 * t(pwr_strat_mean),
@@ -237,12 +236,10 @@ matplot(seq_along(R_LABELS), 100 * t(pwr_strat_mean),
 title(main = bquote(bold("B   ") * bold("Stratified Power by") ~
                      bold(tilde(r)) ~ bold("(FDR 5%)")),
       adj = 0.5, font.main = 2, cex.main = 1.00, line = 0.3)
-# Bracket-style x-axis labels rotated 90 degrees (matches Fig 1B style)
 axis(1, at = seq_along(R_LABELS), labels = R_LABELS, las = 2, cex.axis = 0.65)
 for (j in seq_len(n_N_B)) {
   points(seq_along(R_LABELS), 100 * pwr_strat_mean[j, ],
          pch = 19, col = size_colors[j], cex = 0.65)
-  # +/-1 SE bars (matches Fig 1A/1B convention via add_se_bars)
   arrows(seq_along(R_LABELS),
          100*(pwr_strat_mean[j, ] - pwr_strat_se[j, ]),
          seq_along(R_LABELS),

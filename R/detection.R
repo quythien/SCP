@@ -7,7 +7,6 @@
 #'   DCP_Rhythmicity() - Single/two-group rhythmicity analysis with TOJR
 #'   DCP_DiffR2()      - Differential rhythmicity test (DR)
 #'   DCP_DiffPar()     - Differential parameter tests (DP, DA)
-#'   DCP_Analyze()     - Complete differential analysis workflow
 #'
 #' Author: Based on DiffCircadian package
 #' Date: 2025-02-12
@@ -52,6 +51,7 @@
 #'   \item{R2}{R-squared}
 #'
 #' @examples
+#' \dontrun{
 #' set.seed(32608)
 #' n <- 50
 #' tt <- runif(n,0,24)
@@ -60,8 +60,9 @@
 #' Offset <- 3
 #' yy <- Amp * sin(2*pi/24 * (tt + Phase)) + Offset + rnorm(n,0,1)
 #' fitSinCurve(tt, yy)
+#' }
 #'
-#' @export
+#' @keywords internal
 fitSinCurve <- function(tt, yy, period = 24, parStart = list(amp=3,phase=0,offset=0)){
 
   getPred <- function(parS, tt) {
@@ -218,12 +219,12 @@ CP_OneGroup = function(x1, period = 24, alpha = 0.05, CI = FALSE, p.adjust.metho
 #' sequential model selection. arXiv preprint arXiv:1512.02565.
 #'
 #' @examples
-#' x = DCP_sim_data(ngene=1000, nsample=30, A1=c(1, 3), A2=c(1, 3),
-#' phase1=c(0, pi/4), phase2=c(pi/4, pi/2),
-#' M1=c(4, 6), M2=c(4, 6), sigma1=1, sigma2=1)
-#' rhythm.res = DCP_Rhythmicity(x1 = x[[1]], x2 = x[[2]])
+#' \dontrun{
+#' # x1, x2 are lists with elements data (genes x samples), time, gname
+#' rhythm.res = DCP_Rhythmicity(x1 = x1, x2 = x2)
+#' }
 #'
-#' @export
+#' @keywords internal
 DCP_Rhythmicity = function(x1, x2=NULL, method = "Sidak_FS", period = 24, amp.cutoff = 0,
                            alpha = 0.05, alpha.FDR = 0.05, CI = FALSE,
                            p.adjust.method = "BH", parallel.ncores  = 1){
@@ -275,14 +276,13 @@ DCP_Rhythmicity = function(x1, x2=NULL, method = "Sidak_FS", period = 24, amp.cu
 #' @return Vector of TOJR categories
 #'
 #' @examples
+#' \dontrun{
 #' # Re-calculate TOJR with q-value cutoff 0.1
-#' x = DCP_sim_data(ngene=1000, nsample=30, A1=c(1, 3), A2=c(1, 3),
-#' phase1=c(0, pi/4), phase2=c(pi/4, pi/2),
-#' M1=c(4, 6), M2=c(4, 6), sigma1=1, sigma2=1)
-#' rhythm.res = DCP_Rhythmicity(x1 = x[[1]], x2 = x[[2]])
+#' # rhythm.res is the output of DCP_Rhythmicity(x1, x2)
 #' TOJR.new = toTOJR(rhythm.res, alpha = 0.1, adjustP = TRUE)
+#' }
 #'
-#' @export
+#' @keywords internal
 toTOJR = function(x, method = "Sidak_FS", amp.cutoff = 0, alpha = 0.05,
                  adjustP = TRUE, p.adjust.method = "BH", parallel.ncores = 1){
 
@@ -573,6 +573,7 @@ amp.cut = function(amp, a.TOJR){
 #' @return P-value for delta R2
 #'
 #' @examples
+#' \dontrun{
 #' set.seed(32608)
 #' n <- 50
 #' tt1 <- runif(n,0,24)
@@ -586,8 +587,9 @@ amp.cut = function(amp, a.TOJR){
 #' Offset2 <- 2
 #' yy2 <- Amp2 * sin(2*pi/24 * (tt2 + Phase2)) + Offset2 + rnorm(n,0,1)
 #' LR_deltaR2(tt1, yy1, tt2, yy2)
+#' }
 #'
-#' @export
+#' @keywords internal
 LR_deltaR2 <- function(tt1, yy1, tt2, yy2, period = 24, FN=TRUE){
 
   n1 <- length(tt1)
@@ -773,13 +775,12 @@ LR_deltaR2 <- function(tt1, yy1, tt2, yy2, period = 24, FN=TRUE){
 #' @return Data frame with differential R^2 test results
 #'
 #' @examples
-#' x = DCP_sim_data(ngene=1000, nsample=30, A1=c(1, 3), A2=c(1, 3),
-#' phase1=c(0, pi/4), phase2=c(pi/4, pi/2),
-#' M1=c(4, 6), M2=c(4, 6), sigma1=1, sigma2=1)
-#' rhythm.res = DCP_Rhythmicity(x1 = x[[1]], x2 = x[[2]])
+#' \dontrun{
+#' # rhythm.res is the output of DCP_Rhythmicity(x1, x2)
 #' rhythm.diffR2 = DCP_DiffR2(rhythm.res)
+#' }
 #'
-#' @export
+#' @keywords internal
 DCP_DiffR2 = function(x, method = "LR", TOJR = NULL,  alpha = 0.05,  nSampling=1000,
                      Sampling.save = NULL, Sampling.file.label = "gII_vs_gI",
                      p.adjust.method = "BH", parallel.ncores = 1){
@@ -933,13 +934,12 @@ LR_diff = function(time1, y1, time2, y2, period, FN=TRUE, type="amplitude"){
 #' @return Data frame with differential parameter test results
 #'
 #' @examples
-#' x = DCP_sim_data(ngene=1000, nsample=30, A1=c(1, 3), A2=c(1, 3),
-#' phase1=c(0, pi/4), phase2=c(pi/4, pi/2),
-#' M1=c(4, 6), M2=c(4, 6), sigma1=1, sigma2=1)
-#' rhythm.res = DCP_Rhythmicity(x1 = x[[1]], x2 = x[[2]])
+#' \dontrun{
+#' # rhythm.res is the output of DCP_Rhythmicity(x1, x2)
 #' rhythm.diffPar = DCP_DiffPar(rhythm.res, Par = "A&phase")
+#' }
 #'
-#' @export
+#' @keywords internal
 DCP_DiffPar = function(x, Par = c("A"), TOJR=NULL, alpha = 0.05,
                        p.adjust.method = "BH", parallel.ncores = 1){
   stopifnot('Par should be one of "A", "phase", "M", "A&phase", or "A&phase&M". '
@@ -1104,112 +1104,6 @@ DCP_DiffPar = function(x, Par = c("A"), TOJR=NULL, alpha = 0.05,
 }
 
 # ==============================================================================
-# SECTION 6: MAIN WRAPPER FUNCTIONS
-# ==============================================================================
-
-#' Complete Differential Circadian Analysis
-#'
-#' Performs differential tests (DR, DP) with classification
-#'
-#' @param expr1 Expression matrix for group 1 (genes x samples)
-#' @param expr2 Expression matrix for group 2 (genes x samples)
-#' @param times1 Time points for group 1
-#' @param times2 Time points for group 2
-#' @param alpha Significance threshold (default 0.05)
-#' @param gene_names Gene names (optional)
-#' @param parallel.ncores Number of cores for parallel processing
-#'
-#' @return List with:
-#'   \item{DR}{Differential rhythmicity results}
-#'   \item{DP}{Differential phase results}
-#'   \item{classification}{Gene classifications (DR/DP/NS)}
-#'
-#' @examples
-#' x = DCP_sim_data(ngene=1000, nsample=30, A1=c(1, 3), A2=c(1, 3),
-#' phase1=c(0, pi/4), phase2=c(pi/4, pi/2),
-#' M1=c(4, 6), M2=c(4, 6), sigma1=1, sigma2=1)
-#' dcp_result = DCP_Analyze(x[[1]]$data, x[[2]]$data,
-#'                        x[[1]]$time, x[[2]]$time)
-#'
-#' @export
-DCP_Analyze <- function(expr1, expr2, times1, times2, alpha = 0.05,
-                        gene_names = NULL, parallel.ncores = 1){
-
-  ngenes <- nrow(expr1)
-
-  if (is.null(gene_names)) {
-    gene_names <- paste0("Gene", seq_len(ngenes))
-  }
-
-  # Prepare data in the format expected by DCP_Rhythmicity
-  x1 <- list(data = as.data.frame(expr1),
-             time = times1,
-             gname = gene_names)
-
-  x2 <- list(data = as.data.frame(expr2),
-             time = times2,
-             gname = gene_names)
-
-  # Run rhythmicity analysis
-  rhythm.res <- DCP_Rhythmicity(x1, x2,
-                                method = "Sidak_FS",
-                                period = 24,
-                                amp.cutoff = 0,
-                                alpha = alpha,
-                                CI = FALSE,
-                                parallel.ncores = parallel.ncores)
-
-  # Test 1: Differential Rhythmicity (DR)
-  dr_results <- DCP_DiffR2(rhythm.res, method = "LR", alpha = alpha,
-                            parallel.ncores = parallel.ncores)
-
-  # Test 2: Differential Parameters (DP and DA)
-  dp_results <- DCP_DiffPar(rhythm.res, Par = "A&phase",
-                            alpha = alpha,
-                            parallel.ncores = parallel.ncores)
-
-  # Classification
-  # Priority: DR > DP
-  classification <- rep("NS", ngenes)
-
-  # Match gene names
-  match_idx <- match(gene_names, dr_results$gname)
-
-  # DR: differential rhythmicity (use BH-adjusted q.R2, not raw p.R2)
-  dr_idx <- which(dr_results$q.R2 < alpha)
-  if(length(dr_idx) > 0){
-    classification[dr_idx] <- "DR"
-  }
-
-  # For genes not DR, test DP
-  # Match by gene name: dp_results rows correspond to "both"-classified genes
-  # (a subset of ngenes), so positional indexing into dp_results by seq_len(ngenes)
-  # would silently pick wrong rows. Always index by gname.
-  non_dr <- setdiff(seq_len(ngenes), dr_idx)
-  if (length(non_dr) > 0L && nrow(dp_results) > 0L &&
-      "gname" %in% colnames(dp_results) &&
-      "post.hoc.phase.By.q" %in% colnames(dp_results)) {
-    dp_genes <- dp_results$gname[dp_results$post.hoc.phase.By.q]
-    dp_idx   <- which(gene_names %in% dp_genes & seq_len(ngenes) %in% non_dr)
-    if (length(dp_idx) > 0L) classification[dp_idx] <- "DP"
-  }
-
-  # Compile results
-  results <- list(
-    rhythm = rhythm.res,
-    DR = dr_results,
-    DP = dp_results,
-    classification = data.frame(
-      gname = gene_names,
-      classification = classification,
-      stringsAsFactors = FALSE
-    )
-  )
-
-  return(results)
-}
-
-# ==============================================================================
 # SECTION 7: HELPER FUNCTIONS (CIs, etc.)
 # ==============================================================================
 
@@ -1292,113 +1186,6 @@ choose.abs.min = function(mat = matrix(stats::rnorm(21), ncol = 3)){
 # SECTION 8: UTILITY FUNCTIONS
 # ==============================================================================
 
-#' Simulate Data for Rhythmicity Comparison
-#'
-#' Simple two-group study simulation for illustration
-#'
-#' @param ngene Number of genes
-#' @param nsample Number of samples per group
-#' @param A1 Amplitude range for group 1 (c(min, max))
-#' @param A2 Amplitude range for group 2
-#' @param phase1 Phase range for group 1
-#' @param phase2 Phase range for group 2
-#' @param M1 MESOR range for group 1
-#' @param M2 MESOR range for group 2
-#' @param sigma1 Noise level for group 1
-#' @param sigma2 Noise level for group 2
-#'
-#' @return List of two elements, each is a list with data, time, gname components
-#'
-#' @examples
-#' x = DCP_sim_data(ngene=1000, nsample=30, A1=c(1, 3), A2=c(1, 3),
-#' phase1=c(0, pi/4), phase2=c(pi/4, pi/2),
-#' M1=c(4, 6), M2=c(4, 6), sigma1=1, sigma2=1)
-#'
-#' @export
-DCP_sim_data = function(ngene=1000, nsample=30, A1=c(1, 3), A2=c(1, 3),
-                       phase1=c(0, 2*pi), phase2=c(0, 2*pi),
-                       M1=c(4, 6), M2=c(4, 6), sigma1=1, sigma2=1){
-  a.A1 = stats::runif(ngene, A1[1], A1[2])
-  a.A2 = stats::runif(ngene, A2[1], A2[2])
-  a.m1 = stats::runif(ngene, M1[1], M1[2])
-  a.m2 = stats::runif(ngene, M2[1], M2[2])
-  a.phase1 = stats::runif(ngene, phase1[1], phase1[2])
-  a.phase2 = stats::runif(ngene, phase2[1], phase2[2])
-  a.sigma1 = sigma1
-  a.sigma2 = sigma2
-  x1.time = stats::runif(nsample, min = 0, max = 24)
-  x2.time = stats::runif(nsample, min = 0, max = 24)
-
-  noise.mat1 = matrix(stats::rnorm(ngene*nsample, 0, a.sigma1), ncol = nsample, nrow = ngene)
-  signal.mat1 = t(sapply(seq_len(ngene), function(a){
-    a.m1[a]+a.A1[a]*cos(2*pi/24*x1.time+a.phase1[a])
-  }))
-
-  noise.mat2 = matrix(stats::rnorm(ngene*nsample, 0, a.sigma2), ncol = nsample, nrow = ngene)
-  signal.mat2 = t(sapply(seq_len(ngene), function(a){
-    a.m2[a]+a.A2[a]*cos(2*pi/24*x2.time+a.phase2[a])
-  }))
-
-  x1.data = as.data.frame(noise.mat1 + signal.mat1)
-  x2.data = as.data.frame(noise.mat2 + signal.mat2)
-
-  x1 = list(data = x1.data,
-            time = x1.time,
-            gname = paste("gene", seq_len(ngene)))
-
-  x2 = list(data = x2.data,
-            time = x2.time,
-            gname = paste("gene", seq_len(ngene)))
-  return(list(x1, x2))
-}
-
-#' Summary of Differential Rhythmicity Tests
-#'
-#' @param result List of p-value vectors
-#' @param test Test names
-#' @param type Types of results (e.g. "p-value")
-#' @param val Cutoffs
-#' @param out "long" or "wide" format
-#'
-#' @return Summary table
-#'
-#' @export
-SummarizeDR = function(result, test = "DRF", type = "p-value", val = 0.05, out = "long"){
-  if(!is.list(result)){
-    result = list(result)
-  }
-  l = length(result)
-  stopifnot("Arguments `result`, `test`, `type`, `val` must have the same length" =
-              (length(test)==l&length(type)==l&length(val)==l))
-  tab = lapply(seq_len(l), function(a){
-    a.result = result[[a]]
-    a.test = test[a]
-    a.type = type[a]
-    a.val = val[a]
-    a.tab0 = table(a.result<a.val)
-    a.tab = data.frame(nTRUE = unname(ifelse(is.na(a.tab0["TRUE"]), 0, a.tab0["TRUE"])),
-                       nFALSE = unname(ifelse(is.na(a.tab0["FALSE"]), 0, a.tab0["FALSE"])),
-                       test = a.test,
-                       cutoff = paste0(a.type, "<", a.val))
-    return(a.tab)
-  })
-  tab = do.call(rbind.data.frame, tab)
-  tab$nTRUE = paste0(tab$nTRUE, "(/", tab$nTRUE+tab$nFALSE, ")")
-  if(out=="long"){
-    return(tab[, c(1, 3,4)])
-  }else if(out =="wide"){
-    tab.list = lapply(seq_len(nrow(tab[, c(1, 3,4)])), function(i){
-      a.cell = data.frame(x = c(tab[i, "nTRUE"]))
-      rownames(a.cell) = NULL
-      colnames(a.cell) = paste0(tab[i, "test"], " ", tab[i, "cutoff"])
-      return(a.cell)
-    })
-    tab2 = do.call(cbind.data.frame, tab.list)
-    return(tab2)
-  }
-}
-
-
 # ==============================================================================
 # SECTION 9: BRIDGE FUNCTIONS FOR SIMULATION FRAMEWORK
 # ==============================================================================
@@ -1410,7 +1197,7 @@ SummarizeDR = function(result, test = "DRF", type = "p-value", val = 0.05, out =
 #' @param gene_names Gene name vector
 #'
 #' @return DCP-formatted list
-#' @export
+#' @keywords internal
 format_for_DCP <- function(expr_matrix, times, gene_names = NULL) {
   if (is.null(gene_names)) {
     gene_names = paste0("Gene", seq_len(nrow(expr_matrix)))
@@ -1422,122 +1209,6 @@ format_for_DCP <- function(expr_matrix, times, gene_names = NULL) {
     gname = gene_names
   )
 }
-
-#' Run full DCP differential analysis pipeline
-#'
-#' @description Uses the complete DiffCircadian pipeline with TOJR,
-#' hierarchical testing, and proper LR tests. This is the RIGOROUS approach.
-#'
-#' @param expr1 Expression matrix for group 1 (genes x samples)
-#' @param expr2 Expression matrix for group 2 (genes x samples)
-#' @param times1 Time points for group 1
-#' @param times2 Time points for group 2
-#' @param gene_names Gene names (optional)
-#' @param period Period (default 24)
-#' @param alpha Significance threshold
-#' @param test_DR Test differential rhythmicity?
-#' @param test_DP Test differential phase?
-#'
-#' @return List with p-values for requested tests
-#' @export
-run_DCP_pipeline <- function(expr1, expr2, times1, times2,
-                             gene_names = NULL,
-                             period = 24,
-                             alpha = 0.05,
-                             test_DR = TRUE,
-                             test_DP = TRUE) {
-  
-  # Format data
-  x1 = format_for_DCP(expr1, times1, gene_names)
-  x2 = format_for_DCP(expr2, times2, gene_names)
-  
-  # Step 1: TOJR classification
-  rhythm_res = DCP_Rhythmicity(x1, x2, 
-                               method = "Sidak_FS",
-                               period = period,
-                               alpha = alpha,
-                               CI = FALSE,
-                               parallel.ncores = 1)
-  
-  # Initialize results
-  ngenes = nrow(expr1)
-  results = list(
-    p_DR = rep(1, ngenes),
-    p_DP = rep(1, ngenes),
-    TOJR = rhythm_res$rhythm.joint$TOJR
-  )
-  
-  # Step 2: Test DR (only for genes not in "arrhy")
-  if (test_DR) {
-    dr_results = tryCatch({
-      DCP_DiffR2(rhythm_res, method = "LR", alpha = alpha)
-    }, error = function(e) {
-      NULL
-    })
-    
-    if (!is.null(dr_results)) {
-      match_idx = match(gene_names, dr_results$gname)
-      results$p_DR[!is.na(match_idx)] = dr_results$p.R2[match_idx[!is.na(match_idx)]]
-    }
-  }
-  
-  # Step 3: Test DP (only for "both" genes)
-  if (test_DP) {
-    # Check if there are "both" genes
-    n_both = sum(rhythm_res$rhythm.joint$TOJR == "both")
-
-    if (n_both > 0) {
-      par_results = tryCatch({
-        DCP_DiffPar(rhythm_res, Par = "A&phase", alpha = alpha)
-      }, error = function(e) {
-        NULL
-      })
-
-      if (!is.null(par_results)) {
-        match_idx = match(gene_names, par_results$gname)
-        results$p_DP[!is.na(match_idx)] = par_results$p.delta.peak[match_idx[!is.na(match_idx)]]
-      }
-    }
-  }
-  
-  return(results)
-}
-
-#' Extract p-values from DCP pipeline for power analysis
-#'
-#' @description Simplified wrapper that returns just p-values
-#' for integration with runSimsDiff()
-#'
-#' @param y1,y2 Gene expression matrices for groups 1 and 2 (genes x samples).
-#' @inheritParams run_DCP_pipeline
-#' @param test_types Character vector of endpoints to test: any of
-#'   \code{"DR"} (differential rhythmicity), \code{"DP"} (differential phase).
-#'
-#' @return List with p_DR, p_DP
-#' @export
-testAnyDifferential <- function(y1, y2, times1, times2,
-                                period = 24,
-                                test_types = c("DR", "DP")) {
-
-  # Create single-gene matrices
-  expr1 = matrix(y1, nrow = 1)
-  expr2 = matrix(y2, nrow = 1)
-
-  # Run pipeline
-  results = run_DCP_pipeline(
-    expr1, expr2, times1, times2,
-    gene_names = "Gene1",
-    period = period,
-    test_DR = "DR" %in% test_types,
-    test_DP = "DP" %in% test_types
-  )
-
-  return(list(
-    p_DR = results$p_DR[1],
-    p_DP = results$p_DP[1]
-  ))
-}
-
 
 # ==============================================================================
 # SECTION 10: CIRCACOMPARE WRAPPER
@@ -1565,7 +1236,7 @@ testAnyDifferential <- function(y1, y2, times1, times2,
 #'          gene call is wrapped in tryCatch. NLS failures also yield p=1 (conservative).
 #'          CircaCompare has no differential rhythmicity (DR) test -- only per-group
 #'          rhythmicity p-values. pval_DR is set to NA for all genes.
-#' @export
+#' @keywords internal
 detect_CircaCompare <- function(expr1, times1, expr2, times2,
                                 gene_names = NULL, period = 24,
                                 alpha_threshold = 0.05) {
@@ -1643,7 +1314,7 @@ detect_CircaCompare <- function(expr1, times1, expr2, times2,
 #' @details JTK_CYCLE is designed for evenly-spaced time series. For passive
 #'          designs with uneven sampling, MetaCycle handles the conversion
 #'          internally, but power may be reduced compared to evenly-spaced data.
-#' @export
+#' @keywords internal
 detect_JTK <- function(expr, times, gene_names = NULL, period = 24) {
 
   if (!requireNamespace("MetaCycle", quietly = TRUE)) {
@@ -1705,7 +1376,7 @@ detect_JTK <- function(expr, times, gene_names = NULL, period = 24) {
 #' @details RAIN is designed for evenly-spaced time series. For uneven sampling,
 #'          data is sorted by time and the median interval is used as deltat.
 #'          Power may be reduced compared to evenly-spaced designs.
-#' @export
+#' @keywords internal
 detect_RAIN <- function(expr, times, gene_names = NULL, period = 24) {
 
   if (!requireNamespace("rain", quietly = TRUE)) {
@@ -1792,7 +1463,7 @@ detect_cosinor <- function(expr, times, K = 1L, period = 24,
 #' @param times  Numeric time vector (length = ncol(expr))
 #' @param period Period (default 24)
 #' @return Numeric vector of p-values, length nrow(expr)
-#' @export
+#' @keywords internal
 detect_DCP <- function(expr, times, period = 24) {
   pvals <- tryCatch(
     fitCosinorAll(expr, times = times, period = period)$pvalue,
@@ -1819,7 +1490,7 @@ detect_DCP <- function(expr, times, period = 24) {
 #' @param times  Numeric time vector (length = ncol(expr))
 #' @param period Period (default 24)
 #' @return Numeric vector of p-values, length nrow(expr)
-#' @export
+#' @keywords internal
 detect_MH <- function(expr, times, period = 24) {
   B     <- length(unique(times))
   K     <- max(1L, floor((B - 1L) / 2L))
@@ -1856,41 +1527,7 @@ detect_MH <- function(expr, times, period = 24) {
 #   DCP          DR  DP  --
 #   CircaCompare --  DP  DM
 #   LimoRhyde    DR  --  --
-#   DODR         DR  --  --
 # ==============================================================================
-
-#' DCP two-group differential detection
-#'
-#' Wraps run_DCP_pipeline() (TOJR -> DiffR2 -> DiffPar).
-#' DM is not tested by DCP; pval_DM is returned as NA.
-#'
-#' @param expr1,expr2   Gene x sample matrices for groups 1 and 2
-#' @param times1,times2 Numeric time vectors
-#' @param period        Period (default 24)
-#' @return list(pval_DR, pval_DP, pval_DM=NA) each numeric[G]
-#' @export
-detect_DCP_diff <- function(expr1, times1, expr2, times2, period = 24) {
-  ngenes     <- nrow(expr1)
-  gene_names <- rownames(expr1) %||% paste0("G", seq_len(ngenes))
-
-  res <- tryCatch(
-    run_DCP_pipeline(expr1, expr2, times1, times2,
-                     gene_names = gene_names, period = period,
-                     test_DR = TRUE, test_DP = TRUE),
-    error = function(e) NULL
-  )
-
-  if (is.null(res)) {
-    return(list(pval_DR = rep(1, ngenes), pval_DP = rep(1, ngenes),
-                pval_DM = rep(NA_real_, ngenes)))
-  }
-  list(
-    pval_DR = replace(res$p_DR, is.na(res$p_DR), 1),
-    pval_DP = replace(res$p_DP, is.na(res$p_DP), 1),
-    pval_DM = rep(NA_real_, ngenes)
-  )
-}
-
 
 #' LimoRhyde two-group differential rhythmicity
 #'
@@ -1901,7 +1538,7 @@ detect_DCP_diff <- function(expr1, times1, expr2, times2, period = 24) {
 #' @param times1,times2 Numeric time vectors
 #' @param period        Period (default 24)
 #' @return list(pval_DR, pval_DP=NA, pval_DM=NA)
-#' @export
+#' @keywords internal
 detect_LimoRhyde <- function(expr1, times1, expr2, times2, period = 24) {
   if (!requireNamespace("limma", quietly = TRUE))
     stop("Package 'limma' is required for detect_LimoRhyde()")
@@ -1923,35 +1560,6 @@ detect_LimoRhyde <- function(expr1, times1, expr2, times2, period = 24) {
     ct       <- limma::topTable(fit, coef = int_cols, number = ngenes,
                                  sort.by = "none", adjust.method = "none")
     p        <- ct$P.Value
-    p[is.na(p)] <- 1
-    p
-  }, error = function(e) rep(1, ngenes))
-
-  list(pval_DR = pval_DR,
-       pval_DP = rep(NA_real_, ngenes),
-       pval_DM = rep(NA_real_, ngenes))
-}
-
-
-#' DODR two-group differential oscillation detection
-#'
-#' Wraps DODR::dodr(). DR only.
-#'
-#' @param expr1,expr2   Gene x sample matrices
-#' @param times1,times2 Numeric time vectors
-#' @param period        Period (default 24)
-#' @return list(pval_DR, pval_DP=NA, pval_DM=NA)
-#' @export
-detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
-  if (!requireNamespace("DODR", quietly = TRUE))
-    stop("Package 'DODR' is required. Install with: install.packages('DODR')")
-
-  ngenes  <- nrow(expr1)
-  pval_DR <- tryCatch({
-    res <- DODR::dodr(t(expr1), t(expr2),
-                      times1 = times1, times2 = times2,
-                      period = period, method = "both")
-    p   <- res$p.value
     p[is.na(p)] <- 1
     p
   }, error = function(e) rep(1, ngenes))
@@ -2065,6 +1673,7 @@ detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
 #'   biological rhythms. J Biol Rhythms 32(5), 380-393.
 #'
 #' @examples
+#' \dontrun{
 #' set.seed(1)
 #' n  <- 48
 #' tt <- seq(0, 24*(1-1/n), length.out = n)
@@ -2074,8 +1683,9 @@ detect_DODR <- function(expr1, times1, expr2, times2, period = 24) {
 #'   arrhythmic  = rnorm(n, 0, 0.5)
 #' )
 #' detect_FMM(expr, tt, K = 2)
+#' }
 #'
-#' @export
+#' @keywords internal
 detect_FMM <- function(expr,
                         times,
                         period = 24,

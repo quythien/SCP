@@ -37,11 +37,11 @@ Categorize genes into four types of joint rhythmicity:
 arrhy, rhyI (rhythmic in group 1 only), rhyII (rhythmic in group 2 only), both
 }
 \examples{
+\dontrun{
 # Re-calculate TOJR with q-value cutoff 0.1
-x = DCP_sim_data(ngene=1000, nsample=30, A1=c(1, 3), A2=c(1, 3),
-phase1=c(0, pi/4), phase2=c(pi/4, pi/2),
-M1=c(4, 6), M2=c(4, 6), sigma1=1, sigma2=1)
-rhythm.res = DCP_Rhythmicity(x1 = x[[1]], x2 = x[[2]])
+# rhythm.res is the output of DCP_Rhythmicity(x1, x2)
 TOJR.new = toTOJR(rhythm.res, alpha = 0.1, adjustP = TRUE)
+}
 
 }
+\keyword{internal}
