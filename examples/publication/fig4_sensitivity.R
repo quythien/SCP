@@ -1,16 +1,16 @@
 #' =======================================================================
-#' fig4_sensitivity.R — Sensitivity to cosinor violation (FMM (K=2))
+#' fig4_sensitivity.R - Sensitivity to cosinor violation (FMM (K=2))
 #' =======================================================================
 #'
 #' Two orthogonal sensitivity sweeps anchored on Baboon LUN. Both panels
 #' use FMM (K=2) detection and parametric distributions for ω and α.
 #'
-#' Panel A — ω sweep (α distribution fixed at empirical):
+#' Panel A - ω sweep (α distribution fixed at empirical):
 #'   ω_g ~ Beta(1, β),    sweep β over a log grid
 #'   x-axis: N (total samples), one curve per β value
 #'   β̂ from MoM fit on empirical ω̂_g marked as a curve label
 #'
-#' Panel B — α sweep (ω distribution fixed at empirical Beta(1, β̂)):
+#' Panel B - α sweep (ω distribution fixed at empirical Beta(1, β̂)):
 #'   α_g ~ vonMises(0, κ),  κ = 1/sd_rad²,  sd_rad = sd_hours · 2π/24
 #'   x-axis: N (total samples), one curve per σ_α (hours) value
 #'   σ̂_α from sd of empirical α̂_g marked as a curve label
@@ -18,7 +18,7 @@
 #'
 #' Detector: detect_cosinor(K=2) (two-harmonic LRT) only. K=1 behavior is closed-form
 #' (NCP = (r·c(ω))²·N/2) and would just shift the whole sweep down with
-#' attenuation c(ω)² — uninformative. The interesting question is whether
+#' attenuation c(ω)², uninformative. The interesting question is whether
 #' the K-harmonic LRT preserves power under non-cosinor truth.
 #'
 #' USAGE:
@@ -99,7 +99,7 @@ cat(sprintf("Anchor: β̂=%.3f  σ̂_α=%.3fh  R²=%.3f  n_fitted=%d\n",
             beta_hat, sigma_alpha_hat, bio_lun$diagnostics$R2_median,
             bio_lun$diagnostics$n_fitted))
 
-# Active design: equispaced 12 timepoints — m = N/12 reps each
+# Active design: equispaced 12 timepoints, m = N/12 reps each
 B_VAL <- 12L
 cts_active <- seq(0, 24 * (1 - 1/B_VAL), length.out = B_VAL)
 
@@ -123,7 +123,7 @@ run_sweep_curve <- function(bio_k, label) {
 }
 
 # ====================================================================
-# 2. Panel A — ω sweep (α distribution fixed at empirical)
+# 2. Panel A - ω sweep (α distribution fixed at empirical)
 # ====================================================================
 cat("\n=== Step 2: ω sweep (FMM (K=2)) ===\n")
 power_A <- matrix(NA_real_, nrow = length(N_GRID), ncol = length(BETA_GRID),
@@ -140,7 +140,7 @@ for (k in seq_along(BETA_GRID)) {
 }
 
 # ====================================================================
-# 3. Panel B — α sweep (ω distribution fixed at empirical Beta(1, β̂))
+# 3. Panel B - α sweep (ω distribution fixed at empirical Beta(1, β̂))
 # ====================================================================
 cat("\n=== Step 3: α sweep (FMM (K=2)) ===\n")
 power_B <- matrix(NA_real_, nrow = length(N_GRID), ncol = length(SDHR_GRID),
@@ -175,7 +175,7 @@ saveRDS(out, rds_path)
 cat(sprintf("\nSaved: %s\n", rds_path))
 
 # ====================================================================
-# 5. Plot — 1×2 layout
+# 5. Plot: 1×2 layout
 # ====================================================================
 cat("\n=== Step 4: render Fig 4 (illustration + sweeps) ===\n")
 source("examples/publication/_pub_style.R")

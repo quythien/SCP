@@ -1,5 +1,5 @@
 #' =======================================================================
-#' fig6_phase_mse.R — Active design phase-MSE under cosinor and K-harmonic
+#' fig6_phase_mse.R - Active design phase-MSE under cosinor and K-harmonic
 #' =======================================================================
 #'
 #' Driver script for Fig 6 Panel B (phase MSE) and supporting analysis

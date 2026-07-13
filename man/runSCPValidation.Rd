@@ -15,6 +15,9 @@ runSCPValidation(nsims = 100L, n_test = 24L, alpha = 0.05, seed = 42L)
 
 \item{seed}{RNG seed for reproducibility (default 42).}
 }
+\value{
+Invisible list of the six validation result tables (v1 to v6).
+}
 \description{
 Run the SCP validation suite
 }

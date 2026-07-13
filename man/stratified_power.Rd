@@ -2,8 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{stratified_power}
 \alias{stratified_power}
-\title{Stratified Power Analysis
-Stratified Power Analysis}
+\title{Stratified Power Analysis}
 \usage{
 stratified_power(
   pvals,

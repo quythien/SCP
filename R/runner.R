@@ -1577,6 +1577,11 @@ recommendDesign <- function(bio.opts,
   out
 }
 
+#' Print an SCPRecommendResult object
+#'
+#' @param x An \code{SCPRecommendResult} from \code{recommendDesign()}.
+#' @param ... Ignored.
+#' @return \code{x}, invisibly.
 #' @export
 print.SCPRecommendResult <- function(x, ...) {
   cat("SCPRecommendResult\n")
@@ -1587,6 +1592,12 @@ print.SCPRecommendResult <- function(x, ...) {
   invisible(x)
 }
 
+#' Plot an SCPRecommendResult object
+#'
+#' @param x An \code{SCPRecommendResult} from \code{recommendDesign()}.
+#' @param output_file Optional PDF path; \code{NULL} draws to the active device.
+#' @param ... Passed to the underlying plot method.
+#' @return \code{x}, invisibly.
 #' @export
 plot.SCPRecommendResult <- function(x, output_file = NULL, ...) {
   if (!is.null(x$simulation)) {
@@ -1829,6 +1840,11 @@ runSingleCohortPower <- function(bio.opts,
   res
 }
 
+#' Print an SCPSingleResult object
+#'
+#' @param x An \code{SCPSingleResult} from \code{runSingleCohortGrid()}.
+#' @param ... Ignored.
+#' @return \code{x}, invisibly.
 #' @export
 print.SCPSingleResult <- function(x, ...) {
   cat("SCPSingleResult\n")
@@ -1841,6 +1857,12 @@ print.SCPSingleResult <- function(x, ...) {
   invisible(x)
 }
 
+#' Plot an SCPSingleResult object
+#'
+#' @param x An \code{SCPSingleResult} from \code{runSingleCohortGrid()}.
+#' @param output_file Optional PDF path; \code{NULL} draws to the active device.
+#' @param ... Ignored.
+#' @return \code{x}, invisibly.
 #' @export
 plot.SCPSingleResult <- function(x, output_file = NULL, ...) {
   if (requireNamespace("ggplot2", quietly = TRUE)) {
@@ -1934,6 +1956,11 @@ runDifferentialPower <- function(bio.opts,
   res
 }
 
+#' Print an SCPDiffResult object
+#'
+#' @param x An \code{SCPDiffResult} from \code{runDifferentialPower()}.
+#' @param ... Ignored.
+#' @return \code{x}, invisibly.
 #' @export
 print.SCPDiffResult <- function(x, ...) {
   cat("SCPDiffResult\n")
@@ -1951,6 +1978,12 @@ print.SCPDiffResult <- function(x, ...) {
   invisible(x)
 }
 
+#' Plot an SCPDiffResult object
+#'
+#' @param x An \code{SCPDiffResult} from \code{runDifferentialPower()}.
+#' @param output_file Optional PDF path; \code{NULL} draws to the active device.
+#' @param ... Ignored.
+#' @return \code{x}, invisibly.
 #' @export
 plot.SCPDiffResult <- function(x, output_file = NULL, ...) {
   # x is a plain runSimsDiff() list, delegate to plotDiffPower() which

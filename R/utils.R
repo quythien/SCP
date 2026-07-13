@@ -85,10 +85,6 @@ CircaPower = function(n = NULL, power = NULL, r = NULL,
 # ==============================================================================
 
 #' Stratified Power Analysis
-# ... (rest of utility_functions.R continues)
-
-
-#' Stratified Power Analysis
 #'
 #' @description Calculate power stratified by effect size (r = A/sigma)
 #' stratified power by expression level.
@@ -530,6 +526,7 @@ estimate_r_from_data = function(dcp_results, top_n = 100,
 #' @param x Result from estimate_r_from_data
 #' @param ... Additional arguments (ignored)
 #'
+#' @return \code{x}, invisibly.
 #' @export
 print.estimate_r_from_data = function(x, ...) {
   cat("Signal-to-noise ratio (r) estimation\n")
