@@ -232,7 +232,7 @@ ui <- fluidPage(
                   selected = 0.05),
       numericInput("pilot_top_k", "Effect-size genes (top-K)",
                    value = 300, min = 1, step = 50),
-      helpText(em("Defines which pilot genes count as 'rhythmic' for the simulation. The strongest top-K genes by p-value among those passing the threshold drive the empirical effect-size distribution. If K exceeds the number of rhythmic genes, all of them are used.")),
+      helpText(em("Defines which pilot genes count as 'rhythmic' for the simulation. The strongest top-K genes by p-value among those passing the threshold drive the empirical effect-size distribution (default: K = 300). If K exceeds the number of rhythmic genes, all of them are used.")),
       hr(),
       h4("Pilot"),
       radioButtons(
