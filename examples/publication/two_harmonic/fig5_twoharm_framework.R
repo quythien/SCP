@@ -17,12 +17,10 @@
 RUN_SIMS <- FALSE
 
 setwd("/home/qtp1/Projects/Circadian/Kyle/Circadian-analysis-main/R/v1/PowerSim")
-sink(stderr())
-source("code/utils.R"); source("code/options.R"); source("code/simulation.R")
-source("code/estimation.R"); source("code/bootstrap_sim.R"); source("code/detection.R")
-sink()
-
-suppressPackageStartupMessages(library(parallel))
+# Only the exported simCircadianSingleCohort2H is needed (in the sim path, which
+# is skipped when replotting from cache), so load the installed package rather
+# than the removed code/*.R files.
+suppressPackageStartupMessages({ library(SCP); library(parallel) })
 
 PILOT_PATH <- "output/two_harmonic/results/pilot_2h_GTExLiver_topK300.rds"
 RES_PATH   <- "output/two_harmonic/results/fig5_panelAB_GTExLiver_topK300_unpaired.rds"
