@@ -139,7 +139,7 @@ sampleTimesFromDist <- function(n, cts) {
 #'       prop_rhythmic, prop_DR, prop_DP, prop_DM, period, design).}
 #'   }
 
-#' @export
+#' @keywords internal
 simCircadianDiff <- function(ngenes = 5000,
                            n1 = 24,
                            n2 = 24,
@@ -513,7 +513,7 @@ simCircadianDiff <- function(ngenes = 5000,
 #'   }
 #'
 #' @seealso \code{\link{estCircadianParam}}, \code{\link{simCircadianDiff}}
-#' @export
+#' @keywords internal
 simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
                                      omega = 1.0, beta = pi,
                                      seed = NULL) {
@@ -773,7 +773,7 @@ simCircadianSingleCohort2H <- function(bio.opts, cts, seed = NULL) {
 #'
 #' @seealso \code{\link{simCircadianSingleCohort}}, \code{\link{estCircadianParam}},
 #'   \code{\link{plotFMMViolation}}
-#' @export
+#' @keywords internal
 simCircadianFMM <- function(bio.opts, cts, omega = 1.0, beta = pi,
                             alpha_fixed = NULL, seed = NULL) {
   stopifnot(inherits(bio.opts, "CircadianBioOptions"))

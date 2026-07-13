@@ -2,8 +2,11 @@
 # Run: Rscript examples/publication/fig1_fig2_replot.R
 setwd("/home/qtp1/Projects/Circadian/Kyle/Circadian-analysis-main/R/v1/PowerSim")
 suppressMessages(library(SCP))
-source("R/plot_single_cohort.R")
-source("R/plot_diff.R")
+# Use the installed package's plotSingleCohortPower()/plotDiffPower() directly
+# (rather than source()-ing R/plot_single_cohort.R / R/plot_diff.R) so their
+# internal helpers (e.g. add_se_bars(), .prepDiffStratified()) resolve from
+# within the SCP namespace instead of requiring every helper file to be
+# sourced by hand.
 
 pick_latest <- function(dir, pattern) {
   cands <- list.files(dir, pattern, full.names = TRUE)

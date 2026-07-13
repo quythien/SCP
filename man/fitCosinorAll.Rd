@@ -40,3 +40,4 @@ Key notation:
   nboot = outer bootstrap draws for pilot-estimation uncertainty
 Fit cosinor model to all genes in pilot data
 }
+\keyword{internal}

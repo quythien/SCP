@@ -19,3 +19,4 @@ Numeric vector of p-values, length nrow(expr)
 \description{
 DCP single-cohort rhythmicity detection
 }
+\keyword{internal}

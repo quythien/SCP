@@ -32,7 +32,7 @@
 #' @param min_rhythm_pval P-value threshold for classifying rhythmic genes
 #'
 #' @return Data frame: gene, M, A, phi, sigma, pvalue, is_rhythmic
-#' @export
+#' @keywords internal
 fitCosinorAll <- function(data, times, period = 24, min_rhythm_pval = 0.01) {
   if (exists(".CPP_LOADED", inherits = TRUE) && isTRUE(get(".CPP_LOADED", inherits = TRUE)) &&
       exists("fitCosinorAll_fast", mode = "function"))
@@ -559,66 +559,6 @@ runBootstrapDesignGrid <- function(pilot_data,
 # Summary
 # =====================================================================
 
-#' Summarize bootstrap design grid results
-#'
-#' @param result Output from runBootstrapDesignGrid()
-#' @param test_type Test type to summarize ("DR", "DP", "DM")
-#' @param fdr_threshold FDR threshold (used for display label only)
-#' @param verbose Print table
-#'
-#' @return Invisible data frame with summary
-summaryBootstrapDesignGrid <- function(result,
-                                       test_type     = "DR",
-                                       fdr_threshold = NULL,
-                                       verbose       = TRUE) {
-  t_idx <- match(test_type, result$test_types)
-  if (is.na(t_idx)) {
-    warning(sprintf("test_type '%s' not found; using first: '%s'",
-                    test_type, result$test_types[1]))
-    t_idx <- 1
-    test_type <- result$test_types[1]
-  }
-
-  fdr_thr <- fdr_threshold %||% result$fdr_threshold
-
-  rows <- list()
-  for (n_idx in seq_along(result$N_values)) {
-    N <- result$N_values[n_idx]
-    for (B_idx in seq_along(result$B_values)) {
-      B <- result$B_values[B_idx]
-      m <- result$m_matrix[n_idx, B_idx]
-      pmean  <- result$power_mean[n_idx, B_idx, t_idx]
-      plo    <- result$power_ci_lo[n_idx, B_idx, t_idx]
-      phi    <- result$power_ci_hi[n_idx, B_idx, t_idx]
-      opt    <- result$optimal_B[n_idx] == B
-
-      rows[[length(rows) + 1]] <- data.frame(
-        N            = N,
-        B            = B,
-        m            = m,
-        Power_mean   = round(pmean * 100, 1),
-        Power_CI_lo  = round(plo  * 100, 1),
-        Power_CI_hi  = round(phi  * 100, 1),
-        Optimal      = ifelse(opt, "*", ""),
-        stringsAsFactors = FALSE
-      )
-    }
-  }
-
-  df <- do.call(rbind, rows)
-
-  if (verbose) {
-    cat(sprintf("\nBootstrap Design Grid Summary (%s test at FDR %.0f%%)\n",
-                test_type, 100 * fdr_thr))
-    cat(sprintf("  nboot = %d, design = %s\n\n", result$nboot, result$design))
-    print(df, row.names = FALSE)
-    cat("\n* = Optimal B for this N (highest mean power)\n")
-  }
-
-  invisible(df)
-}
-
-
 # =====================================================================
 # Plotting
 # =====================================================================
@@ -634,6 +574,7 @@ summaryBootstrapDesignGrid <- function(result,
 #' @param panels Which panel(s) to draw: "A" (power vs N) and/or "B" (heatmap)
 #'   (default "A").
 #' @param output_file Path for PDF output (NULL = screen)
+#' @export
 plotBootstrapDesignGrid <- function(result,
                                     test_type     = "DR",
                                     fdr_threshold = NULL,

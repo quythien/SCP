@@ -55,3 +55,4 @@ non-rhythmic genes have amplitude fixed at zero.
 \seealso{
 \code{\link{estCircadianParam}}, \code{\link{simCircadianDiff}}
 }
+\keyword{internal}

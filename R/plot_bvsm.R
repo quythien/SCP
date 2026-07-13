@@ -32,7 +32,7 @@
 #' @param height    PDF height in inches (default 5).
 #'
 #' @return Invisibly returns the ggplot object.
-#' @export
+#' @keywords internal
 plotBvsMPower <- function(x,
                            nsims         = 30L,
                            alpha2        = 0,

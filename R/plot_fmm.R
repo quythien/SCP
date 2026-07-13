@@ -42,7 +42,7 @@
 #'
 #' @return Invisibly returns the combined patchwork object.
 #' @seealso \code{\link{simCircadianFMM}}, \code{\link{plotFMMDifferential}}
-#' @export
+#' @keywords internal
 plotFMMViolation <- function(x,
                               nsims             = 30L,
                               omega_fixed       = 0.5,
@@ -300,7 +300,7 @@ plotFMMViolation <- function(x,
 #'
 #' @return Invisibly returns the ggplot object.
 #' @seealso \code{\link{simCircadianDiffFMM}}, \code{\link{plotFMMViolation}}
-#' @export
+#' @keywords internal
 plotFMMDifferential <- function(x,
                                  nsims         = 20L,
                                  dataset_label = NULL,

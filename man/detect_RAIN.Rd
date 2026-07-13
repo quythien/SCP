@@ -28,3 +28,4 @@ RAIN is designed for evenly-spaced time series. For uneven sampling,
          data is sorted by time and the median interval is used as deltat.
          Power may be reduced compared to evenly-spaced designs.
 }
+\keyword{internal}

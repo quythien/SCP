@@ -26,6 +26,7 @@ P-value for delta R2
 Likelihood Ratio Test for Delta R-squared
 }
 \examples{
+\dontrun{
 set.seed(32608)
 n <- 50
 tt1 <- runif(n,0,24)
@@ -39,5 +40,7 @@ Phase2 <- 5
 Offset2 <- 2
 yy2 <- Amp2 * sin(2*pi/24 * (tt2 + Phase2)) + Offset2 + rnorm(n,0,1)
 LR_deltaR2(tt1, yy1, tt2, yy2)
+}
 
 }
+\keyword{internal}

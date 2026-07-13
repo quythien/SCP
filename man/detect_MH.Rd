@@ -28,3 +28,4 @@ Superseded by \code{\link{detect_FMM}}, which supports explicit K,
   backwards compatibility; new code should call
   \code{detect_FMM(expr, times, K = <K>, ebayes = TRUE/FALSE)} instead.
 }
+\keyword{internal}

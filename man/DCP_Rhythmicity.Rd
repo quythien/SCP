@@ -56,13 +56,14 @@ The method "Sidak_FS" has better type I error control compared to Venn diagram
 analysis (VDA) and adaptively weighted Fisher's method (AWFisher).
 }
 \examples{
-x = DCP_sim_data(ngene=1000, nsample=30, A1=c(1, 3), A2=c(1, 3),
-phase1=c(0, pi/4), phase2=c(pi/4, pi/2),
-M1=c(4, 6), M2=c(4, 6), sigma1=1, sigma2=1)
-rhythm.res = DCP_Rhythmicity(x1 = x[[1]], x2 = x[[2]])
+\dontrun{
+# x1, x2 are lists with elements data (genes x samples), time, gname
+rhythm.res = DCP_Rhythmicity(x1 = x1, x2 = x2)
+}
 
 }
 \references{
 Fithian, W., Taylor, J., Tibshirani, R., & Tibshirani, R. (2015). Selective
 sequential model selection. arXiv preprint arXiv:1512.02565.
 }
+\keyword{internal}

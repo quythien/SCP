@@ -45,3 +45,4 @@ CircaCompare calls stop() when either group is arrhythmic, so every
          CircaCompare has no differential rhythmicity (DR) test -- only per-group
          rhythmicity p-values. pval_DR is set to NA for all genes.
 }
+\keyword{internal}

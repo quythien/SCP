@@ -20,3 +20,4 @@ list(pval_DR, pval_DP=NA, pval_DM=NA)
 limma interaction model: group x cosinor (cos + sin terms).
 Tests H0: no group x rhythm interaction. DR only.
 }
+\keyword{internal}

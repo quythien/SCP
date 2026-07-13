@@ -957,7 +957,7 @@ estCircadianParam2H <- function(data, times, period = 24,
 #' the truth-label generator and the detector consistent. (omega, alpha)
 #' from the FMM fit are propagated only as simulation truth, not detection.
 #'
-#' @export
+#' @keywords internal
 estCircadianParamFMM <- function(data, times, period = 24,
                                  min_rhythm_pval = 0.01,
                                  top_k = 300L,
