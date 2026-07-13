@@ -1,5 +1,5 @@
 #' =======================================================================
-#' fig5_bootstrap_sc.R — Single-Cohort Bootstrap: Plug-in vs Bootstrap CI
+#' fig5_bootstrap_sc.R - Single-Cohort Bootstrap: Plug-in vs Bootstrap CI
 #' =======================================================================
 #'
 #' Three passive-design panels showing how bootstrap CI width depends on
@@ -17,7 +17,7 @@
 #'      → CI persists ~6-7pp across N=80-160 (long elbow); needs N~200 for 80%
 #'
 #' Story: bootstrap quantifies genuine uncertainty wherever the power curve
-#' is in the elbow region (30-75%) — even with large pilots. Plug-in and
+#' is in the elbow region (30-75%), even with large pilots. Plug-in and
 #' bootstrap means agree (gap <2pp); the bootstrap value is the CI width.
 #'
 #' USAGE:
@@ -89,7 +89,7 @@ analysis <- CircadianAnalysisOptions(
     error = function(e) { warning(sprintf("Plug-in failed: %s", e$message)); NULL }
   )
 
-  # Bootstrap (passive) — B_VAL is a placeholder; passive power is N-only
+  # Bootstrap (passive): B_VAL is a placeholder; passive power is N-only
   boot_opts <- CircadianBootstrapOptions(
     design_vector = tod, B_values = B_VAL, N_values = N_grid,
     nboot = NBOOT, nsims_inner = NSIMS_INNER,
@@ -136,7 +136,7 @@ analysis <- CircadianAnalysisOptions(
 
 
 # =======================================================================
-# PANEL A: Putamen SCZ (n=28, passive) — Kyle GSE160521 multiBrain
+# PANEL A: Putamen SCZ (n=28, passive), Kyle GSE160521 multiBrain
 # =======================================================================
 cat("================================================================\n")
 cat("PANEL A: Putamen SCZ (n=28, passive)\n")
@@ -251,7 +251,7 @@ pC <- .run_passive_comparison(mat_thy, tod_thy, N_GRID_THY,
 
 
 # =======================================================================
-# Combined figure (PDF only — no PNG)
+# Combined figure (PDF only, no PNG)
 # =======================================================================
 cat("\n=== Generating combined figure ===\n")
 panels <- Filter(Negate(is.null), list(pSCZ, pA, pB, pC))

@@ -118,6 +118,11 @@ npower <- function(res,
   )
 }
 
+#' Print an npower result
+#'
+#' @param x An \code{npower} object (recommended n and its power curve).
+#' @param ... Ignored.
+#' @return \code{x}, invisibly.
 #' @export
 print.npower <- function(x, ...) {
   ep  <- if (!is.null(x$endpoint)) sprintf(" [%s]", x$endpoint) else ""

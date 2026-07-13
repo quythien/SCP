@@ -232,6 +232,7 @@
 #' @param n_test    Sample size for single-n validations (default 24).
 #' @param alpha     Nominal significance level (default 0.05).
 #' @param seed      RNG seed for reproducibility (default 42).
+#' @return Invisible list of the six validation result tables (v1 to v6).
 #' @export
 runSCPValidation <- function(nsims    = 100L,
                              n_test   = 24L,

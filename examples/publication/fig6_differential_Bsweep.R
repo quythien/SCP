@@ -1,5 +1,5 @@
 #' =======================================================================
-#' fig6_differential_Bsweep.R — Differential B-invariance (advisor addition)
+#' fig6_differential_Bsweep.R - Differential B-invariance (advisor addition)
 #' =======================================================================
 #'
 #' Question (advisor): B-invariance of biomarker detection is Zong theory,

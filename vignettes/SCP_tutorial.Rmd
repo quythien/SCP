@@ -49,7 +49,7 @@ GTEx Adrenal Gland pilot. It is intentionally small (NSIMS = 50, a coarse N
 grid) so it builds quickly. For publication-grade numbers use NSIMS >= 200 and
 a finer N grid.
 
-# Prefer not to code? Use the app
+# Point-and-click app
 
 Everything below is also available as a point-and-click app, no R scripting
 required:
@@ -64,11 +64,11 @@ own), pick a sampling design and your target power and FDR, and click *Run
 simulation* to get the power curve and the recommended N. The **Circadian
 Biomarker Detection** (right) explores the pilot's genes: a core clock-gene
 cosinor panel, a sortable table of rhythmic genes, a per-gene fit, and pathway
-enrichment. The app opens on the GTEx Adrenal (passive) pilot shown here, so the
-power curve below is exactly what you see after one click.
+enrichment. The app opens on the GTEx Adrenal (passive) pilot shown here, which
+matches the power curve below.
 
-The rest of this vignette covers the same workflow in R, which is what you want
-for scripted or reproducible analyses.
+The rest of this vignette covers the same workflow in R, for scripted or
+reproducible analyses.
 
 # 1. Install and load
 
@@ -84,7 +84,7 @@ library(SCP)
 
 # 2. Load a bundled pilot
 
-SCP ships a curated pilot database; `scp_pilots()` lists every entry. We load
+SCP ships a pilot database; `scp_pilots()` lists every entry. We load
 the GTEx Adrenal Gland pilot, a strong-rhythmicity human tissue, as a pre-built
 `CircadianBioOptions` object so we can go straight to simulation. (If you have
 your own raw expression matrix, run `estCircadianParam()` first; see Section 7.)

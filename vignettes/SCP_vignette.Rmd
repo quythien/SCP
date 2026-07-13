@@ -1,5 +1,5 @@
 ---
-title: "SCP: Simulation-Based Circadian Power — User Guide"
+title: "SCP: Simulation-Based Circadian Power (User Guide)"
 author: "Thien Quy Pham"
 date: "`r Sys.Date()`"
 output:
@@ -8,7 +8,7 @@ output:
     toc_depth: 3
     number_sections: true
 vignette: >
-  %\VignetteIndexEntry{SCP: Simulation-Based Circadian Power — User Guide}
+  %\VignetteIndexEntry{SCP: Simulation-Based Circadian Power (User Guide)}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -33,12 +33,12 @@ NCORES <- if (.Platform$OS.type == "windows") 1L else
 transcriptome-wide power analysis of circadian rhythm studies. It answers four
 planning questions:
 
-1. **Single-cohort power** — how many samples detect rhythmic genes in one group?
-2. **Differential power** — how many samples per group detect differential
+1. **Single-cohort power**: how many samples detect rhythmic genes in one group?
+2. **Differential power**: how many samples per group detect differential
    rhythmicity (DR), phase (DP), or mesor (DM) between two conditions?
-3. **B vs m trade-off** — at a fixed total N, how should samples be split across
+3. **B vs m trade-off**: at a fixed total N, how should samples be split across
    time points (B) versus replicates per time point (m = N/B)?
-4. **Bootstrap uncertainty** — how wide are power estimates when the pilot is small?
+4. **Bootstrap uncertainty**: how wide are power estimates when the pilot is small?
 
 Simulations are calibrated from real pilot data: SCP estimates the empirical
 distributions of gene-level amplitude (A), noise (sigma), phase, and the
@@ -67,7 +67,7 @@ biology), a **design** object (sampling plan), and an **analysis** object
 
 # Quick start
 
-SCP ships a curated pilot database; `scp_pilots()` lists every entry and
+SCP ships a pilot database; `scp_pilots()` lists every entry and
 `scp_pilot_search()` filters it.
 
 ```{r discover}
@@ -130,7 +130,7 @@ np$n
 ```
 
 ```{r plot-single, fig.width = 11, fig.height = 4.2}
-plotSingleCohortPower(res, title = "GTEx Adrenal Gland — single-cohort power",
+plotSingleCohortPower(res, title = "GTEx Adrenal Gland, single-cohort power",
                       fdr = 0.05)
 ```
 
@@ -194,7 +194,7 @@ two arms of the bundled demo matrix (Adrenal vs Liver) as the two groups.
 bio_diff <- estCircadianParamTwoGroup(
   data_1  = ex$adrenal$expr, data_2  = ex$liver$expr,
   times_1 = ex$adrenal$times, times_2 = ex$liver$times,
-  paired_sigma = TRUE,         # joint (A, sigma) draw — preserves pilot correlation
+  paired_sigma = TRUE,         # joint (A, sigma) draw, preserves pilot correlation
   verbose = FALSE
 )
 

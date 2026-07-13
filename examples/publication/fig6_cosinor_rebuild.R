@@ -1,23 +1,23 @@
 #' =======================================================================
-#' fig6_cosinor_rebuild.R — Cosinor-only Fig 6 (active KIM design)
+#' fig6_cosinor_rebuild.R - Cosinor-only Fig 6 (active KIM design)
 #' =======================================================================
 #'
 #' Replaces the FMM-based Fig 6. NO FMM, NO omega_rhythmic. Two frameworks,
 #' each simulated with its OWN matched generator and detected with the
 #' matching test (the "correct generator for each" principle):
 #'
-#'   Panel A — Cosinor framework
+#'   Panel A - Cosinor framework
 #'     Truth : estCircadianParam(KIM)            (1-harmonic, paired A,sigma)
 #'     Detect: method = "DCP" (cosinor F-test)
 #'     B-vs-m power vs N at B in {6,8,12,24}.
 #'
-#'   Panel B — Phase estimation (cosinor framework only)
+#'   Panel B - Phase estimation (cosinor framework only)
 #'     Truth : cosinor; estimate phi_hat^cos via fitCosinorAll_fast.
 #'     Median circular phase MSE (h^2) vs N at B in {4,6,8,12,24}.
 #'     With pure cosinor truth there is NO first-harmonic-projection bias
 #'     floor, so MSE declines ~1/(N r^2) instead of saturating early.
 #'
-#'   Panel C — Two-harmonic framework
+#'   Panel C - Two-harmonic framework
 #'     Truth : estCircadianParam2H(KIM)          (paired A1,phi1,A2,phi2,sigma)
 #'     Detect: method = "FMM", K = 2 (K-harmonic F-test)
 #'     B-vs-m power vs N at B in {6,8,12,24}.

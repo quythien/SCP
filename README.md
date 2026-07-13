@@ -10,7 +10,7 @@ pilot-calibrated planning for circadian biomarker detection or differential
 rhythmicity analysis.
 
 **SCP** is a simulation-based circadian power framework for sample-size
-planning in transcriptomic studies. SCP leverages pilot-derived distributions
+planning in transcriptomic studies. SCP uses pilot-derived distributions
 of gene-level amplitude, noise, phase, and time-of-day sampling to capture
 transcriptome-wide signal heterogeneity, and estimates FDR-controlled power
 for single-cohort rhythmic-biomarker detection as well as two-group
@@ -19,14 +19,13 @@ bootstrap layer propagates pilot-estimation uncertainty into confidence
 intervals on every power estimate. The framework is extensible to any
 model-based circadian approach, cosinor or non-cosinor.
 
-To make planning practical, SCP ships a curated **pilot database** of public
-circadian transcriptomic datasets across human, baboon, mouse, and rat,
-spanning 100+ tissue contexts. Users pick a pilot matching their planned
-study and get a recommended sample size in seconds.
+SCP ships a **pilot database** of public circadian transcriptomic datasets
+across human, baboon, mouse, and rat, spanning 100+ tissue contexts. Users
+pick a pilot matching their planned study and get a recommended sample size.
 
-## Try it: launch the Shiny app locally
+## Launch the Shiny app locally
 
-The fastest way to use SCP is the bundled Shiny GUI:
+The bundled Shiny GUI runs the whole workflow without scripting:
 
 ```r
 install.packages(c("remotes", "BiocManager"))
@@ -53,25 +52,24 @@ The app has two linked halves. **Circadian Power Study** (left) drives the
 sample-size calculation: cascading dropdowns (species → dataset → tissue →
 condition), a pilot rhythmicity threshold, the sampling design (active
 timecourse or passive time-of-death), a sample-size grid, and sliders for
-target power and FDR. One click on "Run simulation" draws the FDR-controlled
-power curve and reads off the recommended sample size in a few seconds.
+target power and FDR. Clicking "Run simulation" draws the FDR-controlled
+power curve and the recommended sample size.
 **Circadian Biomarker Detection** (right) explores the pilot itself: a core
 clock-gene cosinor panel, a ranked table of rhythmic genes with BH q-values and
 effect sizes, a per-gene cosinor view, and pathway enrichment (KEGG / Reactome /
-GO). On launch the app opens on the GTEx Adrenal (passive) pilot so there is
-something to look at right away; all 161 bundled pilots are available from the
-dropdowns.
+GO). On launch the app opens on the GTEx Adrenal (passive) pilot; all 161
+bundled pilots are available from the dropdowns.
 
 ![Power curve for the GTEx Adrenal (passive) pilot, the app's default view](man/figures/app_power_curve_adrenal.png)
 
-The app runs entirely on your machine, no account or hosting needed.
+The app runs entirely on your machine.
 
 You can also calibrate from **your own pilot** via "Upload my own pilot": an
 expression-matrix CSV (genes in rows, samples in columns, up to 5 GB) and a
 one-column time-of-day CSV. The upload is fit on the fly for both the
 single-harmonic (K = 1) and two-harmonic (K = 2) detectors, gene IDs are mapped
 to symbols where an annotation package is available, and the gene table and
-enrichment work on your data exactly as on a bundled pilot. A ready-made example
+enrichment work on your data exactly as on a bundled pilot. An example
 pilot (**simulated to resemble a GTEx Adrenal pilot** so it is freely shareable)
 ships with the package:
 

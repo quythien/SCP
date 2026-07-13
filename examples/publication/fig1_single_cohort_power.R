@@ -1,5 +1,5 @@
 #' =======================================================================
-#' Single-Cohort Circadian Power Analysis — Figure 1
+#' Single-Cohort Circadian Power Analysis: Figure 1
 #' =======================================================================
 #'
 #' WHAT THIS DOES:
@@ -22,11 +22,11 @@
 #'   - CircaPower closed-form grid initialisation
 #'
 #' OUTPUTS:
-#'   figures/single_cohort_power.pdf — 3 panels (marginal, discoveries, stratified)
-#'   results/single_cohort_power.rds — full simulation results
+#'   figures/single_cohort_power.pdf: 3 panels (marginal, discoveries, stratified)
+#'   results/single_cohort_power.rds: full simulation results
 #'
 #' PILOT DATA:
-#'   data/gse160521_nac_ctrl_pilot.rds — pre-estimated CircadianBioOptions
+#'   data/gse160521_nac_ctrl_pilot.rds: pre-estimated CircadianBioOptions
 #'   Source: GSE160521, Human NAc (nucleus accumbens), Control group
 #'           n=59, 15,330 genes, r range 0.43-2.01, r_med=0.55
 #'   Metadata: Kyle_multiBrainRegion/NAc_clinical_*_matchIndex34.csv

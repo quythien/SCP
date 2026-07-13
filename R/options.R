@@ -739,6 +739,11 @@ updateBioOptions <- function(opts, ...) {
 # S3 Print Methods
 # =====================================================================
 
+#' Print a CircadianBioOptions object
+#'
+#' @param x A \code{CircadianBioOptions} object.
+#' @param ... Ignored.
+#' @return \code{x}, invisibly.
 #' @exportS3Method
 print.CircadianBioOptions <- function(x, ...) {
   cat("CircadianBioOptions\n")
@@ -785,6 +790,11 @@ print.CircadianBioOptions <- function(x, ...) {
   invisible(x)
 }
 
+#' Print a CircadianDesignOptions object
+#'
+#' @param x A \code{CircadianDesignOptions} object.
+#' @param ... Ignored.
+#' @return \code{x}, invisibly.
 #' @exportS3Method
 print.CircadianDesignOptions <- function(x, ...) {
   cat("CircadianDesignOptions\n")
@@ -808,6 +818,11 @@ print.CircadianDesignOptions <- function(x, ...) {
   invisible(x)
 }
 
+#' Print a CircadianAnalysisOptions object
+#'
+#' @param x A \code{CircadianAnalysisOptions} object.
+#' @param ... Ignored.
+#' @return \code{x}, invisibly.
 #' @exportS3Method
 print.CircadianAnalysisOptions <- function(x, ...) {
   cat("CircadianAnalysisOptions\n")
@@ -824,6 +839,11 @@ print.CircadianAnalysisOptions <- function(x, ...) {
   invisible(x)
 }
 
+#' Print a CircadianBootstrapOptions object
+#'
+#' @param x A \code{CircadianBootstrapOptions} object.
+#' @param ... Ignored.
+#' @return \code{x}, invisibly.
 #' @exportS3Method
 print.CircadianBootstrapOptions <- function(x, ...) {
   cat("CircadianBootstrapOptions\n")

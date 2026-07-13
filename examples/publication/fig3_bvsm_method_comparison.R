@@ -1,10 +1,10 @@
 #' =======================================================================
-#' fig3_bvsm_method_comparison.R — B vs m Tradeoff: DCP B-invariance
+#' fig3_bvsm_method_comparison.R - B vs m Tradeoff: DCP B-invariance
 #' =======================================================================
 #'
 #' Single-cohort rhythmicity detection power across B and N for DCP only,
 #' verifying B-invariance under sinusoidal truth (alpha2=0).
-#'   DCP — cosinor K=1 F-test (B-invariant under sinusoidal truth)
+#'   DCP: cosinor K=1 F-test (B-invariant under sinusoidal truth)
 #'
 #' Three pilot datasets (single group):
 #'   A. Mouse LIV   (GSE54651)  r~2.88  strong
@@ -51,7 +51,7 @@ dir.create(file.path(out_dir, "figures"), recursive = TRUE, showWarnings = FALSE
 dir.create(file.path(out_dir, "results"),  recursive = TRUE, showWarnings = FALSE)
 
 # =====================================================================
-# 1. Load pilot datasets — single group from each pair
+# 1. Load pilot datasets, single group from each pair
 # =====================================================================
 cat("--- Loading datasets ---\n")
 
