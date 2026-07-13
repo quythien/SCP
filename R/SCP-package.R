@@ -1,10 +1,19 @@
-#' SCP: Simulation-Based Circadian Power Analysis with K-harmonic LRT
-#'
+# Developer note: this file holds the package-level NAMESPACE directives
+# (useDynLib + imports) in one obvious place; the compiled cosinor routines
+# live in src/cosinor_fast.cpp. The ?SCP help page shows the description
+# below; its title is inherited from the DESCRIPTION file.
+
 #' @description
-#' Package-level imports and the dynamic-library registration for the
-#' compiled cosinor routines in \code{src/cosinor_fast.cpp}. Kept in its own
-#' file (rather than folded into an arbitrary R/*.R file) so it is obvious
-#' where NAMESPACE's \code{useDynLib}/\code{import} directives come from.
+#' SCP (Simulation-based Circadian Power) is a framework for sample-size
+#' planning in circadian transcriptomic studies. It calibrates gene-level
+#' distributions of amplitude, noise, phase, and time-of-day sampling from a
+#' user's pilot dataset to capture transcriptome-wide signal heterogeneity,
+#' then estimates FDR-controlled power for single-cohort rhythmic-biomarker
+#' detection and for two-group differential analyses of rhythmicity (DR),
+#' phase (DP), and mesor (DM). A bootstrap layer propagates pilot-estimation
+#' uncertainty into confidence intervals on every power estimate. A curated
+#' database of public circadian pilots and a Shiny app are bundled for
+#' point-and-click planning.
 #'
 #' @keywords internal
 #' @importFrom Rcpp sourceCpp
