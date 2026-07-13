@@ -35,16 +35,19 @@ planning questions:
 
 1. **Single-cohort power**: how many samples detect rhythmic genes in one group?
 2. **Differential power**: how many samples per group detect differential
-   rhythmicity (DR), phase (DP), or mesor (DM) between two conditions?
+   rhythmicity (DR), phase (DP), or mesor (DM, the rhythm-adjusted average
+   expression level) between two conditions?
 3. **B vs m trade-off**: at a fixed total N, how should samples be split across
    time points (B) versus replicates per time point (m = N/B)?
 4. **Bootstrap uncertainty**: how wide are power estimates when the pilot is small?
 
 Simulations are calibrated from real pilot data: SCP estimates the empirical
 distributions of gene-level amplitude (A), noise (sigma), phase, and the
-proportion of rhythmic genes, then simulates cohorts under the cosinor model and
-applies FDR-controlled detection. Every chunk below runs as-is on the bundled
-pilots and example data.
+proportion of rhythmic genes, then simulates cohorts under the cosinor model (a
+cosine wave fitted to each gene's expression over the day) and scores them with
+FDR-controlled detection (holding down the fraction of false positives among the
+genes it flags). Every chunk below runs as-is on the bundled pilots and example
+data.
 
 ---
 
