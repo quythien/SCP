@@ -4,7 +4,7 @@
 \name{SCP-package}
 \alias{SCP}
 \alias{SCP-package}
-\title{SCP: Simulation-Based Circadian Power Analysis with K-harmonic LRT}
+\title{SCP: Power Evaluation and Study Design for Circadian Biomarker Detection}
 \description{
 SCP (Simulation-based Circadian Power) is a framework for sample-size
 planning in circadian transcriptomic studies. It calibrates gene-level

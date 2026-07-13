@@ -1,6 +1,6 @@
 Package: SCP
 Type: Package
-Title: Simulation-Based Circadian Power Analysis with K-harmonic LRT
+Title: Power Evaluation and Study Design for Circadian Biomarker Detection
 Version: 0.4.57
 Date: 2026-07-07
 Authors@R: person("Thien Quy", "Pham",
