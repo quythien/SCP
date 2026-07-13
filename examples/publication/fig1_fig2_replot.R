@@ -1,18 +1,5 @@
-# =====================================================================
-# Fig 1 (1A AdrenalGland, 1B Liver) + Fig 2 (ADR vs LIV) replot from cache.
-#
-# Encodes the advisor's sizing preferences (May 2026 review):
-#  - Designed narrow (Fig1 13x5.05", Fig2 12x4.7") so the manuscript scales
-#    them down LESS -> bigger on-page elements; Fig1 panels share Fig2's
-#    near-square plot-box ratio.
-#  - Titles sized for CONSISTENT on-page height at \textwidth: title cex/width
-#    ~ 0.12 (Fig1 title_cex 1.60 @ 13"; Fig2 outer-title cex 1.50 @ 12").
-#  - Title sits close to the panels (small top white space); no clipping.
-#  - Legends bottom-right, compact (FDR key + 2-column n-key) so they clear
-#    the curves; longer SE caps (se_cap 0.55); extra gap from r~ axis title to
-#    the rotated stratum ticks.
+# Replot Fig 1 (Adrenal, Liver) and Fig 2 (Adrenal vs Liver) from cache.
 # Run: Rscript examples/publication/fig1_fig2_replot.R
-# =====================================================================
 setwd("/home/qtp1/Projects/Circadian/Kyle/Circadian-analysis-main/R/v1/PowerSim")
 suppressMessages(library(SCP))
 source("R/plot_single_cohort.R")

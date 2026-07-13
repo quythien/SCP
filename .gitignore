@@ -170,3 +170,9 @@ inst/shiny_demo/
 !summary/**
 scripts/
 !SCP-manual.pdf
+
+# internal maintainer doc, keep local only
+examples/publication/FIGURES.md
+
+# archived/superseded figure scripts, keep local only
+examples/publication/archive/
