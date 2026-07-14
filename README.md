@@ -3,60 +3,63 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![R](https://img.shields.io/badge/R-%E2%89%A54.4.0-blue.svg)](https://www.r-project.org/)
 
-*How many samples, collected at what times of day, in which tissue, do you need
-to find the genes that keep 24 hour time?*
+*How many samples, collected at what times of day and in which tissue, are needed to identify genes with 24-hour rhythmic expression?*
 
 ## What SCP does
 
-Circadian rhythms, the roughly 24 hour oscillations that regulate metabolism,
-physiology, and disease, are carried by only a fraction of the transcriptome
-([Takahashi 2017](https://doi.org/10.1038/nrg.2016.150)). Finding those genes,
-or comparing their rhythms between conditions, takes enough samples collected
-across enough times of day to separate a real rhythm from genome-wide noise, yet
-circadian omics studies are usually short on samples. Established tools analyze
-the data *after* it is collected: JTK_CYCLE and RAIN detect rhythms within a
-condition ([Hughes 2010](https://doi.org/10.1177/0748730410379711); [Thaben
-2014](https://doi.org/10.1177/0748730414553029)), while CircaCompare and
-DiffCircaPipeline compare rhythms across conditions ([Parsons
+Circadian rhythms, the approximately 24-hour oscillations that shape metabolism,
+physiology, and disease, are present in only a subset of the transcriptome
+([Takahashi 2017](https://doi.org/10.1038/nrg.2016.150)). Detecting those genes,
+or comparing their rhythmic behavior across conditions, requires enough samples
+distributed across the day to distinguish true rhythmicity from genome-wide
+noise. In practice, however, circadian omics studies are often limited by sample
+size. Existing methods are designed primarily for analysis after data collection:
+JTK_CYCLE and RAIN detect rhythmicity within a single condition ([Hughes
+2010](https://doi.org/10.1177/0748730410379711); [Thaben
+2014](https://doi.org/10.1177/0748730414553029)), whereas CircaCompare and
+DiffCircaPipeline compare rhythmic parameters between conditions ([Parsons
 2020](https://doi.org/10.1093/bioinformatics/btz730); [Xue
-2023](https://doi.org/10.1093/bioinformatics/btad039)). None of them answer the
-question that comes first: how many samples do you need? The one dedicated power
-tool, CircaPower, assumes a single effect size shared by every rhythmic gene and
-does not account for the multiple testing incurred when screening thousands of
-genes at once ([Zong 2023](https://doi.org/10.1002/sim.9803)), assumptions that
-rarely hold across real tissues and species.
+2023](https://doi.org/10.1093/bioinformatics/btad039)). None of these methods
+addresses the design question that arises first: how many samples are needed? The
+one dedicated power tool, CircaPower, assumes a common effect size for all
+rhythmic genes and does not account for the multiplicity burden that arises when
+testing thousands of genes simultaneously ([Zong
+2023](https://doi.org/10.1002/sim.9803)). Those assumptions are rarely realistic
+for actual tissues or species.
 
-SCP answers the sample-size question by simulation, calibrated to your own data.
-You give it a small *pilot* dataset (a preliminary experiment in a comparable
-tissue, or one of the 160+ pilots bundled with the package), and SCP learns from
-that pilot how strong each gene's rhythm is, how noisy it is, and when during the
-day samples were collected, capturing the transcriptome-wide spread of effect
-sizes that a single fixed value cannot. It then simulates studies of many sizes
-and reports how often each would succeed while holding the false discovery rate
-at the level you choose. The result is a recommended number of samples for
-**circadian biomarker detection** in one group, or for **differential
-rhythmicity analysis** between two groups (differences in rhythmicity, phase, or
-mesor). A bootstrap layer reports how sensitive that recommendation is to the
-particular pilot you started from.
+SCP addresses sample-size planning through simulation calibrated to pilot data.
+The user supplies a small pilot dataset, either from a preliminary experiment in
+a comparable tissue or from one of the 160+ pilots distributed with the package.
+SCP then estimates, for each gene, the strength of rhythmicity, the residual
+noise, and the timing of sample collection, thereby capturing the transcriptome-wide
+distribution of effect sizes rather than reducing it to a single summary value.
+It next simulates studies across a range of sample sizes and quantifies the
+probability of success while controlling the false discovery rate at the
+user-specified level. The output is a recommended sample size for circadian
+biomarker detection within one group or differential rhythmicity analysis between
+two groups, including differences in rhythmicity, phase, or mesor. An optional
+bootstrap layer quantifies how sensitive that recommendation is to the particular
+pilot dataset used for calibration.
 
-A few terms used throughout, in plain language. **Power** is the chance that a
-study of a given size detects a gene that truly is rhythmic. **False discovery
-rate (FDR)** is the share of the genes a study flags as rhythmic that are not
-really rhythmic; you pick the level you are willing to tolerate (5 percent is
-common), and SCP controls it with the Benjamini-Hochberg procedure (Benjamini
-and Hochberg 1995). **Effect size** here is a gene's rhythm amplitude divided by
-its noise, written `r_tilde = A / sigma`; larger means easier to detect.
-**Noise (`sigma`)** is the gene-to-gene scatter of a gene's expression around its
-cosinor fit, the residual variability SCP estimates per gene from the pilot (kept
-on the log scale internally as `lOD`); a noisier gene is harder to detect at the
-same amplitude. **Cosinor** is the standard model that fits a cosine wave to a
-gene's expression over the day ([Cornelissen
+A few terms used throughout are worth defining explicitly. Power is the
+probability that a study of a given size detects a gene that is truly rhythmic.
+False discovery rate (FDR) is the expected proportion of genes declared rhythmic
+that are in fact non-rhythmic; SCP controls FDR using the Benjamini-Hochberg
+procedure (Benjamini and Hochberg 1995), with 5 percent as a common target.
+Effect size is defined here as rhythmic amplitude divided by residual noise,
+written `r_tilde = A / sigma`; larger values indicate genes that are easier to
+detect. Noise (`sigma`) refers to the residual variability of a gene's
+expression around its cosinor fit, estimated on a per-gene basis from the pilot
+dataset and stored internally on the log scale as `lOD`. For a fixed amplitude,
+noisier genes are harder to detect. Cosinor refers to the standard model that
+represents gene expression over the day as a cosine function ([Cornelissen
 2014](https://doi.org/10.1186/1742-4682-11-16)).
 
 ## Install
 
-SCP is an R package. It depends on the Bioconductor package `limma`, so point
-the installer at the Bioconductor repositories first.
+SCP is an R package that depends on the Bioconductor package `limma`, so the
+installation should be configured to use the Bioconductor repositories first.
+
 
 ```r
 install.packages(c("remotes", "BiocManager"))
@@ -91,23 +94,23 @@ the install. This is a one time setup.
 
 ## Two ways to use SCP
 
-**Point and click.** The bundled Shiny app runs the whole workflow in a browser
-with no scripting. Install as above, then:
+SCP can be used either through the bundled Shiny app or directly from R.
+
+**Point and click**: The bundled Shiny app runs the full workflow in a browser without requiring any scripting. After installation, launch it with:
+
 
 ```r
 SCP::launchShiny()
 ```
 
-It runs entirely on your own machine. See the [Shiny app](#the-shiny-app)
-section below for what the two halves of the app do.
+The app runs entirely on your local machine. See the Shiny app section below for an overview of its two main components.
 
-**From R.** The rest of this page is the scripted API, which is what you want
-for reproducible analyses.
+**From R**: The remainder of this page describes the scripted API, which is the recommended interface for reproducible analyses.
 
 ## Quick start
 
-Load a bundled pilot, set the study design, simulate, and read off the
-recommended sample size.
+Load a bundled pilot dataset, define the study design, run the simulation, and obtain the recommended sample size.
+
 
 ```r
 library(SCP)
