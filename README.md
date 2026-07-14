@@ -210,10 +210,13 @@ prep <- prepCircadianData(cau$expr, cau$times, input_type = "log2")
 bio  <- estCircadianParam(prep$data, prep$times, period = 24)
 
 r_tilde <- bio$amplitude / bio$sigma_rhythmic
+med     <- median(r_tilde, na.rm = TRUE)
 hist(r_tilde, breaks = 40, col = "#4C79A6", border = "white",
      main = "GSE160521 Caudate control pilot: per-gene effect size",
      xlab = expression("effect size  " * tilde(r) == A / sigma))
-abline(v = median(r_tilde), col = "#C0392B", lwd = 2)
+abline(v = med, col = "#C0392B", lwd = 2)
+text(med, par("usr")[4] * 0.9, bquote(median ~ tilde(r) == .(round(med, 2))),
+     col = "#C0392B", pos = 4)
 ```
 
 ![Effect-size distribution of the GSE160521 Caudate control pilot](man/figures/pilot_effect_size.png)
