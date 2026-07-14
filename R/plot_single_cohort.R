@@ -56,7 +56,7 @@ if (!exists("add_se_bars")) {
 #' @param oma_top    Outer margin (lines) reserved above the panels for the
 #'   title (default 2.4).
 #' @param legend_pos Legend position keyword passed to \code{legend()}
-#'   (default "topleft").
+#'   (default "bottomright").
 #' @param se_cap     Maximum half-width (power units) drawn for standard-error
 #'   bars, to keep long bars from overplotting neighboring panels (default 0.3).
 #' @param vertical   Logical; if TRUE, stack panels vertically instead of the
@@ -89,7 +89,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                                  cex_main = 1.50, cex_lab = 1.60, cex_axis = 1.45,
                                  line_lwd = 2, pt_cex = 0.95, legend_cex = NULL,
                                  title_cex = 1.65, oma_top = 2.4,
-                                 legend_pos = "topleft", se_cap = 0.3,
+                                 legend_pos = "bottomright", se_cap = 0.3,
                                  vertical = FALSE,
                                  panel_c_legend = FALSE,
                                  width = 15, height = 5.5) {
@@ -413,7 +413,7 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
   }
   grid()
   if (isTRUE(panel_c_legend)) {
-    legend("topleft", title = NULL,
+    legend(legend_pos, title = NULL,
            legend = c(paste0("n = ", sample_sizes[disp_idx]), "Target gene count"),
            col = c(size_colors[disp_idx], "grey60"), lty = c(rep(1, length(disp_idx)), 2),
            lwd = c(rep(2, length(disp_idx)), 1.5),

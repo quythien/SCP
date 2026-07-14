@@ -27,7 +27,7 @@ plotSingleCohortPower(
   legend_cex = NULL,
   title_cex = 1.65,
   oma_top = 2.4,
-  legend_pos = "topleft",
+  legend_pos = "bottomright",
   se_cap = 0.3,
   vertical = FALSE,
   panel_c_legend = FALSE,
@@ -91,7 +91,7 @@ picks a size automatically.}
 title (default 2.4).}
 
 \item{legend_pos}{Legend position keyword passed to \code{legend()}
-(default "topleft").}
+(default "bottomright").}
 
 \item{se_cap}{Maximum half-width (power units) drawn for standard-error
 bars, to keep long bars from overplotting neighboring panels (default 0.3).}

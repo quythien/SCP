@@ -671,11 +671,21 @@ plotBootstrapDesignGrid <- function(result,
     plo <- power_ci_lo[, B_idx]
     phi <- power_ci_hi[, B_idx]
 
-    # CI ribbon
-    polygon(c(N_values, rev(N_values)),
-            c(plo, rev(phi)),
-            col    = adjustcolor(cols[B_idx], alpha.f = 0.15),
-            border = NA)
+    # 2.5/97.5 percentile bootstrap CI band. Draw only where all three are
+    # finite (infeasible (N, B) cells are NA and would otherwise break the
+    # polygon), and render it clearly: a solid fill plus dotted edges at the
+    # lo/hi bounds so a narrow band is still visible.
+    ok <- is.finite(N_values) & is.finite(plo) & is.finite(phi)
+    if (sum(ok) >= 2L) {
+      Nk  <- N_values[ok]; plok <- plo[ok]; phik <- phi[ok]
+      polygon(c(Nk, rev(Nk)), c(plok, rev(phik)),
+              col    = adjustcolor(cols[B_idx], alpha.f = 0.28),
+              border = NA)
+      lines(Nk, plok, col = adjustcolor(cols[B_idx], alpha.f = 0.75),
+            lwd = 1, lty = 3)
+      lines(Nk, phik, col = adjustcolor(cols[B_idx], alpha.f = 0.75),
+            lwd = 1, lty = 3)
+    }
     lines(N_values, pm,  col = cols[B_idx], lwd = 2)
     points(N_values, pm, col = cols[B_idx], pch = 19, cex = 0.7)
   }
