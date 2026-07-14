@@ -49,10 +49,12 @@ pilot dataset stored in \code{data/}. No default, must be supplied.}
 \item{lBaselineExpr2}{As \code{lBaselineExpr} but for group 2 (differential
 analyses only). \code{NULL} uses the same distribution as group 1.}
 
-\item{lOD}{Log over-dispersion (noise). Same forms accepted as
+\item{lOD}{Log residual noise: \code{log(sigma)}, the per-gene noise around
+the cosinor fit (\code{sigma = exp(lOD)}). Same forms accepted as
 \code{lBaselineExpr}. No default, must be supplied.}
 
-\item{lOD2}{As \code{lOD} but for group 2. \code{NULL} shares group 1 values.}
+\item{lOD2}{As \code{lOD} (the residual noise) but for group 2. \code{NULL}
+shares group 1 values.}
 
 \item{amplitude}{Amplitude distribution for rhythmic genes, given in any
 of the forms accepted for \code{lBaselineExpr}. This argument is

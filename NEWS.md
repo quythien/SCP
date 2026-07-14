@@ -1,3 +1,26 @@
+# SCP 0.4.59
+
+## README and bundled data
+
+* The README walkthrough now runs on control-region pilots (nucleus accumbens,
+  caudate, putamen) from the public GSE160521 human striatal study, bundled with
+  the package. The single-cohort and differential examples run end to end on that
+  data, and the two-harmonic section shows the manuscript GTEx Liver figures.
+  Each section carries citations, with a References list at the end.
+
+## Plotting
+
+* `plotSingleCohortPower()` now accepts an optional pilot (`bio.opts`,
+  `design.opts`, `analysis.opts`); given those, it draws the effect-size
+  stratified panels directly from the pilot so every band is populated. Passing a
+  simulation result as before behaves exactly as it did.
+
+## Documentation
+
+* `lOD`/`lOD2` are documented as the log residual noise (`sigma = exp(lOD)`)
+  rather than "over-dispersion", with a matching glossary entry in the README.
+* Maintainer email updated to qtp1@pitt.edu.
+
 # SCP 0.4.58
 
 ## Public API
