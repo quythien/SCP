@@ -702,9 +702,9 @@ plotBootstrapDesignGrid <- function(result,
            else max(power_ci_hi, na.rm = TRUE)
   y_max <- min(1, y_top * 1.05)
   main_txt <- if (has_plugin)
-    sprintf("Bootstrap power vs N (%s, FDR <= %.0f%%)", test_type, 100 * fdr_thr)
+    sprintf("Bootstrap power vs N (%s, FDR \u2264 %.0f%%)", test_type, 100 * fdr_thr)
   else
-    sprintf("Bootstrap Power vs N (%s, FDR <= %.0f%%)\nline: bootstrap mean, band: 95%% bootstrap CI", test_type, 100 * fdr_thr)
+    sprintf("Bootstrap Power vs N (%s, FDR \u2264 %.0f%%)\nline: bootstrap mean, band: 95%% bootstrap CI", test_type, 100 * fdr_thr)
   plot(N_values, power_mean[, 1],
        type  = "n",
        xlim  = range(N_values),
