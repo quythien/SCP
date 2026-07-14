@@ -15,6 +15,14 @@ if (!exists("add_se_bars")) {
 
 #' Plot single-cohort circadian power (3 panels)
 #'
+#' @description
+#' Summarises a single-cohort power simulation in three panels: marginal
+#' power against sample size at several FDR thresholds (Panel A), the number
+#' of true discoveries by effect-size stratum (Panel B), and power resolved
+#' by effect-size stratum (Panel C). It takes the object returned by
+#' \code{\link{runSimsSingleCohort}} and either draws to the current device
+#' or writes a PDF.
+#'
 #' @param res        Output from \code{runSimsSingleCohort()}.
 #' @param panel_a_res Optional alternate result object used for the Panel A
 #'   marginal-power computation only. If NULL (default), Panel A is computed
@@ -58,6 +66,13 @@ if (!exists("add_se_bars")) {
 #' @param width      PDF width in inches (default 15).
 #' @param height     PDF height in inches (default 5.5).
 #' @return Invisibly returns list of data used per panel.
+#' @examples
+#' bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+#' bio$ngenes <- 200L
+#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+#' aopt <- CircadianAnalysisOptions(alpha = 0.05)
+#' res  <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
+#' plotSingleCohortPower(res, out_pdf = tempfile(fileext = ".pdf"))
 #' @export
 plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                                  panel_a_res = NULL,

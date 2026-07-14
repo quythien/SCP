@@ -140,7 +140,17 @@ setPhase <- function(input, n_rhythmic, period) {
 # Configuration Constructors
 # =====================================================================
 
-#' Create Biology + Differential Options
+#' Create Biology and Differential Options
+#'
+#' @description
+#' Builds the \code{CircadianBioOptions} object that describes the simulated
+#' transcriptome: the number of genes, the proportion that are rhythmic, and
+#' the gene-level distributions of baseline expression, noise, amplitude, and
+#' phase. For two-group studies it also records the proportions of genes that
+#' differ in rhythmicity, phase, or mesor between groups. Most users obtain
+#' this object indirectly from \code{\link{estCircadianParam}} or
+#' \code{\link{scp_load_pilot}}; the constructor is exposed for building a
+#' configuration by hand.
 #'
 #' @param ngenes Number of genes.
 #' @param prop_rhythmic Proportion of rhythmic genes. If \code{NULL} and a pilot
@@ -156,8 +166,9 @@ setPhase <- function(input, n_rhythmic, period) {
 #' @param lOD Log over-dispersion (noise). Same forms accepted as
 #'   \code{lBaselineExpr}. No default, must be supplied.
 #' @param lOD2 As \code{lOD} but for group 2. \code{NULL} shares group 1 values.
-#' @param amplitude Amplitude distribution for rhythmic genes. Same forms
-#'   accepted as \code{lBaselineExpr}. No default, must be supplied.
+#' @param amplitude Amplitude distribution for rhythmic genes, given in any
+#'   of the forms accepted for \code{lBaselineExpr}. This argument is
+#'   required and has no default.
 #' @param amplitude2 As \code{amplitude} but for group 2.
 #' @param sigma_rhythmic Optional numeric vector of per-gene noise values for
 #'   rhythmic genes (same length as \code{amplitude}). When provided, amplitude
@@ -167,26 +178,6 @@ setPhase <- function(input, n_rhythmic, period) {
 #'   same resampled gene index so their pilot-estimated pairwise correlation is
 #'   preserved; if \code{FALSE} (default), amplitude and sigma are expanded
 #'   independently.
-#' @param paired_omega Logical. If \code{TRUE} and \code{omega_rhythmic} is
-#'   supplied (same length as \code{amplitude}), expand omega using the same
-#'   shared gene-index used for amplitude/sigma so all three are paired per gene.
-#' @param paired_alpha Logical. Same as \code{paired_omega} for \code{alpha_rhythmic}.
-#' @param omega_rhythmic Optional numeric vector of per-gene FMM omega values
-#'   from a pilot FMM fit (same length as \code{amplitude}). Used when
-#'   \code{paired_omega = TRUE}; ignored when \code{omega_dist} is also set.
-#' @param alpha_rhythmic Optional numeric vector of per-gene FMM alpha values
-#'   in radians from a pilot FMM fit (same length as \code{amplitude}).
-#' @param omega_dist Optional list specifying a distribution from which omega
-#'   is drawn at simulation time, e.g. \code{list(family="beta", a=1, b=5)} or
-#'   \code{list(family="fixed", value=0.7)}. Overrides \code{omega_rhythmic}
-#'   when both are provided.
-#' @param alpha_dist Optional list specifying a distribution for alpha,
-#'   \code{list(family="normal", mean=0, sd_hours=2)}. Internally
-#'   \code{sd_hours} is converted to radians via \code{sd_rad = sd_hours * 2*pi/24}.
-#'   When \code{alpha_rhythmic} is also provided and lengths match,
-#'   the perturbation is added to each gene's empirical alpha
-#'   (alpha_g = alpha_rhythmic[g] + N(0, sd_rad^2)).
-#'   When \code{alpha_rhythmic} is missing, alpha_g = N(0, sd_rad^2).
 #' @param cts Numeric vector of sample collection times for passive design.
 #' @param cts2 As \code{cts} for group 2.
 #' @param phase Phase distribution for rhythmic genes. \code{"uniform"} (default)
@@ -209,6 +200,11 @@ setPhase <- function(input, n_rhythmic, period) {
 #' @param sim.seed Random seed.
 #'
 #' @return Object of class \code{"CircadianBioOptions"}.
+#' @examples
+#' # Build a synthetic biology configuration without pilot data.
+#' bio <- CircadianBioOptions(ngenes = 300L, prop_rhythmic = 0.3,
+#'                            lBaselineExpr = 5, lOD = -1, amplitude = 1)
+#' bio
 #' @export
 CircadianBioOptions <- function(ngenes = 5000,
                                 prop_rhythmic = NULL,
@@ -221,12 +217,6 @@ CircadianBioOptions <- function(ngenes = 5000,
                                 amplitude2 = NULL,
                                 sigma_rhythmic = NULL,
                                 paired_sigma = FALSE,
-                                paired_omega = FALSE,
-                                paired_alpha = FALSE,
-                                omega_rhythmic = NULL,
-                                alpha_rhythmic = NULL,
-                                omega_dist = NULL,
-                                alpha_dist = NULL,
                                 cts = NULL,
                                 cts2 = NULL,
                                 phase = "uniform",
@@ -318,33 +308,12 @@ CircadianBioOptions <- function(ngenes = 5000,
   # preserving the empirical r_tilde = A/sigma distribution.
   # paired_sigma=FALSE (default): original behaviour, amplitude expanded independently
   # via setAmplitude, sigma drawn from lOD in simulation (has_joint=FALSE).
-  #
-  # If paired_omega = TRUE / paired_alpha = TRUE and the corresponding *_rhythmic
-  # vector matches the amplitude length, we reuse the SAME ji index so that
-  # (A, sigma, omega, alpha) for each simulated gene all come from the same pilot gene.
-  amp_len_orig   <- if (is.numeric(amplitude)) length(amplitude) else NA_integer_
-  paired_pairing <- !is.na(amp_len_orig) && amp_len_orig >= 2L
-
-  # Compute the shared ji once if any pairing is requested with sufficient
-  # amplitude length. Used for sigma, omega, and alpha jointly.
-  any_pair_request <- (paired_sigma && !is.null(sigma_rhythmic) &&
-                       is.numeric(amplitude) && length(amplitude) > 1L &&
-                       length(amplitude) == length(sigma_rhythmic) &&
-                       length(amplitude) != n_rhythmic) ||
-                      (paired_omega && !is.null(omega_rhythmic) &&
-                       length(omega_rhythmic) == amp_len_orig &&
-                       length(omega_rhythmic) != n_rhythmic) ||
-                      (paired_alpha && !is.null(alpha_rhythmic) &&
-                       length(alpha_rhythmic) == amp_len_orig &&
-                       length(alpha_rhythmic) != n_rhythmic)
-  ji <- if (any_pair_request && paired_pairing)
-          sample(amp_len_orig, n_rhythmic, replace = TRUE) else NULL
-
   if (paired_sigma &&
       !is.null(sigma_rhythmic) &&
       is.numeric(amplitude) && length(amplitude) > 1L &&
       length(amplitude) == length(sigma_rhythmic) &&
       length(amplitude) != n_rhythmic) {
+    ji                 <- sample(length(amplitude), n_rhythmic, replace = TRUE)
     amplitude_resolved <- amplitude[ji]
     sigma_rhythmic     <- sigma_rhythmic[ji]
   } else {
@@ -358,42 +327,6 @@ CircadianBioOptions <- function(ngenes = 5000,
         rep(sigma_rhythmic, n_rhythmic)
       else
         sample(sigma_rhythmic, n_rhythmic, replace = TRUE)
-    }
-  }
-
-  # Expand omega_rhythmic with the shared ji when paired_omega requested.
-  # If the paired expansion cannot proceed (length mismatch or amplitude is
-  # not a numeric vector), warn so the caller knows pairing is silently off.
-  if (paired_omega) {
-    if (!is.null(omega_rhythmic) &&
-        length(omega_rhythmic) == amp_len_orig &&
-        length(omega_rhythmic) != n_rhythmic &&
-        !is.null(ji)) {
-      omega_rhythmic <- omega_rhythmic[ji]
-    } else if (!is.null(omega_rhythmic) &&
-               length(omega_rhythmic) != n_rhythmic) {
-      warning(sprintf(
-        "paired_omega=TRUE but omega_rhythmic length (%d) does not match amplitude length (%s) or n_rhythmic (%d); pairing skipped.",
-        length(omega_rhythmic),
-        if (is.na(amp_len_orig)) "NA (amplitude is non-numeric)" else as.character(amp_len_orig),
-        n_rhythmic))
-    }
-  }
-
-  # Same for alpha.
-  if (paired_alpha) {
-    if (!is.null(alpha_rhythmic) &&
-        length(alpha_rhythmic) == amp_len_orig &&
-        length(alpha_rhythmic) != n_rhythmic &&
-        !is.null(ji)) {
-      alpha_rhythmic <- alpha_rhythmic[ji]
-    } else if (!is.null(alpha_rhythmic) &&
-               length(alpha_rhythmic) != n_rhythmic) {
-      warning(sprintf(
-        "paired_alpha=TRUE but alpha_rhythmic length (%d) does not match amplitude length (%s) or n_rhythmic (%d); pairing skipped.",
-        length(alpha_rhythmic),
-        if (is.na(amp_len_orig)) "NA (amplitude is non-numeric)" else as.character(amp_len_orig),
-        n_rhythmic))
     }
   }
 
@@ -414,12 +347,6 @@ CircadianBioOptions <- function(ngenes = 5000,
     amplitude_spec = amplitude,
     amplitude2 = amplitude2_resolved,
     sigma_rhythmic = sigma_rhythmic,
-    paired_omega   = paired_omega,
-    paired_alpha   = paired_alpha,
-    omega_rhythmic = omega_rhythmic,
-    alpha_rhythmic = alpha_rhythmic,
-    omega_dist     = omega_dist,
-    alpha_dist     = alpha_dist,
     cts = cts,
     cts2 = cts2,
     phase = phase_resolved,
@@ -443,43 +370,43 @@ CircadianBioOptions <- function(ngenes = 5000,
 
 #' Create Study Design Options
 #'
-#' @param sample_sizes Vector of sample sizes per group
-#' @param nsims Number of simulation replicates
-#' @param design "active" or "passive"
-#' @param cts Time-of-day distribution for passive design (numeric vector)
+#' @description
+#' Collects the sampling-design choices for a power analysis: the sample
+#' sizes to evaluate, the number of simulation replicates per size, and
+#' whether collection times are placed on an even grid (active design) or
+#' drawn from the pilot's time-of-day distribution (passive design). The
+#' resulting \code{CircadianDesignOptions} object is passed to the
+#' \code{runSims*} and \code{recommendDesign} functions.
+#'
+#' @param sample_sizes Numeric vector of sample sizes to evaluate.
+#' @param nsims Number of simulation replicates run at each sample size.
+#' @param design Sampling design: \code{"active"} places collection times on
+#'   an even grid, \code{"passive"} draws them from \code{cts}.
+#' @param cts Numeric vector giving the time-of-day distribution used for a
+#'   passive design.
 #' @param B_values Optional vector of time-point counts (B) to sweep, in
-#'   addition to \code{sample_sizes}; NULL runs a single B implied by \code{cts}.
-#' @param test_types Character vector of tests to run ("DR", "DP", "DM")
-#' @param omega FMM waveform shape parameter in (0, 1]. \code{omega = 1}
-#'   (default) is the pure cosinor path; \code{omega < 1} simulates a
-#'   non-sinusoidal waveform via \code{simCircadianFMM()}. \code{omega = 0} is
-#'   not allowed.
-#' @param beta FMM orientation parameter (peak-location offset, default
-#'   \code{pi}); only used when \code{omega < 1}, ignored for the cosinor path.
+#'   addition to \code{sample_sizes}. \code{NULL} runs the single B implied
+#'   by \code{cts}.
+#' @param test_types Character vector of differential tests to run, any of
+#'   \code{"DR"}, \code{"DP"}, and \code{"DM"}.
 #'
 #' @return Object of class "CircadianDesignOptions"
+#' @examples
+#' # Active design over two small sample sizes with few simulations.
+#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+#' dopt
 #' @export
 CircadianDesignOptions <- function(sample_sizes = c(10, 20, 40, 60, 80, 100),
                                    nsims      = 100,
                                    design     = c("active", "passive"),
                                    cts        = NULL,
                                    B_values   = NULL,
-                                   test_types = c("DR", "DP", "DM"),
-                                   omega      = 1.0,
-                                   beta       = pi) {
-  # omega: FMM waveform shape parameter.
-  #   omega = 1  (default) -> pure cosinor simulation (traditional path).
-  #   omega < 1  -> FMM non-sinusoidal simulation via simCircadianFMM().
-  #   omega = 0  is not allowed (degenerate flat waveform).
-  # beta: FMM orientation parameter (peak location offset, default pi).
-  #   Only used when omega < 1; ignored for cosinor simulation.
+                                   test_types = c("DR", "DP", "DM")) {
 
   design <- match.arg(design)
   stopifnot(all(sample_sizes > 0), nsims > 0)
   if (design == "passive" && is.null(cts))
     stop("cts (time-of-day vector) is required for passive design")
-  if (omega <= 0 || omega > 1)
-    stop("omega must be in (0, 1]. Use omega = 1 (default) for the cosinor path.")
 
   opts <- list(
     sample_sizes = sample_sizes,
@@ -487,9 +414,7 @@ CircadianDesignOptions <- function(sample_sizes = c(10, 20, 40, 60, 80, 100),
     design       = design,
     cts          = cts,
     B_values     = B_values,
-    test_types   = test_types,
-    omega        = omega,
-    beta         = beta
+    test_types   = test_types
   )
   class(opts) <- "CircadianDesignOptions"
   opts
@@ -513,22 +438,55 @@ CircadianDesignOptions <- function(sample_sizes = c(10, 20, 40, 60, 80, 100),
 }
 
 
-#' Create Analysis & Reporting Options
+#' Create Analysis and Reporting Options
 #'
-#' @param alpha Significance level for DCP pipeline
-#' @param p.adjust.method Multiple testing correction method
-#' @param parallel.ncores Number of cores for parallel DCP
-#' @param amp.cutoff Amplitude cutoff for DCP_Rhythmicity
-#' @param target_effect Minimum effect size to count as "interesting"
-#' @param fdr_thresholds FDR thresholds for power curves
-#' @param reference_n Reference sample size for Panel B / phase shift plots
-#' @param r_strata Breakpoints for A/sigma stratification
-#' @param strata_labels Labels for strata (auto-generated if NULL)
-#' @param phase_shifts Phase shift magnitudes to sweep (for sensitivity analysis)
+#' @description
+#' Collects the settings that govern how each simulated dataset is analysed
+#' and how power is reported: the per-gene significance level, the
+#' multiple-testing correction, the FDR thresholds at which power curves are
+#' drawn, and the effect-size strata used to break power down by signal
+#' strength. The resulting \code{CircadianAnalysisOptions} object is passed
+#' to the \code{runSims*} and plotting functions.
+#'
+#' @usage
+#' CircadianAnalysisOptions(
+#'   alpha = 0.05, p.adjust.method = "BH", parallel.ncores = 1,
+#'   amp.cutoff = 0, target_effect = 0.1,
+#'   fdr_thresholds = c(0.01, 0.05, 0.10, 0.20), reference_n = 60,
+#'   r_strata = c(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75,
+#'                2, 2.5, 3, 3.5, 4, 4.5, 5, Inf),
+#'   strata_labels = NULL,
+#'   phase_shifts = c(0, 0.5, 1, 2, 4, 6, 8, 10, 12),
+#'   DCmethod = "DCP")
+#'
+#' @param alpha Per-gene significance level for the cosinor rhythmicity test.
+#' @param p.adjust.method Multiple-testing correction applied across genes,
+#'   passed to \code{stats::p.adjust} (default Benjamini-Hochberg).
+#' @param parallel.ncores Number of cores used to fit the per-gene tests.
+#' @param amp.cutoff Minimum amplitude a gene must exceed to enter the
+#'   cosinor rhythmicity screen.
+#' @param target_effect Minimum effect size a gene must reach to count as a
+#'   meaningful discovery.
+#' @param fdr_thresholds FDR thresholds at which power curves are reported.
+#' @param reference_n Reference sample size marked on the panel-B and
+#'   phase-shift plots.
+#' @param r_strata Breakpoints, in \eqn{r = A / \sigma} units, that define
+#'   the effect-size strata used to report power by signal strength.
+#' @param strata_labels Labels for the strata; generated automatically from
+#'   \code{r_strata} when \code{NULL}.
+#' @param phase_shifts Phase-shift magnitudes (hours) swept in the
+#'   phase-sensitivity analysis.
 #' @param DCmethod Differential-rhythmicity detector to report against,
-#'   one of "DCP" (default) or "CircaCompare".
+#'   either \code{"DCP"} (the cosinor F-test, default) or
+#'   \code{"CircaCompare"}. \code{"DCP"} is a retained legacy alias for the
+#'   cosinor detector.
 #'
 #' @return Object of class "CircadianAnalysisOptions"
+#' @examples
+#' # Reporting options: 5 percent alpha, power at two FDR thresholds.
+#' aopt <- CircadianAnalysisOptions(alpha = 0.05,
+#'                                  fdr_thresholds = c(0.05, 0.20))
+#' aopt
 #' @export
 CircadianAnalysisOptions <- function(alpha = 0.05,
                                      p.adjust.method = "BH",
@@ -573,18 +531,36 @@ CircadianAnalysisOptions <- function(alpha = 0.05,
 }
 
 
-#' Create Bootstrap Design Grid Options
+#' Create Bootstrap Grid Options
 #'
-#' @param design_vector Ordered time points to sweep over (length >= max(B_values))
-#' @param B_values Number of distinct time points to test
-#' @param m_values Replicates per time point (if NULL, derived as round(N/B))
-#' @param N_values Total per-group sample sizes to test (if NULL, derived as B*m)
-#' @param nboot Number of bootstrap parameter draws (outer uncertainty loop)
-#' @param nsims_inner Simulations per bootstrap draw
-#' @param design "active" or "passive"
-#' @param seed Random seed
+#' @description
+#' Collects the settings for a bootstrapped design-grid analysis, which
+#' quantifies how much the finite pilot contributes to uncertainty in
+#' power across combinations of time points (B) and replicates (m). It
+#' defines the grid of designs to evaluate and the number of bootstrap
+#' draws and inner simulations used to form the confidence bands. The
+#' resulting object is passed to \code{\link{runBootstrapDesignGrid}}.
+#'
+#' @param design_vector Ordered vector of candidate time points to sample
+#'   from; its length must be at least \code{max(B_values)}.
+#' @param B_values Numbers of distinct time points to evaluate.
+#' @param m_values Replicates per time point. When \code{NULL}, derived as
+#'   \code{round(N / B)}.
+#' @param N_values Total per-group sample sizes to evaluate. When
+#'   \code{NULL}, derived as \code{B * m}.
+#' @param nboot Number of bootstrap parameter draws in the outer
+#'   uncertainty loop.
+#' @param nsims_inner Number of simulations run per bootstrap draw.
+#' @param design Sampling design, either \code{"active"} or \code{"passive"}.
+#' @param seed Random seed.
 #'
 #' @return Object of class "CircadianBootstrapOptions"
+#' @examples
+#' # A small active-design B-vs-m grid over two sample sizes.
+#' bopt <- CircadianBootstrapOptions(design_vector = seq(0, 22, by = 2),
+#'                                   B_values = 4, N_values = c(24, 48),
+#'                                   nboot = 3, nsims_inner = 4)
+#' bopt
 #' @export
 CircadianBootstrapOptions <- function(design_vector,
                                       B_values     = c(4, 6, 8, 12, 24),
@@ -726,13 +702,6 @@ print.CircadianDesignOptions <- function(x, ...) {
   }
   if (!is.null(x$cts)) {
     cat(sprintf("  cts:            %d time points\n", length(x$cts)))
-  }
-  omega <- x$omega %||% 1.0
-  if (omega < 1.0) {
-    cat(sprintf("  sim model:      FMM  (omega = %.2f, beta = %.4f)\n",
-                omega, x$beta %||% pi))
-  } else {
-    cat("  sim model:      cosinor  (omega = 1, traditional)\n")
   }
   invisible(x)
 }

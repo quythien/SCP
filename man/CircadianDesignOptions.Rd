@@ -10,36 +10,40 @@ CircadianDesignOptions(
   design = c("active", "passive"),
   cts = NULL,
   B_values = NULL,
-  test_types = c("DR", "DP", "DM"),
-  omega = 1,
-  beta = pi
+  test_types = c("DR", "DP", "DM")
 )
 }
 \arguments{
-\item{sample_sizes}{Vector of sample sizes per group}
+\item{sample_sizes}{Numeric vector of sample sizes to evaluate.}
 
-\item{nsims}{Number of simulation replicates}
+\item{nsims}{Number of simulation replicates run at each sample size.}
 
-\item{design}{"active" or "passive"}
+\item{design}{Sampling design: \code{"active"} places collection times on
+an even grid, \code{"passive"} draws them from \code{cts}.}
 
-\item{cts}{Time-of-day distribution for passive design (numeric vector)}
+\item{cts}{Numeric vector giving the time-of-day distribution used for a
+passive design.}
 
 \item{B_values}{Optional vector of time-point counts (B) to sweep, in
-addition to \code{sample_sizes}; NULL runs a single B implied by \code{cts}.}
+addition to \code{sample_sizes}. \code{NULL} runs the single B implied
+by \code{cts}.}
 
-\item{test_types}{Character vector of tests to run ("DR", "DP", "DM")}
-
-\item{omega}{FMM waveform shape parameter in (0, 1]. \code{omega = 1}
-(default) is the pure cosinor path; \code{omega < 1} simulates a
-non-sinusoidal waveform via \code{simCircadianFMM()}. \code{omega = 0} is
-not allowed.}
-
-\item{beta}{FMM orientation parameter (peak-location offset, default
-\code{pi}); only used when \code{omega < 1}, ignored for the cosinor path.}
+\item{test_types}{Character vector of differential tests to run, any of
+\code{"DR"}, \code{"DP"}, and \code{"DM"}.}
 }
 \value{
 Object of class "CircadianDesignOptions"
 }
 \description{
-Create Study Design Options
+Collects the sampling-design choices for a power analysis: the sample
+sizes to evaluate, the number of simulation replicates per size, and
+whether collection times are placed on an even grid (active design) or
+drawn from the pilot's time-of-day distribution (passive design). The
+resulting \code{CircadianDesignOptions} object is passed to the
+\code{runSims*} and \code{recommendDesign} functions.
+}
+\examples{
+# Active design over two small sample sizes with few simulations.
+dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+dopt
 }

@@ -318,7 +318,7 @@ rayleigh_test_circular = function(angles, period = 24) {
 }
 
 
-#' Estimate Circadian Parameters from Pilot Data (Single-Cohort)
+#' Estimate Circadian Pilot Parameters (Single-Cohort)
 #'
 #' @description
 #' Fits a cosinor model per gene, ranks rhythmic genes by p-value, and returns
@@ -357,19 +357,17 @@ rayleigh_test_circular = function(angles, period = 24) {
 #' @return A \code{CircadianBioOptions} S3 object usable directly with
 #'   \code{runSimsSingleCohort()} or \code{runDifferentialPower()}.
 #'
-#' @seealso \code{\link{estCircadianParamFMM}} for FMM-aware pre-screen,
-#'   \code{\link{estCircadianParamTwoGroup}} for two-group setup,
-#'   \code{\link{prepCircadianData}} for normalisation upstream.
+#' @seealso \code{\link{estCircadianParamTwoGroup}} for the two-group setup,
+#'   \code{\link{prepCircadianData}} for preparing the input matrix.
 #'
 #' @examples
-#' \dontrun{
-#'   set.seed(1)
-#'   n_genes <- 200; n_samples <- 30
-#'   times <- rep(seq(0, 22, by = 2), length.out = n_samples)
-#'   expr  <- matrix(rnorm(n_genes * n_samples), nrow = n_genes)
-#'   for (g in 1:20) expr[g, ] <- expr[g, ] + 2 * cos(2*pi*times/24)
-#'   bio <- estCircadianParam(expr, times, period = 24, verbose = FALSE)
-#' }
+#' set.seed(1)
+#' n_genes <- 200; n_samples <- 30
+#' times <- rep(seq(0, 22, by = 2), length.out = n_samples)
+#' expr  <- matrix(rnorm(n_genes * n_samples), nrow = n_genes)
+#' for (g in 1:20) expr[g, ] <- expr[g, ] + 2 * cos(2 * pi * times / 24)
+#' bio <- estCircadianParam(expr, times, period = 24,
+#'                          top_k = 20, verbose = FALSE)
 #'
 #' @export
 estCircadianParam <- function(data, times, period = 24,
@@ -562,7 +560,7 @@ estCircadianParam <- function(data, times, period = 24,
 }
 
 
-#' Estimate CircadianBioOptions Under the Two-Harmonic Cosinor Model
+#' Two-Harmonic Circadian Pilot Estimation
 #'
 #' @description Two-harmonic analog of \code{\link{estCircadianParam}}. Fits the
 #' regression
@@ -598,8 +596,8 @@ estCircadianParam <- function(data, times, period = 24,
 #'         passing the joint 4-d.f. F-test contribute, even those whose
 #'         \eqn{A_2} is essentially noise. The empirical \eqn{F_{A_2}} will
 #'         have a noise spike near zero, which is fine.
-#'   \item K=2 extension is single-cohort only -- the differential simulator
-#'         (\code{simCircadianDiff}) is not extended.
+#'   \item The K=2 extension is single-cohort only; the differential
+#'         simulator is not extended.
 #' }
 #'
 #' @param data Numeric matrix of pilot expression (genes x samples).
@@ -629,6 +627,15 @@ estCircadianParam <- function(data, times, period = 24,
 #'
 #' @seealso \code{\link{estCircadianParam}} for the 1-harmonic case,
 #'   \code{\link{simCircadianSingleCohort2H}} for the matching simulator.
+#'
+#' @examples
+#' # Two-harmonic pilot fit on a bundled raw pilot (first 300 genes).
+#' praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+#'                             package = "SCP"))
+#' expr <- praw$adrenal$expr[1:300, ]
+#' bio2h <- estCircadianParam2H(expr, praw$adrenal$times,
+#'                              top_k = 100, verbose = FALSE)
+#' bio2h$prop_rhythmic
 #'
 #' @export
 estCircadianParam2H <- function(data, times, period = 24,
@@ -915,8 +922,9 @@ estCircadianParam2H <- function(data, times, period = 24,
 #'   detector's harmonic order to keep truth-label generation and detection
 #'   internally consistent.
 #' @param paired_sigma Logical (default TRUE). Forwarded to CircadianBioOptions.
-#' @param paired_omega Logical (default TRUE). Forwarded.
-#' @param paired_alpha Logical (default TRUE). Forwarded.
+#'   The empirical (amplitude, sigma_rhythmic, omega_rhythmic, alpha_rhythmic)
+#'   tuple is always kept jointly paired by gene index (see Value); the internal
+#'   FMM simulator resamples all four vectors with a single shared draw index.
 #' @param prop_DR Target proportion of differential-rhythmicity genes,
 #'   forwarded to CircadianBioOptions (default 0).
 #' @param prop_DP Target proportion of differential-phase genes, forwarded to
@@ -957,8 +965,6 @@ estCircadianParamFMM <- function(data, times, period = 24,
                                  top_k = 300L,
                                  screen_K = 2L,
                                  paired_sigma = TRUE,
-                                 paired_omega = TRUE,
-                                 paired_alpha = TRUE,
                                  prop_DR = 0.0,
                                  prop_DP = 0.0,
                                  prop_DM = 0.0,
@@ -1100,11 +1106,7 @@ estCircadianParamFMM <- function(data, times, period = 24,
     lOD            = lOD_emp,
     amplitude      = amp_emp,
     sigma_rhythmic = sigma_rhythmic_emp,
-    omega_rhythmic = omega_emp,
-    alpha_rhythmic = alpha_emp,
     paired_sigma   = paired_sigma,
-    paired_omega   = paired_omega,
-    paired_alpha   = paired_alpha,
     prop_DR        = prop_DR,
     prop_DP        = prop_DP,
     prop_DM        = prop_DM,
@@ -1112,6 +1114,26 @@ estCircadianParamFMM <- function(data, times, period = 24,
     phase          = phase_emp,
     ...
   )
+  # Restore the joint per-gene pairing of (amplitude, sigma_rhythmic,
+  # omega_rhythmic, alpha_rhythmic).
+  # CircadianBioOptions() independently resamples amplitude/sigma_rhythmic down
+  # to length n_rhythmic (its own local `ji`), which would leave them a
+  # different length than the raw per-gene omega_emp/alpha_emp vectors attached
+  # below. simCircadianFMM()'s .resample_paired() only reuses its shared
+  # per-simulation draw index when length(omega_rhythmic)==length(amplitude);
+  # a length mismatch silently decorrelates (omega, alpha) from (A, sigma).
+  # We therefore overwrite amplitude/phase/sigma_rhythmic with the raw
+  # length-n_fitted pilot vectors (same pattern estCircadianParam2H uses for
+  # its 5-way tuple) so all four FMM-relevant vectors stay length-matched and
+  # the simulator draws a single shared index across the tuple.
+  # The user-facing CircadianBioOptions() constructor no longer exposes the
+  # omega_/alpha_ arguments (FMM is an internal-only extensibility path); the
+  # internal FMM simulator (simCircadianFMM) reads these fields directly.
+  opts$amplitude      <- amp_emp
+  opts$phase          <- phase_emp
+  opts$sigma_rhythmic <- sigma_rhythmic_emp
+  opts$omega_rhythmic <- omega_emp
+  opts$alpha_rhythmic <- alpha_emp
   opts$diagnostics <- list(
     beta_hat        = beta_hat,
     sigma_alpha_hat = sigma_alpha_hat,
@@ -1139,7 +1161,7 @@ circular_difference <- function(phi1, phi2, period = 24) {
   ((diff + period/2) %% period) - period/2
 }
 
-#' Estimate a two-group circadian pilot for differential power
+#' Two-Group Circadian Pilot Estimation
 #'
 #' Fits cosinor models to two groups of pilot data and assembles the two-group
 #' pilot summary used by the differential power simulator, encoding
@@ -1162,6 +1184,15 @@ circular_difference <- function(phi1, phi2, period = 24) {
 #' @param sim.seed Random seed.
 #' @param verbose Print progress.
 #' @return A two-group \code{CircadianBioOptions} pilot summary.
+#' @examples
+#' # Two-group pilot (adrenal vs liver arms of the bundled demo pilot).
+#' praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+#'                             package = "SCP"))
+#' bio <- estCircadianParamTwoGroup(praw$adrenal$expr[1:300, ],
+#'                                  praw$liver$expr[1:300, ],
+#'                                  praw$adrenal$times, praw$liver$times,
+#'                                  top_k = 100, verbose = FALSE)
+#' bio$prop_DR
 #' @export
 estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
                                       period = 24,

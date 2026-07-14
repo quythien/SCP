@@ -613,10 +613,10 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
 }
 
 
-#' Simulate Single-Cohort Circadian Data Under the Two-Harmonic Cosinor Model
+#' Simulate Two-Harmonic Single-Cohort Data
 #'
-#' @description Two-harmonic analog of \code{\link{simCircadianSingleCohort}}.
-#' Generates expression from
+#' @description Two-harmonic analog of the single-harmonic single-cohort
+#' simulator. Generates expression from
 #' \deqn{y_{gi} = \mu_g + A_{g,1} \cos(\omega_0 (t_i - \phi_{g,1}))
 #'              + A_{g,2} \cos(2 \omega_0 (t_i - \phi_{g,2})) + \epsilon_{gi}}
 #' using the joint pilot tuple \eqn{(A_1, \phi_1, A_2, \phi_2, \sigma)} stored
@@ -644,7 +644,18 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
 #'       \code{ngenes}; zero for non-rhythmic genes).}
 #'   }
 #'
-#' @seealso \code{\link{estCircadianParam2H}}, \code{\link{simCircadianSingleCohort}}
+#' @seealso \code{\link{estCircadianParam2H}} for the matching pilot fit.
+#' @examples
+#' # Generate one two-harmonic dataset from a 2H pilot fit.
+#' praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+#'                             package = "SCP"))
+#' expr <- praw$adrenal$expr[1:300, ]
+#' bio2h <- estCircadianParam2H(expr, praw$adrenal$times,
+#'                              top_k = 100, verbose = FALSE)
+#' bio2h$ngenes <- 300L
+#' cts <- rep(seq(0, 22, by = 2), 2)
+#' sim <- simCircadianSingleCohort2H(bio2h, cts, seed = 1)
+#' dim(sim$expr)
 #' @export
 simCircadianSingleCohort2H <- function(bio.opts, cts, seed = NULL) {
   stopifnot(inherits(bio.opts, "CircadianBioOptions"))

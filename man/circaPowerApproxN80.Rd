@@ -2,7 +2,7 @@
 % Please edit documentation in R/runner.R
 \name{circaPowerApproxN80}
 \alias{circaPowerApproxN80}
-\title{Estimate n for 80 percent power using CircaPower at median pilot r}
+\title{Analytical Sample Size for 80 percent Power}
 \usage{
 circaPowerApproxN80(
   bio.opts,
@@ -12,17 +12,28 @@ circaPowerApproxN80(
 )
 }
 \arguments{
-\item{bio.opts}{\code{CircadianBioOptions} with amplitude and sigma_rhythmic.}
+\item{bio.opts}{A \code{CircadianBioOptions} pilot; its \code{amplitude}
+and \code{sigma_rhythmic} give the effect-size distribution.}
 
-\item{alpha}{Significance level (default 0.05).}
+\item{alpha}{Significance level for the per-gene test (default 0.05).}
 
-\item{target_power}{Target power (default 0.80).}
+\item{target_power}{Target power to solve for (default 0.80).}
 
-\item{n_search}{Integer vector of candidate sample sizes.}
+\item{n_search}{Integer vector of candidate sample sizes to search over.}
 }
 \value{
-Single integer -- smallest n achieving target_power, or NA if not found.
+A single integer: the smallest sample size in \code{n_search}
+  that reaches \code{target_power}, or \code{NA} if none does.
 }
 \description{
-Estimate n for 80 percent power using CircaPower at median pilot r
+Returns a fast closed-form estimate of the sample size needed for the
+target power, evaluated at the pilot's median effect size
+(\eqn{\tilde r = A / \sigma}). It uses the analytical cosinor F-test
+power formula rather than simulation, so it is a useful starting point
+before running the full simulation grid.
+}
+\examples{
+# Analytical sample size for the pilot's median effect size.
+bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+circaPowerApproxN80(bio)
 }

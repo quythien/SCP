@@ -2,7 +2,7 @@
 % Please edit documentation in R/runner.R
 \name{runSimsSingleCohort}
 \alias{runSimsSingleCohort}
-\title{Simulation-Based Power for Single-Cohort Rhythmicity Detection}
+\title{Single-Cohort Rhythmicity Power Simulation}
 \usage{
 runSimsSingleCohort(
   bio.opts,
@@ -10,30 +10,30 @@ runSimsSingleCohort(
   analysis.opts,
   method = "cosinor",
   K = 1L,
-  harmonics = c(0, 0),
   verbose = TRUE,
   mc.cores = 1L,
   progress = NULL
 )
 }
 \arguments{
-\item{bio.opts}{\code{CircadianBioOptions} -- pilot parameter distributions.
-Build with \code{estCircadianParam()}.}
+\item{bio.opts}{The \code{CircadianBioOptions} pilot object, from
+\code{estCircadianParam()}.}
 
-\item{design.opts}{\code{CircadianDesignOptions} -- sample sizes, nsims, design.}
+\item{design.opts}{The \code{CircadianDesignOptions} object (sample
+sizes, nsims, design).}
 
-\item{analysis.opts}{\code{CircadianAnalysisOptions} -- alpha, p.adjust.method.}
+\item{analysis.opts}{The \code{CircadianAnalysisOptions} object (alpha,
+correction, FDR thresholds).}
 
-\item{method}{Detection method: \code{"DCP"} (1-harmonic cosinor F-test),
-\code{"JTK"}, \code{"RAIN"}, \code{"MH"} (multi-harmonic), or \code{"FMM"}
-(K-harmonic F-test motivated by the FMM Fourier expansion; default detector
-for non-cosinor signals).}
+\item{method}{Detection method: \code{"cosinor"} (default, the
+K-harmonic cosinor F-test, with \code{K} set by the \code{K} argument),
+or the alternative detectors \code{"JTK"}, \code{"RAIN"}, and \code{"MH"}
+(multi-harmonic). \code{"DCP"} and \code{"Kharmonic"} are retained aliases
+of the cosinor detector.}
 
-\item{K}{Integer. Number of harmonics for \code{method = "FMM"}
-(default 2). K=1 is equivalent to DCP; K=2 captures the 1st and 2nd
-Fourier harmonics; K=3+ for very sharp peaks.}
-
-\item{harmonics}{Numeric length-2: \code{c(alpha2, alpha3)} harmonic coefficients (default \code{c(0,0)}).}
+\item{K}{Integer. Number of harmonics for the cosinor detector
+(default 1). K=1 is the single-harmonic cosinor F-test; K=2 captures the
+1st and 2nd harmonics; K=3+ for very sharp peaks.}
 
 \item{verbose}{Print progress (default TRUE).}
 
@@ -49,9 +49,9 @@ List with:
   \item{marginal_FDR}{Matrix [sample_sizes x nsims]}
   \item{marginal_TD}{Matrix [sample_sizes x nsims]}
   \item{marginal_FD}{Matrix [sample_sizes x nsims]}
-  \item{marginal_alpha}{Matrix [sample_sizes x nsims] -- empirical type-I error}
-  \item{pvalues}{Array [sample_sizes x ngenes x nsims] -- raw p-values}
-  \item{r_values_list}{List[[sample_size]][[sim]] -- per-gene A/sigma}
+  \item{marginal_alpha}{Matrix [sample_sizes x nsims]: empirical type-I error}
+  \item{pvalues}{Array [sample_sizes x ngenes x nsims]: raw p-values}
+  \item{r_values_list}{List[[sample_size]][[sim]]: per-gene A/sigma}
   \item{strat_power}{Array [sample_sizes x n_strata x nsims]}
   \item{strat_TD}{Array [sample_sizes x n_strata x nsims]}
   \item{strat_FD}{Array [sample_sizes x n_strata x nsims]}
@@ -76,12 +76,11 @@ Simulation-based alternative to the closed-form \code{CircaPower} formula:
 works for any design (active or passive) and any pilot parameter distribution.
 }
 \examples{
-\dontrun{
-bio  <- estCircadianParam(expr, times)
-dopt <- CircadianDesignOptions(sample_sizes = c(20, 40, 80), nsims = 50)
+bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+bio$ngenes <- 200L
+dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
 aopt <- CircadianAnalysisOptions(alpha = 0.05)
-res  <- runSimsSingleCohort(bio, dopt, aopt)
+res  <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
 rowMeans(res$marginal_power)  # mean power at each N
-}
 
 }

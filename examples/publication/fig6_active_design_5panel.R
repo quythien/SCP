@@ -23,7 +23,7 @@
 #'   * All randomness is seeded (calibration seed 2025; per-B sweep seed
 #'     GLOBAL_SEED + B), so the figure is reproducible on this server.
 
-setwd("/home/qtp1/Projects/Circadian/Kyle/Circadian-analysis-main/R/v1/PowerSim")
+setwd(Sys.getenv("SCP_ROOT", unset = "."))  # run from the package root
 suppressWarnings(suppressMessages({ library(Rcpp); library(SCP) }))
 dyn.load(system.file("libs", "SCP.so", package = "SCP")); .CPP_LOADED <- TRUE
 
@@ -36,7 +36,10 @@ N_GRID      <- c(24L, 48L, 96L, 144L, 192L, 240L)
 NSIMS       <- 60L
 NGENES      <- 3000L
 
-KD          <- "/home/qtp1/Projects/Circadian/Kyle/Kyle_multiBrainRegion"
+# GSE160521 striatal CPM + the matched-donor clinical file are controlled-access
+# (CAMO server); not redistributed. Point SCP_GSE160521_DIR at your local copy to
+# recalibrate, or run from the cached RDS below.
+KD          <- Sys.getenv("SCP_GSE160521_DIR", unset = "data/gse160521")
 AB_CACHE    <- "output/two_harmonic/results/fig6_v9_data.rds"          # A/B biomarker (Putamen ctrl)
 PILOT_RDS   <- "output/diagnostics/pilot_put_vs_cau_control.rds"       # Stage 1 output
 SWEEP_RDS   <- "output/diagnostics/Fig6_diff_Bsweep_PutCau.rds"        # Stage 2 output

@@ -2,49 +2,65 @@
 % Please edit documentation in R/options.R
 \name{CircadianAnalysisOptions}
 \alias{CircadianAnalysisOptions}
-\title{Create Analysis & Reporting Options}
+\title{Create Analysis and Reporting Options}
 \usage{
 CircadianAnalysisOptions(
-  alpha = 0.05,
-  p.adjust.method = "BH",
-  parallel.ncores = 1,
-  amp.cutoff = 0,
-  target_effect = 0.1,
-  fdr_thresholds = c(0.01, 0.05, 0.1, 0.2),
-  reference_n = 60,
-  r_strata = c(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4, 4.5, 5, Inf),
+  alpha = 0.05, p.adjust.method = "BH", parallel.ncores = 1,
+  amp.cutoff = 0, target_effect = 0.1,
+  fdr_thresholds = c(0.01, 0.05, 0.10, 0.20), reference_n = 60,
+  r_strata = c(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75,
+               2, 2.5, 3, 3.5, 4, 4.5, 5, Inf),
   strata_labels = NULL,
   phase_shifts = c(0, 0.5, 1, 2, 4, 6, 8, 10, 12),
-  DCmethod = "DCP"
-)
+  DCmethod = "DCP")
 }
 \arguments{
-\item{alpha}{Significance level for DCP pipeline}
+\item{alpha}{Per-gene significance level for the cosinor rhythmicity test.}
 
-\item{p.adjust.method}{Multiple testing correction method}
+\item{p.adjust.method}{Multiple-testing correction applied across genes,
+passed to \code{stats::p.adjust} (default Benjamini-Hochberg).}
 
-\item{parallel.ncores}{Number of cores for parallel DCP}
+\item{parallel.ncores}{Number of cores used to fit the per-gene tests.}
 
-\item{amp.cutoff}{Amplitude cutoff for DCP_Rhythmicity}
+\item{amp.cutoff}{Minimum amplitude a gene must exceed to enter the
+cosinor rhythmicity screen.}
 
-\item{target_effect}{Minimum effect size to count as "interesting"}
+\item{target_effect}{Minimum effect size a gene must reach to count as a
+meaningful discovery.}
 
-\item{fdr_thresholds}{FDR thresholds for power curves}
+\item{fdr_thresholds}{FDR thresholds at which power curves are reported.}
 
-\item{reference_n}{Reference sample size for Panel B / phase shift plots}
+\item{reference_n}{Reference sample size marked on the panel-B and
+phase-shift plots.}
 
-\item{r_strata}{Breakpoints for A/sigma stratification}
+\item{r_strata}{Breakpoints, in \eqn{r = A / \sigma} units, that define
+the effect-size strata used to report power by signal strength.}
 
-\item{strata_labels}{Labels for strata (auto-generated if NULL)}
+\item{strata_labels}{Labels for the strata; generated automatically from
+\code{r_strata} when \code{NULL}.}
 
-\item{phase_shifts}{Phase shift magnitudes to sweep (for sensitivity analysis)}
+\item{phase_shifts}{Phase-shift magnitudes (hours) swept in the
+phase-sensitivity analysis.}
 
 \item{DCmethod}{Differential-rhythmicity detector to report against,
-one of "DCP" (default) or "CircaCompare".}
+either \code{"DCP"} (the cosinor F-test, default) or
+\code{"CircaCompare"}. \code{"DCP"} is a retained legacy alias for the
+cosinor detector.}
 }
 \value{
 Object of class "CircadianAnalysisOptions"
 }
 \description{
-Create Analysis & Reporting Options
+Collects the settings that govern how each simulated dataset is analysed
+and how power is reported: the per-gene significance level, the
+multiple-testing correction, the FDR thresholds at which power curves are
+drawn, and the effect-size strata used to break power down by signal
+strength. The resulting \code{CircadianAnalysisOptions} object is passed
+to the \code{runSims*} and plotting functions.
+}
+\examples{
+# Reporting options: 5 percent alpha, power at two FDR thresholds.
+aopt <- CircadianAnalysisOptions(alpha = 0.05,
+                                 fdr_thresholds = c(0.05, 0.20))
+aopt
 }

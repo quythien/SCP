@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimation.R
 \name{estCircadianParam2H}
 \alias{estCircadianParam2H}
-\title{Estimate CircadianBioOptions Under the Two-Harmonic Cosinor Model}
+\title{Two-Harmonic Circadian Pilot Estimation}
 \usage{
 estCircadianParam2H(
   data,
@@ -98,11 +98,21 @@ modified.
         passing the joint 4-d.f. F-test contribute, even those whose
         \eqn{A_2} is essentially noise. The empirical \eqn{F_{A_2}} will
         have a noise spike near zero, which is fine.
-  \item K=2 extension is single-cohort only -- the differential simulator
-        (\code{simCircadianDiff}) is not extended.
+  \item The K=2 extension is single-cohort only; the differential
+        simulator is not extended.
 }
 }
 
+\examples{
+# Two-harmonic pilot fit on a bundled raw pilot (first 300 genes).
+praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+                            package = "SCP"))
+expr <- praw$adrenal$expr[1:300, ]
+bio2h <- estCircadianParam2H(expr, praw$adrenal$times,
+                             top_k = 100, verbose = FALSE)
+bio2h$prop_rhythmic
+
+}
 \seealso{
 \code{\link{estCircadianParam}} for the 1-harmonic case,
   \code{\link{simCircadianSingleCohort2H}} for the matching simulator.

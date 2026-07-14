@@ -15,7 +15,8 @@
 #'     the heavy stages on a re-run.
 #' Outputs are written under submission/figures/ (Supp Table 1 to submission/).
 
-ROOT <- "/home/qtp1/Projects/Circadian/Kyle/Circadian-analysis-main/R/v1/PowerSim"
+# Run from the package root (set SCP_ROOT to run from elsewhere).
+ROOT <- Sys.getenv("SCP_ROOT", unset = ".")
 setwd(ROOT)
 
 GENERATORS <- c(

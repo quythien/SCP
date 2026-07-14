@@ -1,3 +1,30 @@
+# SCP 0.4.58
+
+## Public API
+
+* **Cosinor-only public surface.** The frequency-modulated Mobius (FMM)
+  parameters have been removed from the exported interface: `CircadianDesignOptions()`
+  no longer takes `omega`/`beta`, `CircadianBioOptions()` no longer takes
+  `omega_rhythmic`/`alpha_rhythmic`/`omega_dist`/`alpha_dist`/`paired_omega`/`paired_alpha`,
+  and `runSimsSingleCohort()` no longer accepts `method = "FMM"` or the
+  `harmonics` argument. The public detectors are the single-harmonic (K = 1)
+  and two-harmonic (K = 2) cosinor F-tests. The internal K-harmonic engine is
+  unchanged, so `detect_cosinor(K = 2)` and the two-harmonic simulator are
+  unaffected.
+* **Runnable examples on every exported function.** Most examples run directly
+  on the bundled demo pilot; the heavier two-group and bootstrap examples are
+  wrapped in `\donttest{}`, and only `launchShiny()` remains `\dontrun{}`.
+* **All contributors credited** in `DESCRIPTION` and `CITATION.cff`.
+
+## Documentation
+
+* **Reference manual rewritten and slimmed** (35 pages): a grouped overview of
+  the main functions, real per-function descriptions in place of title-repeats,
+  plain-language argument text, and no dedicated pages for the trivial S3
+  `print`/`plot` methods. User-facing text now says "cosinor" rather than the
+  legacy internal name "DCP".
+* Dropped the unused `reshape2` dependency.
+
 # SCP 0.4.57
 
 ## Release hardening
@@ -11,9 +38,9 @@
 * **Subject bootstrap is the default** for `runBootstrapDesignGrid()`
   (`resample = "subject"`); the reported band is the 2.5-97.5 percentile
   bootstrap interval. See the README "Bootstrap uncertainty" section.
-* **More parameters exposed.** `runSingleCohortGrid(target_power=)` and
-  `makeAdaptiveRStrata(r_pctile_cap=)` are now arguments rather than hardcoded
-  constants; `estCircadianParam*()` accept a user-settable `top_k`.
+* **More parameters exposed.** `makeAdaptiveRStrata(r_pctile_cap=)` is now an
+  argument rather than a hardcoded constant, and `estCircadianParam*()` accept a
+  user-settable `top_k`.
 
 ## Bug fixes
 

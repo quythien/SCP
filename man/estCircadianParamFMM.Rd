@@ -12,8 +12,6 @@ estCircadianParamFMM(
   top_k = 300L,
   screen_K = 2L,
   paired_sigma = TRUE,
-  paired_omega = TRUE,
-  paired_alpha = TRUE,
   prop_DR = 0,
   prop_DP = 0,
   prop_DM = 0,
@@ -43,11 +41,10 @@ estCircadianParam's top-K logic).}
 detector's harmonic order to keep truth-label generation and detection
 internally consistent.}
 
-\item{paired_sigma}{Logical (default TRUE). Forwarded to CircadianBioOptions.}
-
-\item{paired_omega}{Logical (default TRUE). Forwarded.}
-
-\item{paired_alpha}{Logical (default TRUE). Forwarded.}
+\item{paired_sigma}{Logical (default TRUE). Forwarded to CircadianBioOptions.
+The empirical (amplitude, sigma_rhythmic, omega_rhythmic, alpha_rhythmic)
+tuple is always kept jointly paired by gene index (see Value); the internal
+FMM simulator resamples all four vectors with a single shared draw index.}
 
 \item{prop_DR}{Target proportion of differential-rhythmicity genes,
 forwarded to CircadianBioOptions (default 0).}

@@ -49,41 +49,32 @@ A list with:
 }
 \description{
 Converts raw expression data into the standard (matrix, times) format
-expected by \code{estCircadianParam()}, \code{estCircadianParamTwoGroup()},
-and \code{runBootstrapDesignGrid()}.
+used by the pilot-calibration and power functions (for example
+\code{estCircadianParam} and \code{runBootstrapDesignGrid}).
 
 The pipeline always expects:
   \itemize{
     \item \code{data}, numeric matrix, \strong{genes x samples}, log2-scale
-    \item \code{times}, numeric vector, hours in [0, 24), same length as \code{ncol(data)}
+    \item \code{times}, numeric vector, hours in [0, 24), one per column
+      of \code{data}
   }
 
 This function handles the three most common raw formats:
 \describe{
-  \item{"counts"}{Raw integer counts (e.g. featureCounts, STAR).
-    Converts to log2(CPM + 1): \code{log2(sweep(x, 2, colSums(x), "/") * 1e6 + 1)}.}
-  \item{"cpm"}{Raw CPM values (e.g. edgeR \code{cpm()}, baboon data).
-    Converts to log2(CPM + 1).}
-  \item{"log2"}{Already log2-scale (e.g. GSE54651, Seney ACC).
-    Wraps with \code{data.matrix()} only; no numeric transformation.}
+  \item{"counts"}{Raw integer counts (e.g. featureCounts, STAR);
+    converted to \code{log2(CPM + 1)}.}
+  \item{"cpm"}{Raw CPM values (e.g. edgeR, baboon data);
+    converted to \code{log2(CPM + 1)}.}
+  \item{"log2"}{Already log2-scale (e.g. GSE54651, Seney ACC);
+    wrapped with \code{data.matrix()}, no numeric transformation.}
 }
 }
 \examples{
-\dontrun{
-# From raw counts matrix
-prep <- prepCircadianData(counts_matrix, times = tod_vector, input_type = "counts")
-bio  <- estCircadianParam(prep$data, prep$times)
-
-# From data.frame with metadata
-prep <- prepCircadianData(
-  expr       = expr_df,
-  times      = "TOD",
-  input_type = "log2",
-  pheno      = pheno_df,
-  sample_col = "SampleID"
-)
-
-# Baboon raw CPM (load gives a data.frame)
-prep <- prepCircadianData(baboon_df, times = tod_vector, input_type = "cpm")
-}
+# Wrap a bundled log2 pilot matrix into the (data, times) format.
+praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+                            package = "SCP"))
+expr <- praw$adrenal$expr[1:200, ]
+tod  <- praw$adrenal$times
+prep <- prepCircadianData(expr, tod, input_type = "log2")
+str(prep[c("n_genes", "n_samples", "input_type")])
 }

@@ -1428,12 +1428,17 @@ detect_RAIN <- function(expr, times, gene_names = NULL, period = 24) {
 
 #' Unified cosinor rhythmicity detection (single- or multi-harmonic)
 #'
+#' @description
 #' Canonical entry point for rhythmicity detection by K-harmonic cosinor
 #' regression. \code{K = 1} is the single-harmonic cosinor F-test, identical
-#' to \code{\link{detect_DCP}}; \code{K = 2} adds the 12-hour second harmonic
+#' to the single-harmonic case; \code{K = 2} adds the 12-hour second harmonic
 #' and tests the joint harmonic block. By default the unshrunk exact nested
 #' F-test is used (matching the power derivations in the paper). Returns raw
 #' p-values; the caller applies FDR control.
+#'
+#' @usage
+#' detect_cosinor(expr, times, K = 1L, period = 24,
+#'                ebayes = FALSE, mc.cores = 1L)
 #'
 #' @param expr   Gene x sample expression matrix
 #' @param times  Numeric time vector (length = ncol(expr))
@@ -1444,7 +1449,16 @@ detect_RAIN <- function(expr, times, gene_names = NULL, period = 24) {
 #'   F-test)
 #' @param mc.cores Cores for the \code{K >= 2} fit (default 1)
 #' @return Numeric vector of raw p-values, length \code{nrow(expr)}
-#' @seealso \code{\link{detect_DCP}}
+#' @seealso \code{\link{estCircadianParam}} for calibrating a pilot from the
+#'   same cosinor fit.
+#' @examples
+#' # Rhythmicity p-values for a small simulated matrix (10 rhythmic genes).
+#' set.seed(1)
+#' times <- rep(seq(0, 22, by = 2), 2)
+#' expr  <- matrix(rnorm(50 * length(times)), nrow = 50)
+#' expr[1:10, ] <- expr[1:10, ] + 2 * cos(2 * pi * times / 24)
+#' pvals <- detect_cosinor(expr, times, K = 1)
+#' sum(p.adjust(pvals, "BH") < 0.05)
 #' @export
 detect_cosinor <- function(expr, times, K = 1L, period = 24,
                            ebayes = FALSE, mc.cores = 1L) {
@@ -1757,8 +1771,6 @@ detect_FMM <- function(expr,
   # the test is undefined on this design) and return a conservative null
   # result: F=0, p=1, R^2=NA. This keeps the function safe to call directly,
   # outside the runner that performs an earlier dispatch-level check.
-  # TODO: once limma exposes a `coef` argument that tolerates non-estimable
-  # columns, prefer that path over the conservative fallback.
   rank_X <- qr(X)$rank
   if (rank_X < ncol(X)) {
     warning(sprintf(

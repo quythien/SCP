@@ -1,4 +1,4 @@
-#' Find the sample size needed to achieve a target genome-wide power
+#' Sample Size for a Target Genome-Wide Power
 #'
 #' Works on output from either \code{runSimsSingleCohort()} or \code{runSimsDiff()}.
 #' Recomputes marginal power at the requested FDR from raw simulation output,
@@ -27,6 +27,14 @@
 #'     when target power is never reached.}
 #'   \item{power}{Named numeric vector: mean power at each grid sample size.}
 #'   \item{target_power, fdr, endpoint}{Echo of inputs.}
+#' @examples
+#' bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+#' bio$ngenes <- 200L
+#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+#' aopt <- CircadianAnalysisOptions(alpha = 0.05)
+#' res  <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
+#' np <- npower(res, target_power = 0.8, fdr = 0.05)
+#' np
 #' @export
 npower <- function(res,
                    target_power     = 0.80,

@@ -36,9 +36,7 @@ a pilot whose design (tissue, sample size, signal strength) matches
 their planned study.
 }
 \examples{
-\dontrun{
-  scp_pilot_search("liver")
-  scp_pilot_search(species = "mouse", tissue_pattern = "brain|cortex")
-  scp_pilot_search(sample_type = NULL)   # include cell lines
-}
+scp_pilot_search("liver")
+scp_pilot_search(species = "mouse", tissue_pattern = "brain|cortex")
+scp_pilot_search(sample_type = NULL)   # include cell lines
 }

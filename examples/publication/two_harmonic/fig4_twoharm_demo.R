@@ -5,9 +5,12 @@
 # Pilot: GTEx Liver  |  Output: submission/figures/Fig4_twoharm_demo.pdf
 # =============================================================================
 
-setwd("/home/qtp1/Projects/Circadian/Kyle/Circadian-analysis-main/R/v1/PowerSim")
+setwd(Sys.getenv("SCP_ROOT", unset = "."))  # run from the package root
 
-GTEX_PATH <- "/home/qtp1/Projects/Collaborative/GTEXdata/data/v10/cpm/v10_CPM_full.RData"
+# GTEx v10 CPM is controlled-access (dbGaP); not redistributed. Point GTEX_V10_CPM
+# at your local copy to recalibrate, or run from the cached fits under output/.
+GTEX_PATH <- Sys.getenv("GTEX_V10_CPM",
+                        unset = "data/v10/cpm/v10_CPM_full.RData")
 FITS_PATH <- "output/two_harmonic/results/tissue_Liver_fits.rds"
 VENN_PATH <- "output/two_harmonic/results/tissue_Liver_venn.rds"
 KEGG_PATH <- "output/two_harmonic/results/tissue_Liver_kegg.rds"

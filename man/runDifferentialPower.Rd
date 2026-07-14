@@ -19,36 +19,63 @@ runDifferentialPower(
 )
 }
 \arguments{
-\item{bio.opts}{CircadianBioOptions from estCircadianParamTwoGroup()}
+\item{bio.opts}{Two-group pilot from
+\code{estCircadianParamTwoGroup()}.}
 
-\item{design.opts}{CircadianDesignOptions (sample_sizes, design, cts)}
+\item{design.opts}{The \code{CircadianDesignOptions} object (sample
+sizes, design, collection times).}
 
-\item{analysis.opts}{CircadianAnalysisOptions}
+\item{analysis.opts}{The \code{CircadianAnalysisOptions} object.}
 
-\item{methods}{Any of "DCP","CircaCompare"}
+\item{methods}{Detectors to run: \code{"DCP"} (the cosinor F-test)
+or \code{"CircaCompare"}.}
 
-\item{test_types}{Any of "DR","DP","DM" (silently NA if method lacks support)}
+\item{test_types}{Endpoints to test, any of \code{"DR"} (rhythmicity),
+\code{"DP"} (phase), and \code{"DM"} (mesor). An endpoint a detector
+does not support is returned as \code{NA}.}
 
 \item{alpha2}{Scalar or vector swept for both groups}
 
 \item{alpha3}{Scalar or vector swept for both groups}
 
-\item{mc.cores}{Parallel cores}
+\item{mc.cores}{Number of cores used for the per-gene fits.}
 
-\item{plot}{Auto-plot on completion}
+\item{plot}{Draw the power curves when the run finishes.}
 
-\item{output_file}{PDF path (NULL = screen)}
+\item{output_file}{Path for a PDF of the plot, or \code{NULL} to draw to
+the current device.}
 
-\item{verbose}{Print progress}
+\item{verbose}{Print progress messages while running.}
 }
 \value{
-List (class \code{SCPDiffResult}) from \code{runSimsDiff()}:
-  \code{pval_DR}, \code{fdr_DR}, \code{pval_DP}, \code{fdr_DP},
-  \code{pval_DM}, \code{fdr_DM} -- 3-D arrays \code{[ngenes x n_sizes x nsims]};
-  plus \code{diff_type}, \code{effectsize}, \code{sample_sizes}, \code{nsims}.
-  Pass to \code{plotDiffPower()} or \code{npower(..., endpoint="DR")}.
+A list of class \code{SCPDiffResult}. It holds the p-value and
+  FDR arrays \code{pval_DR}, \code{fdr_DR}, \code{pval_DP},
+  \code{fdr_DP}, \code{pval_DM}, and \code{fdr_DM}, each indexed by
+  gene, sample size, and simulation, together with \code{diff_type},
+  \code{effectsize}, \code{sample_sizes}, and \code{nsims}. Pass it to
+  \code{plotDiffPower()} or to \code{npower(..., endpoint = "DR")}.
 }
 \description{
-Sweeps N x alpha2 x alpha3 x method x test_type and returns a tidy power table.
-Automatically calls plot() and npower() unless plot=FALSE.
+Estimates FDR-controlled power to detect differential rhythmicity between
+two groups. For each sample size and simulation replicate it generates
+paired two-group data from the pilot, applies the chosen differential
+detector, and aggregates power for the requested endpoints (differential
+rhythmicity, phase, or mesor). Unless \code{plot = FALSE}, it also draws
+the power curves and prints the recommended sample size on completion.
+}
+\examples{
+\donttest{
+praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+                            package = "SCP"))
+e1 <- praw$adrenal$expr[1:300, ]; t1 <- praw$adrenal$times
+e2 <- praw$liver$expr[1:300, ];   t2 <- praw$liver$times
+bio  <- estCircadianParamTwoGroup(e1, e2, t1, t2, top_k = 100,
+                                  verbose = FALSE)
+bio$ngenes <- 200L
+dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+aopt <- CircadianAnalysisOptions(alpha = 0.05)
+res  <- runDifferentialPower(bio, dopt, aopt, test_types = "DR",
+                             plot = FALSE, verbose = FALSE)
+npower(res, endpoint = "DR", fdr = 0.05)$n
+}
 }
