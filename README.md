@@ -205,17 +205,18 @@ distribution (`r_tilde = A / sigma`, amplitude over noise, per gene) tells you
 what you are working with before you simulate anything.
 
 ```r
-bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
-bio$ngenes <- 1200
+cau  <- readRDS(system.file("extdata", "caudate_control_GSE160521.rds", package = "SCP"))
+prep <- prepCircadianData(cau$expr, cau$times, input_type = "log2")
+bio  <- estCircadianParam(prep$data, prep$times, period = 24)
 
 r_tilde <- bio$amplitude / bio$sigma_rhythmic
 hist(r_tilde, breaks = 40, col = "#4C79A6", border = "white",
-     main = "GTEx Adrenal pilot: per-gene effect size",
+     main = "GSE160521 Caudate control pilot: per-gene effect size",
      xlab = expression("effect size  " * tilde(r) == A / sigma))
 abline(v = median(r_tilde), col = "#C0392B", lwd = 2)
 ```
 
-![Effect-size distribution of the GTEx Adrenal pilot](man/figures/pilot_effect_size.png)
+![Effect-size distribution of the GSE160521 Caudate control pilot](man/figures/pilot_effect_size.png)
 
 ### b. Single-cohort power
 
@@ -266,8 +267,9 @@ cannot be controlled, so SCP draws them from the pilot's own time-of-day
 distribution. The simulation lands far above the closed form (113 against 40),
 because the weak-gene tail and the genome-wide FDR control, which the
 single-number formula leaves out, both cost samples, and this striatal pilot
-spans a broad range of effect sizes. That gap is the reason SCP simulates rather
-than trusting a formula. Draw the panels straight from the pilot:
+spans a broad range of effect sizes. That gap reflects the transcriptome-wide
+effect-size heterogeneity a single-summary formula cannot capture but the
+simulation does. Draw the panels straight from the pilot:
 
 ```r
 plotSingleCohortPower(bio.opts = bio_c, design.opts = design,
@@ -377,7 +379,8 @@ boot <- runBootstrapDesignGrid(pilot_data = prep$data, pilot_times = prep$times,
 plotBootstrapDesignGrid(boot, panels = "A")
 ```
 
-![Bootstrap uncertainty for the caudate control pilot](man/figures/bootstrap_ci.png)
+<img src="man/figures/bootstrap_ci.png" alt="Bootstrap uncertainty for the caudate control pilot" width="440">
+
 
 The blue line is the point estimate (plug-in power); the orange line with error
 bars is the bootstrap mean and its 95 percent confidence interval. With only 59
