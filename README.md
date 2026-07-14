@@ -359,8 +359,8 @@ its expression, and re-runs the whole estimate, so you can see how much the powe
 curve wobbles. `runBootstrapDesignGrid()` works from raw pilot expression, so this
 example uses the caudate control pilot bundled with the package, a striatal cohort
 of 59 subjects ([Ketchesin 2021](https://doi.org/10.1073/pnas.2016150118); GEO
-accession GSE160521). The figure below is that pilot's panel from the manuscript
-bootstrap figure.
+accession GSE160521). The figure below reproduces the caudate panel of the
+manuscript bootstrap figure.
 
 ```r
 pilot <- readRDS(system.file("extdata", "caudate_control_GSE160521.rds",
@@ -370,12 +370,13 @@ bio_c <- estCircadianParam(prep$data, prep$times, period = 24)
 
 boot_opts <- CircadianBootstrapOptions(design_vector = prep$times, B_values = 4,
                                        N_values = c(20, 40, 60, 80, 100, 120),
-                                       nboot = 24, nsims_inner = 6,
+                                       nboot = 40, nsims_inner = 20,
                                        design = "passive", seed = 42)
 
 boot <- runBootstrapDesignGrid(pilot_data = prep$data, pilot_times = prep$times,
                                boot.opts = boot_opts,
-                               analysis.opts = CircadianAnalysisOptions(alpha = 0.05),
+                               analysis.opts = CircadianAnalysisOptions(
+                                 alpha = 0.05, fdr_thresholds = 0.05),
                                bio_diff.opts = bio_c, mode = "single",
                                methods = "DCP", mc.cores = 12)
 
@@ -385,13 +386,13 @@ plotBootstrapDesignGrid(boot, panels = "A")
 <p align="center"><img src="man/figures/bootstrap_ci.png" alt="Bootstrap uncertainty for the caudate control pilot" width="440"></p>
 
 
-The blue line is the point estimate (plug-in power); the orange line with error
-bars is the bootstrap mean and its 95 percent confidence interval. With only 59
-subjects to resample from, the band is wide and the bootstrap mean sits well above
-the point estimate at small N (21 percent point estimate against a 72 percent
-bootstrap mean at N = 40), while the point estimate reaches 80 percent power near
-N = 80. A recommended sample size from a small pilot therefore carries real
-uncertainty and should be treated with caution.
+The blue line is the point estimate (plug-in power); the orange dashed line with
+the shaded band is the bootstrap mean and its 95 percent confidence interval. With
+only 59 subjects to resample from, the band is wide and the bootstrap mean sits
+well above the point estimate at small N (a 42 percent point estimate against an
+86 percent bootstrap mean at N = 40), while the point estimate does not reach
+80 percent power until about N = 65. A recommended sample size from a small pilot
+therefore carries real uncertainty and should be treated with caution.
 
 ### e. Two-harmonic detection (K = 2)
 
