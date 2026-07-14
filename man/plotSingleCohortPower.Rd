@@ -5,7 +5,7 @@
 \title{Plot single-cohort circadian power (3 panels)}
 \usage{
 plotSingleCohortPower(
-  res,
+  res = NULL,
   out_pdf = NULL,
   title = "",
   panel_a_res = NULL,
@@ -32,11 +32,18 @@ plotSingleCohortPower(
   vertical = FALSE,
   panel_c_legend = FALSE,
   width = 15,
-  height = 5.5
+  height = 5.5,
+  bio.opts = NULL,
+  design.opts = NULL,
+  analysis.opts = NULL,
+  K = 1L,
+  mc.cores = 1L
 )
 }
 \arguments{
-\item{res}{Output from \code{runSimsSingleCohort()}.}
+\item{res}{Output from \code{\link{runSimsSingleCohort}}. May be
+\code{NULL} when \code{bio.opts} and \code{design.opts} are supplied, in
+which case the required simulations are run internally.}
 
 \item{out_pdf}{Path for PDF output. If NULL, plots to current device.}
 
@@ -48,8 +55,8 @@ from \code{res}. Useful when the marginal summary should reflect a
 different empirical assumption than the effect-size-stratified panels.}
 
 \item{panels}{Character vector, which of panels "A" (marginal power vs
-n), "B" (true discoveries by r-stratum), "C" (stratified power by
-r-stratum) to draw (default all three).}
+n), "B" (power by effect-size stratum), "C" (true discoveries by
+effect-size stratum) to draw (default all three).}
 
 \item{fdr_thresholds}{FDR levels for panel A (default c(0.01,0.05,0.10,0.20)).}
 
@@ -105,17 +112,45 @@ default horizontal 1 x length(panels) layout (default FALSE).}
 \item{width}{PDF width in inches (default 15).}
 
 \item{height}{PDF height in inches (default 5.5).}
+
+\item{bio.opts}{Optional \code{CircadianBioOptions} pilot (e.g. from
+\code{\link{estCircadianParam}}). When supplied together with
+\code{design.opts}, and \code{panel_a_res} is \code{NULL}, the simulations
+backing the requested panels are run internally so the caller can go
+straight from a pilot to the figure. Ignored when \code{panel_a_res} is
+supplied (default \code{NULL}).}
+
+\item{design.opts}{Optional \code{CircadianDesignOptions} used with
+\code{bio.opts} for the internal runs (default \code{NULL}).}
+
+\item{analysis.opts}{Optional \code{CircadianAnalysisOptions} for the
+internal runs; defaults to \code{CircadianAnalysisOptions()} when
+\code{NULL}.}
+
+\item{K}{Cosinor harmonic order for the internal runs (1 =
+single-harmonic, 2 = two-harmonic; default 1).}
+
+\item{mc.cores}{Cores used for the internal simulation runs (default 1).}
 }
 \value{
 Invisibly returns list of data used per panel.
 }
 \description{
 Summarises a single-cohort power simulation in three panels: marginal
-power against sample size at several FDR thresholds (Panel A), the number
-of true discoveries by effect-size stratum (Panel B), and power resolved
-by effect-size stratum (Panel C). It takes the object returned by
-\code{\link{runSimsSingleCohort}} and either draws to the current device
-or writes a PDF.
+power against sample size at several FDR thresholds (Panel A), power
+resolved by effect-size stratum (Panel B), and the number of true
+discoveries by effect-size stratum (Panel C). It either draws to the
+current device or writes a PDF.
+
+The panels can be produced two ways. Supply a precomputed
+\code{\link{runSimsSingleCohort}} object as \code{res} (optionally with a
+second object as \code{panel_a_res} that drives only the marginal panel).
+Alternatively, supply the pilot and design directly through \code{bio.opts}
+and \code{design.opts}: the marginal panel (A) is then computed from a run
+over the pilot's own effect sizes, while the stratified panels (B and C) are
+computed from a companion run that spreads gene effect sizes across the full
+\eqn{r = A/\sigma} range so every stratum is populated. The caller never
+specifies how effect sizes are drawn.
 }
 \examples{
 bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
