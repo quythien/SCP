@@ -46,8 +46,12 @@ really rhythmic; you pick the level you are willing to tolerate (5 percent is
 common), and SCP controls it with the Benjamini-Hochberg procedure (Benjamini
 and Hochberg 1995). **Effect size** here is a gene's rhythm amplitude divided by
 its noise, written `r_tilde = A / sigma`; larger means easier to detect.
-**Cosinor** is the standard model that fits a cosine wave to a gene's expression
-over the day ([Cornelissen 2014](https://doi.org/10.1186/1742-4682-11-16)).
+**Noise (`sigma`)** is the gene-to-gene scatter of a gene's expression around its
+cosinor fit, the residual variability SCP estimates per gene from the pilot (kept
+on the log scale internally as `lOD`); a noisier gene is harder to detect at the
+same amplitude. **Cosinor** is the standard model that fits a cosine wave to a
+gene's expression over the day ([Cornelissen
+2014](https://doi.org/10.1186/1742-4682-11-16)).
 
 ## Install
 

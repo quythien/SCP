@@ -94,7 +94,7 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Thien Quy Pham \email{quythien14@gmail.com} (University of Pittsburgh)
+\strong{Maintainer}: Thien Quy Pham \email{qtp1@pitt.edu} (University of Pittsburgh)
 
 Authors:
 \itemize{

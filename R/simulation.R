@@ -86,8 +86,9 @@ sampleTimesFromDist <- function(n, cts) {
 #' @param lBaselineExpr Log baseline expression. Default: rnorm(ngenes, 5, 2)
 #' @param lBaselineExpr2 As \code{lBaselineExpr} but for group 2. \code{NULL}
 #'   (default) reuses group 1's distribution.
-#' @param lOD Log over-dispersion (noise). Default: rnorm(ngenes, -1, 0.3),
-#'   so sigma = exp(lOD) ~ LogNormal(mu=-1, sd=0.3) with median ~0.37
+#' @param lOD Log residual noise: \code{log(sigma)}, the per-gene noise around
+#'   the cosinor fit (\code{sigma = exp(lOD)}). Default: rnorm(ngenes, -1, 0.3),
+#'   so sigma ~ LogNormal(mu=-1, sd=0.3) with median ~0.37
 #' @param lOD2 As \code{lOD} but for group 2. \code{NULL} (default) shares
 #'   group 1 values.
 #' @param amplitude Amplitude distribution for rhythmic genes in group 1.
