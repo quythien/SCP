@@ -30,7 +30,7 @@ Quick analytical power for single-group rhythmicity
 }
 \examples{
 \dontrun{
-# How many samples for 80\% power?
+# How many samples for 80 percent power?
 CircaPower(n = NULL, power = 0.8, r = 1.5)
 
 # What power with n=24?

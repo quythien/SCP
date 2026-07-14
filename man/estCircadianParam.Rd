@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimation.R
 \name{estCircadianParam}
 \alias{estCircadianParam}
-\title{Estimate Circadian Parameters from Pilot Data (Single-Cohort)}
+\title{Estimate Circadian Pilot Parameters (Single-Cohort)}
 \usage{
 estCircadianParam(
   data,
@@ -75,18 +75,16 @@ empirical parameter distributions packaged as a \code{CircadianBioOptions}
 object suitable for downstream simulation and power analysis.
 }
 \examples{
-\dontrun{
-  set.seed(1)
-  n_genes <- 200; n_samples <- 30
-  times <- rep(seq(0, 22, by = 2), length.out = n_samples)
-  expr  <- matrix(rnorm(n_genes * n_samples), nrow = n_genes)
-  for (g in 1:20) expr[g, ] <- expr[g, ] + 2 * cos(2*pi*times/24)
-  bio <- estCircadianParam(expr, times, period = 24, verbose = FALSE)
-}
+set.seed(1)
+n_genes <- 200; n_samples <- 30
+times <- rep(seq(0, 22, by = 2), length.out = n_samples)
+expr  <- matrix(rnorm(n_genes * n_samples), nrow = n_genes)
+for (g in 1:20) expr[g, ] <- expr[g, ] + 2 * cos(2 * pi * times / 24)
+bio <- estCircadianParam(expr, times, period = 24,
+                         top_k = 20, verbose = FALSE)
 
 }
 \seealso{
-\code{\link{estCircadianParamFMM}} for FMM-aware pre-screen,
-  \code{\link{estCircadianParamTwoGroup}} for two-group setup,
-  \code{\link{prepCircadianData}} for normalisation upstream.
+\code{\link{estCircadianParamTwoGroup}} for the two-group setup,
+  \code{\link{prepCircadianData}} for preparing the input matrix.
 }

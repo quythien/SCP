@@ -1,6 +1,7 @@
 # Replot Fig 1 (Adrenal, Liver) and Fig 2 (Adrenal vs Liver) from cache.
-# Run: Rscript examples/publication/fig1_fig2_replot.R
-setwd("/home/qtp1/Projects/Circadian/Kyle/Circadian-analysis-main/R/v1/PowerSim")
+# Run from the package root: Rscript examples/publication/fig1_fig2_replot.R
+# (set SCP_ROOT to run from elsewhere).
+setwd(Sys.getenv("SCP_ROOT", unset = "."))
 suppressMessages(library(SCP))
 # Use the installed package's plotSingleCohortPower()/plotDiffPower() directly
 # (rather than source()-ing R/plot_single_cohort.R / R/plot_diff.R) so their

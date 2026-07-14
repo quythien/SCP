@@ -61,17 +61,20 @@ A \code{CircadianBioOptions} object with empirical
   rhythmic, ready for downstream simulation.
 }
 \description{
-Loads one standardized pilot object from the bundled pilot database.
-Each pilot is a pre-fit \code{CircadianBioOptions} S3 object (fit via
-the same cosinor pipeline as \code{\link{estCircadianParam}}) and can be
-passed directly
-to \code{runSimsSingleCohort()} or \code{runDifferentialPower()}.
+The returned object is a \code{CircadianBioOptions} pilot from the
+bundled database, produced by the standard cosinor pipeline and ready
+for power simulation. It has the same form as a pilot you calibrate
+from your own data, so it can be passed straight to the single-cohort
+and differential power runners.
 }
 \examples{
-\dontrun{
-  bio <- scp_load_pilot("human", "GTEx", "Liver")
-  bio <- scp_load_pilot("human", "GTEx", "Liver", alpha_pilot = 0.05)
-  bio <- scp_load_pilot("human", "GTEx", "Liver", alpha_pilot = 0.1, adjust = "BH")
-  bio <- scp_load_pilot("human", "GSE160521", "NAc", "Control")
+bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All",
+                      alpha_pilot = 0.05)
+bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All",
+                      alpha_pilot = 0.1, adjust = "BH")
 }
+\seealso{
+\code{\link{estCircadianParam}} to build the same object from
+  your own pilot data.
 }

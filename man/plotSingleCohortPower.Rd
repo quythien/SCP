@@ -110,5 +110,18 @@ default horizontal 1 x length(panels) layout (default FALSE).}
 Invisibly returns list of data used per panel.
 }
 \description{
-Plot single-cohort circadian power (3 panels)
+Summarises a single-cohort power simulation in three panels: marginal
+power against sample size at several FDR thresholds (Panel A), the number
+of true discoveries by effect-size stratum (Panel B), and power resolved
+by effect-size stratum (Panel C). It takes the object returned by
+\code{\link{runSimsSingleCohort}} and either draws to the current device
+or writes a PDF.
+}
+\examples{
+bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+bio$ngenes <- 200L
+dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+aopt <- CircadianAnalysisOptions(alpha = 0.05)
+res  <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
+plotSingleCohortPower(res, out_pdf = tempfile(fileext = ".pdf"))
 }

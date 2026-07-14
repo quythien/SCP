@@ -2,7 +2,7 @@
 % Please edit documentation in R/npower.R
 \name{npower}
 \alias{npower}
-\title{Find the sample size needed to achieve a target genome-wide power}
+\title{Sample Size for a Target Genome-Wide Power}
 \usage{
 npower(
   res,
@@ -49,4 +49,13 @@ Recomputes marginal power at the requested FDR from raw simulation output,
 then returns the smallest grid N that meets the target (\code{n_grid}) and,
 when \code{interpolate = TRUE} (the default), a linearly interpolated estimate
 between the two bracketing grid points (\code{n}).
+}
+\examples{
+bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+bio$ngenes <- 200L
+dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+aopt <- CircadianAnalysisOptions(alpha = 0.05)
+res  <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
+np <- npower(res, target_power = 0.8, fdr = 0.05)
+np
 }

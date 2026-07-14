@@ -2,7 +2,7 @@
 % Please edit documentation in R/options.R
 \name{CircadianBootstrapOptions}
 \alias{CircadianBootstrapOptions}
-\title{Create Bootstrap Design Grid Options}
+\title{Create Bootstrap Grid Options}
 \usage{
 CircadianBootstrapOptions(
   design_vector,
@@ -16,25 +16,41 @@ CircadianBootstrapOptions(
 )
 }
 \arguments{
-\item{design_vector}{Ordered time points to sweep over (length >= max(B_values))}
+\item{design_vector}{Ordered vector of candidate time points to sample
+from; its length must be at least \code{max(B_values)}.}
 
-\item{B_values}{Number of distinct time points to test}
+\item{B_values}{Numbers of distinct time points to evaluate.}
 
-\item{m_values}{Replicates per time point (if NULL, derived as round(N/B))}
+\item{m_values}{Replicates per time point. When \code{NULL}, derived as
+\code{round(N / B)}.}
 
-\item{N_values}{Total per-group sample sizes to test (if NULL, derived as B*m)}
+\item{N_values}{Total per-group sample sizes to evaluate. When
+\code{NULL}, derived as \code{B * m}.}
 
-\item{nboot}{Number of bootstrap parameter draws (outer uncertainty loop)}
+\item{nboot}{Number of bootstrap parameter draws in the outer
+uncertainty loop.}
 
-\item{nsims_inner}{Simulations per bootstrap draw}
+\item{nsims_inner}{Number of simulations run per bootstrap draw.}
 
-\item{design}{"active" or "passive"}
+\item{design}{Sampling design, either \code{"active"} or \code{"passive"}.}
 
-\item{seed}{Random seed}
+\item{seed}{Random seed.}
 }
 \value{
 Object of class "CircadianBootstrapOptions"
 }
 \description{
-Create Bootstrap Design Grid Options
+Collects the settings for a bootstrapped design-grid analysis, which
+quantifies how much the finite pilot contributes to uncertainty in
+power across combinations of time points (B) and replicates (m). It
+defines the grid of designs to evaluate and the number of bootstrap
+draws and inner simulations used to form the confidence bands. The
+resulting object is passed to \code{\link{runBootstrapDesignGrid}}.
+}
+\examples{
+# A small active-design B-vs-m grid over two sample sizes.
+bopt <- CircadianBootstrapOptions(design_vector = seq(0, 22, by = 2),
+                                  B_values = 4, N_values = c(24, 48),
+                                  nboot = 3, nsims_inner = 4)
+bopt
 }

@@ -28,3 +28,22 @@ plotBootstrapDesignGrid(
 Panel A: Power vs N, one line per B, with bootstrap CI ribbon.
 Panel B: Heatmap of mean power over (N, B) grid.
 }
+\examples{
+\donttest{
+praw  <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+                             package = "SCP"))
+expr  <- praw$adrenal$expr[1:300, ]
+times <- praw$adrenal$times
+bio   <- estCircadianParam(expr, times, verbose = FALSE)
+bopt  <- CircadianBootstrapOptions(
+           design_vector = sort(unique(round(times))),
+           B_values = 4, N_values = c(24, 48),
+           nboot = 3, nsims_inner = 4, design = "passive")
+aopt  <- CircadianAnalysisOptions(alpha = 0.05)
+grid  <- runBootstrapDesignGrid(expr, times, bopt, aopt,
+                                bio_diff.opts = bio, mode = "single",
+                                verbose = FALSE)
+plotBootstrapDesignGrid(grid, test_type = "rhythmic",
+                        output_file = tempfile(fileext = ".pdf"))
+}
+}

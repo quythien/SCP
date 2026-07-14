@@ -2,7 +2,7 @@
 % Please edit documentation in R/options.R
 \name{CircadianBioOptions}
 \alias{CircadianBioOptions}
-\title{Create Biology + Differential Options}
+\title{Create Biology and Differential Options}
 \usage{
 CircadianBioOptions(
   ngenes = 5000,
@@ -16,12 +16,6 @@ CircadianBioOptions(
   amplitude2 = NULL,
   sigma_rhythmic = NULL,
   paired_sigma = FALSE,
-  paired_omega = FALSE,
-  paired_alpha = FALSE,
-  omega_rhythmic = NULL,
-  alpha_rhythmic = NULL,
-  omega_dist = NULL,
-  alpha_dist = NULL,
   cts = NULL,
   cts2 = NULL,
   phase = "uniform",
@@ -60,8 +54,9 @@ analyses only). \code{NULL} uses the same distribution as group 1.}
 
 \item{lOD2}{As \code{lOD} but for group 2. \code{NULL} shares group 1 values.}
 
-\item{amplitude}{Amplitude distribution for rhythmic genes. Same forms
-accepted as \code{lBaselineExpr}. No default, must be supplied.}
+\item{amplitude}{Amplitude distribution for rhythmic genes, given in any
+of the forms accepted for \code{lBaselineExpr}. This argument is
+required and has no default.}
 
 \item{amplitude2}{As \code{amplitude} but for group 2.}
 
@@ -74,32 +69,6 @@ supplied, expand \code{amplitude} and \code{sigma_rhythmic} jointly by the
 same resampled gene index so their pilot-estimated pairwise correlation is
 preserved; if \code{FALSE} (default), amplitude and sigma are expanded
 independently.}
-
-\item{paired_omega}{Logical. If \code{TRUE} and \code{omega_rhythmic} is
-supplied (same length as \code{amplitude}), expand omega using the same
-shared gene-index used for amplitude/sigma so all three are paired per gene.}
-
-\item{paired_alpha}{Logical. Same as \code{paired_omega} for \code{alpha_rhythmic}.}
-
-\item{omega_rhythmic}{Optional numeric vector of per-gene FMM omega values
-from a pilot FMM fit (same length as \code{amplitude}). Used when
-\code{paired_omega = TRUE}; ignored when \code{omega_dist} is also set.}
-
-\item{alpha_rhythmic}{Optional numeric vector of per-gene FMM alpha values
-in radians from a pilot FMM fit (same length as \code{amplitude}).}
-
-\item{omega_dist}{Optional list specifying a distribution from which omega
-is drawn at simulation time, e.g. \code{list(family="beta", a=1, b=5)} or
-\code{list(family="fixed", value=0.7)}. Overrides \code{omega_rhythmic}
-when both are provided.}
-
-\item{alpha_dist}{Optional list specifying a distribution for alpha,
-\code{list(family="normal", mean=0, sd_hours=2)}. Internally
-\code{sd_hours} is converted to radians via \code{sd_rad = sd_hours * 2*pi/24}.
-When \code{alpha_rhythmic} is also provided and lengths match,
-the perturbation is added to each gene's empirical alpha
-(alpha_g = alpha_rhythmic[g] + N(0, sd_rad^2)).
-When \code{alpha_rhythmic} is missing, alpha_g = N(0, sd_rad^2).}
 
 \item{cts}{Numeric vector of sample collection times for passive design.}
 
@@ -139,5 +108,18 @@ provenance and reporting; default \code{NULL}.}
 Object of class \code{"CircadianBioOptions"}.
 }
 \description{
-Create Biology + Differential Options
+Builds the \code{CircadianBioOptions} object that describes the simulated
+transcriptome: the number of genes, the proportion that are rhythmic, and
+the gene-level distributions of baseline expression, noise, amplitude, and
+phase. For two-group studies it also records the proportions of genes that
+differ in rhythmicity, phase, or mesor between groups. Most users obtain
+this object indirectly from \code{\link{estCircadianParam}} or
+\code{\link{scp_load_pilot}}; the constructor is exposed for building a
+configuration by hand.
+}
+\examples{
+# Build a synthetic biology configuration without pilot data.
+bio <- CircadianBioOptions(ngenes = 300L, prop_rhythmic = 0.3,
+                           lBaselineExpr = 5, lOD = -1, amplitude = 1)
+bio
 }

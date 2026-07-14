@@ -91,8 +91,6 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     cts           <- design.opts$cts
     test_types    <- design.opts$test_types
     harmonics     <- design.opts$harmonics %||% NULL
-    fmm_omega     <- design.opts$omega %||% 1.0   # 1 = cosinor; <1 = FMM
-    fmm_beta      <- design.opts$beta  %||% pi
     period        <- bio.opts$period
     alpha         <- analysis.opts$alpha
     p.adjust.method <- analysis.opts$p.adjust.method
@@ -113,8 +111,6 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     dr_sigma_scale <- 1.0
     prop_DM        <- 0
     mesor_diff     <- c(0.5, 2.0)
-    fmm_omega      <- 1.0   # 1 = cosinor; legacy path has no FMM config to read
-    fmm_beta       <- pi
     # phase_diff/amp_diff default to NULL in the signature (so the config-object
     # path can tell "not supplied" apart from an explicit value); the legacy
     # path has no CircadianBioOptions to fall back on, so apply the same
@@ -196,13 +192,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
         }
       }
 
-      # FMM path: non-sinusoidal waveform when fmm_omega < 1
-      if (fmm_omega < 1.0) {
-        sim_data <- do.call(simCircadianDiffFMM,
-                            c(sim_args, list(omega = fmm_omega, beta = fmm_beta)))
-      } else {
-        sim_data <- do.call(simCircadianDiff, sim_args)
-      }
+      sim_data <- do.call(simCircadianDiff, sim_args)
 
       if (j == 1) {
         diff_type_i  <- sim_data$ground_truth$diff_type
@@ -347,7 +337,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
 # =====================================================================
 # Simulation-Based Single-Cohort Power
 # =====================================================================
-#' Simulation-Based Power for Single-Cohort Rhythmicity Detection
+#' Single-Cohort Rhythmicity Power Simulation
 #'
 #' Extends the closed-form CircaPower approach by running full simulations:
 #' for each sample size and simulation replicate, generates data from the
@@ -357,18 +347,20 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
 #' Simulation-based alternative to the closed-form \code{CircaPower} formula:
 #' works for any design (active or passive) and any pilot parameter distribution.
 #'
-#' @param bio.opts      \code{CircadianBioOptions} -- pilot parameter distributions.
-#'   Build with \code{estCircadianParam()}.
-#' @param design.opts   \code{CircadianDesignOptions} -- sample sizes, nsims, design.
-#' @param analysis.opts \code{CircadianAnalysisOptions} -- alpha, p.adjust.method.
-#' @param method        Detection method: \code{"DCP"} (1-harmonic cosinor F-test),
-#'   \code{"JTK"}, \code{"RAIN"}, \code{"MH"} (multi-harmonic), or \code{"FMM"}
-#'   (K-harmonic F-test motivated by the FMM Fourier expansion; default detector
-#'   for non-cosinor signals).
-#' @param K             Integer. Number of harmonics for \code{method = "FMM"}
-#'   (default 2). K=1 is equivalent to DCP; K=2 captures the 1st and 2nd
-#'   Fourier harmonics; K=3+ for very sharp peaks.
-#' @param harmonics     Numeric length-2: \code{c(alpha2, alpha3)} harmonic coefficients (default \code{c(0,0)}).
+#' @param bio.opts      The \code{CircadianBioOptions} pilot object, from
+#'   \code{estCircadianParam()}.
+#' @param design.opts   The \code{CircadianDesignOptions} object (sample
+#'   sizes, nsims, design).
+#' @param analysis.opts The \code{CircadianAnalysisOptions} object (alpha,
+#'   correction, FDR thresholds).
+#' @param method        Detection method: \code{"cosinor"} (default, the
+#'   K-harmonic cosinor F-test, with \code{K} set by the \code{K} argument),
+#'   or the alternative detectors \code{"JTK"}, \code{"RAIN"}, and \code{"MH"}
+#'   (multi-harmonic). \code{"DCP"} and \code{"Kharmonic"} are retained aliases
+#'   of the cosinor detector.
+#' @param K             Integer. Number of harmonics for the cosinor detector
+#'   (default 1). K=1 is the single-harmonic cosinor F-test; K=2 captures the
+#'   1st and 2nd harmonics; K=3+ for very sharp peaks.
 #' @param verbose       Print progress (default TRUE).
 #' @param mc.cores      Parallel cores (default 1).
 #' @param progress      Optional callback \code{function(sample_size_index, n_sample_sizes)}
@@ -380,9 +372,9 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
 #'   \item{marginal_FDR}{Matrix [sample_sizes x nsims]}
 #'   \item{marginal_TD}{Matrix [sample_sizes x nsims]}
 #'   \item{marginal_FD}{Matrix [sample_sizes x nsims]}
-#'   \item{marginal_alpha}{Matrix [sample_sizes x nsims] -- empirical type-I error}
-#'   \item{pvalues}{Array [sample_sizes x ngenes x nsims] -- raw p-values}
-#'   \item{r_values_list}{List[[sample_size]][[sim]] -- per-gene A/sigma}
+#'   \item{marginal_alpha}{Matrix [sample_sizes x nsims]: empirical type-I error}
+#'   \item{pvalues}{Array [sample_sizes x ngenes x nsims]: raw p-values}
+#'   \item{r_values_list}{List[[sample_size]][[sim]]: per-gene A/sigma}
 #'   \item{strat_power}{Array [sample_sizes x n_strata x nsims]}
 #'   \item{strat_TD}{Array [sample_sizes x n_strata x nsims]}
 #'   \item{strat_FD}{Array [sample_sizes x n_strata x nsims]}
@@ -397,86 +389,43 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
 #'   \item{nsims}{Number of simulation replicates}
 #'
 #' @examples
-#' \dontrun{
-#' bio  <- estCircadianParam(expr, times)
-#' dopt <- CircadianDesignOptions(sample_sizes = c(20, 40, 80), nsims = 50)
+#' bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+#' bio$ngenes <- 200L
+#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
 #' aopt <- CircadianAnalysisOptions(alpha = 0.05)
-#' res  <- runSimsSingleCohort(bio, dopt, aopt)
+#' res  <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
 #' rowMeans(res$marginal_power)  # mean power at each N
-#' }
 #'
 #' @export
 runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
                                 method = "cosinor",
                                 K = 1L,
-                                harmonics = c(0, 0),
                                 verbose = TRUE, mc.cores = 1L,
                                 progress = NULL) {
   # New default: method = "cosinor" + K = 1. Users wanting the two-harmonic
-  # test set K = 2 only; method = "DCP" / "FMM" / "Kharmonic" are retained
-  # as legacy aliases.
+  # test set K = 2 only; method = "DCP" / "Kharmonic" are retained as legacy
+  # aliases of the cosinor detector.
 
   stopifnot(inherits(bio.opts, "CircadianBioOptions"))
   stopifnot(inherits(design.opts, "CircadianDesignOptions"))
   if (missing(analysis.opts)) analysis.opts <- CircadianAnalysisOptions()
 
-  method    <- match.arg(method, c("DCP", "cosinor", "Kharmonic", "JTK", "RAIN", "MH", "FMM"))
+  method    <- match.arg(method, c("DCP", "cosinor", "Kharmonic", "JTK", "RAIN", "MH"))
   K         <- as.integer(K)
-  harmonics <- rep_len(as.numeric(harmonics), 2L)
+  # Pure cosinor truth: the public single-cohort path no longer injects
+  # non-sinusoidal Fourier harmonics. Per-gene alpha2_dist / alpha3_dist on
+  # bio.opts still override this when present (K=2 sensitivity sweeps).
+  harmonics <- c(0, 0)
 
   sample_sizes    <- design.opts$sample_sizes
   nsims           <- design.opts$nsims
   design          <- design.opts$design
   cts             <- design.opts$cts
 
-  # Nyquist guard for the K-harmonic detector. K-harmonic regression has
-  # 2K+1 free parameters and requires at least 2K+1 distinct sampling
-  # phases per period to be identifiable. For active designs this is
-  # decided by design.opts$cts; for passive designs the effective B is
-  # the number of unique TODs (mod period). If the design fails this
-  # check, warn loudly at dispatch time (before mclapply swallows it)
-  # and suggest the largest K the design supports.
-  if (method == "FMM" && !is.null(cts)) {
-    period_check <- bio.opts$period %||% 24
-    n_unique     <- length(unique(cts %% period_check))
-    K_max        <- max(1L, (n_unique - 1L) %/% 2L)
-    if (n_unique < 2L * K + 1L) {
-      warning(sprintf(
-        "runSimsSingleCohort: method=\"FMM\" with K=%d requires at least %d distinct sampling phases per period (Nyquist condition), but the design has only %d unique time(s) modulo period=%g. The K=%d test is not identifiable on this design; expect zero power. Use K = %d (the largest identifiable K for this design) or switch to method=\"DCP\".",
-        K, 2L * K + 1L, n_unique, period_check, K, K_max),
-        call. = FALSE)
-    }
-  } else if (method == "FMM" && is.null(cts)) {
-    # Passive design without supplied TOD vector: sampling phases are
-    # drawn from F_TOD at runtime, so the exact identifiability check is
-    # deferred. We can still flag the unambiguous case where even the
-    # smallest requested N is below the 2K+1 threshold; at that N the
-    # K-harmonic test is rank-deficient regardless of how phases land.
-    min_N <- min(sample_sizes)
-    if (min_N < 2L * K + 1L) {
-      warning(sprintf(
-        "runSimsSingleCohort: method=\"FMM\" with K=%d, passive design (cts=NULL): the smallest requested N=%d is below the identifiability threshold 2K+1=%d, so the K=%d test will be conservative or undefined at that N. Per-replicate Nyquist identifiability is otherwise determined by the runtime TOD draws from F_TOD.",
-        K, min_N, 2L * K + 1L, K),
-        call. = FALSE)
-    }
-  }
-
-  fmm_omega       <- design.opts$omega %||% 1.0   # 1 = cosinor; <1 = FMM
-  fmm_beta        <- design.opts$beta  %||% pi
-  # Per-gene FMM activation: bio.opts carries omega_dist / alpha_dist /
-  # omega_rhythmic / alpha_rhythmic (set by estCircadianParamFMM or by Fig 4
-  # sweep code). When any of these is present, force the FMM simulation path
-  # so the per-gene parameters are honoured even though design.opts$omega == 1.
-  has_fmm_per_gene <- !is.null(bio.opts$omega_dist) ||
-                       !is.null(bio.opts$alpha_dist) ||
-                       (!is.null(bio.opts$omega_rhythmic) &&
-                        length(bio.opts$omega_rhythmic) > 0) ||
-                       (!is.null(bio.opts$alpha_rhythmic) &&
-                        length(bio.opts$alpha_rhythmic) > 0)
   # Two-harmonic cosinor truth: bio.opts carries per-gene (A2, phi2) vectors
   # paired with (amplitude, phase, sigma_rhythmic) by gene index. Set by
   # estCircadianParam2H(). Takes precedence over the existing alpha2_dist /
-  # alpha3_dist scalar-harmonic mechanism (which we keep for Fig 4 sensitivity).
+  # alpha3_dist scalar-harmonic mechanism (kept for K=2 sensitivity sweeps).
   has_2h_per_gene <- isTRUE(bio.opts$paired_2h) &&
                       !is.null(bio.opts$amplitude2) &&
                       length(bio.opts$amplitude2) > 0L &&
@@ -497,12 +446,11 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
 
   # method labels: "cosinor" (canonical, K from K argument) is the recommended
   # public name; "DCP" forces single-harmonic; "Kharmonic" is an alias of
-  # "cosinor"; "FMM" is retained for backward compatibility with figure scripts.
+  # "cosinor".
   detect_fn <- switch(method,
     DCP       = function(e, t) detect_cosinor(e, t, K = 1L, period = period),
     cosinor   = function(e, t) detect_cosinor(e, t, K = K,  period = period),
     Kharmonic = function(e, t) detect_cosinor(e, t, K = K,  period = period),
-    FMM       = function(e, t) detect_cosinor(e, t, K = K,  period = period),
     JTK       = function(e, t) detect_JTK(e, t, period = period),
     RAIN      = function(e, t) detect_RAIN(e, t, period = period),
     MH        = function(e, t) detect_MH(e, t, period = period)
@@ -587,16 +535,9 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
 
       # Simulate expression [ngenes x n]
       # Path selection (mutually exclusive, in priority order):
-      #   1. FMM:  fmm_omega < 1 OR per-gene FMM params on bio.opts
-      #   2. 2H:   bio.opts carries paired (A2, phi2) vectors (paired_2h = TRUE)
-      #   3. cosinor (Cpp or R fallback) with optional alpha2_dist / alpha3_dist
-      if (fmm_omega < 1.0 || has_fmm_per_gene) {
-        fmm_out     <- simCircadianFMM(bio.opts, times_i, omega = fmm_omega,
-                                       beta = fmm_beta)
-        expr        <- fmm_out$expr
-        is_rhythmic <- fmm_out$is_rhythmic
-        r_values    <- fmm_out$r_values
-      } else if (has_2h_per_gene) {
+      #   1. 2H:   bio.opts carries paired (A2, phi2) vectors (paired_2h = TRUE)
+      #   2. cosinor (Cpp or R fallback) with optional alpha2_dist / alpha3_dist
+      if (has_2h_per_gene) {
         # Two-harmonic cosinor truth.
         # Re-draw per-replicate joint (A1, phi1, A2, phi2, sigma) tuples from
         # the pilot using a SHARED index so the empirical cross-parameter
@@ -805,13 +746,26 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
 # =====================================================================
 # CircaPower grid initialisation helper
 # =====================================================================
-#' Estimate n for 80 percent power using CircaPower at median pilot r
+#' Analytical Sample Size for 80 percent Power
 #'
-#' @param bio.opts \code{CircadianBioOptions} with amplitude and sigma_rhythmic.
-#' @param alpha    Significance level (default 0.05).
-#' @param target_power Target power (default 0.80).
-#' @param n_search Integer vector of candidate sample sizes.
-#' @return Single integer -- smallest n achieving target_power, or NA if not found.
+#' @description
+#' Returns a fast closed-form estimate of the sample size needed for the
+#' target power, evaluated at the pilot's median effect size
+#' (\eqn{\tilde r = A / \sigma}). It uses the analytical cosinor F-test
+#' power formula rather than simulation, so it is a useful starting point
+#' before running the full simulation grid.
+#'
+#' @param bio.opts A \code{CircadianBioOptions} pilot; its \code{amplitude}
+#'   and \code{sigma_rhythmic} give the effect-size distribution.
+#' @param alpha Significance level for the per-gene test (default 0.05).
+#' @param target_power Target power to solve for (default 0.80).
+#' @param n_search Integer vector of candidate sample sizes to search over.
+#' @return A single integer: the smallest sample size in \code{n_search}
+#'   that reaches \code{target_power}, or \code{NA} if none does.
+#' @examples
+#' # Analytical sample size for the pilot's median effect size.
+#' bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+#' circaPowerApproxN80(bio)
 #' @export
 circaPowerApproxN80 <- function(bio.opts, alpha = 0.05, target_power = 0.80,
                                 n_search = seq(5, 500, by = 5)) {
@@ -838,7 +792,7 @@ circaPowerApproxN80 <- function(bio.opts, alpha = 0.05, target_power = 0.80,
 # =====================================================================
 # Adaptive r-strata from pilot data
 # =====================================================================
-#' Compute adaptive r-strata breakpoints with fixed bin width
+#' Adaptive r-Strata Breakpoints
 #'
 #' Generates breakpoints from 0 to ceiling(r_max / bin_width) * bin_width,
 #' stepping by bin_width, then appends Inf. Every bin width is identical,
@@ -851,6 +805,10 @@ circaPowerApproxN80 <- function(bio.opts, alpha = 0.05, target_power = 0.80,
 #' @param r_pctile_cap Upper percentile of pilot r used as the range ceiling
 #'   before rounding up to the nearest \code{bin_width} (default 0.99).
 #' @return Numeric vector of breakpoints starting at 0 and ending at Inf.
+#' @examples
+#' # Adaptive r = A/sigma strata from a bundled pilot.
+#' bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+#' makeAdaptiveRStrata(bio, bin_width = 0.5)
 #' @export
 makeAdaptiveRStrata <- function(bio.opts, bin_width = 0.25, r_min_pct = 0,
                                 r_pctile_cap = 0.99) {
@@ -920,15 +878,16 @@ printMethodGuidance <- function(methods = c("DCP","JTK","RAIN","MH"),
 }
 
 
-#' B vs m design study -- analytical + simulation
+#' B vs m design study (analytical and simulation)
 #'
-#' Full B vs m study orchestrator. Three sequential steps:
-#'
-#' 1. Print method guidance table (printMethodGuidance)
-#' 2. Analytical: CircaPower closed-form power at each N (DCP; B-invariant).
-#'    For JTK/RAIN/MH no closed form exists -- simulation is required.
-#' 3. Simulation: run runSingleCohortPower() or runDifferentialPower(), or
-#'    absorb a prior_result from a previous call to skip re-running.
+#' @description
+#' Compares study designs that trade the number of time points (B) against
+#' the number of replicates per time point (m), and recommends a sample
+#' size for a target power. It first reports how each detector responds to
+#' B versus m, then computes analytical power at each sample size for the
+#' cosinor detector (which is invariant to B), and finally runs the full
+#' simulation for detectors that have no closed form. A previous result can
+#' be supplied to reuse its simulation instead of running it again.
 #'
 #' @param bio.opts      CircadianBioOptions from estCircadianParam() or
 #'                      estCircadianParamTwoGroup()
@@ -950,11 +909,25 @@ printMethodGuidance <- function(methods = c("DCP","JTK","RAIN","MH"),
 #' @param output_file   PDF path (NULL = screen)
 #' @param verbose       Print progress
 #'
-#' @return SCPRecommendResult with:
-#'   $guidance      -- data.frame: method guidance table
-#'   $analytical_df -- data.frame[method, N, power_analytical] (DCP only)
-#'   $simulation    -- runSingleCohortGrid() or runDifferentialPower() result (NULL if not run)
-#'   $recommendation -- data.frame[method, optimal_B, n_target, note]
+#' @return An \code{SCPRecommendResult} object (a list) with:
+#'   \itemize{
+#'     \item \code{guidance}: the method-guidance table.
+#'     \item \code{analytical_df}: analytical power at each sample size
+#'       (cosinor detector only).
+#'     \item \code{simulation}: the simulation result, or \code{NULL} when
+#'       no simulation was run.
+#'     \item \code{recommendation}: the recommended design and sample size
+#'       per method.
+#'   }
+#' @examples
+#' # Analytical (CircaPower) design guidance, no simulation.
+#' bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48, 96), nsims = 5)
+#' aopt <- CircadianAnalysisOptions(alpha = 0.05)
+#' rec  <- recommendDesign(bio, dopt, aopt, methods = "DCP",
+#'                         run_simulation = FALSE, plot = FALSE,
+#'                         verbose = FALSE)
+#' rec$analytical_df
 #' @export
 recommendDesign <- function(bio.opts,
                              design.opts,
@@ -1269,15 +1242,12 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
     # Respect design: active = equispaced; passive = sample from pilot TOD KDE
     cts_active <- rep(seq(0, period * (1 - 1/B), length.out = B), each = N / B)
 
-    fmm_omega_i <- design.opts$omega %||% 1.0
-    fmm_beta_i  <- design.opts$beta  %||% pi
     sims <- vapply(seq_len(nsims), function(s) {
       cts <- if (design_type == "passive" && !is.null(pilot_cts))
                sampleTimesFromDist(N, pilot_cts)
              else
                cts_active
       dat <- simCircadianSingleCohort(bio.opts, cts, alpha2 = a2, alpha3 = a3,
-                                      omega = fmm_omega_i, beta = fmm_beta_i,
                                       seed = GLOBAL_SEED + i * 1000L + s)
       pv  <- fn(dat$expr, cts)
       adj <- p.adjust(pv, method = analysis.opts$p.adjust.method)
@@ -1387,7 +1357,6 @@ runSingleCohortPower <- function(bio.opts,
 
   res <- runSimsSingleCohort(bio.opts, design.opts, analysis.opts,
                               method    = methods,
-                              harmonics = c(alpha2[1], alpha3[1]),
                               verbose   = verbose,
                               mc.cores  = mc.cores)
 
@@ -1448,26 +1417,53 @@ plot.SCPSingleResult <- function(x, output_file = NULL, ...) {
 
 #' Run two-group differential circadian power analysis
 #'
-#' Sweeps N x alpha2 x alpha3 x method x test_type and returns a tidy power table.
-#' Automatically calls plot() and npower() unless plot=FALSE.
+#' @description
+#' Estimates FDR-controlled power to detect differential rhythmicity between
+#' two groups. For each sample size and simulation replicate it generates
+#' paired two-group data from the pilot, applies the chosen differential
+#' detector, and aggregates power for the requested endpoints (differential
+#' rhythmicity, phase, or mesor). Unless \code{plot = FALSE}, it also draws
+#' the power curves and prints the recommended sample size on completion.
 #'
-#' @param bio.opts      CircadianBioOptions from estCircadianParamTwoGroup()
-#' @param design.opts   CircadianDesignOptions (sample_sizes, design, cts)
-#' @param analysis.opts CircadianAnalysisOptions
-#' @param methods       Any of "DCP","CircaCompare"
-#' @param test_types    Any of "DR","DP","DM" (silently NA if method lacks support)
+#' @param bio.opts      Two-group pilot from
+#'   \code{estCircadianParamTwoGroup()}.
+#' @param design.opts   The \code{CircadianDesignOptions} object (sample
+#'   sizes, design, collection times).
+#' @param analysis.opts The \code{CircadianAnalysisOptions} object.
+#' @param methods       Detectors to run: \code{"DCP"} (the cosinor F-test)
+#'   or \code{"CircaCompare"}.
+#' @param test_types    Endpoints to test, any of \code{"DR"} (rhythmicity),
+#'   \code{"DP"} (phase), and \code{"DM"} (mesor). An endpoint a detector
+#'   does not support is returned as \code{NA}.
 #' @param alpha2        Scalar or vector swept for both groups
 #' @param alpha3        Scalar or vector swept for both groups
-#' @param mc.cores      Parallel cores
-#' @param plot          Auto-plot on completion
-#' @param output_file   PDF path (NULL = screen)
-#' @param verbose       Print progress
+#' @param mc.cores      Number of cores used for the per-gene fits.
+#' @param plot          Draw the power curves when the run finishes.
+#' @param output_file   Path for a PDF of the plot, or \code{NULL} to draw to
+#'   the current device.
+#' @param verbose       Print progress messages while running.
 #'
-#' @return List (class \code{SCPDiffResult}) from \code{runSimsDiff()}:
-#'   \code{pval_DR}, \code{fdr_DR}, \code{pval_DP}, \code{fdr_DP},
-#'   \code{pval_DM}, \code{fdr_DM} -- 3-D arrays \code{[ngenes x n_sizes x nsims]};
-#'   plus \code{diff_type}, \code{effectsize}, \code{sample_sizes}, \code{nsims}.
-#'   Pass to \code{plotDiffPower()} or \code{npower(..., endpoint="DR")}.
+#' @return A list of class \code{SCPDiffResult}. It holds the p-value and
+#'   FDR arrays \code{pval_DR}, \code{fdr_DR}, \code{pval_DP},
+#'   \code{fdr_DP}, \code{pval_DM}, and \code{fdr_DM}, each indexed by
+#'   gene, sample size, and simulation, together with \code{diff_type},
+#'   \code{effectsize}, \code{sample_sizes}, and \code{nsims}. Pass it to
+#'   \code{plotDiffPower()} or to \code{npower(..., endpoint = "DR")}.
+#' @examples
+#' \donttest{
+#' praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+#'                             package = "SCP"))
+#' e1 <- praw$adrenal$expr[1:300, ]; t1 <- praw$adrenal$times
+#' e2 <- praw$liver$expr[1:300, ];   t2 <- praw$liver$times
+#' bio  <- estCircadianParamTwoGroup(e1, e2, t1, t2, top_k = 100,
+#'                                   verbose = FALSE)
+#' bio$ngenes <- 200L
+#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+#' aopt <- CircadianAnalysisOptions(alpha = 0.05)
+#' res  <- runDifferentialPower(bio, dopt, aopt, test_types = "DR",
+#'                              plot = FALSE, verbose = FALSE)
+#' npower(res, endpoint = "DR", fdr = 0.05)$n
+#' }
 #' @export
 runDifferentialPower <- function(bio.opts,
                                   design.opts,

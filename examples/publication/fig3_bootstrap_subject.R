@@ -21,11 +21,13 @@ efron<-function(mat,tod,N,label){
     if(is.null(r))rep(NA,length(N)) else r},mc.cores=CORES))
   list(label=label,n=n,N=N,plugin=plugin,mean=rowMeans(S,na.rm=T),
        lo=apply(S,1,quantile,.025,na.rm=T),hi=apply(S,1,quantile,.975,na.rm=T))}  # 2.5-97.5 percentile CI
-KD<-"/home/qtp1/Projects/Circadian/Kyle/Kyle_multiBrainRegion"
+# Controlled-access sources (CAMO server): GSE160521 striatal CPM + matched-donor
+# clinical file; GTEx CPM.all.norm (dbGaP). Not redistributed; override via env vars.
+KD<-Sys.getenv("SCP_GSE160521_DIR", unset="data/gse160521")
 clin<-read.csv(file.path(KD,"DS_clinical_1221_rm97_rm231_matchIndex34.csv"),row.names=1);ctl<-clin[clin$Diagnostic.Category=="CONTROL",]
 f<-list.files(KD,pattern="^Caudate_CPMfiltered_logCPM.*csv$",full.names=TRUE);ex<-as.matrix(read.csv(f[1],row.names=1,check.names=FALSE))
 cols<-intersect(ctl$pair,colnames(ex));cd<-efron(ex[,cols,drop=FALSE],ctl$CorrectedTOD[match(cols,ctl$pair)]%%24,c(20L,40L,60L,80L,100L,120L,160L,220L),"Caudate control (n=59)")
-load("/home/qtp1/Projects/Collaborative/GTEXdata/TOD Xiangning/data/CPM/CPM.all.norm.RData")
+load(Sys.getenv("SCP_GTEX_CPM_NORM", unset="CPM.all.norm.RData"))
 df<-CPM.all.norm[["Muscle - Skeletal"]];ids<-as.character(colnames(df));hh<-sapply(strsplit(ids,"\\."),function(z)if(length(z)>=3)z[3] else NA)
 hr<-suppressWarnings(as.numeric(substr(hh,1,2))+as.numeric(substr(hh,3,4))/60);ok<-!is.na(hr)
 ms<-efron(as.matrix(df[,ok]),hr[ok],c(40L,80L,120L,160L,200L,240L,280L,320L),"GTEx Muscle-Skeletal (n=748)")

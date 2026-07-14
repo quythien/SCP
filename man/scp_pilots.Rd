@@ -31,9 +31,7 @@ ingestion status so a user can quickly enumerate the pilots they
 actually have available.
 }
 \examples{
-\dontrun{
-  scp_pilots()
-  scp_pilots(species = "human")
-  scp_pilots(status = "all")
-}
+scp_pilots()
+scp_pilots(species = "human")
+scp_pilots(status = "all")
 }

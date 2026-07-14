@@ -73,11 +73,9 @@ NULL
 #'   \code{license}, \code{file}, \code{status}.
 #'
 #' @examples
-#' \dontrun{
-#'   scp_pilots()
-#'   scp_pilots(species = "human")
-#'   scp_pilots(status = "all")
-#' }
+#' scp_pilots()
+#' scp_pilots(species = "human")
+#' scp_pilots(status = "all")
 #' @export
 scp_pilots <- function(species = NULL, status = "ingested") {
   m <- utils::read.csv(.scp_manifest_path(), stringsAsFactors = FALSE)
@@ -97,11 +95,14 @@ scp_pilots <- function(species = NULL, status = "ingested") {
 #' Load a Bundled SCP Pilot Dataset
 #'
 #' @description
-#' Loads one standardized pilot object from the bundled pilot database.
-#' Each pilot is a pre-fit \code{CircadianBioOptions} S3 object (fit via
-#' the same cosinor pipeline as \code{\link{estCircadianParam}}) and can be
-#' passed directly
-#' to \code{runSimsSingleCohort()} or \code{runDifferentialPower()}.
+#' The returned object is a \code{CircadianBioOptions} pilot from the
+#' bundled database, produced by the standard cosinor pipeline and ready
+#' for power simulation. It has the same form as a pilot you calibrate
+#' from your own data, so it can be passed straight to the single-cohort
+#' and differential power runners.
+#'
+#' @seealso \code{\link{estCircadianParam}} to build the same object from
+#'   your own pilot data.
 #'
 #' @param species Character, length 1. One of \code{"human"},
 #'   \code{"baboon"}, \code{"other_primate"}, \code{"mouse"},
@@ -140,12 +141,11 @@ scp_pilots <- function(species = NULL, status = "ingested") {
 #'   rhythmic, ready for downstream simulation.
 #'
 #' @examples
-#' \dontrun{
-#'   bio <- scp_load_pilot("human", "GTEx", "Liver")
-#'   bio <- scp_load_pilot("human", "GTEx", "Liver", alpha_pilot = 0.05)
-#'   bio <- scp_load_pilot("human", "GTEx", "Liver", alpha_pilot = 0.1, adjust = "BH")
-#'   bio <- scp_load_pilot("human", "GSE160521", "NAc", "Control")
-#' }
+#' bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+#' bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All",
+#'                       alpha_pilot = 0.05)
+#' bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All",
+#'                       alpha_pilot = 0.1, adjust = "BH")
 #' @export
 scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
                            alpha_pilot = 0.01,
@@ -323,11 +323,9 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
 #' @return A data.frame: rows of the manifest passing every active filter.
 #'
 #' @examples
-#' \dontrun{
-#'   scp_pilot_search("liver")
-#'   scp_pilot_search(species = "mouse", tissue_pattern = "brain|cortex")
-#'   scp_pilot_search(sample_type = NULL)   # include cell lines
-#' }
+#' scp_pilot_search("liver")
+#' scp_pilot_search(species = "mouse", tissue_pattern = "brain|cortex")
+#' scp_pilot_search(sample_type = NULL)   # include cell lines
 #' @export
 scp_pilot_search <- function(query = NULL,
                              species = NULL,

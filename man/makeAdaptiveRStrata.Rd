@@ -2,7 +2,7 @@
 % Please edit documentation in R/runner.R
 \name{makeAdaptiveRStrata}
 \alias{makeAdaptiveRStrata}
-\title{Compute adaptive r-strata breakpoints with fixed bin width}
+\title{Adaptive r-Strata Breakpoints}
 \usage{
 makeAdaptiveRStrata(
   bio.opts,
@@ -29,4 +29,9 @@ Numeric vector of breakpoints starting at 0 and ending at Inf.
 Generates breakpoints from 0 to ceiling(r_max / bin_width) * bin_width,
 stepping by bin_width, then appends Inf. Every bin width is identical,
 but the number of bins adapts to the empirical r range of the pilot data.
+}
+\examples{
+# Adaptive r = A/sigma strata from a bundled pilot.
+bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+makeAdaptiveRStrata(bio, bin_width = 0.5)
 }

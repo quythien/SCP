@@ -16,7 +16,7 @@
 
 RUN_SIMS <- FALSE
 
-setwd("/home/qtp1/Projects/Circadian/Kyle/Circadian-analysis-main/R/v1/PowerSim")
+setwd(Sys.getenv("SCP_ROOT", unset = "."))  # run from the package root
 # Only the exported simCircadianSingleCohort2H is needed (in the sim path, which
 # is skipped when replotting from cache), so load the installed package rather
 # than the removed code/*.R files.

@@ -2,12 +2,28 @@ cff-version: 1.2.0
 message: >-
   If you use SCP in your research, please cite the manuscript and the software.
 title: "SCP: Simulation-Based Circadian Power Analysis"
-version: 0.4.56
-date-released: 2026-06-04
+version: 0.4.58
+date-released: 2026-07-13
 authors:
   - family-names: Pham
     given-names: Thien Quy
     email: quythien14@gmail.com
+    affiliation: University of Pittsburgh
+  - family-names: Wang
+    given-names: Hao
+    affiliation: University of Pittsburgh
+  - family-names: Seney
+    given-names: Marianne L.
+    affiliation: University of Pittsburgh
+  - family-names: McClung
+    given-names: Colleen A.
+    affiliation: University of Pittsburgh
+  - family-names: Yu
+    given-names: Guan
+    affiliation: University of Pittsburgh
+  - family-names: Tseng
+    given-names: George C.
+    email: ctseng@pitt.edu
     affiliation: University of Pittsburgh
 license: MIT
 repository-code: "https://github.com/quythien/SCP"
@@ -22,10 +38,25 @@ keywords:
   - rhythmicity
 preferred-citation:
   type: article
-  title: "Simulation-based circadian power analysis: a two-detector framework for rhythmicity and differential circadian gene detection"
+  title: "Comprehensive Power Evaluation and Study Design for Circadian Biomarker Detection and Differential Rhythmicity Analysis"
   authors:
     - family-names: Pham
       given-names: Thien Quy
+      affiliation: University of Pittsburgh
+    - family-names: Wang
+      given-names: Hao
+      affiliation: University of Pittsburgh
+    - family-names: Seney
+      given-names: Marianne L.
+      affiliation: University of Pittsburgh
+    - family-names: McClung
+      given-names: Colleen A.
+      affiliation: University of Pittsburgh
+    - family-names: Yu
+      given-names: Guan
+      affiliation: University of Pittsburgh
+    - family-names: Tseng
+      given-names: George C.
       affiliation: University of Pittsburgh
   year: 2026
   journal: "Bioinformatics"

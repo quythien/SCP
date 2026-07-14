@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimation.R
 \name{estCircadianParamTwoGroup}
 \alias{estCircadianParamTwoGroup}
-\title{Estimate a two-group circadian pilot for differential power}
+\title{Two-Group Circadian Pilot Estimation}
 \usage{
 estCircadianParamTwoGroup(
   data_1,
@@ -57,4 +57,14 @@ Fits cosinor models to two groups of pilot data and assembles the two-group
 pilot summary used by the differential power simulator, encoding
 differential rhythmicity (DR), differential phase (DP), and differential
 MESOR (DM) structure.
+}
+\examples{
+# Two-group pilot (adrenal vs liver arms of the bundled demo pilot).
+praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+                            package = "SCP"))
+bio <- estCircadianParamTwoGroup(praw$adrenal$expr[1:300, ],
+                                 praw$liver$expr[1:300, ],
+                                 praw$adrenal$times, praw$liver$times,
+                                 top_k = 100, verbose = FALSE)
+bio$prop_DR
 }

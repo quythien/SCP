@@ -244,7 +244,8 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 #'
 #' @param pilot_data Genes x samples matrix (pilot experiment).
 #' @param pilot_times Numeric vector of sample time points, length = ncol(pilot_data).
-#' @param boot.opts \code{CircadianBootstrapOptions} from \code{CircadianBootstrapOptions()}.
+#' @param boot.opts The bootstrap-grid options built with
+#'   \code{CircadianBootstrapOptions()}.
 #'   Must set \code{B_values} to a single value for passive designs.
 #' @param analysis.opts \code{CircadianAnalysisOptions}.
 #' @param bio_diff.opts \code{CircadianBioOptions} from \code{estCircadianParam()}. Required
@@ -284,6 +285,23 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 #'     \item{\code{optimal_B_ci_lo}}{Bootstrap 2.5th percentile of optimal B.}
 #'     \item{\code{optimal_B_ci_hi}}{Bootstrap 97.5th percentile of optimal B.}
 #'   }
+#' @examples
+#' \donttest{
+#' praw  <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+#'                              package = "SCP"))
+#' expr  <- praw$adrenal$expr[1:300, ]
+#' times <- praw$adrenal$times
+#' bio   <- estCircadianParam(expr, times, verbose = FALSE)
+#' bopt  <- CircadianBootstrapOptions(
+#'            design_vector = sort(unique(round(times))),
+#'            B_values = 4, N_values = c(24, 48),
+#'            nboot = 3, nsims_inner = 4, design = "passive")
+#' aopt  <- CircadianAnalysisOptions(alpha = 0.05)
+#' grid  <- runBootstrapDesignGrid(expr, times, bopt, aopt,
+#'                                 bio_diff.opts = bio, mode = "single",
+#'                                 verbose = FALSE)
+#' grid$power_mean
+#' }
 #' @export
 runBootstrapDesignGrid <- function(pilot_data,
                                    pilot_times,
@@ -574,6 +592,24 @@ runBootstrapDesignGrid <- function(pilot_data,
 #' @param panels Which panel(s) to draw: "A" (power vs N) and/or "B" (heatmap)
 #'   (default "A").
 #' @param output_file Path for PDF output (NULL = screen)
+#' @examples
+#' \donttest{
+#' praw  <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+#'                              package = "SCP"))
+#' expr  <- praw$adrenal$expr[1:300, ]
+#' times <- praw$adrenal$times
+#' bio   <- estCircadianParam(expr, times, verbose = FALSE)
+#' bopt  <- CircadianBootstrapOptions(
+#'            design_vector = sort(unique(round(times))),
+#'            B_values = 4, N_values = c(24, 48),
+#'            nboot = 3, nsims_inner = 4, design = "passive")
+#' aopt  <- CircadianAnalysisOptions(alpha = 0.05)
+#' grid  <- runBootstrapDesignGrid(expr, times, bopt, aopt,
+#'                                 bio_diff.opts = bio, mode = "single",
+#'                                 verbose = FALSE)
+#' plotBootstrapDesignGrid(grid, test_type = "rhythmic",
+#'                         output_file = tempfile(fileext = ".pdf"))
+#' }
 #' @export
 plotBootstrapDesignGrid <- function(result,
                                     test_type     = "DR",

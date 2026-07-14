@@ -28,7 +28,8 @@ runBootstrapDesignGrid(
 
 \item{pilot_times}{Numeric vector of sample time points, length = ncol(pilot_data).}
 
-\item{boot.opts}{\code{CircadianBootstrapOptions} from \code{CircadianBootstrapOptions()}.
+\item{boot.opts}{The bootstrap-grid options built with
+\code{CircadianBootstrapOptions()}.
 Must set \code{B_values} to a single value for passive designs.}
 
 \item{analysis.opts}{\code{CircadianAnalysisOptions}.}
@@ -86,4 +87,22 @@ Named list with 15 elements:
 \description{
 Estimates uncertainty in power across (N, B) design configurations by
 bootstrapping parameter sets from pilot data.
+}
+\examples{
+\donttest{
+praw  <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+                             package = "SCP"))
+expr  <- praw$adrenal$expr[1:300, ]
+times <- praw$adrenal$times
+bio   <- estCircadianParam(expr, times, verbose = FALSE)
+bopt  <- CircadianBootstrapOptions(
+           design_vector = sort(unique(round(times))),
+           B_values = 4, N_values = c(24, 48),
+           nboot = 3, nsims_inner = 4, design = "passive")
+aopt  <- CircadianAnalysisOptions(alpha = 0.05)
+grid  <- runBootstrapDesignGrid(expr, times, bopt, aopt,
+                                bio_diff.opts = bio, mode = "single",
+                                verbose = FALSE)
+grid$power_mean
+}
 }

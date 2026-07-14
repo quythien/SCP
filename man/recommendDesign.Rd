@@ -2,7 +2,7 @@
 % Please edit documentation in R/runner.R
 \name{recommendDesign}
 \alias{recommendDesign}
-\title{B vs m design study -- analytical + simulation}
+\title{B vs m design study (analytical and simulation)}
 \usage{
 recommendDesign(
   bio.opts,
@@ -56,19 +56,33 @@ instead of re-running simulation.}
 \item{verbose}{Print progress}
 }
 \value{
-SCPRecommendResult with:
-  $guidance      -- data.frame: method guidance table
-  $analytical_df -- data.frame[method, N, power_analytical] (DCP only)
-  $simulation    -- runSingleCohortGrid() or runDifferentialPower() result (NULL if not run)
-  $recommendation -- data.frame[method, optimal_B, n_target, note]
+An \code{SCPRecommendResult} object (a list) with:
+  \itemize{
+    \item \code{guidance}: the method-guidance table.
+    \item \code{analytical_df}: analytical power at each sample size
+      (cosinor detector only).
+    \item \code{simulation}: the simulation result, or \code{NULL} when
+      no simulation was run.
+    \item \code{recommendation}: the recommended design and sample size
+      per method.
+  }
 }
 \description{
-Full B vs m study orchestrator. Three sequential steps:
+Compares study designs that trade the number of time points (B) against
+the number of replicates per time point (m), and recommends a sample
+size for a target power. It first reports how each detector responds to
+B versus m, then computes analytical power at each sample size for the
+cosinor detector (which is invariant to B), and finally runs the full
+simulation for detectors that have no closed form. A previous result can
+be supplied to reuse its simulation instead of running it again.
 }
-\details{
-1. Print method guidance table (printMethodGuidance)
-2. Analytical: CircaPower closed-form power at each N (DCP; B-invariant).
-   For JTK/RAIN/MH no closed form exists -- simulation is required.
-3. Simulation: run runSingleCohortPower() or runDifferentialPower(), or
-   absorb a prior_result from a previous call to skip re-running.
+\examples{
+# Analytical (CircaPower) design guidance, no simulation.
+bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+dopt <- CircadianDesignOptions(sample_sizes = c(24, 48, 96), nsims = 5)
+aopt <- CircadianAnalysisOptions(alpha = 0.05)
+rec  <- recommendDesign(bio, dopt, aopt, methods = "DCP",
+                        run_simulation = FALSE, plot = FALSE,
+                        verbose = FALSE)
+rec$analytical_df
 }

@@ -1,12 +1,23 @@
 Package: SCP
 Type: Package
 Title: Power Evaluation and Study Design for Circadian Biomarker Detection
-Version: 0.4.57
-Date: 2026-07-07
-Authors@R: person("Thien Quy", "Pham",
-    role = c("aut", "cre"),
-    email = "quythien14@gmail.com",
-    comment = c(affiliation = "University of Pittsburgh"))
+Version: 0.4.58
+Date: 2026-07-13
+Authors@R: c(
+    person("Thien Quy", "Pham", role = c("aut", "cre"),
+           email = "quythien14@gmail.com",
+           comment = c(affiliation = "University of Pittsburgh")),
+    person("Hao", "Wang", role = "aut",
+           comment = c(affiliation = "University of Pittsburgh")),
+    person("Marianne L.", "Seney", role = "aut",
+           comment = c(affiliation = "University of Pittsburgh")),
+    person("Colleen A.", "McClung", role = "aut",
+           comment = c(affiliation = "University of Pittsburgh")),
+    person("Guan", "Yu", role = "aut",
+           comment = c(affiliation = "University of Pittsburgh")),
+    person("George C.", "Tseng", role = "aut",
+           email = "ctseng@pitt.edu",
+           comment = c(affiliation = "University of Pittsburgh")))
 Maintainer: Thien Quy Pham <quythien14@gmail.com>
 URL: https://github.com/quythien/SCP
 BugReports: https://github.com/quythien/SCP/issues
@@ -22,7 +33,6 @@ Description: Simulation-based power analysis for circadian transcriptomics
 Depends: R (>= 4.4.0)
 Imports:
     ggplot2,
-    reshape2,
     limma,
     limorhyde,
     minpack.lm,

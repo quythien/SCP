@@ -70,8 +70,27 @@ stratified panels; \code{NULL} (default) uses the full stratified range.}
 Invisibly, list of panel data per comparison/endpoint.
 }
 \description{
-Default layout is marginal power vs sample size only (one column per
-endpoint, one row per comparison). The effect-size-stratified panels
-(power and true-discoveries by r) are opt-in via \code{stratified = TRUE},
-which restores the original 3-column-per-row layout.
+Plots two-group differential power for one or more comparisons from the
+objects returned by \code{\link{runDifferentialPower}}. By default it
+draws marginal power against sample size, with one column per endpoint
+and one row per comparison. Setting \code{stratified = TRUE} adds the
+effect-size-stratified panels (power and true discoveries by effect size)
+in a three-column layout.
+}
+\examples{
+\donttest{
+praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+                            package = "SCP"))
+e1 <- praw$adrenal$expr[1:300, ]; t1 <- praw$adrenal$times
+e2 <- praw$liver$expr[1:300, ];   t2 <- praw$liver$times
+bio  <- estCircadianParamTwoGroup(e1, e2, t1, t2, top_k = 100,
+                                  verbose = FALSE)
+bio$ngenes <- 200L
+dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+aopt <- CircadianAnalysisOptions(alpha = 0.05)
+res  <- runDifferentialPower(bio, dopt, aopt, test_types = "DR",
+                             plot = FALSE, verbose = FALSE)
+plotDiffPower(list(res), endpoints = "DR",
+              out_pdf = tempfile(fileext = ".pdf"))
+}
 }

@@ -33,14 +33,12 @@ size, explore per-gene rhythmicity, and run pathway enrichment.
 On first launch the function checks for the app's optional helper packages
 and offers to install any that are missing (so the gene-symbol mapping,
 XLSX export, full-app capture, and pathway-enrichment features work out of
-the box). These are kept out of the package's hard dependencies so a plain
-\code{install.packages("SCP")} stays lightweight and the API works without
-the large Bioconductor annotation databases.
+the box).
 }
 \examples{
 \dontrun{
   launchShiny()
-  launchShiny(species_all = TRUE)     # also install rat/zebrafish/fly/plant DBs
-  launchShiny(install_deps = FALSE)   # skip the dependency check
+  launchShiny(species_all = TRUE)    # add rat/fish/fly/plant DBs
+  launchShiny(install_deps = FALSE)  # skip the dependency check
 }
 }
