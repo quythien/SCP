@@ -281,6 +281,9 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 #'     \item{\code{power_se}}{Bootstrap SE array, same shape as \code{power_mean}.}
 #'     \item{\code{power_ci_lo}}{2.5th percentile CI array.}
 #'     \item{\code{power_ci_hi}}{97.5th percentile CI array.}
+#'     \item{\code{power_plugin}}{Plug-in (point-estimate) power array
+#'       \code{[n_N x n_B x n_tests]} from the full pilot fit without resampling;
+#'       overlaid as the plug-in line by \code{plotBootstrapDesignGrid()}.}
 #'     \item{\code{optimal_B}}{Integer vector (length n_N): B with highest mean power at each N.}
 #'     \item{\code{optimal_B_ci_lo}}{Bootstrap 2.5th percentile of optimal B.}
 #'     \item{\code{optimal_B_ci_hi}}{Bootstrap 97.5th percentile of optimal B.}
@@ -412,18 +415,17 @@ runBootstrapDesignGrid <- function(pilot_data,
 
   if (verbose) cat(sprintf("Running %d bootstrap draws (mc.cores=%d)...\n", nboot, mc.cores))
 
-  boot_results <- parallel::mclapply(seq_len(nboot), function(b) {
-    if (identical(resample, "subject")) {
-      j          <- subj_idx[[b]]
-      refit_df   <- fitCosinorAll(pilot_data[, j, drop = FALSE], pilot_times[j],
-                                  period = period, min_rhythm_pval = min_rhythm_pval)
-      bio_b      <- .buildBioFromBoot(refit_df, bio_diff.opts)
-      boot_times <- pilot_times[j]     # passive TOD is resampled jointly with the subjects
-    } else {
-      bio_b      <- .buildBioFromBoot(boot_list[[b]], bio_diff.opts)
-      boot_times <- design_vector
-    }
-    bio_b$sim.seed <- seed + 1000L + b  # reproducible inner-simulation seed per draw
+  # Number of genes to simulate per cell: user-specified value, else the pilot's
+  # gene count. Held fixed across the plug-in and every bootstrap draw so the FDR
+  # calibration is comparable across the whole surface.
+  sim_ngenes <- bio_diff.opts$ngenes %||% nrow(pilot_data)
+
+  # Power surface for a single pilot summary (bio_b) and its passive TOD
+  # (boot_times). Shared by the bootstrap draws (each a resampled pilot) and the
+  # plug-in (the full pilot, no resampling), so both go through identical machinery
+  # and differ only in the pilot handed in.
+  runCells <- function(bio_b, boot_times, sim_seed) {
+    bio_b$sim.seed <- sim_seed
     result_b <- array(NA_real_, dim = c(n_N, n_B, n_tests))
 
     for (n_idx in seq_len(n_N)) {
@@ -446,10 +448,7 @@ runBootstrapDesignGrid <- function(pilot_data,
         }
 
         bio_b_n        <- bio_b
-        # Use the user-specified ngenes (from bio_diff.opts) rather than the raw gene count
-        # from the bootstrap draw. This ensures the bootstrap simulation uses the same
-        # number of genes as the plug-in for consistent FDR calibration.
-        bio_b_n$ngenes <- bio_diff.opts$ngenes %||% nrow(boot_list[[b]])
+        bio_b_n$ngenes <- sim_ngenes
 
         iter_design <- CircadianDesignOptions(
           sample_sizes = actual_N,
@@ -502,6 +501,21 @@ runBootstrapDesignGrid <- function(pilot_data,
       }
     }
     result_b
+  }
+
+  boot_results <- parallel::mclapply(seq_len(nboot), function(b) {
+    if (identical(resample, "subject")) {
+      j          <- subj_idx[[b]]
+      refit_df   <- fitCosinorAll(pilot_data[, j, drop = FALSE], pilot_times[j],
+                                  period = period, min_rhythm_pval = min_rhythm_pval)
+      bio_b      <- .buildBioFromBoot(refit_df, bio_diff.opts)
+      boot_times <- pilot_times[j]     # passive TOD is resampled jointly with the subjects
+    } else {
+      bio_b      <- .buildBioFromBoot(boot_list[[b]], bio_diff.opts)
+      boot_times <- design_vector
+    }
+    # reproducible inner-simulation seed per draw
+    runCells(bio_b, boot_times, seed + 1000L + b)
   }, mc.cores = mc.cores)
 
   # Combine per-draw results into boot_power_arr[b, n_idx, B_idx, test_idx]
@@ -528,6 +542,28 @@ runBootstrapDesignGrid <- function(pilot_data,
   power_se    <- array(apply(boot_power_arr, c(2,3,4), sd,       na.rm=TRUE), dim=c(n_N,n_B,n_tests))
   power_ci_lo <- array(apply(boot_power_arr, c(2,3,4), function(x) as.numeric(quantile(x, 0.025, na.rm=TRUE))), dim=c(n_N,n_B,n_tests))
   power_ci_hi <- array(apply(boot_power_arr, c(2,3,4), function(x) as.numeric(quantile(x, 0.975, na.rm=TRUE))), dim=c(n_N,n_B,n_tests))
+
+  # Plug-in (point-estimate) power surface: the full pilot fit, no resampling.
+  # This is the projected power a user would report from the pilot as-is; the gap
+  # between it and the bootstrap mean is the pilot-uncertainty inflation, and it is
+  # what plotBootstrapDesignGrid() overlays as the plug-in line.
+  if (verbose) cat("Computing plug-in (full-pilot) power surface...\n")
+  power_plugin <- tryCatch({
+    if (identical(resample, "subject")) {
+      plug_df    <- fitCosinorAll(pilot_data, pilot_times, period = period,
+                                  min_rhythm_pval = min_rhythm_pval)
+      bio_plug   <- .buildBioFromBoot(plug_df, bio_diff.opts)
+      plug_times <- pilot_times
+    } else {
+      bio_plug   <- .buildBioFromBoot(param_df, bio_diff.opts)
+      plug_times <- design_vector
+    }
+    runCells(bio_plug, plug_times, seed)
+  }, error = function(e) {
+    warning(sprintf("runBootstrapDesignGrid: plug-in computation failed (left NA): %s",
+                    conditionMessage(e)))
+    array(NA_real_, dim = c(n_N, n_B, n_tests))
+  })
 
   # Optimal B for each N (highest mean power), using first test type
   optimal_B     <- integer(n_N)
@@ -566,6 +602,7 @@ runBootstrapDesignGrid <- function(pilot_data,
     power_se        = power_se,
     power_ci_lo     = power_ci_lo,
     power_ci_hi     = power_ci_hi,
+    power_plugin    = power_plugin,
     optimal_B       = optimal_B,
     optimal_B_ci_lo = optimal_B_ci_lo,
     optimal_B_ci_hi = optimal_B_ci_hi
@@ -634,6 +671,8 @@ plotBootstrapDesignGrid <- function(result,
   power_mean  <- matrix(result$power_mean[, , t_idx],  nrow = n_N, ncol = n_B)
   power_ci_lo <- matrix(result$power_ci_lo[, , t_idx], nrow = n_N, ncol = n_B)
   power_ci_hi <- matrix(result$power_ci_hi[, , t_idx], nrow = n_N, ncol = n_B)
+  power_plugin <- if (!is.null(result$power_plugin))
+    matrix(result$power_plugin[, , t_idx], nrow = n_N, ncol = n_B) else NULL
 
   cols <- rainbow(n_B, s = 0.7, v = 0.85)
 
@@ -652,14 +691,27 @@ plotBootstrapDesignGrid <- function(result,
   if (!("A" %in% panels)) {
     # skip to Panel B
   } else {
-  y_max <- min(1, max(power_ci_hi, na.rm = TRUE) * 1.05)
+  has_plugin <- !is.null(power_plugin)
+  single_B   <- (n_B == 1L)
+  # Single-design case gets the manuscript Fig 3 palette (blue plug-in, orange
+  # bootstrap); multi-B keeps one rainbow colour per B.
+  plugin_col <- if (single_B) "#0072B2" else cols
+  boot_col   <- if (single_B) "#D55E00" else cols
+
+  y_top <- if (has_plugin) max(power_ci_hi, power_plugin, na.rm = TRUE)
+           else max(power_ci_hi, na.rm = TRUE)
+  y_max <- min(1, y_top * 1.05)
+  main_txt <- if (has_plugin)
+    sprintf("Bootstrap power vs N (%s, FDR <= %.0f%%)", test_type, 100 * fdr_thr)
+  else
+    sprintf("Bootstrap Power vs N (%s, FDR <= %.0f%%)\nline: bootstrap mean, band: 95%% bootstrap CI", test_type, 100 * fdr_thr)
   plot(N_values, power_mean[, 1],
        type  = "n",
        xlim  = range(N_values),
        ylim  = c(0, y_max),
        xlab  = "N per group",
        ylab  = "Power",
-       main  = sprintf("Bootstrap Power vs N (%s, FDR <= %.0f%%)\nline: bootstrap mean, band: 95%% bootstrap CI", test_type, 100 * fdr_thr),
+       main  = main_txt,
        las   = 1, xaxt = "n")
   axis(1, at = N_values)
   abline(h = 0.80, lty = 2, col = "gray40")
@@ -670,6 +722,8 @@ plotBootstrapDesignGrid <- function(result,
     pm  <- power_mean[, B_idx]
     plo <- power_ci_lo[, B_idx]
     phi <- power_ci_hi[, B_idx]
+    bcol <- boot_col[if (single_B) 1L else B_idx]
+    pcol <- plugin_col[if (single_B) 1L else B_idx]
 
     # 2.5/97.5 percentile bootstrap CI band. Draw only where all three are
     # finite (infeasible (N, B) cells are NA and would otherwise break the
@@ -679,23 +733,45 @@ plotBootstrapDesignGrid <- function(result,
     if (sum(ok) >= 2L) {
       Nk  <- N_values[ok]; plok <- plo[ok]; phik <- phi[ok]
       polygon(c(Nk, rev(Nk)), c(plok, rev(phik)),
-              col    = adjustcolor(cols[B_idx], alpha.f = 0.28),
+              col    = adjustcolor(bcol, alpha.f = 0.22),
               border = NA)
-      lines(Nk, plok, col = adjustcolor(cols[B_idx], alpha.f = 0.75),
+      lines(Nk, plok, col = adjustcolor(bcol, alpha.f = 0.75),
             lwd = 1, lty = 3)
-      lines(Nk, phik, col = adjustcolor(cols[B_idx], alpha.f = 0.75),
+      lines(Nk, phik, col = adjustcolor(bcol, alpha.f = 0.75),
             lwd = 1, lty = 3)
     }
-    lines(N_values, pm,  col = cols[B_idx], lwd = 2)
-    points(N_values, pm, col = cols[B_idx], pch = 19, cex = 0.7)
+
+    # Plug-in (point-estimate) line: solid and heavier, matching Fig 3.
+    if (has_plugin) {
+      pg  <- power_plugin[, B_idx]
+      okp <- is.finite(N_values) & is.finite(pg)
+      if (sum(okp) >= 2L) lines(N_values[okp], pg[okp], col = pcol, lwd = 2.4)
+    }
+
+    # Bootstrap mean: dashed with points when a plug-in line is present, so the
+    # two curves read apart; solid when it is the only line.
+    lines(N_values, pm,  col = bcol, lwd = 1.6, lty = if (has_plugin) 2 else 1)
+    points(N_values, pm, col = bcol, pch = 19, cex = 0.7)
   }
 
-  legend("bottomright",
-         legend = paste0("B=", B_values),
-         col    = cols,
-         lwd    = 2, lty = 1,
-         title  = "# Time Points",
-         cex    = 0.8, bty = "n")
+  if (single_B && has_plugin) {
+    legend("bottomright",
+           legend = c("Plug-in estimate", "Bootstrap mean and 95% CI"),
+           col    = c(plugin_col, boot_col),
+           lwd    = c(2.4, 1.6), lty = c(1, 2), pch = c(NA, 19),
+           cex    = 0.8, bty = "n")
+  } else {
+    legend("bottomright",
+           legend = paste0("B=", B_values),
+           col    = cols,
+           lwd    = 2, lty = 1,
+           title  = "# Time Points",
+           cex    = 0.8, bty = "n")
+    if (has_plugin)
+      legend("topleft",
+             legend = c("solid: plug-in", "dashed: bootstrap mean"),
+             lwd = c(2.4, 1.6), lty = c(1, 2), cex = 0.7, bty = "n")
+  }
   } # end Panel A
 
   if (!("B" %in% panels)) return(invisible(NULL))

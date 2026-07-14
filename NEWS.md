@@ -1,3 +1,16 @@
+# SCP 0.4.60
+
+## Plotting
+
+* `runBootstrapDesignGrid()` now also computes the plug-in (point-estimate) power
+  from the full pilot without resampling and returns it as `power_plugin`.
+  `plotBootstrapDesignGrid()` overlays it as the plug-in line, so the single-panel
+  default plot reproduces the manuscript bootstrap figure: the plug-in estimate
+  against the bootstrap mean and its 95 percent percentile interval. The per-cell
+  simulation was refactored into one shared routine used by both the plug-in and
+  the bootstrap draws. The README bootstrap section is now drawn by this code on
+  the bundled caudate control pilot.
+
 # SCP 0.4.59
 
 ## README and bundled data

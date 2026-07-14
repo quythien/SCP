@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: >-
   If you use SCP in your research, please cite the manuscript and the software.
 title: "SCP: Simulation-Based Circadian Power Analysis"
-version: 0.4.59
+version: 0.4.60
 date-released: 2026-07-14
 authors:
   - family-names: Pham

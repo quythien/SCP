@@ -79,6 +79,9 @@ Named list with 15 elements:
     \item{\code{power_se}}{Bootstrap SE array, same shape as \code{power_mean}.}
     \item{\code{power_ci_lo}}{2.5th percentile CI array.}
     \item{\code{power_ci_hi}}{97.5th percentile CI array.}
+    \item{\code{power_plugin}}{Plug-in (point-estimate) power array
+      \code{[n_N x n_B x n_tests]} from the full pilot fit without resampling;
+      overlaid as the plug-in line by \code{plotBootstrapDesignGrid()}.}
     \item{\code{optimal_B}}{Integer vector (length n_N): B with highest mean power at each N.}
     \item{\code{optimal_B_ci_lo}}{Bootstrap 2.5th percentile of optimal B.}
     \item{\code{optimal_B_ci_hi}}{Bootstrap 97.5th percentile of optimal B.}
