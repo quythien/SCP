@@ -379,7 +379,7 @@ boot <- runBootstrapDesignGrid(pilot_data = prep$data, pilot_times = prep$times,
 plotBootstrapDesignGrid(boot, panels = "A")
 ```
 
-<img src="man/figures/bootstrap_ci.png" alt="Bootstrap uncertainty for the caudate control pilot" width="440">
+<p align="center"><img src="man/figures/bootstrap_ci.png" alt="Bootstrap uncertainty for the caudate control pilot" width="440"></p>
 
 
 The blue line is the point estimate (plug-in power); the orange line with error
