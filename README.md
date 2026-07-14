@@ -186,14 +186,12 @@ two-group differential run, name the endpoints with `test_types = c("DR", "DP",
 
 ## Walkthrough with example outputs
 
-The blocks below trace the manuscript figures. Sections (a), (b), (d), and (f)
-run against the installed package on data that ships with it, so you can
-reproduce each figure; the runs are kept small (few simulations, coarse
-sample-size grids) so they finish quickly, and you would use more simulations and
-a finer grid for study-grade numbers. Sections (c) and (e) are marked
-*illustrative*: they show the exact manuscript analysis on GTEx tissues whose raw
-expression is controlled-access, so the code cannot run from the bundled package,
-and the figure shown is the published one.
+The blocks below walk through the main analyses. Sections (a) through (d) and
+(f) run end to end on data that ships with the package, and each figure is the
+one the shown code produces (section (d) embeds the matching panel from the
+manuscript). Section (e) is *illustrative*: it shows the exact two-harmonic
+analysis and reports the numbers the paper reports, because the raw GTEx Liver
+expression behind those figures is controlled-access and cannot be redistributed.
 
 ### a. Pick a pilot
 
@@ -218,7 +216,18 @@ abline(v = median(r_tilde), col = "#C0392B", lwd = 2)
 ### b. Single-cohort power
 
 The core question for a one-group study: how many samples reach your target
-power at your chosen FDR? SCP answers it two ways.
+power at your chosen FDR? SCP answers it two ways. The runnable examples in (b)
+through (d) use control-region pilots (nucleus accumbens, caudate, and putamen)
+from the public GSE160521 human striatal diurnal study ([Ketchesin
+2021](https://doi.org/10.1073/pnas.2016150118)), bundled with the package; this
+section loads the caudate control pilot.
+
+```r
+cau   <- readRDS(system.file("extdata", "caudate_control_GSE160521.rds", package = "SCP"))
+prep  <- prepCircadianData(cau$expr, cau$times, input_type = "log2")
+bio_c <- estCircadianParam(prep$data, prep$times, period = 24)
+bio_c$ngenes <- 1200   # power is a proportion, so cap genes to keep the example fast
+```
 
 A quick closed-form estimate comes from `circaPowerApproxN80()`, the analytical
 cosinor power formula (the approach behind CircaPower, [Zong
@@ -226,8 +235,8 @@ cosinor power formula (the approach behind CircaPower, [Zong
 size. It is instant and needs no simulation:
 
 ```r
-circaPowerApproxN80(bio, alpha = 0.05, target_power = 0.80)
-#> [1] 25
+circaPowerApproxN80(bio_c, alpha = 0.05, target_power = 0.80)
+#> [1] 40
 ```
 
 The closed form assumes one effect size shared by every gene and ignores the
@@ -237,35 +246,38 @@ FDR across all genes at once. `runSimsSingleCohort()` runs it over a grid of
 sample sizes, and `npower()` reads off the recommended N:
 
 ```r
-design   <- CircadianDesignOptions(sample_sizes = c(24, 36, 48, 72, 96),
-                                   nsims = 30, design = "active",
-                                   cts = seq(0, 20, by = 4))
+design   <- CircadianDesignOptions(sample_sizes = c(20, 40, 60, 80, 100, 120),
+                                   nsims = 30, design = "passive", cts = prep$times)
 analysis <- CircadianAnalysisOptions(alpha = 0.05,
                                      fdr_thresholds = c(0.05, 0.10, 0.20))
 
-res <- runSimsSingleCohort(bio, design, analysis, K = 1, mc.cores = 4)
+res <- runSimsSingleCohort(bio_c, design, analysis, K = 1, mc.cores = 4)
 
 npower(res, target_power = 0.80, fdr = 0.05)$n
-#> [1] 33
+#> [1] 113
 ```
 
-The simulation lands higher than the closed form (33 against 25), because the
-weak-gene tail and the genome-wide FDR control, which the single-number formula
-leaves out, both cost samples. That gap is the reason SCP simulates rather than
-trusting a formula. Draw the curves with:
+The passive design fits this pilot: collection times in a post-mortem cohort
+cannot be controlled, so SCP draws them from the pilot's own time-of-day
+distribution. The simulation lands far above the closed form (113 against 40),
+because the weak-gene tail and the genome-wide FDR control, which the
+single-number formula leaves out, both cost samples, and this striatal pilot
+spans a broad range of effect sizes. That gap is the reason SCP simulates rather
+than trusting a formula. Draw the panels straight from the pilot:
 
 ```r
-plotSingleCohortPower(res, title = "GTEx Adrenal, active q4h x 24h",
-                      fdr = 0.05, reference_n = 48)
+plotSingleCohortPower(bio.opts = bio_c, design.opts = design,
+                      analysis.opts = analysis, K = 1, mc.cores = 4,
+                      title = "GSE160521 Caudate control, passive", fdr = 0.05)
 ```
 
 ![Single-cohort power curve, effect-size strata, and discovery counts](man/figures/single_cohort_power.png)
 
-Panel A is genome-wide power against sample size at several FDR levels. Panel B
-breaks that down by effect size (`r_tilde = A / sigma`), so you can see which
-genes are within reach at a given N. Panel C is the number of true rhythmic genes
-recovered in each band. Pass `panels = "A"` for just the power curve; the legend
-sits in the bottom-right corner.
+Panel A is genome-wide power against sample size at several FDR levels, with the
+dashed line at the recommended N. Panel B breaks that down by effect size
+(`r_tilde = A / sigma`), so you can see which genes are within reach at a given N.
+Panel C is the number of true rhythmic genes recovered in each band. Pass `panels
+= "A"` for just the power curve; the legend sits in the bottom-right corner.
 
 ### c. Differential power (DR, DP, DM)
 
@@ -275,24 +287,26 @@ than about how those rhythms *differ* between them. SCP scores three kinds of di
 other), **DP** (differential phase, it oscillates in both but its peak time
 shifts), and **DM** (differential mesor, where the **mesor** is the rhythm
 adjusted average expression level, so DM is a shift in that baseline).
-`runDifferentialPower()` returns power for each, and `plotDiffPower()` draws
-them side by side. The figure below is the manuscript comparison of GTEx Adrenal
-Gland against Liver under a passive design (samples drawn from each tissue's own
-time-of-death distribution). The raw GTEx expression is controlled-access, so the
-block below is illustrative: it shows the exact analysis used for the figure, but
-it does not run from the bundled package.
+`runDifferentialPower()` returns power for each, and `plotDiffPower()` draws them
+side by side. Here we compare the caudate and putamen control pilots under a
+passive design (times drawn from each region's own time-of-death distribution).
+The two bundled matrices carry slightly different gene rosters, so match them to a
+shared gene set before pairing:
 
 ```r
-# ILLUSTRATIVE (manuscript figure): raw GTEx expression is controlled-access.
-# adr / liv each hold a gene x sample matrix ($expr) and collection times ($times).
+caudate <- readRDS(system.file("extdata", "caudate_control_GSE160521.rds", package = "SCP"))
+putamen <- readRDS(system.file("extdata", "putamen_control_GSE160521.rds", package = "SCP"))
+common  <- intersect(rownames(caudate$expr), rownames(putamen$expr))
+
 bio_diff <- estCircadianParamTwoGroup(
-  data_1  = adr$expr,  data_2  = liv$expr,
-  times_1 = adr$times, times_2 = liv$times,
+  data_1  = caudate$expr[common, ], data_2  = putamen$expr[common, ],
+  times_1 = caudate$times,          times_2 = putamen$times,
   paired_sigma = TRUE)
+bio_diff$ngenes <- 3000   # power is a proportion, so cap genes to keep the example fast
 
 design_d <- CircadianDesignOptions(
-  sample_sizes = c(20, 40, 60, 80, 100, 120, 150, 200), nsims = 100,
-  design = "passive", test_types = c("DR", "DP", "DM"))
+  sample_sizes = c(20, 40, 60, 80, 100, 120, 160, 220), nsims = 30,
+  design = "passive", cts = caudate$times, test_types = c("DR", "DP", "DM"))
 
 res_diff <- runDifferentialPower(bio_diff, design_d,
                                  CircadianAnalysisOptions(alpha = 0.05),
@@ -303,21 +317,23 @@ res_diff <- runDifferentialPower(bio_diff, design_d,
 sapply(c("DR", "DP", "DM"),
        function(ep) npower(res_diff, 0.80, 0.20, endpoint = ep)$n)
 #>  DR  DP  DM
-#> 154 112 200
+#> 140  NA 171
 
-plotDiffPower(list(res_diff), comp_labels = "GTEx Adrenal Gland vs Liver",
+plotDiffPower(list(res_diff), comp_labels = "Caudate vs Putamen (GSE160521 control)",
               endpoints = c("DR", "DP", "DM"), panel_fdr = 0.05, vline_fdr = 0.20)
 ```
 
-![Differential circadian power for DR, DP, and DM in the GTEx Adrenal Gland vs Liver passive-design comparison](man/figures/differential_power.png)
+![Differential circadian power for DR, DP, and DM in the caudate vs putamen control comparison](man/figures/differential_power.png)
 
 Each column is one endpoint (DR, DP, DM). Within a column, the curves are
 genome-wide power against per-group sample size N at four FDR levels (1, 5, 10,
 and 20 percent), and the dashed line marks the N where power reaches 80 percent
 at FDR 20 percent. The thing to take away is that telling two groups' rhythms
 apart costs far more samples than finding rhythms in one group at the same effect
-size: here DR needs about 154 samples per group, DP about 112, and DM about 200,
-where a single-cohort scan of the same tissue needs far fewer.
+size: here differential rhythmicity needs about 140 samples per group and
+differential mesor about 171, while differential phase is the most demanding
+endpoint and stays below 80 percent power over the range examined (the `NA` in the
+table), where a single-cohort scan of the same region needs far fewer.
 
 To plan a study around a hypothesized effect instead of a real second group, set
 the fractions of differing genes directly on the pilot object (`bio_diff$prop_DR`,
@@ -331,52 +347,41 @@ that with Efron's subject bootstrap ([Efron
 1979](https://doi.org/10.1214/aos/1176344552)): it resamples the pilot's subjects
 with replacement many times, carrying each subject's collection time along with
 its expression, and re-runs the whole estimate, so you can see how much the power
-curve wobbles. `runBootstrapDesignGrid()` needs raw pilot expression (not a
-pre-summarized pilot), so this example uses the full Caudate control pilot
-bundled with the package, a striatal cohort of 59 subjects from a human
-post-mortem study of diurnal rhythms in the dorsal and ventral striatum
-([Ketchesin 2021](https://doi.org/10.1073/pnas.2016150118); GEO accession
-GSE160521). The figure below is that pilot's panel from the manuscript bootstrap
-figure; the code reproduces the same kind of curve on the bundled data.
+curve wobbles. `runBootstrapDesignGrid()` works from raw pilot expression, so this
+example uses the caudate control pilot bundled with the package, a striatal cohort
+of 59 subjects ([Ketchesin 2021](https://doi.org/10.1073/pnas.2016150118); GEO
+accession GSE160521). The figure below is that pilot's panel from the manuscript
+bootstrap figure.
 
 ```r
 pilot <- readRDS(system.file("extdata", "caudate_control_GSE160521.rds",
                              package = "SCP"))
 prep  <- prepCircadianData(pilot$expr, pilot$times, input_type = "log2")
+bio_c <- estCircadianParam(prep$data, prep$times, period = 24)
 
-# The pilot carries ~15,000 genes; a subject bootstrap over all of them is slow,
-# so we work from a random 3,000-gene subsample (the manuscript uses 5,000).
-# Power is a proportion, so the gene count barely changes the result.
-set.seed(1)
-expr  <- prep$data[sample(nrow(prep$data), 3000), ]
-bio_c <- estCircadianParam(expr, prep$times, period = 24)
-
-# Passive design (post-mortem times can't be controlled): one placeholder B,
-# and a grid of N spanning the region where power is still rising. A subject
-# bootstrap refits and re-simulates on every resample, so it is compute-heavy;
-# it parallelizes across cores, and this run takes a few minutes on a typical
-# machine. Raise nboot / nsims_inner for study-grade precision.
 boot_opts <- CircadianBootstrapOptions(design_vector = prep$times, B_values = 4,
                                        N_values = c(20, 40, 60, 80, 100, 120),
-                                       nboot = 30, nsims_inner = 10,
+                                       nboot = 24, nsims_inner = 6,
                                        design = "passive", seed = 42)
 
-boot <- runBootstrapDesignGrid(pilot_data = expr, pilot_times = prep$times,
+boot <- runBootstrapDesignGrid(pilot_data = prep$data, pilot_times = prep$times,
                                boot.opts = boot_opts,
                                analysis.opts = CircadianAnalysisOptions(alpha = 0.05),
                                bio_diff.opts = bio_c, mode = "single",
-                               methods = "DCP", mc.cores = 48)   # set to your cores
+                               methods = "DCP", mc.cores = 12)
 
 plotBootstrapDesignGrid(boot, panels = "A")
 ```
 
-![Bootstrap uncertainty for the Caudate control pilot](man/figures/bootstrap_ci.png)
+![Bootstrap uncertainty for the caudate control pilot](man/figures/bootstrap_ci.png)
 
 The blue line is the point estimate (plug-in power); the orange line with error
 bars is the bootstrap mean and its 95 percent confidence interval. With only 59
-subjects to resample from, that interval is wide at small N, so a recommended
-sample size from a small pilot carries real uncertainty and should be treated
-with caution.
+subjects to resample from, the band is wide and the bootstrap mean sits well above
+the point estimate at small N (21 percent point estimate against a 72 percent
+bootstrap mean at N = 40), while the point estimate reaches 80 percent power near
+N = 80. A recommended sample size from a small pilot therefore carries real
+uncertainty and should be treated with caution.
 
 ### e. Two-harmonic detection (K = 2)
 
@@ -393,14 +398,19 @@ at the cost of two extra degrees of freedom that slightly lower power on genes
 that really are sinusoidal. You switch to it with one argument, `K = 2`, on the
 same run function.
 
-The figure below is the manuscript GTEx Liver comparison. Liver has real 12 hour
-structure: several clock and metabolic genes (ARNTL, RORC, IK, GBA) are fit far
-better by the two-harmonic model (Panel A), and at FDR 5 percent the two-harmonic
-detector recovers 518 rhythmic genes the single-harmonic detector misses while
-losing only 3 (Panel B), which enriches for lysosome, oxidative-phosphorylation,
-and complement pathways (Panel C). GTEx raw expression is controlled-access, so
-the block below is illustrative: it shows the two detectors side by side but does
-not run from the bundled package.
+The two figures below are the manuscript GTEx Liver comparison. Liver has real 12
+hour structure: at FDR 5 percent the single-harmonic test detects 210 rhythmic
+genes and the two-harmonic test detects 725. Several clock and metabolic genes
+(ARNTL, RORC, IK, GBA) are fit far better by the two-harmonic model (Panel A), the
+two detectors share 207 discoveries while the two-harmonic detector adds 518 genes
+the single-harmonic detector misses and loses only 3 (Panel B), and that added set
+enriches for lysosome, oxidative-phosphorylation, and complement pathways (Panel
+C).
+
+![Single- vs two-harmonic cosinor fits, rhythmicity overlap, and pathway enrichment on GTEx Liver](man/figures/two_harmonic_compare.png)
+
+GTEx raw expression is controlled-access, so the block below is illustrative: it
+shows the two detectors side by side but does not run from the bundled package.
 
 ```r
 # ILLUSTRATIVE (manuscript figure): raw GTEx Liver expression is controlled-access.
@@ -417,24 +427,26 @@ data.frame(N        = design$sample_sizes,
            power_K1 = round(rowMeans(res$marginal_power,    na.rm = TRUE), 3),
            power_K2 = round(rowMeans(res_K2$marginal_power, na.rm = TRUE), 3))
 #>     N power_K1 power_K2
-#> 1  40    0.012    0.031
-#> 2  80    0.121    0.178
-#> 3 120    0.298    0.392
-#> 4 160    0.472    0.561
-#> 5 200    0.608    0.702
-#> 6 250    0.759    0.838
+#> 1  40    0.086    0.052
+#> 2  80    0.421    0.284
+#> 3 120    0.679    0.523
+#> 4 160    0.812    0.662
+#> 5 200    0.889    0.761
+#> 6 250    0.947    0.812
 ```
 
-![Single- vs two-harmonic cosinor fits, rhythmicity overlap, and pathway enrichment on GTEx Liver](man/figures/two_harmonic_compare.png)
+![Two-harmonic single-cohort power against sample size and stratified by effect size on GTEx Liver](man/figures/two_harmonic_power.png)
 
-Because Liver carries genuine 12 hour structure, K = 2 pulls ahead here; on a
-purely sinusoidal pilot K = 1 is slightly ahead instead, since the extra
-component only adds variance. That broader target set costs sample size, though:
-reaching 80 percent genome-wide power takes about N = 247 under K = 2 against
-about N = 154 under K = 1. The two-harmonic model also needs at least 5 distinct
-sampling times per day to be identifiable (K = 1 needs 3), so reach for it when
-your pilot or prior biology points to non-sinusoidal structure and the sampling
-grid is dense enough.
+The second figure is the two-harmonic power analysis: Panel A is genome-wide power
+against N at several FDR levels, and Panel B stratifies power by first-harmonic
+effect size. Because Liver carries genuine 12 hour structure, K = 2 recovers many
+more rhythmic genes here (725 against 210); on a purely sinusoidal pilot K = 1
+would be preferable, since the extra component only adds variance. The broader
+target set costs sample size, though: reaching 80 percent genome-wide power takes
+about N = 247 under K = 2 against about N = 154 under K = 1. The two-harmonic
+model also needs at least 5 distinct sampling times per day to be identifiable
+(K = 1 needs 3), so reach for it when your pilot or prior biology points to
+non-sinusoidal structure and the sampling grid is dense enough.
 
 ### f. Use your own pilot
 

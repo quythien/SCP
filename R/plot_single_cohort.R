@@ -10,20 +10,31 @@ if (!exists("add_se_bars")) {
   }
 }
 # Panel A: marginal power vs n, lines = FDR thresholds
-# Panel B: true discoveries by r-stratum (lines per n) + overlay of gene distribution
-# Panel C: stratified power by r-stratum, lines per n
+# Panel B: stratified power by r-stratum, lines per n
+# Panel C: true discoveries by r-stratum (lines per n) + overlay of gene distribution
 
 #' Plot single-cohort circadian power (3 panels)
 #'
 #' @description
 #' Summarises a single-cohort power simulation in three panels: marginal
-#' power against sample size at several FDR thresholds (Panel A), the number
-#' of true discoveries by effect-size stratum (Panel B), and power resolved
-#' by effect-size stratum (Panel C). It takes the object returned by
-#' \code{\link{runSimsSingleCohort}} and either draws to the current device
-#' or writes a PDF.
+#' power against sample size at several FDR thresholds (Panel A), power
+#' resolved by effect-size stratum (Panel B), and the number of true
+#' discoveries by effect-size stratum (Panel C). It either draws to the
+#' current device or writes a PDF.
 #'
-#' @param res        Output from \code{runSimsSingleCohort()}.
+#' The panels can be produced two ways. Supply a precomputed
+#' \code{\link{runSimsSingleCohort}} object as \code{res} (optionally with a
+#' second object as \code{panel_a_res} that drives only the marginal panel).
+#' Alternatively, supply the pilot and design directly through \code{bio.opts}
+#' and \code{design.opts}: the marginal panel (A) is then computed from a run
+#' over the pilot's own effect sizes, while the stratified panels (B and C) are
+#' computed from a companion run that spreads gene effect sizes across the full
+#' \eqn{r = A/\sigma} range so every stratum is populated. The caller never
+#' specifies how effect sizes are drawn.
+#'
+#' @param res        Output from \code{\link{runSimsSingleCohort}}. May be
+#'   \code{NULL} when \code{bio.opts} and \code{design.opts} are supplied, in
+#'   which case the required simulations are run internally.
 #' @param panel_a_res Optional alternate result object used for the Panel A
 #'   marginal-power computation only. If NULL (default), Panel A is computed
 #'   from \code{res}. Useful when the marginal summary should reflect a
@@ -31,8 +42,8 @@ if (!exists("add_se_bars")) {
 #' @param out_pdf    Path for PDF output. If NULL, plots to current device.
 #' @param title      Overall figure title (default empty).
 #' @param panels     Character vector, which of panels "A" (marginal power vs
-#'   n), "B" (true discoveries by r-stratum), "C" (stratified power by
-#'   r-stratum) to draw (default all three).
+#'   n), "B" (power by effect-size stratum), "C" (true discoveries by
+#'   effect-size stratum) to draw (default all three).
 #' @param fdr_thresholds FDR levels for panel A (default c(0.01,0.05,0.10,0.20)).
 #' @param panel_fdr  FDR threshold highlighted in panels B/C (default 0.05).
 #' @param vline_power Horizontal reference line for target power (default 0.80).
@@ -65,6 +76,20 @@ if (!exists("add_se_bars")) {
 #'   (default FALSE; panel A's legend is normally sufficient).
 #' @param width      PDF width in inches (default 15).
 #' @param height     PDF height in inches (default 5.5).
+#' @param bio.opts   Optional \code{CircadianBioOptions} pilot (e.g. from
+#'   \code{\link{estCircadianParam}}). When supplied together with
+#'   \code{design.opts}, and \code{panel_a_res} is \code{NULL}, the simulations
+#'   backing the requested panels are run internally so the caller can go
+#'   straight from a pilot to the figure. Ignored when \code{panel_a_res} is
+#'   supplied (default \code{NULL}).
+#' @param design.opts Optional \code{CircadianDesignOptions} used with
+#'   \code{bio.opts} for the internal runs (default \code{NULL}).
+#' @param analysis.opts Optional \code{CircadianAnalysisOptions} for the
+#'   internal runs; defaults to \code{CircadianAnalysisOptions()} when
+#'   \code{NULL}.
+#' @param K          Cosinor harmonic order for the internal runs (1 =
+#'   single-harmonic, 2 = two-harmonic; default 1).
+#' @param mc.cores   Cores used for the internal simulation runs (default 1).
 #' @return Invisibly returns list of data used per panel.
 #' @examples
 #' bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
@@ -74,7 +99,7 @@ if (!exists("add_se_bars")) {
 #' res  <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
 #' plotSingleCohortPower(res, out_pdf = tempfile(fileext = ".pdf"))
 #' @export
-plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
+plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
                                  panel_a_res = NULL,
                                  panels = c("A", "B", "C"),
                                  fdr_thresholds = c(0.01, 0.05, 0.10, 0.20),
@@ -92,12 +117,65 @@ plotSingleCohortPower <- function(res, out_pdf = NULL, title = "",
                                  legend_pos = "bottomright", se_cap = 0.3,
                                  vertical = FALSE,
                                  panel_c_legend = FALSE,
-                                 width = 15, height = 5.5) {
+                                 width = 15, height = 5.5,
+                                 bio.opts = NULL, design.opts = NULL,
+                                 analysis.opts = NULL, K = 1L, mc.cores = 1L) {
   # `fdr` is a single-value alias for panel_fdr + vline_fdr (back-compat)
   if (!is.null(fdr) && is.numeric(fdr) && length(fdr) == 1L) {
     panel_fdr <- fdr
     vline_fdr <- fdr
   }
+
+  # ------------------------------------------------------------------
+  # Optional pilot-driven path. When a CircadianBioOptions pilot and a design
+  # are supplied (and no explicit panel_a_res override is given), run the
+  # simulations the requested panels need here, so the caller can go straight
+  # from a pilot to the figure without staging a runSimsSingleCohort() object.
+  #
+  # Panel A (marginal power) is computed from a run over the pilot's own
+  # effect sizes. Panels B and C need every effect-size stratum populated, so
+  # when either is requested a companion run spreads gene effect sizes across
+  # the full r = A/sigma range (sigma_rhythmic is resampled so it no longer
+  # tracks amplitude) and drives the stratified panels. The caller never
+  # chooses how effect sizes are drawn.
+  #
+  # When bio.opts is NULL the behaviour is exactly as before: `res` (and any
+  # `panel_a_res`) are used as passed.
+  # ------------------------------------------------------------------
+  if (!is.null(bio.opts) && is.null(panel_a_res)) {
+    if (is.null(design.opts))
+      stop("plotSingleCohortPower(): 'design.opts' is required when 'bio.opts' is supplied.")
+    if (is.null(analysis.opts)) analysis.opts <- CircadianAnalysisOptions()
+
+    want_bc <- any(c("B", "C") %in% intersect(c("A", "B", "C"), panels))
+
+    res_marg <- runSimsSingleCohort(bio.opts, design.opts, analysis.opts,
+                                    K = K, mc.cores = mc.cores, verbose = FALSE)
+
+    if (want_bc) {
+      bio_bc <- bio.opts
+      sig <- bio_bc$sigma_rhythmic
+      if (!is.null(sig) && length(sig) > 1L) {
+        rng_state <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
+                       get(".Random.seed", envir = .GlobalEnv) else NULL
+        set.seed(2025L)
+        # Break the amplitude/sigma pairing so r = A/sigma spans its full
+        # range and every stratum in panels B and C is populated.
+        bio_bc$sigma_rhythmic <- sample(sig)
+        if (!is.null(rng_state))
+          assign(".Random.seed", rng_state, envir = .GlobalEnv)
+      }
+      res_bc <- runSimsSingleCohort(bio_bc, design.opts, analysis.opts,
+                                    K = K, mc.cores = mc.cores, verbose = FALSE)
+      res         <- res_bc     # stratified panels B and C
+      panel_a_res <- res_marg   # marginal panel A
+    } else {
+      res <- res_marg
+    }
+  }
+
+  if (is.null(res))
+    stop("plotSingleCohortPower(): supply either 'res' or ('bio.opts' + 'design.opts').")
   # Adaptive r_max: pick the 95th percentile of observed r-tilde values across
   # all simulations so panels B and C only show populated strata (don't waste
   # space on r in (3, 5] when no gene has r > 1.5).

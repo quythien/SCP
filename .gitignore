@@ -154,6 +154,8 @@ examples/publication/archive/
 !inst/extdata/pilots/**/*.rds
 !inst/extdata/example_pilot_raw.rds
 !inst/extdata/caudate_control_GSE160521.rds
+!inst/extdata/nac_control_GSE160521.rds
+!inst/extdata/putamen_control_GSE160521.rds
 !inst/extdata/example/
 !inst/extdata/example/*.csv
 
