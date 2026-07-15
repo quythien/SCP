@@ -24,7 +24,13 @@ addresses the design question that arises first: how many samples are needed? Th
 one dedicated power tool, CircaPower, assumes a common effect size for all
 rhythmic genes and does not account for the multiplicity burden that arises when
 testing thousands of genes simultaneously ([Zong
-2023](https://doi.org/10.1002/sim.9803)). Those assumptions are rarely realistic
+2023](https://doi.org/10.1002/sim.9803)). Those assumptions are rarely rCircaPower, the only dedicated power tool currently available, assumes a common
+effect size across all rhythmic genes and does not account for the
+multiple-testing burden that arises when thousands of genes are tested
+simultaneously ([Zong
+2023](https://doi.org/10.1002/sim.9803)). In practice, these assumptions are
+rarely realistic.
+ealistic
 for actual tissues or species.
 
 SCP addresses sample-size planning through simulation calibrated to pilot data.
