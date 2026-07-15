@@ -29,9 +29,7 @@ effect size across all rhythmic genes and does not account for the
 multiple-testing burden that arises when thousands of genes are tested
 simultaneously ([Zong
 2023](https://doi.org/10.1002/sim.9803)). In practice, these assumptions are
-rarely realistic.
-ealistic
-for actual tissues or species.
+rarely realistic for actual tissues or species.
 
 SCP addresses sample-size planning through simulation calibrated to pilot data.
 The user supplies a small pilot dataset, either from a preliminary experiment in
