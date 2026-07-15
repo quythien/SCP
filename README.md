@@ -45,15 +45,16 @@ A few terms used throughout are worth defining explicitly. Power is the
 probability that a study of a given size detects a gene that is truly rhythmic.
 False discovery rate (FDR) is the expected proportion of genes declared rhythmic
 that are in fact non-rhythmic; SCP controls FDR using the Benjamini-Hochberg
-procedure (Benjamini and Hochberg 1995), with 5 percent as a common target.
-Effect size is defined here as rhythmic amplitude divided by residual noise,
-written `r_tilde = A / sigma`; larger values indicate genes that are easier to
-detect. Noise (`sigma`) refers to the residual variability of a gene's
-expression around its cosinor fit, estimated on a per-gene basis from the pilot
-dataset and stored internally on the log scale as `lOD`. For a fixed amplitude,
-noisier genes are harder to detect. Cosinor refers to the standard model that
+procedure (Benjamini and Hochberg 1995), typically at 5 percent. Effect size is
+defined here as rhythmic amplitude divided by residual noise, written
+`r_tilde = A / sigma`; larger values indicate genes that are easier to detect.
+Noise (`sigma`) refers to the residual variability of a gene's expression around
+its cosinor fit, estimated on a per-gene basis from the pilot dataset and
+stored internally on the log scale as `lOD`. For a fixed amplitude, noisier
+genes are harder to detect. Cosinor refers to the standard model that
 represents gene expression over the day as a cosine function ([Cornelissen
 2014](https://doi.org/10.1186/1742-4682-11-16)).
+
 
 ## Installation
 
