@@ -546,7 +546,7 @@ power curve and the recommended sample size. On launch, the app opens to the
 GTEx Adrenal (passive) pilot.
 
 
-![Power curve for the GTEx Adrenal (passive) pilot, the app's default view](man/figures/app_power_curve_adrenal.png)
+![The app's default view](man/figures/SCP_app_view.png)
 
 **Circadian Biomarker Detection** (right) explores the pilot itself: a core
 clock-gene cosinor panel, a ranked table of rhythmic genes with FDR-adjusted
