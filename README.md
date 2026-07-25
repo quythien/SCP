@@ -51,7 +51,7 @@ False discovery rate (FDR) is the expected proportion of genes declared rhythmic
 that are in fact non-rhythmic; SCP controls FDR using the Benjamini-Hochberg
 procedure (Benjamini and Hochberg 1995), typically at 5 percent. Effect size is
 defined here as rhythmic amplitude divided by residual noise, written
-`r_tilde = A / sigma`; larger values indicate genes that are easier to detect.
+`r = A / sigma`; larger values indicate genes that are easier to detect.
 Noise (`sigma`) refers to the residual variability of a gene's expression around
 its cosinor fit, estimated on a per-gene basis from the pilot dataset and
 stored internally on the log scale as `lOD`. For a fixed amplitude, noisier
@@ -215,7 +215,7 @@ redistributed.
 
 The pilots differ in how strong their rhythms are, and that is what decides how
 many samples you will need. Loading a pilot and looking at its effect-size
-distribution (`r_tilde = A / sigma`, amplitude over noise, per gene) tells you
+distribution (`r = A / sigma`, amplitude over noise, per gene) tells you
 what you are working with before you simulate anything.
 
 ```r
@@ -227,7 +227,7 @@ r_tilde <- bio$amplitude / bio$sigma_rhythmic
 med     <- median(r_tilde, na.rm = TRUE)
 hist(r_tilde, breaks = 40, col = "#4C79A6", border = "white",
      main = "GSE160521 Caudate control pilot: per-gene effect size",
-     xlab = expression("effect size  " * tilde(r) == A / sigma))
+     xlab = expression("effect size  " * r == A / sigma))
 abline(v = med, col = "#C0392B", lwd = 2)
 text(med, par("usr")[4] * 0.9, bquote(median ~ tilde(r) == .(round(med, 2))),
      col = "#C0392B", pos = 4)
@@ -304,7 +304,7 @@ plotSingleCohortPower(bio.opts = bio_c, design.opts = design,
 
 Panel A shows genome-wide power as a function of sample size at several FDR
 levels, with the dashed line marking the recommended N. Panel B stratifies power
-by effect size (`r_tilde = A / sigma`), showing which genes are detectable at a
+by effect size (`r = A / sigma`), showing which genes are detectable at a
 given N. Panel C shows the number of true rhythmic genes recovered in each
 effect-size band. Pass `panels = "A"` to plot only the power curve; the legend
 appears in the bottom-right corner.
@@ -525,7 +525,7 @@ phase <- (bio_own$phase %% (2 * pi)) / (2 * pi) * 24   # radians to hours
 
 par(mfrow = c(1, 2))
 hist(r_own, breaks = 35, col = "#4C79A6", border = "white",
-     main = "Estimated effect size", xlab = expression(tilde(r) == A / sigma))
+     main = "Estimated effect size", xlab = expression(r == A / sigma))
 hist(phase, breaks = seq(0, 24, by = 1.5), col = "#6FA46F", border = "white",
      main = "Estimated acrophase (peak time)", xlab = "time of day (h)")
 ```
