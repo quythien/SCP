@@ -16,9 +16,7 @@ if (!exists("add_se_bars")) {
 # Input: res_list, named list of two runSimsDiff() outputs (raw format)
 #        comp_labels, character(2) labels for the two comparisons
 
-# ----------------------------------------------------------------------
 # Internal: convert raw runSimsDiff() output to stratified arrays
-# ----------------------------------------------------------------------
 #' Prepare Differential Power Data for Stratified Plotting
 #'
 #' @description
@@ -105,9 +103,7 @@ if (!exists("add_se_bars")) {
   )
 }
 
-# ----------------------------------------------------------------------
 # Internal: collapse strata with left boundary >= threshold into one bin
-# ----------------------------------------------------------------------
 #' Collapse High-r Tail Strata into a Single Bin
 #'
 #' @description
@@ -264,13 +260,11 @@ plotDiffPower <- function(res_list,
       stop("panel_fdr must be a scalar or named vector with names matching endpoints.")
   }
 
-  # ------------------------------------------------------------------
   # Precompute per-comparison, per-endpoint n80 (n needed to reach
   # target power at vline_fdr). Each endpoint's row gets its own
   # vertical line; previously we collapsed to the max across endpoints
   # which made all rows show the same n80, hiding the easy-endpoint
   # advantage.
-  # ------------------------------------------------------------------
   n80_by_comp <- lapply(seq_along(res_list), function(ci) {
     res_ci <- res_list[[ci]]
     out <- vapply(endpoints, function(ep) {
@@ -281,11 +275,9 @@ plotDiffPower <- function(res_list,
     out
   })
 
-  # ------------------------------------------------------------------
   # Open device. Layout:
   #   stratified = TRUE : (n_ep * n_comps) rows x 3 cols (A, B, C)
   #   stratified = FALSE: n_comps rows x n_ep cols (A only, one per endpoint)
-  # ------------------------------------------------------------------
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
   if (stratified) {
     par(mfrow = c(n_ep * n_comps, 3),
@@ -320,9 +312,7 @@ plotDiffPower <- function(res_list,
                   else seq_len(n_sizes)
       ss_disp  <- sample_sizes[disp_idx]
 
-      # ------------------------------------------------------------------
       # Preprocess: stratified arrays from raw runSimsDiff() output
-      # ------------------------------------------------------------------
       ep_fdr    <- panel_fdr_vec[ep]
       idx_fdr5  <- which.min(abs(fdr_thresholds - ep_fdr))
       fdr_label <- sprintf("FDR %g%%", ep_fdr * 100)
@@ -384,7 +374,7 @@ plotDiffPower <- function(res_list,
               type = "b", pch = 19, lwd = paA_lwd, cex = paA_pt,
               col = thresh_cols, lty = 1,
               xlim = c(0, max(ss_disp) * 1.05), ylim = c(0, 100),
-              xlab = "Sample size (n)", ylab = "Power (%)",
+              xlab = "Sample size (N)", ylab = "Power (%)",
               main = "")
       title(main = sprintf("%s   %s - Power vs Sample Size", letter_panel, ep),
             adj = 0.5, font.main = 2, cex.main = paA_titcex, line = 0.6)
@@ -397,7 +387,7 @@ plotDiffPower <- function(res_list,
       abline(h = 80, lty = 2, col = "grey50", lwd = 1.3)
       if (!is.na(vline_n) && is.finite(vline_n)) {
         abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.8)
-        text(vline_n, 95, sprintf("n = %d", vline_n),
+        text(vline_n, 95, sprintf("N = %d", vline_n),
              col = "steelblue", cex = paA_ntxt, adj = c(1.05, 0.5), font = 2)
       }
       grid()
@@ -416,9 +406,9 @@ plotDiffPower <- function(res_list,
               type = "l", lwd = 2.2, col = size_colors[disp_idx], lty = 1,
               xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, 100), bty = "l",
               xaxt = "n",
-              xlab = expression(tilde(r) == A/sigma), ylab = "Power (%)",
+              xlab = expression(r == A/sigma), ylab = "Power (%)",
               main = bquote(bold("Stratified Power by") ~
-                              bold(tilde(r)) ~ bold(.(sprintf("(%s)", fdr_label)))))
+                              bold(r) ~ bold(.(sprintf("(%s)", fdr_label)))))
       axis(1, at = seq_len(n_strata_plt), labels = strata_lbl,
            las = 2, cex.axis = 1.05)
       for (j in disp_idx) {
@@ -429,7 +419,7 @@ plotDiffPower <- function(res_list,
       }
       grid()
       if (identical(ep, endpoints[1])) {
-        legend("bottomright", paste0("n=", ss_disp),
+        legend("bottomright", paste0("N=", ss_disp),
                col = size_colors[disp_idx], lty = 1, lwd = 2.2,
                cex = 0.58, bty = "o", box.col = "grey70", box.lwd = 0.5,
                inset = 0.01, y.intersp = 0.85)
@@ -442,10 +432,10 @@ plotDiffPower <- function(res_list,
       plot(seq_len(n_strata_plt), rep(0, n_strata_plt),
            type = "n", bty = "l", xaxt = "n",
            xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, y_max_TD),
-           xlab = expression(tilde(r) == A/sigma),
+           xlab = expression(r == A/sigma),
            ylab = sprintf("# True %s Discoveries", ep),
            main = bquote(bold("True Discoveries by") ~
-                           bold(tilde(r)) ~ bold(.(sprintf("(%s)", fdr_label)))))
+                           bold(r) ~ bold(.(sprintf("(%s)", fdr_label)))))
       axis(1, at = seq_len(n_strata_plt), labels = strata_lbl,
            las = 2, cex.axis = 1.05)
 
@@ -464,7 +454,7 @@ plotDiffPower <- function(res_list,
       grid()
       if (identical(ep, endpoints[1])) {
         legend("topright",
-               c(paste0("n=", ss_disp), "# Target Discoveries"),
+               c(paste0("N=", ss_disp), "# Target Discoveries"),
                col = c(size_colors[disp_idx], "grey60"),
                lty = c(rep(1, length(disp_idx)), 2),
                lwd = c(rep(2.2, length(disp_idx)), 1.8),

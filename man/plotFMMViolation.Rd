@@ -2,9 +2,7 @@
 % Please edit documentation in R/plot_fmm.R
 \name{plotFMMViolation}
 \alias{plotFMMViolation}
-\title{=======================================================================
-plot_fmm.R, FMM Waveform Robustness Plots (Figures 4, 4b)
-=======================================================================}
+\title{Plot FMM Waveform Robustness: Single-Cohort}
 \usage{
 plotFMMViolation(
   x,
@@ -52,13 +50,6 @@ The FMM model (Rueda, Rodriguez-Collado & Peddada, 2019, Sci Rep,
 doi:10.1038/s41598-019-54569-1) parameterises waveform shape via
 \code{omega} and orientation via \code{beta}. \code{omega = 1} recovers
 pure cosinor, \code{omega = 0} gives a flat (arrhythmic) signal.
-}
-\details{
-Plotting functions for FMM-based cosinor violation analyses.
-Two main functions:
-  plotFMMViolation(), single-cohort 4-row figure (Fig 4)
-  plotFMMDifferential(), differential 3-panel figure (Fig 4b)
-Plot FMM Waveform Robustness: Single-Cohort
 }
 \seealso{
 \code{\link{simCircadianFMM}}, \code{\link{plotFMMDifferential}}

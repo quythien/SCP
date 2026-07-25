@@ -11,9 +11,7 @@
 #' Author: Based on DiffCircadian package
 #' Date: 2025-02-12
 
-# ==============================================================================
-# DEPENDENCIES
-# ==============================================================================
+# Dependencies
 
 # Required packages - will be loaded when functions are called
 # - limma (linear models)
@@ -26,9 +24,7 @@
 # LRTest_diff_phase.R and LRTest_diff_amp.R are loaded as part of the package;
 # the runtime source() calls used in the legacy code/detection.R are not needed here.
 
-# ==============================================================================
 # SECTION 1: FITTING FUNCTIONS
-# ==============================================================================
 
 #' Fit Sinusoidal Curve
 #'
@@ -183,9 +179,7 @@ CP_OneGroup = function(x1, period = 24, alpha = 0.05, CI = FALSE, p.adjust.metho
   return(x1)
 }
 
-# ==============================================================================
 # SECTION 2: JOINT RHYTHMICITY (TOJR)
-# ==============================================================================
 
 #' Rhythmicity Analysis with Cosinor Model
 #'
@@ -354,9 +348,7 @@ toTOJR = function(x, method = "Sidak_FS", amp.cutoff = 0, alpha = 0.05,
   return(TOJR_adj)
 }
 
-# ==============================================================================
 # SECTION 3: MODEL SELECTION FUNCTIONS
-# ==============================================================================
 
 #' Sequential Model Selection for Joint Rhythmicity
 #'
@@ -557,9 +549,7 @@ amp.cut = function(amp, a.TOJR){
   }
 }
 
-# ==============================================================================
 # SECTION 4: DIFFERENTIAL R2 TEST (DR)
-# ==============================================================================
 
 #' Likelihood Ratio Test for Delta R-squared
 #'
@@ -845,9 +835,7 @@ DCP_DiffR2 = function(x, method = "LR", TOJR = NULL,  alpha = 0.05,  nSampling=1
   return(diffR2.tab)
 }
 
-# ==============================================================================
 # SECTION 5: DIFFERENTIAL PARAMETER TESTS (DP and DA)
-# ==============================================================================
 
 #' Likelihood Ratio Test for Differential Parameters
 #'
@@ -1103,9 +1091,7 @@ DCP_DiffPar = function(x, Par = c("A"), TOJR=NULL, alpha = 0.05,
   return(diffPar.tab)
 }
 
-# ==============================================================================
 # SECTION 7: HELPER FUNCTIONS (CIs, etc.)
-# ==============================================================================
 
 #' Get Phase from Beta Coefficients
 #'
@@ -1182,13 +1168,9 @@ choose.abs.min = function(mat = matrix(stats::rnorm(21), ncol = 3)){
   return(abs.min.vec)
 }
 
-# ==============================================================================
 # SECTION 8: UTILITY FUNCTIONS
-# ==============================================================================
 
-# ==============================================================================
 # SECTION 9: BRIDGE FUNCTIONS FOR SIMULATION FRAMEWORK
-# ==============================================================================
 
 #' Bridge: Convert simulation output to DCP format
 #'
@@ -1210,9 +1192,7 @@ format_for_DCP <- function(expr_matrix, times, gene_names = NULL) {
   )
 }
 
-# ==============================================================================
 # SECTION 10: CIRCACOMPARE WRAPPER
-# ==============================================================================
 
 #' CircaCompare Differential Analysis Wrapper
 #'
@@ -1294,9 +1274,7 @@ detect_CircaCompare <- function(expr1, times1, expr2, times2,
 }
 
 
-# ==============================================================================
 # SECTION 11: JTK_CYCLE RHYTHMICITY WRAPPER
-# ==============================================================================
 
 #' JTK_CYCLE Rhythmicity Detection
 #'
@@ -1356,9 +1334,7 @@ detect_JTK <- function(expr, times, gene_names = NULL, period = 24) {
 }
 
 
-# ==============================================================================
 # SECTION 12: RAIN RHYTHMICITY WRAPPER
-# ==============================================================================
 
 #' RAIN Rhythmicity Detection
 #'
@@ -1421,10 +1397,8 @@ detect_RAIN <- function(expr, times, gene_names = NULL, period = 24) {
 }
 
 
-# ==============================================================================
 # SECTION 13: UNIFIED SINGLE-COHORT DETECTION WRAPPERS
 # All return numeric[G] of raw p-values (caller handles FDR adjustment).
-# ==============================================================================
 
 #' Unified cosinor rhythmicity detection (single- or multi-harmonic)
 #'
@@ -1532,7 +1506,6 @@ detect_MH <- function(expr, times, period = 24) {
 }
 
 
-# ==============================================================================
 # SECTION 14: UNIFIED TWO-GROUP DIFFERENTIAL DETECTION WRAPPERS
 # All return list(pval_DR, pval_DP, pval_DM).
 # NA for test types the method does not support.
@@ -1541,7 +1514,6 @@ detect_MH <- function(expr, times, period = 24) {
 #   DCP          DR  DP  --
 #   CircaCompare --  DP  DM
 #   LimoRhyde    DR  --  --
-# ==============================================================================
 
 #' LimoRhyde two-group differential rhythmicity
 #'
@@ -1584,9 +1556,7 @@ detect_LimoRhyde <- function(expr1, times1, expr2, times2, period = 24) {
 }
 
 
-# ==============================================================================
 # detect_FMM: K-harmonic F-test for rhythmicity detection
-# ==============================================================================
 # Rather than fitting the nonlinear FMM model
 # y = M + A*cos(beta + 2*atan(omega*tan((t-alpha)/2))) directly, we use its
 # closed-form Fourier expansion

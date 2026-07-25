@@ -132,7 +132,7 @@ draw_ab <- function(N, M, SE, B_grid, letter, main_text, jitter_step = 1.2,
                     force_zero_cols = integer(0)) {
   cols <- COL_ALL[as.character(B_grid)]
   matplot(N, 100 * M, type = "n", ylim = c(0, 100), xlim = c(0, max(N) * 1.05),
-          xlab = "Sample size (n)", ylab = "Power (%)", main = "")
+          xlab = "Sample size (N)", ylab = "Power (%)", main = "")
   title(main = sprintf("%s   %s", letter, main_text),
         adj = 0.5, font.main = 2, cex.main = 1.10, line = 0.3)
   abline(h = 80, lty = 2, col = "grey50", lwd = 1.2); grid()
@@ -156,7 +156,7 @@ draw_cde <- function(N, M, SE, B_grid, letter, main_text, jitter_step = 2.2,
                      show_legend = FALSE) {
   cols <- COL_ALL[as.character(B_grid)]
   plot(NA, xlim = c(0, max(N) * 1.03), ylim = c(0, 100),
-       xlab = "Sample size (n)", ylab = "Power (%)", main = "")
+       xlab = "Sample size (N)", ylab = "Power (%)", main = "")
   title(main = sprintf("%s   %s", letter, main_text),
         adj = 0.5, font.main = 2, cex.main = 1.10, line = 0.3)
   abline(h = 80, lty = 2, col = "grey50", lwd = 1.2); grid()

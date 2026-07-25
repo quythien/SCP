@@ -1,15 +1,9 @@
-#' =======================================================================
-#' Plotting Helper: Standard Error Bars
-#' =======================================================================
-#'
-#' add_se_bars() draws +/-1 SE error bars on a base-R plot. It is called
-#' internally by plotSingleCohortPower() and plotDiffPower() when rendering
-#' their stratified-power panels.
+# Plotting Helper: Standard Error Bars
+#
+# add_se_bars() draws +/-1 SE error bars on a base-R plot. It is called
+# internally by plotSingleCohortPower() and plotDiffPower() when rendering
+# their stratified-power panels.
 
-
-# =====================================================================
-# HELPER: add error bars to a plot
-# =====================================================================
 #' Add +/-1 SE Error Bars to a Base-R Plot
 #'
 #' @param x Numeric vector. x-coordinates of the bar centres.

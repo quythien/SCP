@@ -286,7 +286,7 @@ ui <- fluidPage(
         selected = "1"
       ),
       checkboxInput("eff_sens", "Effect-size sensitivity", value = FALSE),
-      helpText(em("Also show power stratified by effect size r̃ = A/σ.")),
+      helpText(em("Also show power stratified by effect size r = A/σ.")),
       hr(),
       h4("Sampling design"),
       radioButtons(
@@ -369,7 +369,7 @@ ui <- fluidPage(
             tags$b("Top rhythmic genes"),
             div(style = "margin-top:6px;", uiOutput("gene_table_ui")),
             div(style = "margin-top:6px;",
-                helpText(em("Downloads include ALL fitted genes with full parameters (p, BH q, amplitude, sigma, r-tilde, peak, mesor).")),
+                helpText(em("Downloads include ALL fitted genes with full parameters (p, BH q, amplitude, sigma, r, peak, mesor).")),
                 downloadButton("dl_genes",      "Download all genes (CSV)"),
                 downloadButton("dl_genes_xlsx", "Download all genes (XLSX)"))
           ),
@@ -1032,7 +1032,7 @@ server <- function(input, output, session) {
             K = K_val, mc.cores = n_cores,
             progress = function(j, nj, n)
               incProgress(step_amt,
-                          detail = sprintf("%s | n = %d  (%d of %d)", label, n, j, nj))) },
+                          detail = sprintf("%s | N = %d  (%d of %d)", label, n, j, nj))) },
         error = function(e) {
           showNotification(sprintf("Simulation failed: %s", conditionMessage(e)),
                            type = "error", duration = 8)
@@ -1304,7 +1304,7 @@ server <- function(input, output, session) {
     if (k2) ch <- c(ch, "1st-harmonic p-value" = "p_K1", "2nd-harmonic p-value" = "p_2h")
     ch <- c(ch, "Peak 1 (h)" = "peak1")
     if (k2) ch <- c(ch, "Peak 2 (h)" = "peak2")
-    ch <- c(ch, "Effect size r-tilde (A/sigma)" = "rtilde",
+    ch <- c(ch, "Effect size r (A/sigma)" = "rtilde",
                 "Amplitude A1" = "Amp", "Gene symbol (A-Z)" = "Gene")
     sel <- isolate(input$gene_sort); if (is.null(sel) || !(sel %in% ch)) sel <- "p"
     updateSelectInput(session, "gene_sort", choices = ch, selected = sel)
@@ -1507,11 +1507,11 @@ server <- function(input, output, session) {
       df <- data.frame(Gene = out$Gene, out$p, out$q, out$p_2h,
                        round(out$rtilde, 2), round(pks["peak1", ], 1), round(pks["peak2", ], 1),
                        check.names = FALSE, stringsAsFactors = FALSE)
-      names(df) <- c("Gene", "p (joint)", "q", "p (2nd)", "r̃", "Peak1", "Peak2")
+      names(df) <- c("Gene", "p (joint)", "q", "p (2nd)", "r₁", "Peak1", "Peak2")
     } else {
       df <- data.frame(Gene = out$Gene, out$p, out$q, round(out$rtilde, 2), out$Peak_h,
                        check.names = FALSE, stringsAsFactors = FALSE)
-      names(df) <- c("Gene", "p-value", "q-value", "r̃ (A/σ)", "Peak (h)")
+      names(df) <- c("Gene", "p-value", "q-value", "r (A/σ)", "Peak (h)")
     }
     attr(df, "sci_cols") <- if (is_k2) c("p (joint)", "q", "p (2nd)") else c("p-value", "q-value")
     df
@@ -1568,7 +1568,7 @@ server <- function(input, output, session) {
       data.frame(
         gene       = g$Gene, gene_id = g$ID,
         pvalue     = g$p, qvalue_BH = g$q,
-        amplitude  = g$Amp, sigma = g$Sigma, r_tilde = g$rtilde,
+        amplitude  = g$Amp, sigma = g$Sigma, r = g$rtilde,
         peak_hours = g$Peak_h, mesor = g$Mesor,
         stringsAsFactors = FALSE)
     } else {
@@ -1582,7 +1582,7 @@ server <- function(input, output, session) {
         mesor = g$Mesor,
         A1 = g$Amp,  phi1_hours = g$Peak_h,
         A2 = g$A2,   phi2_hours = g$phi2,
-        sigma = g$Sigma, r_tilde = g$rtilde,
+        sigma = g$Sigma, r1 = g$rtilde,
         peak1_hours = round(pks["peak1", ], 3),
         peak2_hours = round(pks["peak2", ], 3),
         stringsAsFactors = FALSE)
@@ -1644,7 +1644,7 @@ server <- function(input, output, session) {
         sprintf("A1 / phi1  : %.3f / %.2f h   (1st harmonic)\n", r$Amp, r$Peak_h),
         sprintf("A2 / phi2  : %.3f / %.2f h   (2nd harmonic)\n", r$A2, r$phi2),
         sprintf("Sigma      : %.3f\n", r$Sigma),
-        sprintf("r-tilde    : %.2f   (A1/sigma)\n", r$rtilde),
+        sprintf("r_1        : %.2f   (A1/sigma)\n", r$rtilde),
         sprintf("Peak 1     : %.2f h\n", pk[["peak1"]]),
         if (is.finite(pk[["peak2"]])) sprintf("Peak 2     : %.2f h\n", pk[["peak2"]]) else "",
         sprintf("Mesor      : %s", mesor_line))
@@ -1655,7 +1655,7 @@ server <- function(input, output, session) {
         sprintf("q (BH)    : %.3e\n", r$q),
         sprintf("Amplitude : %.3f\n", r$Amp),
         sprintf("Sigma     : %.3f\n", r$Sigma),
-        sprintf("r-tilde   : %.2f   (A/sigma)\n", r$rtilde),
+        sprintf("r         : %.2f   (A/sigma)\n", r$rtilde),
         sprintf("Peak      : %.2f h\n", r$Peak_h),
         sprintf("Mesor     : %s", mesor_line))
     }

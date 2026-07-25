@@ -126,7 +126,6 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
     vline_fdr <- fdr
   }
 
-  # ------------------------------------------------------------------
   # Optional pilot-driven path. When a CircadianBioOptions pilot and a design
   # are supplied (and no explicit panel_a_res override is given), run the
   # simulations the requested panels need here, so the caller can go straight
@@ -141,7 +140,6 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
   #
   # When bio.opts is NULL the behaviour is exactly as before: `res` (and any
   # `panel_a_res`) are used as passed.
-  # ------------------------------------------------------------------
   if (!is.null(bio.opts) && is.null(panel_a_res)) {
     if (is.null(design.opts))
       stop("plotSingleCohortPower(): 'design.opts' is required when 'bio.opts' is supplied.")
@@ -176,7 +174,7 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
 
   if (is.null(res))
     stop("plotSingleCohortPower(): supply either 'res' or ('bio.opts' + 'design.opts').")
-  # Adaptive r_max: pick the 95th percentile of observed r-tilde values across
+  # Adaptive r_max: pick the 95th percentile of observed r values across
   # all simulations so panels B and C only show populated strata (don't waste
   # space on r in (3, 5] when no gene has r > 1.5).
   if (is.null(r_max)) {
@@ -210,11 +208,9 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
                 which(sample_sizes %in% display_sizes)
               else seq_len(n_sizes)
 
-  # ------------------------------------------------------------------
   # Recompute power and TD at each FDR threshold from raw pvalues
   # power_arr[size, stratum, threshold, sim]
   # TD_arr   [size, stratum, threshold, sim]
-  # ------------------------------------------------------------------
   power_arr <- array(NA_real_, dim = c(n_sizes, n_strata, n_thresh, nsims))
   TD_arr    <- array(NA_real_, dim = c(n_sizes, n_strata, n_thresh, nsims))
 
@@ -248,10 +244,8 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
     }
   }
 
-  # ------------------------------------------------------------------
   # Panel A: marginal power vs n, lines = FDR thresholds
   # marginal_sim[size, threshold, sim]
-  # ------------------------------------------------------------------
   marginal_sim <- array(NA_real_, dim = c(n_sizes, n_thresh, nsims))
   for (j in seq_len(n_sizes)) {
     for (s in seq_len(nsims)) {
@@ -304,9 +298,7 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
     disp_idx_a     <- disp_idx
   }
 
-  # ------------------------------------------------------------------
   # Panels B & C: stratum-level results at panel_fdr (closest in fdr_thresholds)
-  # ------------------------------------------------------------------
   idx_fdr5  <- which.min(abs(fdr_thresholds - panel_fdr))
   fdr_label <- sprintf("FDR %g%%", panel_fdr * 100)
   mean_TD <- apply(TD_arr[, , idx_fdr5, , drop = FALSE], c(1, 2),
@@ -328,17 +320,13 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
   }
   gene_counts <- colMeans(count_mat)
 
-  # ------------------------------------------------------------------
   # Panel C: stratified power at FDR 5% by r-stratum, lines per n
-  # ------------------------------------------------------------------
   mean_pow <- apply(power_arr[, , idx_fdr5, , drop = FALSE], c(1, 2),
                     mean, na.rm = TRUE)  # [size, stratum]
   se_pow   <- apply(power_arr[, , idx_fdr5, , drop = FALSE], c(1, 2),
                     function(x) sd(x, na.rm = TRUE) / sqrt(sum(!is.na(x))))
 
-  # ------------------------------------------------------------------
   # Collapse strata with r >= r_max into a single ">r_max" bin
-  # ------------------------------------------------------------------
   left_bounds <- r_strata[-length(r_strata)]   # left boundary of each bin
   collapse_from <- which(left_bounds >= r_max)
 
@@ -372,9 +360,7 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
     n_strata_plt      <- n_strata
   }
 
-  # ------------------------------------------------------------------
   # Open device
-  # ------------------------------------------------------------------
   panels <- intersect(c("A", "B", "C"), panels)
   if (length(panels) == 0L) panels <- c("A", "B", "C")
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
@@ -406,7 +392,7 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
           type = "b", pch = 19, lwd = line_lwd, cex = pt_cex,
           col = thresh_cols, lty = 1,
           xlim = c(0, max(ss_disp_a) * 1.05), ylim = c(0, 100),
-          xlab = "Sample size (n)", ylab = "Power (%)",
+          xlab = "Sample size (N)", ylab = "Power (%)",
           main = "")
   title(main = "A   Power vs Sample Size",
         adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.95)
@@ -428,7 +414,7 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
          seg.len = 1.1, x.intersp = 0.5)
   if (!is.na(vline_n)) {
     abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.5)
-    text(vline_n, 35, sprintf("n=%d", vline_n),
+    text(vline_n, 35, sprintf("N=%d", vline_n),
          col = "steelblue", cex = panel_a_legend_cex, adj = c(-0.10, 0.5), font = 2)
   }
   }  # end Panel A
@@ -439,7 +425,7 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
   matplot(seq_len(n_strata_plt), 100 * t(mean_pow_plt[disp_idx, , drop = FALSE]),
           type = "l", lwd = line_lwd, col = size_colors[disp_idx], lty = 1,
           xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, 100), bty = "l",
-          xlab = expression(tilde(r) == A/sigma), ylab = "Power (%)",
+          xlab = expression(r == A/sigma), ylab = "Power (%)",
           main = "",
           xaxt = "n")
   title(main = bquote(bold("B   ") * bold("Stratified Power") ~
@@ -453,7 +439,7 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
                 100 * se_pow_plt[j, ], col = size_colors[j], bar_width = se_cap)
   }
   grid()
-  legend(legend_pos, title = NULL, legend = paste0("n = ", sample_sizes[disp_idx]),
+  legend(legend_pos, title = NULL, legend = paste0("N = ", sample_sizes[disp_idx]),
          col = size_colors[disp_idx], lty = 1, lwd = 2,
          cex = sample_legend_cex, bty = "o", bg = "white",
          box.col = "grey50", box.lwd = 0.8,
@@ -470,7 +456,7 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
   plot(seq_len(n_strata_plt), rep(0, n_strata_plt),
        type = "n", bty = "l",
        xlim = c(0.5, n_strata_plt + 0.5), ylim = c(0, y_max_TD),
-       xlab = expression(tilde(r) == A/sigma), ylab = "# True Discoveries",
+       xlab = expression(r == A/sigma), ylab = "# True Discoveries",
        main = "",
        xaxt = "n")
   title(main = bquote(bold("C   ") * bold("True Discoveries") ~
@@ -492,7 +478,7 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
   grid()
   if (isTRUE(panel_c_legend)) {
     legend(legend_pos, title = NULL,
-           legend = c(paste0("n = ", sample_sizes[disp_idx]), "Target gene count"),
+           legend = c(paste0("N = ", sample_sizes[disp_idx]), "Target gene count"),
            col = c(size_colors[disp_idx], "grey60"), lty = c(rep(1, length(disp_idx)), 2),
            lwd = c(rep(2, length(disp_idx)), 1.5),
            cex = sample_legend_cex, bty = "o", bg = "white",

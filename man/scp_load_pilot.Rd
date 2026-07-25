@@ -50,9 +50,9 @@ error is raised if no such variant has been built for the pilot.}
 
 \item{paired_sigma}{Logical (default \code{TRUE}). Keep the per-gene
 \code{(A, sigma)} pairing so the simulator draws amplitude and noise from
-the same pilot gene, preserving the realistic narrow \eqn{\tilde r = A/\sigma}
+the same pilot gene, preserving the realistic narrow \eqn{r = A/\sigma}
 distribution (the marginal-power / Fig 1-2 Panel A convention). \code{FALSE}
-decouples sigma from amplitude, giving the wide \eqn{\tilde r} used by the
+decouples sigma from amplitude, giving the wide \eqn{r} used by the
 effect-size-stratified panels (Fig 1-2 Panels B/C).}
 }
 \value{

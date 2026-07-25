@@ -2,9 +2,7 @@
 % Please edit documentation in R/plot_with_se.R
 \name{add_se_bars}
 \alias{add_se_bars}
-\title{=======================================================================
-Plotting Helper: Standard Error Bars
-=======================================================================}
+\title{Add +/-1 SE Error Bars to a Base-R Plot}
 \usage{
 add_se_bars(x, y, se, col, bar_width = 0.3)
 }
@@ -24,8 +22,5 @@ Invisibly returns \code{NULL}. Called for its side-effect of
   drawing arrows on the active plot device.
 }
 \description{
-add_se_bars() draws +/-1 SE error bars on a base-R plot. It is called
-internally by plotSingleCohortPower() and plotDiffPower() when rendering
-their stratified-power panels.
 Add +/-1 SE Error Bars to a Base-R Plot
 }

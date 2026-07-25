@@ -8,11 +8,16 @@
 #' Data requirements differ by script:
 #'   * Replot scripts (fig1_fig2_replot, fig5_twoharm_framework) redraw from
 #'     cached results under output/ and run against the current tree.
-#'   * Sim-calibrated scripts (fig3_bootstrap_subject, fig4_twoharm_demo,
-#'     fig6_active_design_5panel) need the controlled-access pilot matrices
-#'     (GSE160521 striatal CSVs, GTEx CPM.all.norm / v10) and the fast C++ path,
-#'     so they run on the calibration server only; they cache to output/ and skip
-#'     the heavy stages on a re-run.
+#'   * Sim-calibrated scripts (fig3_bootstrap_subject, fig4_twoharm_demo) need the
+#'     controlled-access pilot matrices (GSE160521 striatal CSVs, GTEx CPM.all.norm
+#'     / v10) and the fast C++ path, so they run on the calibration server only;
+#'     they cache to output/ and skip the heavy stages on a re-run.
+#'   * Fig 6 (GTEx recalibration, 2026-07) is now a PLOT-ONLY render
+#'     (fig6_active_design_5panel_gtex.R) that reads two caches: A/B from
+#'     two_harmonic/fig6AB_liver_active.R (GTEx Liver, K=1/K=2 active B-sweep), and
+#'     C-E from archive/fig6_differential_Bsweep.R (GTEx Adrenal-vs-Liver DR/DP/DM).
+#'     Those two upstream sim scripts use the bundled/cached GTEx Liver + Adr-vs-Liv
+#'     pilots and write output/two_harmonic/results/ + output/diagnostics/.
 #' Outputs are written under submission/figures/ (Supp Table 1 to submission/).
 
 # Run from the package root (set SCP_ROOT to run from elsewhere).
@@ -28,8 +33,8 @@ GENERATORS <- c(
     "examples/publication/two_harmonic/fig4_twoharm_demo.R",
   "Fig 5 (two-harmonic framework; replot)" =
     "examples/publication/two_harmonic/fig5_twoharm_framework.R",
-  "Fig 6 (active design, 5-panel; needs pilot data)" =
-    "examples/publication/fig6_active_design_5panel.R",
+  "Fig 6 (active design, 5-panel GTEx; plot-only render from caches)" =
+    "examples/publication/fig6_active_design_5panel_gtex.R",
   "Supp Table 1 (pilot signal summary)" =
     "examples/publication/suppT1_pilot_dataset_summary.R"
 )

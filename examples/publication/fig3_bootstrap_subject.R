@@ -32,15 +32,15 @@ df<-CPM.all.norm[["Muscle - Skeletal"]];ids<-as.character(colnames(df));hh<-sapp
 hr<-suppressWarnings(as.numeric(substr(hh,1,2))+as.numeric(substr(hh,3,4))/60);ok<-!is.na(hr)
 ms<-efron(as.matrix(df[,ok]),hr[ok],c(40L,80L,120L,160L,200L,240L,280L,320L),"GTEx Muscle-Skeletal (n=748)")
 cp<-"#0072B2";cb<-"#D55E00"
-pan<-function(p,lab,main,leg,xmax){N<-p$N;keep<-N<=xmax;N<-N[keep]
-  plot(N,100*p$plugin[keep],type="l",lwd=2.4,col=cp,ylim=c(0,100),xlim=range(N),xlab="Sample size (n)",ylab="Power (%)",main="",xaxt="n")
+pan<-function(p,lab,tissue,npil,leg,xmax){N<-p$N;keep<-N<=xmax;N<-N[keep]
+  plot(N,100*p$plugin[keep],type="l",lwd=2.4,col=cp,ylim=c(0,100),xlim=range(N),xlab="Sample size (N)",ylab="Power (%)",main="",xaxt="n")
   axis(1,at=N,cex.axis=0.8,gap.axis=-1);abline(h=80,lty=2,col="grey60")
-  title(main=sprintf("%s   %s",lab,main),line=0.5,cex.main=1.02,font.main=2)
+  title(main=bquote(.(paste0(lab,"   ",tissue)) ~ group("(", n[pilot] == .(npil), ")")),line=0.5,cex.main=1.02,font.main=2)
   lines(N,100*p$mean[keep],lwd=1.4,col=cb,lty=2)
   arrows(N,100*p$lo[keep],N,100*p$hi[keep],code=3,angle=90,length=0.035,lwd=1.7,col=cb);points(N,100*p$mean[keep],pch=19,col=cb,cex=0.7)
   if(leg)legend("bottomright",c("Projected power","95% bootstrap CI"),col=c(cp,cb),lwd=c(2.4,1.7),lty=c(1,2),pch=c(NA,19),bty="o",box.col="grey65",cex=0.6,inset=0.02,y.intersp=0.9,seg.len=1.4)}
 for(dest in c("submission/figures/Fig3_bootstrap_singlecohort.pdf","output/main_figures/Fig3_bootstrap_singlecohort.pdf")){
   dir.create(dirname(dest),recursive=TRUE,showWarnings=FALSE)
   cairo_pdf(dest,width=7.8,height=3.8);par(mfrow=c(1,2),mar=c(4,4.2,2.6,1.2),mgp=c(2.5,0.7,0),oma=c(0,0,2,0))
-  pan(cd,"A","Caudate control (n=59)",FALSE,220);pan(ms,"B","GTEx Muscle-Skeletal (n=748)",TRUE,320)
+  pan(cd,"A","Caudate control",59L,FALSE,220);pan(ms,"B","GTEx Muscle-Skeletal",748L,TRUE,320)
   mtext("Bootstrap Uncertainty in Single-Cohort Power Estimates",outer=TRUE,side=3,line=0.3,font=2,cex=1.05);dev.off()}

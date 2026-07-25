@@ -48,9 +48,7 @@ npower <- function(res,
   n_sizes      <- length(sample_sizes)
   is_diff      <- !is.null(res$diff_type)
 
-  # ------------------------------------------------------------------
   # Compute mean power curve at the requested FDR
-  # ------------------------------------------------------------------
   if (!is_diff) {
     # Single-cohort: recompute BH-adjusted power from raw p-values
     power_sim <- matrix(NA_real_, nrow = n_sizes, ncol = nsims)
@@ -90,15 +88,11 @@ npower <- function(res,
   mean_power          <- rowMeans(power_sim, na.rm = TRUE)
   names(mean_power)   <- sample_sizes
 
-  # ------------------------------------------------------------------
   # Smallest grid n meeting target
-  # ------------------------------------------------------------------
   above  <- which(mean_power >= target_power)
   n_grid <- if (length(above) > 0) sample_sizes[min(above)] else NA_integer_
 
-  # ------------------------------------------------------------------
   # Linear interpolation between the two bracketing grid points
-  # ------------------------------------------------------------------
   n_interp <- NA_real_
   if (interpolate && !is.na(n_grid)) {
     j2 <- min(above)
@@ -128,7 +122,7 @@ npower <- function(res,
 
 #' Print an npower result
 #'
-#' @param x An \code{npower} object (recommended n and its power curve).
+#' @param x An \code{npower} object (recommended N and its power curve).
 #' @param ... Ignored.
 #' @return \code{x}, invisibly.
 #' @export
@@ -137,16 +131,16 @@ print.npower <- function(x, ...) {
   cat(sprintf("npower%s (target: %.0f%% power at FDR %.0f%%)\n",
               ep, x$target_power * 100, x$fdr * 100))
   if (is.na(x$n_grid)) {
-    cat(sprintf("  Recommended n : not reached within simulation grid\n"))
-    cat(sprintf("  Max power     : %.1f%% at n = %s\n",
+    cat(sprintf("  Recommended N : not reached within simulation grid\n"))
+    cat(sprintf("  Max power     : %.1f%% at N = %s\n",
                 max(x$power, na.rm = TRUE) * 100,
                 names(which.max(x$power))))
   } else {
-    cat(sprintf("  Recommended n : %s\n",
+    cat(sprintf("  Recommended N : %s\n",
                 if (is.na(x$n)) as.character(x$n_grid) else as.character(x$n)))
   }
   cat("\n  Power curve:\n")
   for (nm in names(x$power))
-    cat(sprintf("    n = %-4s  %.1f%%\n", nm, x$power[nm] * 100))
+    cat(sprintf("    N = %-4s  %.1f%%\n", nm, x$power[nm] * 100))
   invisible(x)
 }

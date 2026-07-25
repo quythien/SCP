@@ -1,6 +1,4 @@
-# =====================================================================
 # Built-in Pilot Data Loader
-# =====================================================================
 
 # Cache environment to avoid repeated disk reads
 .pilot_cache <- new.env(parent = emptyenv())
@@ -130,15 +128,11 @@ setPhase <- function(input, n_rhythmic, period) {
 }
 
 
-# =====================================================================
 # Null-coalescing operator
-# =====================================================================
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
 
-# =====================================================================
 # Configuration Constructors
-# =====================================================================
 
 #' Create Biology and Differential Options
 #'
@@ -307,7 +301,7 @@ CircadianBioOptions <- function(ngenes = 5000,
   lOD2_resolved <- if (!is.null(lOD2)) setOD(lOD2, ngenes) else NULL
   # paired_sigma=TRUE: expand amplitude and sigma_rhythmic jointly using a shared
   # index so each simulated rhythmic gene draws (A, sigma) from the same pilot gene,
-  # preserving the empirical r_tilde = A/sigma distribution.
+  # preserving the empirical r = A/sigma distribution.
   # paired_sigma=FALSE (default): original behaviour, amplitude expanded independently
   # via setAmplitude, sigma drawn from lOD in simulation (has_joint=FALSE).
   if (paired_sigma &&
@@ -632,9 +626,7 @@ CircadianBootstrapOptions <- function(design_vector,
 }
 
 
-# =====================================================================
 # S3 Print Methods
-# =====================================================================
 
 #' Print a CircadianBioOptions object
 #'

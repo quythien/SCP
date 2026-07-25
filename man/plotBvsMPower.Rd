@@ -2,9 +2,7 @@
 % Please edit documentation in R/plot_bvsm.R
 \name{plotBvsMPower}
 \alias{plotBvsMPower}
-\title{=======================================================================
-plot_bvsm.R, B vs m Trade-off Plot (Figure 3)
-=======================================================================}
+\title{Plot B vs m Trade-off Power Grid}
 \usage{
 plotBvsMPower(
   x,
@@ -46,11 +44,5 @@ Invisibly returns the ggplot object.
 Produces a faceted power-vs-N figure for each dataset in the result,
 with one line per B value. SD bars (+/-1 SD across simulation replicates)
 are drawn at each N. B-invariance appears as overlapping lines.
-}
-\details{
-Plots DCP power vs N for multiple B values, demonstrating B-invariance.
-Input: SCPSingleResult from runSingleCohortGrid() or a tidy data.frame
-with columns N, B, alpha2, power, power_se.
-Plot B vs m Trade-off Power Grid
 }
 \keyword{internal}

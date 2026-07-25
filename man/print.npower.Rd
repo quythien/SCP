@@ -7,7 +7,7 @@
 \method{print}{npower}(x, ...)
 }
 \arguments{
-\item{x}{An \code{npower} object (recommended n and its power curve).}
+\item{x}{An \code{npower} object (recommended N and its power curve).}
 
 \item{...}{Ignored.}
 }
