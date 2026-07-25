@@ -36,14 +36,16 @@ SC_ARGS <- list(
   width = 13.0, height = 5.05
 )
 
-draw_sc <- function(primary_rx, panelA_rx, title, dests) {
+draw_sc <- function(primary_rx, panelA_rx, title, dests,
+                    panel_labels = c("A", "B", "C")) {
   rds_p <- pick_latest("output/single_cohort/results", primary_rx)
   rds_a <- pick_latest("output/single_cohort/results", panelA_rx)
   cat(sprintf("  B/C: %s\n  A  : %s\n", basename(rds_p), basename(rds_a)))
   tmp <- tempfile(fileext = ".pdf")
   do.call(plotSingleCohortPower,
           c(list(res = readRDS(rds_p), panel_a_res = readRDS(rds_a),
-                 out_pdf = tmp, title = title), SC_ARGS))
+                 out_pdf = tmp, title = title, panel_labels = panel_labels),
+            SC_ARGS))
   mirror_pdf(tmp, dests)
 }
 
@@ -59,7 +61,8 @@ draw_sc("^single_cohort_power_GTEx_Liver_2026.*\\.rds$",
         "^single_cohort_power_GTEx_Liver_paired_.*\\.rds$",
         "Single-Cohort Power Analysis (GTEx Liver)",
         c("figures/Fig1B_single_cohort_Liver.pdf",
-          "submission/figures/Fig1B_single_cohort_Liver.pdf"))
+          "submission/figures/Fig1B_single_cohort_Liver.pdf"),
+        panel_labels = c("D", "E", "F"))
 
 cat("\n=== Fig 2: ADR vs LIV differential ===\n")
 rds_diff <- tryCatch(
