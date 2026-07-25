@@ -44,6 +44,9 @@ if (!exists("add_se_bars")) {
 #' @param panels     Character vector, which of panels "A" (marginal power vs
 #'   n), "B" (power by effect-size stratum), "C" (true discoveries by
 #'   effect-size stratum) to draw (default all three).
+#' @param panel_labels Character vector of length 3 giving the letters printed on
+#'   panels A, B, C respectively (default \code{c("A","B","C")}). Use e.g.
+#'   \code{c("D","E","F")} for the lower figure in a vertically stacked pair.
 #' @param fdr_thresholds FDR levels for panel A (default c(0.01,0.05,0.10,0.20)).
 #' @param panel_fdr  FDR threshold highlighted in panels B/C (default 0.05).
 #' @param vline_power Horizontal reference line for target power (default 0.80).
@@ -102,6 +105,7 @@ if (!exists("add_se_bars")) {
 plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
                                  panel_a_res = NULL,
                                  panels = c("A", "B", "C"),
+                                 panel_labels = c("A", "B", "C"),
                                  fdr_thresholds = c(0.01, 0.05, 0.10, 0.20),
                                  panel_fdr = 0.05,
                                  vline_power = 0.80,
@@ -394,7 +398,7 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
           xlim = c(0, max(ss_disp_a) * 1.05), ylim = c(0, 100),
           xlab = "Sample size (N)", ylab = "Power (%)",
           main = "")
-  title(main = "A   Power vs Sample Size",
+  title(main = paste0(panel_labels[1], "   Power vs Sample Size"),
         adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.95)
   for (t in seq_len(n_thresh)) {
     add_se_bars(ss_disp_a, 100 * marginal_mean[disp_idx_a, t],
@@ -428,7 +432,7 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
           xlab = expression(r == A/sigma), ylab = "Power (%)",
           main = "",
           xaxt = "n")
-  title(main = bquote(bold("B   ") * bold("Stratified Power") ~
+  title(main = bquote(bold(.(paste0(panel_labels[2], "   "))) * bold("Stratified Power") ~
                        bold(.(sprintf("(%s)", fdr_label)))),
         adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.95)
   axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = max(1.15, cex_axis * 0.8))
@@ -459,7 +463,7 @@ plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
        xlab = expression(r == A/sigma), ylab = "# True Discoveries",
        main = "",
        xaxt = "n")
-  title(main = bquote(bold("C   ") * bold("True Discoveries") ~
+  title(main = bquote(bold(.(paste0(panel_labels[3], "   "))) * bold("True Discoveries") ~
                        bold(.(sprintf("(%s)", fdr_label)))),
         adj = 0.5, font.main = 2, cex.main = cex_main, line = 0.95)
   axis(1, at = seq_len(n_strata_plt), labels = strata_labels_plt, las = 2, cex.axis = max(1.15, cex_axis * 0.8))

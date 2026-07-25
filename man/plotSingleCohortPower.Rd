@@ -10,6 +10,7 @@ plotSingleCohortPower(
   title = "",
   panel_a_res = NULL,
   panels = c("A", "B", "C"),
+  panel_labels = c("A", "B", "C"),
   fdr_thresholds = c(0.01, 0.05, 0.1, 0.2),
   panel_fdr = 0.05,
   vline_power = 0.8,
@@ -57,6 +58,10 @@ different empirical assumption than the effect-size-stratified panels.}
 \item{panels}{Character vector, which of panels "A" (marginal power vs
 n), "B" (power by effect-size stratum), "C" (true discoveries by
 effect-size stratum) to draw (default all three).}
+
+\item{panel_labels}{Character vector of length 3 giving the letters printed on
+panels A, B, C respectively (default \code{c("A","B","C")}). Use e.g.
+\code{c("D","E","F")} for the lower figure in a vertically stacked pair.}
 
 \item{fdr_thresholds}{FDR levels for panel A (default c(0.01,0.05,0.10,0.20)).}
 
