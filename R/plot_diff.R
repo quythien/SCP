@@ -16,9 +16,7 @@ if (!exists("add_se_bars")) {
 # Input: res_list, named list of two runSimsDiff() outputs (raw format)
 #        comp_labels, character(2) labels for the two comparisons
 
-# ----------------------------------------------------------------------
 # Internal: convert raw runSimsDiff() output to stratified arrays
-# ----------------------------------------------------------------------
 #' Prepare Differential Power Data for Stratified Plotting
 #'
 #' @description
@@ -105,9 +103,7 @@ if (!exists("add_se_bars")) {
   )
 }
 
-# ----------------------------------------------------------------------
 # Internal: collapse strata with left boundary >= threshold into one bin
-# ----------------------------------------------------------------------
 #' Collapse High-r Tail Strata into a Single Bin
 #'
 #' @description
@@ -264,13 +260,11 @@ plotDiffPower <- function(res_list,
       stop("panel_fdr must be a scalar or named vector with names matching endpoints.")
   }
 
-  # ------------------------------------------------------------------
   # Precompute per-comparison, per-endpoint n80 (n needed to reach
   # target power at vline_fdr). Each endpoint's row gets its own
   # vertical line; previously we collapsed to the max across endpoints
   # which made all rows show the same n80, hiding the easy-endpoint
   # advantage.
-  # ------------------------------------------------------------------
   n80_by_comp <- lapply(seq_along(res_list), function(ci) {
     res_ci <- res_list[[ci]]
     out <- vapply(endpoints, function(ep) {
@@ -281,11 +275,9 @@ plotDiffPower <- function(res_list,
     out
   })
 
-  # ------------------------------------------------------------------
   # Open device. Layout:
   #   stratified = TRUE : (n_ep * n_comps) rows x 3 cols (A, B, C)
   #   stratified = FALSE: n_comps rows x n_ep cols (A only, one per endpoint)
-  # ------------------------------------------------------------------
   if (!is.null(out_pdf)) pdf(out_pdf, width = width, height = height)
   if (stratified) {
     par(mfrow = c(n_ep * n_comps, 3),
@@ -320,9 +312,7 @@ plotDiffPower <- function(res_list,
                   else seq_len(n_sizes)
       ss_disp  <- sample_sizes[disp_idx]
 
-      # ------------------------------------------------------------------
       # Preprocess: stratified arrays from raw runSimsDiff() output
-      # ------------------------------------------------------------------
       ep_fdr    <- panel_fdr_vec[ep]
       idx_fdr5  <- which.min(abs(fdr_thresholds - ep_fdr))
       fdr_label <- sprintf("FDR %g%%", ep_fdr * 100)

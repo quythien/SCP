@@ -25,9 +25,7 @@
 NULL
 
 
-# -------------------------------------------------------------------------
 # Internal: locate manifest and pilots directory
-# -------------------------------------------------------------------------
 
 #' @keywords internal
 .scp_pilots_dir <- function() {
@@ -45,9 +43,7 @@ NULL
 }
 
 
-# -------------------------------------------------------------------------
 # scp_pilots: load the manifest
-# -------------------------------------------------------------------------
 
 #' List Bundled SCP Pilot Datasets
 #'
@@ -88,9 +84,7 @@ scp_pilots <- function(species = NULL, status = "ingested") {
 }
 
 
-# -------------------------------------------------------------------------
 # scp_load_pilot
-# -------------------------------------------------------------------------
 
 #' Load a Bundled SCP Pilot Dataset
 #'
@@ -208,10 +202,8 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
 }
 
 
-# -------------------------------------------------------------------------
 # Internal: re-derive prop_rhythmic + effect-size distributions at a chosen
 # alpha_pilot from the stored per-gene rhythm table (rhythm_fit).
-# -------------------------------------------------------------------------
 
 #' @keywords internal
 .reslice_pilot <- function(p, alpha_pilot = 0.01, adjust = "none",
@@ -297,9 +289,7 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
 }
 
 
-# -------------------------------------------------------------------------
 # scp_pilot_search
-# -------------------------------------------------------------------------
 
 #' Search the SCP Pilot Database
 #'

@@ -1,6 +1,4 @@
-# =====================================================================
 # Built-in Pilot Data Loader
-# =====================================================================
 
 # Cache environment to avoid repeated disk reads
 .pilot_cache <- new.env(parent = emptyenv())
@@ -130,15 +128,11 @@ setPhase <- function(input, n_rhythmic, period) {
 }
 
 
-# =====================================================================
 # Null-coalescing operator
-# =====================================================================
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
 
-# =====================================================================
 # Configuration Constructors
-# =====================================================================
 
 #' Create Biology and Differential Options
 #'
@@ -632,9 +626,7 @@ CircadianBootstrapOptions <- function(design_vector,
 }
 
 
-# =====================================================================
 # S3 Print Methods
-# =====================================================================
 
 #' Print a CircadianBioOptions object
 #'

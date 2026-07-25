@@ -3,8 +3,7 @@
 
 
 
-# QUICK ANALYTICAL POWER 
-# ==============================================================================
+# Quick analytical power
 
 #' Quick analytical power for single-group rhythmicity
 #'
@@ -82,9 +81,7 @@ CircaPower = function(n = NULL, power = NULL, r = NULL,
               design_factor = design_factor))
 }
 
-# ==============================================================================
-# DATA PREPARATION
-# ==============================================================================
+# Data preparation
 
 #' Prepare expression data for circadian power analysis
 #'

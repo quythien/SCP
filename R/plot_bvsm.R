@@ -1,14 +1,10 @@
-#' =======================================================================
-#' plot_bvsm.R, B vs m Trade-off Plot (Figure 3)
-#' =======================================================================
-#'
-#' Plots DCP power vs N for multiple B values, demonstrating B-invariance.
-#' Input: SCPSingleResult from runSingleCohortGrid() or a tidy data.frame
-#' with columns N, B, alpha2, power, power_se.
+# plot_bvsm.R, B vs m Trade-off Plot (Figure 3)
+#
+# Plots DCP power vs N for multiple B values to show B-invariance.
+# Input: SCPSingleResult from runSingleCohortGrid() or a tidy data.frame
+# with columns N, B, alpha2, power, power_se.
 
-# =====================================================================
 # Main plot function
-# =====================================================================
 
 #' Plot B vs m Trade-off Power Grid
 #'
@@ -45,7 +41,7 @@ plotBvsMPower <- function(x,
   if (!requireNamespace("ggplot2", quietly = TRUE))
     stop("Package 'ggplot2' is required for plotBvsMPower().")
 
-  # -- Extract tidy data frame -------------------------------------
+  # Extract tidy data frame
   if (inherits(x, "SCPSingleResult")) {
     df <- x$power_df
   } else if (is.list(x) && !is.data.frame(x) &&

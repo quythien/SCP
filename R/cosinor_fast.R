@@ -16,7 +16,6 @@
 #                            runSimsSingleCohort() in simulation.R / runner.R
 
 
-# ---------------------------------------------------------------------------
 # fitCosinorAll_fast()
 #
 # Drop-in replacement for fitCosinorAll() in bootstrap_sim.R.
@@ -31,7 +30,6 @@
 #   times          : numeric vector length N
 #   period         : circadian period (default 24)
 #   min_rhythm_pval: threshold for is_rhythmic flag (default 0.01)
-# ---------------------------------------------------------------------------
 fitCosinorAll_fast <- function(data, times, period = 24, min_rhythm_pval = 0.01) {
 
   if (!exists("cosinor_pvals_cpp", mode = "function"))
@@ -106,7 +104,6 @@ fitCosinorAll_fast <- function(data, times, period = 24, min_rhythm_pval = 0.01)
 }
 
 
-# ---------------------------------------------------------------------------
 # sim_cosinor_expr_fast()
 #
 # Drop-in replacement for the per-gene for-loop in:
@@ -120,7 +117,6 @@ fitCosinorAll_fast <- function(data, times, period = 24, min_rhythm_pval = 0.01)
 # Note on reproducibility: the C++ function calls R's RNG (R::rnorm) for each
 # draw in the same row-major order as the R for-loop, so set.seed() in R
 # produces identical results for both implementations.
-# ---------------------------------------------------------------------------
 sim_cosinor_expr_fast <- function(mesor, amplitude, phase, sigma, times,
                                    period = 24, alpha2 = 0, alpha3 = 0) {
   if (!exists("sim_cosinor_expr_cpp", mode = "function"))

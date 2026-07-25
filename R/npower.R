@@ -48,9 +48,7 @@ npower <- function(res,
   n_sizes      <- length(sample_sizes)
   is_diff      <- !is.null(res$diff_type)
 
-  # ------------------------------------------------------------------
   # Compute mean power curve at the requested FDR
-  # ------------------------------------------------------------------
   if (!is_diff) {
     # Single-cohort: recompute BH-adjusted power from raw p-values
     power_sim <- matrix(NA_real_, nrow = n_sizes, ncol = nsims)
@@ -90,15 +88,11 @@ npower <- function(res,
   mean_power          <- rowMeans(power_sim, na.rm = TRUE)
   names(mean_power)   <- sample_sizes
 
-  # ------------------------------------------------------------------
   # Smallest grid n meeting target
-  # ------------------------------------------------------------------
   above  <- which(mean_power >= target_power)
   n_grid <- if (length(above) > 0) sample_sizes[min(above)] else NA_integer_
 
-  # ------------------------------------------------------------------
   # Linear interpolation between the two bracketing grid points
-  # ------------------------------------------------------------------
   n_interp <- NA_real_
   if (interpolate && !is.na(n_grid)) {
     j2 <- min(above)

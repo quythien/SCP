@@ -20,9 +20,7 @@
 #'   nboot = outer bootstrap draws for pilot-estimation uncertainty
 
 
-# =====================================================================
 # Pilot Parameter Fitting
-# =====================================================================
 
 #' Fit cosinor model to all genes in pilot data
 #'
@@ -64,9 +62,7 @@ fitCosinorAll <- function(data, times, period = 24, min_rhythm_pval = 0.01) {
 }
 
 
-# =====================================================================
 # Bootstrap Parameter Resampling
-# =====================================================================
 
 #' Bootstrap parameter sets from pilot fit
 #'
@@ -121,9 +117,7 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 }
 
 
-# =====================================================================
 # Internal helper: build CircadianBioOptions from bootstrap draw
-# =====================================================================
 
 #' Build CircadianBioOptions from a Bootstrap Parameter Draw
 #'
@@ -213,9 +207,7 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 }
 
 
-# =====================================================================
 # Internal helper: select B evenly-spaced time points from design_vector
-# =====================================================================
 
 #' Select B Evenly-Spaced Time Points from a Design Vector
 #'
@@ -233,9 +225,7 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 }
 
 
-# =====================================================================
 # Main Bootstrap Design Grid Runner
-# =====================================================================
 
 #' Run bootstrap design grid simulation
 #'
@@ -610,13 +600,9 @@ runBootstrapDesignGrid <- function(pilot_data,
 }
 
 
-# =====================================================================
 # Summary
-# =====================================================================
 
-# =====================================================================
 # Plotting
-# =====================================================================
 
 #' Plot bootstrap design grid results
 #'
@@ -685,9 +671,7 @@ plotBootstrapDesignGrid <- function(result,
   old_par <- par(mfrow = c(1, n_panels), mar = c(4.5, 4.5, 3, 1.5))
   on.exit(par(old_par), add = TRUE)
 
-  # -----------------------------------------------------------
   # Panel A: Power vs N, one line per B, with CI ribbon
-  # -----------------------------------------------------------
   if (!("A" %in% panels)) {
     # skip to Panel B
   } else {
@@ -776,9 +760,7 @@ plotBootstrapDesignGrid <- function(result,
 
   if (!("B" %in% panels)) return(invisible(NULL))
 
-  # -----------------------------------------------------------
   # Panel B: Heatmap of mean power over (N, B)
-  # -----------------------------------------------------------
   col_ramp <- colorRampPalette(c("white", "lightyellow", "orange", "red", "darkred"))(100)
   pm_pct <- power_mean * 100
   image(seq_len(n_N), seq_len(n_B), pm_pct,

@@ -1,15 +1,10 @@
-#' =======================================================================
-#' plot_fmm.R, FMM Waveform Robustness Plots (Figures 4, 4b)
-#' =======================================================================
-#'
-#' Plotting functions for FMM-based cosinor violation analyses.
-#' Two main functions:
-#'   plotFMMViolation(), single-cohort 4-row figure (Fig 4)
-#'   plotFMMDifferential(), differential 3-panel figure (Fig 4b)
+# plot_fmm.R, FMM Waveform Robustness Plots (Figures 4, 4b)
+#
+# Plotting functions for FMM-based cosinor violation analyses:
+#   plotFMMViolation(), single-cohort 4-row figure (Fig 4)
+#   plotFMMDifferential(), differential 3-panel figure (Fig 4b)
 
-# =====================================================================
 # Single-cohort FMM plot (Figure 4)
-# =====================================================================
 
 #' Plot FMM Waveform Robustness: Single-Cohort
 #'
@@ -61,7 +56,7 @@ plotFMMViolation <- function(x,
 
   full_df$snr_col <- factor(full_df$snr_col, levels = c("Strong","Moderate","Weak"))
 
-  # -- Color schemes ---------------------------------------------
+  # Color schemes
   omega_levels <- as.character(sort(unique(full_df$omega[full_df$sweep_param=="omega"])))
   n_omega      <- length(omega_levels)
   omega_colors <- stats::setNames(
@@ -269,9 +264,7 @@ plotFMMViolation <- function(x,
 }
 
 
-# =====================================================================
 # Differential FMM plot (Figure 4b)
-# =====================================================================
 
 #' Plot FMM Waveform Robustness: Differential Endpoints
 #'

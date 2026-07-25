@@ -1225,21 +1225,21 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   rhythmic_1 <- p1$raw$is_rhythmic
   rhythmic_2 <- p2$raw$is_rhythmic
 
-  # prop_DR: rhythmic in exactly one group ------------------------------------
+  # prop_DR: rhythmic in exactly one group
   dr_mask     <- xor(rhythmic_1, rhythmic_2) & !is.na(rhythmic_1) & !is.na(rhythmic_2)
   prop_DR_emp <- mean(dr_mask)
 
-  # Union rhythmic: rhythmic in at least one group ----------------------------
+  # Union rhythmic: rhythmic in at least one group
   # This is the correct budget for CircadianBioOptions: every DR/DP gene is
   # rhythmic in at least one group, so the budget is union, not group-1 alone.
   union_mask     <- (rhythmic_1 | rhythmic_2) & !is.na(rhythmic_1) & !is.na(rhythmic_2)
   prop_union_rhy <- mean(union_mask)
 
-  # Jointly rhythmic pool -----------------------------------------------------
+  # Jointly rhythmic pool
   jointly    <- rhythmic_1 & rhythmic_2 & !is.na(rhythmic_1) & !is.na(rhythmic_2)
   prop_joint <- mean(jointly)
 
-  # Phase differences among jointly rhythmic genes ----------------------------
+  # Phase differences among jointly rhythmic genes
   delta_phi <- circular_difference(
     p2$raw$phi[jointly],
     p1$raw$phi[jointly],
@@ -1251,7 +1251,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   prop_DP_emp    <- if (length(dp_among_joint) > 0)
     prop_joint * mean(dp_among_joint, na.rm = TRUE) else 0
 
-  # prop_DM: jointly rhythmic genes with significant mesor difference -----------
+  # prop_DM: jointly rhythmic genes with significant mesor difference
   # SE(M) ~ sigma/sqrt(n) for OLS intercept; two-sample z-test on mesor difference
   n1 <- ncol(data_1); n2 <- ncol(data_2)
   se_mesor_diff <- sqrt(p1$raw$sigma^2 / n1 + p2$raw$sigma^2 / n2)
@@ -1300,7 +1300,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
     phase_diff_emp <- c(-phase_shift_threshold, phase_shift_threshold)
   }
 
-  # SNR (r = A/sigma) for each group's rhythmic genes -------------------------
+  # SNR (r = A/sigma) for each group's rhythmic genes
   r1_vals <- p1$raw$r[rhythmic_1 & !is.na(p1$raw$r) & is.finite(p1$raw$r)]
   r2_vals <- p2$raw$r[rhythmic_2 & !is.na(p2$raw$r) & is.finite(p2$raw$r)]
 
@@ -1313,7 +1313,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   r1_snr <- snr_summary(r1_vals)
   r2_snr <- snr_summary(r2_vals)
 
-  # Effective DP SNR: r_dp = 2 * r * |sin(pi * delta_phi / period)| ----------
+  # Effective DP SNR: r_dp = 2 * r * |sin(pi * delta_phi / period)|
   # Use group-1 SNR for jointly-rhythmic genes as the baseline r
   r_joint <- p1$raw$r[jointly]
   valid_dp <- dp_among_joint & !is.na(delta_phi) & !is.na(r_joint) & is.finite(r_joint)
@@ -1367,14 +1367,14 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   sigma_rhythmic_emp <- p1$raw$sigma[estim_valid_1]
   phase_emp          <- p1$raw$phi[p1$raw$in_estim_set & !is.na(p1$raw$phi)]
 
-  # Group-2 distributions for fully symmetric two-group simulation -----------
+  # Group-2 distributions for fully symmetric two-group simulation
   rhythmic_idx_2     <- p2$raw$is_rhythmic
   amp_emp2           <- p2$raw$A[p2$raw$in_estim_set & !is.na(p2$raw$A) & p2$raw$A > 0]
   sigma_valid_2      <- p2$raw$sigma[!is.na(p2$raw$sigma) & p2$raw$sigma > 0]
   lOD_emp2           <- log(sigma_valid_2)
   lBaselineExpr2_emp <- p2$raw$M[!is.na(p2$raw$M)]   # group-2 mesor distribution
 
-  # Diagnostics ---------------------------------------------------------------
+  # Diagnostics
   diagnostics <- list(
     # Simulation hyperparameters
     prop_DR_emp           = prop_DR_emp,

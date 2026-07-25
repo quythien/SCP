@@ -334,9 +334,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
 }
 
 
-# =====================================================================
 # Simulation-Based Single-Cohort Power
-# =====================================================================
 #' Single-Cohort Rhythmicity Power Simulation
 #'
 #' Extends the closed-form CircaPower approach by running full simulations:
@@ -743,9 +741,7 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
 }
 
 
-# =====================================================================
 # CircaPower grid initialisation helper
-# =====================================================================
 #' Analytical Sample Size for 80 percent Power
 #'
 #' @description
@@ -789,9 +785,7 @@ circaPowerApproxN80 <- function(bio.opts, alpha = 0.05, target_power = 0.80,
 }
 
 
-# =====================================================================
 # Adaptive r-strata from pilot data
-# =====================================================================
 #' Adaptive r-Strata Breakpoints
 #'
 #' Generates breakpoints from 0 to ceiling(r_max / bin_width) * bin_width,
@@ -826,9 +820,7 @@ makeAdaptiveRStrata <- function(bio.opts, bin_width = 0.25, r_min_pct = 0,
 }
 
 
-# =====================================================================
 # B vs m design guidance
-# =====================================================================
 
 #' Print B vs m method guidance table
 #'
@@ -955,14 +947,10 @@ recommendDesign <- function(bio.opts,
   alpha  <- analysis.opts$alpha
   period <- bio.opts$period %||% 24
 
-  # ------------------------------------------------------------------
   # Step 1: Print method guidance
-  # ------------------------------------------------------------------
   guidance <- printMethodGuidance(methods = methods, verbose = verbose)
 
-  # ------------------------------------------------------------------
   # Step 2: Analytical estimates (CircaPower, DCP only, B-invariant)
-  # ------------------------------------------------------------------
   if (verbose) cat("Step 2: Analytical estimates (CircaPower / DCP)\n")
 
   # Median r from bio.opts
@@ -997,9 +985,7 @@ recommendDesign <- function(bio.opts,
     cat("  Note: JTK, RAIN, MH have no closed-form; simulation required.\n\n")
   }
 
-  # ------------------------------------------------------------------
   # Step 3: Simulation (use prior_result or run fresh)
-  # ------------------------------------------------------------------
   sim_result <- NULL
 
   if (!is.null(prior_result)) {
@@ -1027,9 +1013,7 @@ recommendDesign <- function(bio.opts,
     if (verbose) cat("Step 3: Skipped (run_simulation=FALSE)\n\n")
   }
 
-  # ------------------------------------------------------------------
   # Step 4: Synthesise recommendation, optimal B per method
-  # ------------------------------------------------------------------
   if (verbose) cat(sprintf("Step 4: Recommendation at target power=%.0f%%\n",
                             target_power * 100))
 
@@ -1149,9 +1133,7 @@ plot.SCPRecommendResult <- function(x, output_file = NULL, ...) {
 }
 
 
-# =====================================================================
 # Internal grid engine for B vs m recommendation
-# =====================================================================
 
 # Not exported. Called by recommendDesign() to sweep N x B x method x alpha2.
 # Returns SCPSingleResult with $power_df (N, B, method, alpha2, power, power_se)
@@ -1308,9 +1290,7 @@ runSingleCohortGrid <- function(bio.opts, design.opts, analysis.opts,
 }
 
 
-# =====================================================================
 # Unified single-cohort power runner
-# =====================================================================
 
 #' Run single-cohort rhythmicity power analysis
 #'
@@ -1411,9 +1391,7 @@ plot.SCPSingleResult <- function(x, output_file = NULL, ...) {
 }
 
 
-# =====================================================================
 # Unified two-group differential power runner
-# =====================================================================
 
 #' Run two-group differential circadian power analysis
 #'

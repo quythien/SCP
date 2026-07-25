@@ -173,14 +173,12 @@ simCircadianDiff <- function(ngenes = 5000,
   amp_dist2 <- amplitude2
   lod_dist2 <- lOD2
 
-  # ---------------------------------------------------------------
   # IMPORTANT: Gene assignment (diff_type) must use a seed that does
   # NOT depend on sample size (n1, n2). Time sampling consumes random
   # numbers proportional to n, so if done first it shifts the RNG
   # state and makes diff_type change across sample sizes.
   # Fix: do gene assignment with sim.seed FIRST, then reseed for
   # n-dependent sampling with a derived seed.
-  # ---------------------------------------------------------------
   set.seed(sim.seed)
 
   # Set baseline expression and noise
@@ -359,10 +357,8 @@ simCircadianDiff <- function(ngenes = 5000,
     mesor2[DM_genes] <- mesor[DM_genes] + shift_sign * shift_mag
   }
 
-  # ---------------------------------------------------------------
   # Now reseed for n-dependent sampling (time points + expression noise).
   # This ensures gene parameters above are identical across sample sizes.
-  # ---------------------------------------------------------------
   set.seed(sim.seed + n1 * 7919L + n2 * 104729L)
 
   # Generate time points (depends on n1, n2)
