@@ -87,7 +87,7 @@ pdf(OUT_PDF, width = 10.5, height = 7.0)
 layout(matrix(c(1, 1, 1, 2, 2, 2,
                 3, 3, 4, 4, 5, 5), nrow = 2, byrow = TRUE))
 par(mai = c(0.62, 0.62, 0.34, 0.10), mgp = c(2.1, 0.55, 0),
-    oma = c(0, 0, 2.2, 0), cex.axis = 1.15, cex.lab = 1.35, font.main = 2)
+    oma = c(0, 0, 3.1, 0), cex.axis = 1.15, cex.lab = 1.35, font.main = 2)
 
 # A / B: GTEx Liver biomarker detection (legend on A)
 draw_panel(ab$N, ab$pwr_K1, ab$se_K1, ab$B_K1, "A", "Single-harmonic (K=1)",
@@ -103,10 +103,10 @@ draw_panel(diff$N_GRID, diff$power$DP, diff$se$DP, diff$B_GRID, "D",
 draw_panel(diff$N_GRID, diff$power$DM, diff$se$DM, diff$B_GRID, "E",
            "Differential mesor (DM)", jitter_step = 2.2, show_legend = FALSE)
 
-mtext("Active-design power on GTEx Liver (biomarker detection) and Adrenal-vs-Liver (differential)",
-      outer = TRUE, side = 3, line = 0.85, font = 2, cex = 1.15)
-mtext("All at BH-FDR 5%. Points and error bars show the mean +/- 1 SE across simulation replicates.",
-      outer = TRUE, side = 3, line = -0.15, font = 1, cex = 0.92)
+mtext("Active-design B vs m trade-off in circadian study design",
+      outer = TRUE, side = 3, line = 1.7, font = 2, cex = 1.25)
+mtext("Biomarker detection (A, B, GTEx Liver); differential endpoints (C-E, Adrenal Gland vs Liver)",
+      outer = TRUE, side = 3, line = 0.25, font = 1, cex = 0.95)
 dev.off()
 
 file.copy(OUT_PDF, OUT_PDF2, overwrite = TRUE)

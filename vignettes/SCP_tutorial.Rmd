@@ -112,7 +112,7 @@ cat(sprintf("Pilot: %d genes, %.1f%% rhythmic, period = %g h\n",
 # 3. Inspect the effect-size distribution
 
 The effect size that matters here is each gene's signal-to-noise ratio,
-`r_tilde = A / sigma` (rhythm amplitude over noise): the larger it is, the
+`r = A / sigma` (rhythm amplitude over noise): the larger it is, the
 easier that gene is to detect.
 
 ```{r r-dist}
@@ -121,7 +121,7 @@ summary(r_tilde)
 
 hist(r_tilde, breaks = 40, col = "steelblue", border = "white",
      main = "Pilot r = A / sigma  (GTEx Adrenal Gland)",
-     xlab = expression(tilde(r) == A / sigma))
+     xlab = expression(r == A / sigma))
 abline(v = median(r_tilde), col = "red", lwd = 2)
 ```
 
@@ -167,7 +167,7 @@ data.frame(N = design$sample_sizes, power_K1 = round(marg_power_K1, 3))
 # 5. Plot the power curve
 
 `plotSingleCohortPower()` returns a three-panel summary: marginal power vs N
-at several FDR levels (panel A), stratified power by `r_tilde` band
+at several FDR levels (panel A), stratified power by `r` band
 (panel B), and the discovery count (panel C).
 
 ```{r plot-power, fig.width = 11, fig.height = 4.2}

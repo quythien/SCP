@@ -45,7 +45,7 @@ rate (FDR)** is the share of the genes a study flags as rhythmic that are not
 really rhythmic; you pick the level you are willing to tolerate (5 percent is
 common), and SCP controls it with the Benjamini-Hochberg procedure (Benjamini
 and Hochberg 1995). **Effect size** here is a gene's rhythm amplitude divided by
-its noise, written `r_tilde = A / sigma`; larger means easier to detect.
+its noise, written `r = A / sigma`; larger means easier to detect.
 **Noise (`sigma`)** is the gene-to-gene scatter of a gene's expression around its
 cosinor fit, the residual variability SCP estimates per gene from the pilot (kept
 on the log scale internally as `lOD`); a noisier gene is harder to detect at the
@@ -201,7 +201,7 @@ expression behind those figures is controlled-access and cannot be redistributed
 
 The pilots differ in how strong their rhythms are, and that is what decides how
 many samples you will need. Loading a pilot and looking at its effect-size
-distribution (`r_tilde = A / sigma`, amplitude over noise, per gene) tells you
+distribution (`r = A / sigma`, amplitude over noise, per gene) tells you
 what you are working with before you simulate anything.
 
 ```r
@@ -213,7 +213,7 @@ r_tilde <- bio$amplitude / bio$sigma_rhythmic
 med     <- median(r_tilde, na.rm = TRUE)
 hist(r_tilde, breaks = 40, col = "#4C79A6", border = "white",
      main = "GSE160521 Caudate control pilot: per-gene effect size",
-     xlab = expression("effect size  " * tilde(r) == A / sigma))
+     xlab = expression("effect size  " * r == A / sigma))
 abline(v = med, col = "#C0392B", lwd = 2)
 text(med, par("usr")[4] * 0.9, bquote(median ~ tilde(r) == .(round(med, 2))),
      col = "#C0392B", pos = 4)
@@ -284,7 +284,7 @@ plotSingleCohortPower(bio.opts = bio_c, design.opts = design,
 
 Panel A is genome-wide power against sample size at several FDR levels, with the
 dashed line at the recommended N. Panel B breaks that down by effect size
-(`r_tilde = A / sigma`), so you can see which genes are within reach at a given N.
+(`r = A / sigma`), so you can see which genes are within reach at a given N.
 Panel C is the number of true rhythmic genes recovered in each band. Pass `panels
 = "A"` for just the power curve; the legend sits in the bottom-right corner.
 
@@ -483,7 +483,7 @@ phase <- (bio_own$phase %% (2 * pi)) / (2 * pi) * 24   # radians to hours
 
 par(mfrow = c(1, 2))
 hist(r_own, breaks = 35, col = "#4C79A6", border = "white",
-     main = "Estimated effect size", xlab = expression(tilde(r) == A / sigma))
+     main = "Estimated effect size", xlab = expression(r == A / sigma))
 hist(phase, breaks = seq(0, 24, by = 1.5), col = "#6FA46F", border = "white",
      main = "Estimated acrophase (peak time)", xlab = "time of day (h)")
 ```

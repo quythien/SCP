@@ -199,7 +199,7 @@ alpha_cols <- c("darkgreen", "steelblue", "orange", "red")
 matplot(DISPLAY_N_A, 100 * pwr_mean, type = "o", pch = 19, lwd = 2,
         col = alpha_cols, lty = 1, cex = 0.55,
         xlim = c(0, max(DISPLAY_N_A) * 1.05), ylim = c(0, 100),
-        xlab = "Sample size (n)", ylab = "Power (%)",
+        xlab = "Sample size (N)", ylab = "Power (%)",
         main = "")
 title(main = "A   Power vs Sample Size",
       adj = 0.5, font.main = 2, cex.main = 1.00, line = 0.3)
@@ -215,7 +215,7 @@ for (a in seq_along(ALPHA_GRID)) {
 abline(h = 80, lty = 2, col = "grey50", lwd = 1.2)
 if (!is.na(vline_n) && is.finite(vline_n)) {
   abline(v = vline_n, lty = 2, col = adjustcolor("steelblue", 0.7), lwd = 1.4)
-  text(vline_n, 35, sprintf("n=%d", round(vline_n)),
+  text(vline_n, 35, sprintf("N=%d", round(vline_n)),
        col = "steelblue", cex = 0.70, adj = c(-0.10, 0.5), font = 2)
 }
 grid()
@@ -230,11 +230,11 @@ size_colors <- rainbow(length(DISPLAY_N_B), s = 0.6, v = 0.8)
 matplot(seq_along(R_LABELS), 100 * t(pwr_strat_mean),
         type = "l", lwd = 2, col = size_colors, lty = 1,
         xlim = c(0.5, length(R_LABELS) + 0.5), ylim = c(0, 100), bty = "l",
-        xlab = expression(tilde(r) == A/sigma),
+        xlab = expression(r[1] == A[1]/sigma),
         ylab = "Power (%)",
         main = "", xaxt = "n")
 title(main = bquote(bold("B   ") * bold("Stratified Power by") ~
-                     bold(tilde(r)) ~ bold("(FDR 5%)")),
+                     bold(r[1]) ~ bold("(FDR 5%)")),
       adj = 0.5, font.main = 2, cex.main = 1.00, line = 0.3)
 axis(1, at = seq_along(R_LABELS), labels = R_LABELS, las = 2, cex.axis = 0.65)
 for (j in seq_len(n_N_B)) {
@@ -247,7 +247,7 @@ for (j in seq_len(n_N_B)) {
          code = 3, angle = 90, length = 0.04, col = size_colors[j], lwd = 1.2)
 }
 grid()
-legend("bottomright", paste0("n=", DISPLAY_N_B),
+legend("bottomright", paste0("N=", DISPLAY_N_B),
        col = size_colors, lty = 1, lwd = 1.2,
        cex = 0.45, bty = "o", box.col = "grey70", box.lwd = 0.5,
        inset = 0.01, y.intersp = 0.78, bg = "white", seg.len = 1.2)

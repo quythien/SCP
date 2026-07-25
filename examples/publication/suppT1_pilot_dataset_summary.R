@@ -4,7 +4,7 @@
 #'
 #' Summarises the circadian signal strength of every pilot the package
 #' actually bundles in inst/extdata/pilots/, so the output stays consistent
-#' with what ships (paired top-K r-tilde = A/sigma, current manifest). One row
+#' with what ships (paired top-K r = A/sigma, current manifest). One row
 #' per ingested manifest pilot whose .rds exists on disk.
 #'
 #' This reads the BUNDLED CircadianBioOptions pilots (which carry the per-gene
@@ -29,7 +29,7 @@ m <- utils::read.csv(file.path(DIR, "manifest.csv"), stringsAsFactors = FALSE)
 # Only summarise pilots the package actually exposes: status == "ingested"
 # (same filter as scp_pilots()/the Shiny app) and the .rds present on disk.
 # This excludes ingest_incomplete / failed arms (e.g. tiny-n microarray arms
-# whose residual sigma collapses and inflates r-tilde).
+# whose residual sigma collapses and inflates r).
 m <- m[m$status == "ingested" & file.exists(file.path(DIR, m$file)), , drop = FALSE]
 
 # Time-of-day design summary from a pilot's empirical sampling times (mod 24).
@@ -60,7 +60,7 @@ rows <- lapply(seq_len(nrow(m)), function(i) {
   r <- m[i, ]
   p <- tryCatch(readRDS(file.path(DIR, r$file)), error = function(e) NULL)
   if (is.null(p)) return(NULL)
-  # Paired top-K effect size r-tilde = A / sigma (gene-aligned as bundled).
+  # Paired top-K effect size r = A / sigma (gene-aligned as bundled).
   amp <- p$amplitude %||% numeric(0); sig <- p$sigma_rhythmic %||% numeric(0)
   k   <- min(length(amp), length(sig))
   rv  <- if (k > 0) { v <- amp[seq_len(k)] / sig[seq_len(k)]; v[is.finite(v) & v > 0] } else numeric(0)

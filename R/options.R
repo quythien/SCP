@@ -307,7 +307,7 @@ CircadianBioOptions <- function(ngenes = 5000,
   lOD2_resolved <- if (!is.null(lOD2)) setOD(lOD2, ngenes) else NULL
   # paired_sigma=TRUE: expand amplitude and sigma_rhythmic jointly using a shared
   # index so each simulated rhythmic gene draws (A, sigma) from the same pilot gene,
-  # preserving the empirical r_tilde = A/sigma distribution.
+  # preserving the empirical r = A/sigma distribution.
   # paired_sigma=FALSE (default): original behaviour, amplitude expanded independently
   # via setAmplitude, sigma drawn from lOD in simulation (has_joint=FALSE).
   if (paired_sigma &&

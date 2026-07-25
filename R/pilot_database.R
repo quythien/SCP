@@ -131,9 +131,9 @@ scp_pilots <- function(species = NULL, status = "ingested") {
 #'   error is raised if no such variant has been built for the pilot.
 #' @param paired_sigma Logical (default \code{TRUE}). Keep the per-gene
 #'   \code{(A, sigma)} pairing so the simulator draws amplitude and noise from
-#'   the same pilot gene, preserving the realistic narrow \eqn{\tilde r = A/\sigma}
+#'   the same pilot gene, preserving the realistic narrow \eqn{r = A/\sigma}
 #'   distribution (the marginal-power / Fig 1-2 Panel A convention). \code{FALSE}
-#'   decouples sigma from amplitude, giving the wide \eqn{\tilde r} used by the
+#'   decouples sigma from amplitude, giving the wide \eqn{r} used by the
 #'   effect-size-stratified panels (Fig 1-2 Panels B/C).
 #'
 #' @return A \code{CircadianBioOptions} object with empirical
@@ -284,9 +284,9 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
   }
 
   # paired_sigma controls whether (A, sigma) stay gene-paired. TRUE (default)
-  # keeps them aligned -> realistic narrow r-tilde = A/sigma -> the marginal /
+  # keeps them aligned -> realistic narrow r = A/sigma -> the marginal /
   # Panel-A behavior (e.g. GTEx Liver 0.92 at N=200). FALSE permutes sigma to
-  # decouple it from A -> wide r-tilde -> the stratified Panel-B/C behavior
+  # decouple it from A -> wide r -> the stratified Panel-B/C behavior
   # (e.g. ~0.72 at N=200). The pilot stores (A, sigma) gene-paired, so both are
   # recoverable from one file.
   if (!isTRUE(paired_sigma) && length(p$sigma_rhythmic) > 1L) {

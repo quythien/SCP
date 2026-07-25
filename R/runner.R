@@ -254,7 +254,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
             }
           }
         }, error = function(e) {
-          warning(sprintf("DCP pipeline failed for sim %d, n=%d: %s", i, n, e$message))
+          warning(sprintf("DCP pipeline failed for sim %d, N=%d: %s", i, n, e$message))
         })
 
       } else if (DCmethod == "CircaCompare") {
@@ -267,7 +267,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
           pval_DP_g = cc_result$pval_DP
           pval_DM_g = cc_result$pval_DM
         }, error = function(e) {
-          warning(sprintf("CircaCompare failed for sim %d, n=%d: %s", i, n, e$message))
+          warning(sprintf("CircaCompare failed for sim %d, N=%d: %s", i, n, e$message))
         })
       } else {
         stop(sprintf(paste0("runSimsDiff: DCmethod '%s' is not implemented in the ",
@@ -479,7 +479,7 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
 
   for (j in seq_along(sample_sizes)) {
     n <- sample_sizes[j]
-    if (verbose) cat(sprintf("  n = %d\n", n))
+    if (verbose) cat(sprintf("  N = %d\n", n))
 
     cts_n <- if (design == "active" && !is.null(cts) && length(cts) != n) {
       sort(rep_len(cts, n))
@@ -708,7 +708,7 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
     }
 
     if (verbose) {
-      cat(sprintf("    n=%d: mean power = %.1f%%  mean FDR = %.3f\n",
+      cat(sprintf("    N=%d: mean power = %.1f%%  mean FDR = %.3f\n",
                   n,
                   100 * mean(marginal_power[j, ], na.rm = TRUE),
                   mean(marginal_FDR[j, ], na.rm = TRUE)))
