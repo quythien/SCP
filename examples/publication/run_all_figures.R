@@ -15,7 +15,8 @@
 #'   * Fig 6 (GTEx recalibration, 2026-07) is now a PLOT-ONLY render
 #'     (fig6_active_design_5panel_gtex.R) that reads two caches: A/B from
 #'     two_harmonic/fig6AB_liver_active.R (GTEx Liver, K=1/K=2 active B-sweep), and
-#'     C-E from archive/fig6_differential_Bsweep.R (GTEx Adrenal-vs-Liver DR/DP/DM).
+#'     C-E from fig6_differential_Bsweep_fdr20.R (GTEx Adrenal-vs-Liver DR/DP/DM at
+#'     BH-FDR 20%, matching Fig 2; the A/B biomarker panels stay at BH-FDR 5%).
 #'     Those two upstream sim scripts use the bundled/cached GTEx Liver + Adr-vs-Liv
 #'     pilots and write output/two_harmonic/results/ + output/diagnostics/.
 #' Outputs are written under submission/figures/ (Supp Table 1 to submission/).
