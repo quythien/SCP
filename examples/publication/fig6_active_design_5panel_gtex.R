@@ -22,7 +22,7 @@ setwd(Sys.getenv("SCP_ROOT", unset = "."))  # run from the package root
 # Caches
 # ---------------------------------------------------------------------------
 AB_CACHE   <- "output/two_harmonic/results/fig6AB_liver_active.rds"   # A/B (GTEx Liver)
-DIFF_CACHE <- "output/diagnostics/Fig6_differential_Bsweep_fdr20.rds"  # C/D/E (Adrenal vs Liver, BH-FDR 20% to match Fig 2)
+DIFF_CACHE <- "output/diagnostics/Fig6_differential_Bsweep_fdr20_fine.rds"  # C/D/E (Adrenal vs Liver, BH-FDR 20%, fine N grid to match Fig 2)
 OUT_PDF    <- "submission/figures/Fig6_active_design_5panel.pdf"
 OUT_PDF2   <- "figures/Fig6_active_design_5panel.pdf"
 

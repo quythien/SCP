@@ -35,7 +35,7 @@ N_CORES     <- as.integer(Sys.getenv("MC_CORES", unset = "48"))
 
 # N grid divisible by every B in {4,6,8,12,24}  (LCM = 24)
 B_GRID <- if (SMOKE_TEST) c(4L, 24L)             else c(4L, 6L, 8L, 12L, 24L)
-N_GRID <- if (SMOKE_TEST) c(24L, 48L)            else c(24L, 48L, 96L, 144L, 192L, 240L)
+N_GRID <- if (SMOKE_TEST) c(24L, 48L)            else c(24L, 48L, 72L, 96L, 120L, 144L, 168L, 192L, 216L, 240L)
 NSIMS  <- if (SMOKE_TEST) 5L                     else 80L
 NGENES <- if (SMOKE_TEST) 800L                   else 3000L
 
@@ -115,7 +115,7 @@ out <- list(pilot = "GTEx Adrenal vs Liver (paired)", B_GRID = B_GRID,
             N_GRID = N_GRID, NSIMS = NSIMS, NGENES = NGENES, FDR = FDR,
             endpoints = ENDPOINTS, power = pw, se = se,
             prop_DR = bio$prop_DR, prop_DP = bio$prop_DP, prop_DM = bio$prop_DM)
-rds <- file.path(out_dir, "Fig6_differential_Bsweep_fdr20.rds")
+rds <- file.path(out_dir, "Fig6_differential_Bsweep_fdr20_fine.rds")
 saveRDS(out, rds)
 cat(sprintf("\nSaved: %s\n", rds))
 
