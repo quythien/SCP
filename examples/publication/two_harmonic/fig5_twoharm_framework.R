@@ -225,18 +225,19 @@ legend("bottomright", paste0("FDR ", round(100*ALPHA_GRID), "%"),
        inset = 0.01, y.intersp = 0.85, bg = "white")
 
 # ---- Panel B ----
-par(mgp = c(3.6, 0.55, 0))
+par(mgp = c(2.4, 0.55, 0))
 size_colors <- rainbow(length(DISPLAY_N_B), s = 0.6, v = 0.8)
 matplot(seq_along(R_LABELS), 100 * t(pwr_strat_mean),
         type = "l", lwd = 2, col = size_colors, lty = 1,
         xlim = c(0.5, length(R_LABELS) + 0.5), ylim = c(0, 100), bty = "l",
-        xlab = expression(r[1] == A[1]/sigma),
+        xlab = "",
         ylab = "Power (%)",
         main = "", xaxt = "n")
 title(main = bquote(bold("B   ") * bold("Stratified Power by") ~
                      bold(r[1]) ~ bold("(FDR 5%)")),
       adj = 0.5, font.main = 2, cex.main = 1.00, line = 0.3)
 axis(1, at = seq_along(R_LABELS), labels = R_LABELS, las = 2, cex.axis = 0.65)
+title(xlab = expression(r[1] == A[1]/sigma), line = 4.2)
 for (j in seq_len(n_N_B)) {
   points(seq_along(R_LABELS), 100 * pwr_strat_mean[j, ],
          pch = 19, col = size_colors[j], cex = 0.65)
