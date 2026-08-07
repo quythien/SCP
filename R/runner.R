@@ -84,7 +84,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     phase_diff    <- bio.opts$phase_diff
     amp_diff      <- bio.opts$amp_diff
     mesor_diff    <- bio.opts$mesor_diff %||% c(0.5, 2.0)
-    dp_shift_mode <- bio.opts$dp_shift_mode %||% "fixed"
+    dp_shift_mode <- bio.opts$dp_shift_mode %||% "uniform"
     dr_amp_scale  <- bio.opts$dr_amp_scale %||% 1.0
     dr_sigma_scale <- bio.opts$dr_sigma_scale %||% 1.0
     design        <- design.opts$design
@@ -106,7 +106,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     parallel.ncores <- 1
     amp.cutoff     <- 0
     DCmethod       <- "DCP"
-    dp_shift_mode  <- "fixed"
+    dp_shift_mode  <- "uniform"
     dr_amp_scale   <- 1.0
     dr_sigma_scale <- 1.0
     prop_DM        <- 0
