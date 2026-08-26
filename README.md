@@ -481,7 +481,7 @@ data.frame(N        = design$sample_sizes,
 #> 4 160    0.812    0.662
 #> 5 200    0.889    0.761
 #> 6 250    0.947    0.812
-
+```
 
 ![Two-harmonic single-cohort power against sample size and stratified by effect size on GTEx Liver](man/figures/two_harmonic_power.png)
 
