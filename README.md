@@ -568,6 +568,13 @@ counts at several FDR thresholds, and the time-of-day sampling pattern) lives at
 - Zhu B, Liu S, David NL, et al. 2024. Evidence for conservation of primordial 12-hour ultradian gene programs in humans under free-living conditions. *npj Biology of Timing and Sleep* 2:5. https://doi.org/10.1038/s44323-024-00005-1
 - Zong W, Seney ML, Ketchesin KD, et al. 2023. Experimental design and power calculation in omics circadian rhythmicity detection using the cosinor model. *Statistics in Medicine* 42:3236-3258. https://doi.org/10.1002/sim.9803
 
+## GTEx pilot sources
+
+The pilot manifest records the GTEx release and time source. The database rebuild
+uses donor-matched seasonal CT and stages pilot and CSV updates separately from
+paper inputs. See the [GTEx analysis scripts](examples/pilots/README.md) for the
+numbered steps and local source settings.
+
 ## Citation
 
 If you use SCP in your research, please cite:

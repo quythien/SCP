@@ -1,5 +1,11 @@
 # SCP 0.4.60
 
+## Pilot data
+
+* Updated 31 GTEx v8 tissue pilots and their signal-summary rows using
+  donor-matched seasonal CT. The three paper-linked tissue pilots remain unchanged.
+  The manifest records the GTEx release and time source.
+
 ## Plotting
 
 * `runBootstrapDesignGrid()` now also computes the plug-in (point-estimate) power
