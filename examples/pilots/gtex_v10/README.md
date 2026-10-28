@@ -83,7 +83,6 @@ source("examples/pilots/gtex_v10/12_render_normalized_TOD_report.R")
 
 The report presents the tissue signal summaries and sample-size comparisons.
 The builder records source hashes and output checksums for future reproduction.
-Existing paper inputs and manuscript figures remain unchanged.
 
 After integrating these pilots and installing SCP, rebuild the app demo:
 

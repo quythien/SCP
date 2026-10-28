@@ -568,6 +568,7 @@ remains with the manuscript examples and previous releases.
 - Function reference: `?SCP`, or `help(package = "SCP")`, or the bundled
   `SCP-manual.pdf`.
 - News and release notes: `NEWS.md`.
+- Paper figure code and plotting data: [paper_reproduction/](paper_reproduction/README.md).
 
 ## References
 

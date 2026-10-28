@@ -1,0 +1,8 @@
+figure,plotting_data,redraw_script,figure_source,generated_output
+Figure1,Figure1/data/panel_data.rds,Figure1/redraw.R,Figure1/final/Fig1_single_cohort_1col.pdf,generated/Figure1.pdf
+Figure2,Figure2/data/panel_data.rds,Figure2/redraw.R,Figure2/final/Fig2_differential_ADR_vs_LIV_1col.pdf,generated/Figure2.pdf
+Figure3,Figure3/data/fig3_values.csv,Figure3/redraw.R,Figure3/final/Fig3_bootstrap_redraw_1col.pdf,generated/Figure3.pdf
+Figure4,Figure4/data/,Figure4/redraw.R,Figure4/final/Fig4_twoharm_demo.pdf + Figure4/final/Fig4BC_1col.pdf,generated/Figure4A.pdf + generated/Figure4BC.pdf
+Figure5,Figure5/data/,Figure5/redraw.R,Figure5/final/Fig6_active_design_5panel_1col.pdf,generated/Figure5.pdf
+FigureS1,Supplement/FigureS1/data/panel_data.rds,Supplement/FigureS1/redraw.R,Supplement/FigureS1/final/Fig5_twoharm_framework_1col.pdf,generated/FigureS1.pdf
+TablesS1S2,Supplement/Tables/data/,Supplement/Tables/redraw.R,Supplement/Tables/code/TableS1_source.tex + TableS2_source.tex,generated/TableS1.tex + generated/TableS2.tex

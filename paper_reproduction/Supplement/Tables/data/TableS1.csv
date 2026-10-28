@@ -1,0 +1,5 @@
+Species,Pilot dataset,n_pilot,Median r,Used in
+H.\ sapiens,GTEx Adrenal Gland,187,0.97,"Figures 1, 2, and 6"
+H.\ sapiens,GTEx Liver,154,0.48,"Figures 1, 2, 4, 6, and S1"
+H.\ sapiens,GSE160521 Caudate control,59,0.67,Figure 3
+H.\ sapiens,GTEx Muscle-Skeletal,748,0.55,Figure 3
