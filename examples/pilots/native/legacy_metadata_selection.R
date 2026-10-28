@@ -100,4 +100,3 @@ native_legacy_match_arm <- function(pd, tissue, condition) {
   }
   which(keep)
 }
-

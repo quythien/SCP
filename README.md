@@ -119,9 +119,9 @@ estimates each gene's acrophase relative to that input time. The cosinor model
 describes mean expression over input time. Sampling times can be evenly spaced
 or unevenly distributed and do not need to follow a cosine curve.
 
-The figures on this page illustrate the manuscript analyses and retain their
-original inputs. Results from the current GTEx pilots can differ because the
-release, input time, and eligible samples have changed.
+Manuscript figures retain their original inputs. Results from the current GTEx
+pilots can differ because the release, preprocessing, input time, and eligible
+samples have changed.
 
 ```r
 library(SCP)
@@ -565,6 +565,11 @@ The current GTEx summary is
 It records the input time, sample and gene counts, signal strength, and discovery
 counts for both alternatives. The earlier signal summary remains with the
 manuscript examples and in the previous release.
+
+The [full GTEx v10 analysis dataset](https://github.com/quythien/SCP/releases/download/v0.5.0/GTEx_v10_full_DIP.tar)
+(2.0 GiB) contains the retained expression matrices for 46 tissues, gene
+annotation, and CHIRAL-estimated DIP. Expression values are covariate-adjusted
+log-CPM residuals.
 
 ## Documentation
 

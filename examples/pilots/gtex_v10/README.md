@@ -34,6 +34,9 @@ The original CHIRAL study used GTEx v8. These scripts estimate DIP from v10
 expression using CHIRAL 0.1.0 and the published preprocessing and consensus
 functions. Source revision: `1f78a9a60b6d18facfedf5923d43bae9fa79f0b0`.
 
+The source manifest maps recorded recipe hashes to the matching files in
+`source_snapshots/`. Use the numbered scripts for new builds.
+
 ## Run the analysis
 
 Work from the SCP source root and run the scripts in order:

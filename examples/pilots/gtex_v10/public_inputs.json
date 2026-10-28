@@ -87,10 +87,37 @@
     "raw_gene_reads_sha256": "5ab68c1aa638bf60343eb19cac7f2078ae73d49c818c1e2ca4b8d4ffec10e056",
     "recipe": "Within-tissue raw gene mean >10, edgeR TMM, cpm(log=TRUE, prior.count=0.25)",
     "verification": {
+      "upstream_function": "run_edgeR",
+      "n_tissues": 68,
+      "total_samples": 19788,
+      "maximum_absolute_logCPM_error": 1.7763568394002505e-14,
+      "all_sample_sets_match": true,
+      "all_gene_sets_match": true,
+      "all_sample_orders_match": true,
+      "all_gene_orders_match": true,
+      "all_values_finite": true,
+      "tolerance": 1e-10,
+      "gene_identity_alignment": "Version suffixes on Ensembl gene identifiers removed before exact symbol-key matching",
+      "method": "All official tissue samples. Raw gene mean >10, edgeR TMM, cpm(log=TRUE, prior.count=0.25)"
+    },
+    "provenance": "Locally prepared cache from the official v10 gene reads. All68cached tissue contexts independently reproduce the published normalization.",
+    "initial_adrenal_verification": {
       "tissue": "Adrenal",
       "scope": "Numerical check of raw-read normalization against the cached matrix and subsequent strict/broad preparation",
       "maximum_absolute_prepared_expression_error": 2.43e-13
+    }
+  },
+  "recipe_sources": {
+    "normalization_at_pilot_build": {
+      "file": "examples/pilots/gtex_v10/source_snapshots/normalization_at_pilot_build.R",
+      "sha256": "67240e40378f4933322644e6970609b0627a52ada34bee94ad86323a2240a716",
+      "scope": "Recipe source present when the pilots were built"
     },
-    "provenance": "Locally prepared cache. The recorded numerical raw-read check covers Adrenal, not every tissue."
+    "active_normalization": {
+      "file": "examples/pilots/gtex_v10/00_normalize_inputs.R",
+      "sha256": "9de8454ff0edf79282b7b7b4af9d8a98424b83b5be0ac3771bd4cc1a0ec92aab",
+      "scope": "Active recipe for new builds"
+    },
+    "difference": "The active recipe fixes tissue ordering when creating a new CPM cache. The verified existing-cache branch and normalization functions are unchanged."
   }
 }

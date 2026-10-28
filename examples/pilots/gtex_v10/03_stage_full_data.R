@@ -3,6 +3,8 @@
 
 # 1. Read expression and the newly inferred donor times --------------------
 source("examples/pilots/gtex_v10/00_settings.R")
+if (file.exists(file.path(stage, "GTEx_v10_full_DIP.tar")))
+  stop("The full archive already exists. Preserve it before rebuilding.")
 stopifnot(file.exists(broad_path))
 broad <- read_expression(broad_path, "CPM.all.norm_large")
 inference <- readRDS(file.path(stage, "private", "v10_DIP_inference.rds"))
@@ -127,19 +129,35 @@ relative <- substring(files, nchar(candidate) + 2L)
 checksums <- vapply(files, file_hash, character(1))
 writeLines(paste(checksums, relative, sep = "  "), file.path(candidate, "SHA256SUMS"))
 
-# 5. Package one archive without altering its gene or sample coverage -------
-archive <- file.path(stage, "GTEx_v10_full_DIP.tar.xz")
-old_xz <- Sys.getenv("XZ_OPT", unset = NA_character_)
-Sys.setenv(XZ_OPT = "-1")
-status <- system2("tar", c("-cJf", shQuote(archive), "-C", shQuote(candidate), "."))
-if (is.na(old_xz)) Sys.unsetenv("XZ_OPT") else Sys.setenv(XZ_OPT = old_xz)
+# 5. Package the exact payload with R's portable internal TAR writer -------
+archive <- file.path(normalizePath(stage, mustWork = TRUE), "GTEx_v10_full_DIP.tar")
+if (file.exists(archive)) stop("The full archive already exists. Preserve it before rebuilding.")
+payload <- sort(c(relative, "SHA256SUMS"))
+payload_info <- file.info(file.path(candidate, payload))
+links <- Sys.readlink(file.path(candidate, payload))
+stopifnot(length(payload) == 51L, !anyDuplicated(payload),
+          all(!payload_info$isdir), all(!is.na(payload_info$size)),
+          all(is.na(links) | !nzchar(links)),
+          all(nchar(payload, type = "bytes") <= 100L),
+          !any(grepl("(^|/)\\.", payload)))
+estimated_bytes <- 1024 + sum(512 + 512 * ceiling(payload_info$size / 512))
+if (estimated_bytes >= 2 * 1024^3)
+  stop("The complete TAR exceeds the release size limit. Keep all payload files and use release parts.")
+working_directory <- getwd()
+setwd(candidate)
+status <- tryCatch(utils::tar(archive, files = payload, compression = "none", tar = "internal"),
+                   finally = setwd(working_directory))
 stopifnot(status == 0L, file.exists(archive))
-members <- utils::untar(archive, list = TRUE)
-stopifnot(length(members) >= length(files) + 1L)
+members <- utils::untar(archive, list = TRUE, tar = "internal")
 bytes <- file.info(archive)$size
-json_write(list(archive = basename(archive), bytes = bytes, sha256 = file_hash(archive),
+stopifnot(length(members) == 51L, identical(sort(members), payload),
+          bytes == estimated_bytes, bytes < 2 * 1024^3)
+json_write(list(archive = basename(archive), format = "tar", bytes = bytes,
+                sha256 = file_hash(archive), payload_files = length(payload),
+                payload_bytes = sum(payload_info$size), estimated_tar_bytes = estimated_bytes,
+                regular_members = length(payload), AppleDouble_members = 0L,
                 github_release_size_eligible = bytes < 2 * 1024^3,
                 publication_status = "Staged for release validation",
                 n_tissues = length(source_tissues), n_samples = length(all_samples),
                 n_donors = length(all_donors)), file.path(stage, "qc", "full_archive_receipt.json"))
-cat("Full data archive staged for release validation.\n")
+cat("Full data TAR staged for release validation.\n")
