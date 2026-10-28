@@ -746,20 +746,20 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
 #'
 #' @description
 #' Returns a fast closed-form estimate of the sample size needed for the
-#' target power, evaluated at the pilot's median effect size
+#' target power, evaluated at the pilot's median signal-to-noise ratio
 #' (\eqn{\tilde r = A / \sigma}). It uses the analytical cosinor F-test
 #' power formula rather than simulation, so it is a useful starting point
 #' before running the full simulation grid.
 #'
 #' @param bio.opts A \code{CircadianBioOptions} pilot; its \code{amplitude}
-#'   and \code{sigma_rhythmic} give the effect-size distribution.
+#'   and \code{sigma_rhythmic} give the signal-to-noise distribution.
 #' @param alpha Significance level for the per-gene test (default 0.05).
 #' @param target_power Target power to solve for (default 0.80).
 #' @param n_search Integer vector of candidate sample sizes to search over.
 #' @return A single integer: the smallest sample size in \code{n_search}
 #'   that reaches \code{target_power}, or \code{NA} if none does.
 #' @examples
-#' # Analytical sample size for the pilot's median effect size.
+#' # Analytical sample size for the pilot's median signal-to-noise ratio.
 #' bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
 #' circaPowerApproxN80(bio)
 #' @export
@@ -942,7 +942,9 @@ recommendDesign <- function(bio.opts,
   mode <- match.arg(mode)
 
   N_vals <- design.opts$sample_sizes
-  B_vals <- design.opts$B_values %||% length(unique(design.opts$cts %||% integer(0)))
+  B_vals <- design.opts$B_values %||%
+    if (inherits(design.opts$cts, "SCPTimeDistribution")) 1L else
+      length(unique(design.opts$cts %||% integer(0)))
   if (length(B_vals) == 0) B_vals <- 1L
   alpha  <- analysis.opts$alpha
   period <- bio.opts$period %||% 24

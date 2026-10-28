@@ -112,7 +112,6 @@ output/main_figures/archive_*/
 
 # Explicitly exclude from public repo (kept locally for reproducibility)
 output/two_harmonic/results/
-tests/
 
 # Local AI tool state (not committed)
 .codex/
@@ -126,7 +125,6 @@ inst/extdata/pilots/cache_geo/
 # Dropped from public repo (kept locally)
 code/
 doc/
-tests/
 paper/
 paper2/
 submission/
@@ -179,3 +177,19 @@ examples/publication/FIGURES.md
 
 # archived/superseded figure scripts, keep local only
 examples/publication/archive/
+
+!\.Rbuildignore
+!tests/
+!tests/**
+LOCAL_IMPLEMENTATION.md
+
+# Installed citation and the demo entrypoint.
+!inst/CITATION
+!inst/shiny_demo/
+inst/shiny_demo/*
+!inst/shiny_demo/app.R
+
+# GTEx v10 input-time variants.
+!inst/extdata/pilots/human/gtex_v10/
+!inst/extdata/pilots/human/gtex_v10/dip/
+!inst/extdata/pilots/human/gtex_v10/tod/

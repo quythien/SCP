@@ -1,0 +1,96 @@
+{
+  "gtex_release": "v10",
+  "study_accession": "phs000424",
+  "inputs": {
+    "gene_reads": {
+      "file": "GTEx_Analysis_v10_RNASeQCv2.4.2_gene_reads.gct.gz",
+      "bytes": 941668791,
+      "sha256": "5ab68c1aa638bf60343eb19cac7f2078ae73d49c818c1e2ca4b8d4ffec10e056",
+      "md5_base64": "+EWiWJNdzeBD9VR/GWlBtw==",
+      "url": "https://storage.googleapis.com/adult-gtex/bulk-gex/v10/rna-seq/GTEx_Analysis_v10_RNASeQCv2.4.2_gene_reads.gct.gz",
+      "object_metadata_url": "https://storage.googleapis.com/storage/v1/b/adult-gtex/o/bulk-gex%2Fv10%2Frna-seq%2FGTEx_Analysis_v10_RNASeQCv2.4.2_gene_reads.gct.gz",
+      "verification": "Unauthenticated HTTPS Google Storage JSON object metadata",
+      "verified_at_UTC": "2026-10-28T03:42:52.086432+00:00"
+    },
+    "sample_QC": {
+      "file": "GTEx_Analysis_v10_Annotations_SampleAttributesDS.txt",
+      "bytes": 38497961,
+      "sha256": "98c246b3855edf62cb050982a7ca50f3069d010624baea47ef84a9465900ca4b",
+      "md5_base64": "TEXiXD/F7JKpfaDUvLoSBw==",
+      "url": "https://storage.googleapis.com/adult-gtex/annotations/v10/metadata-files/GTEx_Analysis_v10_Annotations_SampleAttributesDS.txt",
+      "object_metadata_url": "https://storage.googleapis.com/storage/v1/b/adult-gtex/o/annotations%2Fv10%2Fmetadata-files%2FGTEx_Analysis_v10_Annotations_SampleAttributesDS.txt",
+      "verification": "Unauthenticated HTTPS Google Storage JSON object metadata",
+      "verified_at_UTC": "2026-10-28T03:42:52.086828+00:00"
+    },
+    "public_subjects": {
+      "file": "GTEx_Analysis_v10_Annotations_SubjectPhenotypesDS.txt",
+      "bytes": 20292,
+      "sha256": "2313caeaaf3718ac8aead8c6b9eab92b3f613509cfe1a6f7b6286310a7200e73",
+      "md5_base64": "/6FaaAhVxshPJVG/uoAXug==",
+      "url": "https://storage.googleapis.com/adult-gtex/annotations/v10/metadata-files/GTEx_Analysis_v10_Annotations_SubjectPhenotypesDS.txt",
+      "object_metadata_url": "https://storage.googleapis.com/storage/v1/b/adult-gtex/o/annotations%2Fv10%2Fmetadata-files%2FGTEx_Analysis_v10_Annotations_SubjectPhenotypesDS.txt",
+      "verification": "Unauthenticated HTTPS Google Storage JSON object metadata",
+      "fields_used": [
+        "SUBJID",
+        "AGE",
+        "SEX",
+        "DTHHRDY"
+      ],
+      "age_resolution": "Published age groups"
+    }
+  },
+  "normalization": {
+    "raw_gene_mean_min_exclusive": 10,
+    "method": "edgeR TMM and cpm(log=TRUE, prior.count=0.25)",
+    "pre_QC_gene_mean_min_exclusive": {
+      "broad": 0,
+      "strict": 3
+    },
+    "minimum_pre_regression_samples": 49,
+    "upstream_functions": [
+      "Norm.CPM",
+      "remove_covariates"
+    ],
+    "covariates": [
+      "Ischemic-time group",
+      "Public age group",
+      "Sex",
+      "Death type"
+    ],
+    "ischemic_time_breaks": [
+      0,
+      200,
+      500,
+      800,
+      2000
+    ],
+    "formula": "y ~ isch + age + sex + death.type",
+    "single_sex_tissue_formula": "y ~ isch + age + death.type",
+    "uses_subject_phenotypes": true,
+    "uses_exact_age": false,
+    "uses_recorded_death_time": false,
+    "complete_case_rule": "Author residual output with samples missing in the first gene removed by CPM_to_E"
+  },
+  "CHIRAL": {
+    "revision": "1f78a9a60b6d18facfedf5923d43bae9fa79f0b0",
+    "citation": "Talamanca, Gobet and Naef (2023). Science 379:478-483. doi:10.1126/science.add0846",
+    "package_version": "0.1.0",
+    "maximum_iterations": 500,
+    "consensus_function": "Phi.from.phi_mat",
+    "consensus_ct": 1.95,
+    "consensus_min_tissues": 1
+  },
+  "normalized_CPM_cache": {
+    "file": "v10_CPM_full.RData",
+    "bytes": 1940548104,
+    "sha256": "373021ba2927d70d5bdad98958de920cc773294c250ef28a9c8a44b4d26bce8c",
+    "raw_gene_reads_sha256": "5ab68c1aa638bf60343eb19cac7f2078ae73d49c818c1e2ca4b8d4ffec10e056",
+    "recipe": "Within-tissue raw gene mean >10, edgeR TMM, cpm(log=TRUE, prior.count=0.25)",
+    "verification": {
+      "tissue": "Adrenal",
+      "scope": "Numerical check of raw-read normalization against the cached matrix and subsequent strict/broad preparation",
+      "maximum_absolute_prepared_expression_error": 2.43e-13
+    },
+    "provenance": "Locally prepared cache. The recorded numerical raw-read check covers Adrenal, not every tissue."
+  }
+}

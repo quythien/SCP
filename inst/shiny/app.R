@@ -21,18 +21,19 @@ options(shiny.maxRequestSize = 5 * 1024^3)
 .cap_choices <- function(v) stats::setNames(as.character(v), .cap1(v))
 
 
-# SCP_SHINY_DEMO=1 reads the slim 86-pilot subset from ./pilots/ (shinyapps.io
-# demo) instead of the installed extdata/pilots.
-.demo_mode    <- nzchar(Sys.getenv("SCP_SHINY_DEMO"))
-.demo_pilots  <- file.path(getwd(), "pilots")
+# Demo deployments use the same app with a generated pilot bundle.
+.demo_mode <- nzchar(Sys.getenv("SCP_SHINY_DEMO"))
+.demo_pilots <- Sys.getenv("SCP_SHINY_DEMO_PILOTS", file.path(getwd(), "pilots"))
 
 .read_manifest <- function() {
-  if (.demo_mode && file.exists(file.path(.demo_pilots, "manifest.csv"))) {
-    m <- utils::read.csv(file.path(.demo_pilots, "manifest.csv"),
-                         stringsAsFactors = FALSE)
-    m[m$status == "ingested", , drop = FALSE]
+  if (.demo_mode) {
+    manifest_file <- file.path(.demo_pilots, "manifest.csv")
+    if (!file.exists(manifest_file)) stop("The demo pilot manifest is missing.")
+    m <- utils::read.csv(manifest_file, stringsAsFactors = FALSE)
+    m <- m[m$status == "ingested", , drop = FALSE]
+    getFromNamespace(".scp_filter_time_basis", "SCP")(m, time_basis = "DIP")
   } else {
-    SCP::scp_pilots(status = "ingested")
+    SCP::scp_pilots(status = "ingested", time_basis = "DIP")
   }
 }
 
@@ -41,19 +42,34 @@ options(shiny.maxRequestSize = 5 * 1024^3)
   if (.demo_mode) {
     m <- .read_manifest()
     hit <- m$species == species & m$dataset == dataset &
-           m$tissue == tissue & m$condition == condition
-    if (!any(hit)) stop("Pilot not in demo bundle.")
-    f <- m$file[which(hit)[1]]
-    if (K == 2L) {
-      f2 <- sub("\\.rds$", "_2H.rds", f)
-      p2 <- file.path(.demo_pilots, f2)
-      if (!file.exists(p2)) stop("No two-harmonic (K=2) variant for this pilot.")
-      f <- f2
-    }
-    readRDS(file.path(.demo_pilots, f))
+      m$tissue == tissue & m$condition == condition
+    row <- m[which(hit), , drop = FALSE]
+    if (nrow(row) != 1L) stop("The pilot is missing or ambiguous in the demo bundle.")
+    file <- row$file[1]
+    if (K == 2L) file <- sub("\\.rds$", "_2H.rds", file)
+    path <- file.path(.demo_pilots, file)
+    if (!file.exists(path)) stop("The requested harmonic variant is not in the demo bundle.")
+    p <- readRDS(path)
+    if (identical(toupper(dataset), "GTEX"))
+      p <- getFromNamespace(".scp_validate_gtex_pilot", "SCP")(p, row)
+    p
   } else {
-    SCP::scp_load_pilot(species, dataset, tissue, condition, K = K)
+    basis <- if (identical(toupper(dataset), "GTEX")) "DIP" else NULL
+    SCP::scp_load_pilot(species, dataset, tissue, condition, K = K,
+                        time_basis = basis)
   }
+}
+
+.app_input_time_label <- function(p) {
+  if (identical(p$time_basis, "DIP")) return("CHIRAL-estimated time (DIP)")
+  if (identical(p$time_basis, "TOD")) return("Season-adjusted time of death (TOD)")
+  "Study sampling time"
+}
+
+.app_time_metadata <- function(p) {
+  list(gtex_release = p$gtex_release %||% NA_character_,
+       time_basis = p$time_basis %||% "native",
+       label = .app_input_time_label(p))
 }
 
 # Does a K=2 (two-harmonic) variant exist for this pilot?
@@ -139,7 +155,51 @@ options(shiny.maxRequestSize = 5 * 1024^3)
   if (!isTRUE(paired_sigma) && length(p$sigma_rhythmic) > 1L)
     p$sigma_rhythmic <- sample(p$sigma_rhythmic)
   p$paired_sigma <- isTRUE(paired_sigma)
+  r <- p$amplitude / p$sigma_rhythmic
+  r <- r[is.finite(r) & r > 0]
+  p$r_median <- if (length(r)) stats::median(r) else NA_real_
+  p$r_q25 <- if (length(r)) unname(stats::quantile(r, 0.25)) else NA_real_
+  p$r_q75 <- if (length(r)) unname(stats::quantile(r, 0.75)) else NA_real_
   p
+}
+
+
+# Explorer tables use full gene fits when the pilot stores them.
+.app_explorer_table <- function(p) {
+  full_fit <- !is.null(p$explorer_fit)
+  rf <- p$explorer_fit %||% p$rhythm_fit
+  if (is.null(rf) || !nrow(rf)) return(NULL)
+  n_total <- p$rhythm_denom %||% p$ngenes %||% nrow(rf)
+  is_k2 <- !is.null(rf$p_joint) && any(is.finite(rf$p_joint))
+  pp <- if (is_k2) rf$p_joint else rf$p_K1 %||% rf$pvalue
+  q <- if (is_k2) rf$q_joint else rf$q_K1 %||% rf$qvalue
+  if (is.null(q)) {
+    if (full_fit) {
+      q <- stats::p.adjust(pp, "BH", n = n_total)
+    } else if (is_k2) {
+      # A K1-screened subset cannot recover the full joint-test ranks.
+      q <- rep(NA_real_, nrow(rf))
+    } else {
+      q <- stats::p.adjust(pp, "BH", n = n_total)
+    }
+  }
+  ord <- order(pp, na.last = TRUE)
+  rf <- rf[ord, , drop = FALSE]
+  pp <- pp[ord]
+  q <- q[ord]
+  n <- nrow(rf)
+  gene_id <- if (!is.null(rf$gene)) as.character(rf$gene) else as.character(seq_len(n))
+  gene_nm <- if (!is.null(rf$symbol)) as.character(rf$symbol) else gene_id
+  data.frame(
+    Gene = gene_nm, ID = gene_id, p = pp, q = q,
+    p_K1 = rf$p_K1 %||% rf$pvalue,
+    p_2h = rf$p_2h %||% rep(NA_real_, n),
+    Amp = rf$A, Sigma = rf$sigma, rtilde = rf$A / rf$sigma,
+    Peak_h = round(rf$phi %% 24, 2),
+    Mesor = rf$mesor %||% rep(NA_real_, n),
+    A2 = rf$A2 %||% rep(NA_real_, n),
+    phi2 = rf$phi2 %||% rep(NA_real_, n),
+    K2 = is_k2, stringsAsFactors = FALSE)
 }
 
 # Ensembl-style ID -> gene symbol per organism, used when an upload's IDs match
@@ -285,14 +345,14 @@ ui <- fluidPage(
                      "Two-harmonic (K = 2)"    = "2"),
         selected = "1"
       ),
-      checkboxInput("eff_sens", "Effect-size sensitivity", value = FALSE),
-      helpText(em("Also show power stratified by effect size r = A/σ.")),
+      checkboxInput("eff_sens", "Signal-to-noise sensitivity", value = FALSE),
+      helpText(em("Also show power by signal-to-noise ratio r = A/σ.")),
       hr(),
       h4("Sampling design"),
       radioButtons(
         "design", NULL,
         choices  = c("Active (controlled timecourse)" = "active",
-                     "Passive (TOD-of-death)"         = "passive"),
+                     "Passive (uncontrolled sampling)"         = "passive"),
         selected = "active"
       ),
       conditionalPanel(
@@ -339,7 +399,7 @@ ui <- fluidPage(
           uiOutput("pilot_links")
         ),
         column(5,
-          h4("Sampling design (TOD distribution)", style = "text-align:center;"),
+          h4("Sampling input time", style = "text-align:center;"),
           plotOutput("tod_plot", height = "auto", width = "auto")
         )
       ),
@@ -370,8 +430,8 @@ ui <- fluidPage(
             div(style = "margin-top:6px;", uiOutput("gene_table_ui")),
             div(style = "margin-top:6px;",
                 helpText(em("Downloads include ALL fitted genes with full parameters (p, BH q, amplitude, sigma, r, peak, mesor).")),
-                downloadButton("dl_genes",      "Download all genes (CSV)"),
-                downloadButton("dl_genes_xlsx", "Download all genes (XLSX)"))
+                downloadButton("dl_genes",      "Download gene fits (CSV)"),
+                downloadButton("dl_genes_xlsx", "Download gene fits (XLSX)"))
           ),
           column(5,
             tags$b("Gene detail"),
@@ -620,7 +680,7 @@ server <- function(input, output, session) {
                     "Two-harmonic (K=2) fit ready: switch the detector to K=2 to use it."
                   else "Two-harmonic (K=2) fit unavailable (need N>=6 and rhythmic genes); K=2 falls back to K=1."
       uploaded_pilot_state$msg <- sprintf(
-        "OK: %d genes fit, %d rhythmic (%.0f%%). Median r-tilde = %.2f.\n%s\n%s\n%s",
+        "OK: %d genes fit, %d rhythmic (%.0f%%). Median signal-to-noise ratio = %.2f.\n%s\n%s\n%s",
         res$ngenes %||% NA_integer_,
         length(res$amplitude %||% numeric(0)),
         100 * (res$prop_rhythmic %||% NA_real_),
@@ -715,7 +775,10 @@ server <- function(input, output, session) {
   last_run_state <- reactiveVal(NULL)
 
   current_state <- reactive({
-    list(species = input$species, dataset = input$dataset,
+    p <- pilot()
+    list(pilot_source = input$pilot_source, input_time = .app_time_metadata(p),
+         upload_expr = input$upload_expr$datapath, upload_time = input$upload_tod$datapath,
+         species = input$species, dataset = input$dataset,
          tissue = input$tissue, condition = input$condition,
          rhy_stat = input$rhy_stat, rhy_thresh = input$rhy_thresh,
          pilot_top_k = input$pilot_top_k,
@@ -757,7 +820,8 @@ server <- function(input, output, session) {
       "<div style='margin-top:6px; font-size:0.9em;'><b>Accession:</b> %s%s<br/><b>Citation:</b> <i>%s</i></div>",
       acc,
       if (nzchar(url)) sprintf(" &nbsp;<a href='%s' target='_blank'>open page &rarr;</a>", url) else "",
-      cit
+      paste0(cit, if (identical(input$dataset, "GTEx"))
+        "<br/><b>Input time:</b> CHIRAL-estimated time (DIP). Talamanca, Gobet and Naef (2023), <a href='https://doi.org/10.1126/science.add0846' target='_blank'>Science</a>." else "")
     ))
   })
 
@@ -776,7 +840,7 @@ server <- function(input, output, session) {
         "Pilot     : User-uploaded\n",
         "Samples (n) : %s\nGenes     : %s\n",
         "Prop. rhythmic (%s) : %s\n",
-        "Median r-tilde (A / sigma) : %s   IQR [%s, %s]"),
+        "Median signal-to-noise ratio (r) : %s   IQR [%s, %s]"),
         if (nsamp > 0L) nsamp else "NA",
         format(p$ngenes %||% NA_integer_, big.mark = ","),
         rlab,
@@ -800,16 +864,6 @@ server <- function(input, output, session) {
         }
       }
     }
-    # If no gene passed the threshold (weak tissues at FDR 5%), summarise r-tilde
-    # from the full rhythm_fit pool so it isn't NA. prop_rhythmic stays honest.
-    if (!is.finite(r_med) && !is.null(p$rhythm_fit) &&
-        nrow(p$rhythm_fit) > 0L && !is.null(p$rhythm_fit$A)) {
-      rfr <- p$rhythm_fit$A / p$rhythm_fit$sigma
-      rfr <- rfr[is.finite(rfr) & rfr > 0]
-      if (length(rfr) > 0L) {
-        r_med <- median(rfr); r_q25 <- quantile(rfr, 0.25); r_q75 <- quantile(rfr, 0.75)
-      }
-    }
     # prop_rhythmic was already set at the chosen threshold in pilot(); for legacy
     # pilots without rhythm_fit, recompute from the raw p-vector.
     prop_at_fdr <- p$prop_rhythmic %||% NA_real_
@@ -823,13 +877,16 @@ server <- function(input, output, session) {
     sprintf(
       paste0(
         "Pilot     : %s / %s / %s / %s\n",
+        "Input time: %s\n",
         "Design    : %s\n",
         "Samples (n) : %s\n",
         "Genes     : %s\n",
         "Prop. rhythmic (%s) : %s\n",
-        "Median r-tilde (A / sigma) : %s   IQR [%s, %s]"
+        "Median signal-to-noise ratio (r) : %s   IQR [%s, %s]"
       ),
       input$species, input$dataset, input$tissue, input$condition,
+      paste(c(if (!is.null(p$gtex_release)) paste("GTEx", p$gtex_release),
+              .app_input_time_label(p)), collapse = " / "),
       {
         mrow <- manifest()[manifest()$species == input$species &
                            manifest()$dataset == input$dataset &
@@ -839,7 +896,8 @@ server <- function(input, output, session) {
       },
       {
         # Prefer the pilot's actual stored sample times; fall back to manifest n.
-        nn <- length(p$times %||% p$raw$times %||% numeric(0))
+        nn <- p$n_samples %||% p$time_distribution$n_observed %||%
+          length(p$times %||% p$raw$times %||% numeric(0))
         if (nn < 1L) {
           mrow <- manifest()[manifest()$species == input$species &
                              manifest()$dataset == input$dataset &
@@ -877,7 +935,18 @@ server <- function(input, output, session) {
       text(0, 0, "No pilot loaded", cex = 1.2, col = "grey40")
       return()
     }
-    # Prefer raw times when preserved; otherwise reconstruct from manifest
+    if (inherits(p$time_distribution, "SCPTimeDistribution")) {
+      td <- p$time_distribution
+      density <- td$weights / sum(td$weights) / mean(diff(td$grid))
+      plot(td$grid, density, type = "l", lwd = 2, col = "#1f78b4",
+           xlim = c(0, td$period), xlab = "Input time (h)", ylab = "Density",
+           main = "", xaxt = "n", ylim = c(0, max(density) * 1.05))
+      axis(1, at = seq(0, td$period, by = 4))
+      title(main = sprintf("%s samples, %s", td$n_observed, p$time_basis),
+            cex.main = 1.0, line = 0.6)
+      return()
+    }
+    # Native studies and uploads can retain their observed sampling times.
     times  <- p$times %||% p$raw$times %||% numeric(0)
     phases <- numeric(0)
     n_samp <- NA_integer_
@@ -907,7 +976,7 @@ server <- function(input, output, session) {
 
     if (length(phases) == 0L) {
       plot(0, 0, type = "n", axes = FALSE, xlab = "", ylab = "")
-      text(0, 0, "TOD metadata not available\n(no raw times, no manifest summary)",
+      text(0, 0, "Sampling times are not available",
            cex = 1.05, col = "grey40")
       return()
     }
@@ -915,7 +984,7 @@ server <- function(input, output, session) {
     n_u <- length(unique(round(phases, 1)))
     h <- hist(phases, breaks = seq(0, 24, by = 1), plot = FALSE)
     plot(h, col = "#a6cee3", border = "#1f78b4", xlim = c(0, 24),
-         xlab = "Time of day (h, mod 24)", ylab = "Samples", main = "",
+         xlab = "Sampling time (h, mod 24)", ylab = "Samples", main = "",
          xaxt = "n")
     axis(side = 1, at = seq(0, 24, by = 4))
     title(main = sprintf("n = %s samples, %d distinct time point%s",
@@ -983,32 +1052,21 @@ server <- function(input, output, session) {
       if (length(n_grid) < 2L) {
         n_grid <- n_lo + n_by * 0:3
       }
-      # cts: q4h grid for active; for passive use the pilot's empirical times
-      # if preserved, else fall back to the q4h grid as a placeholder
       design_type <- input$design
       cts_vec <- if (design_type == "passive") {
-        tt <- p$times %||% p$raw$times %||% NULL
-        if (is.null(tt) || length(tt) == 0L) {
-          # Pilot has no raw times; try the manifest's tod_phases as fallback
-          m <- manifest()
-          mrow <- m[m$species == input$species & m$design == input$design_filter &
-                    m$dataset == input$dataset & m$condition == input$condition, , drop = FALSE]
-          mrow <- mrow[.tissue_display(mrow) == input$tissue, , drop = FALSE]
-          ph <- if (nrow(mrow) > 0L && "tod_phases" %in% names(mrow) &&
-                    !is.na(mrow$tod_phases[1]) && nzchar(mrow$tod_phases[1]) &&
-                    !grepl("phases\\)$", mrow$tod_phases[1])) {
-            suppressWarnings(as.numeric(strsplit(mrow$tod_phases[1], ",")[[1]]))
-          } else NULL
-          if (!is.null(ph) && length(ph) > 0L) ph else seq(0, 22, by = 4)
-        } else as.numeric(tt)
+        p$time_distribution %||% p$times %||% p$raw$times %||% p$cts
       } else {
         step <- suppressWarnings(as.numeric(input$active_step))
         if (!is.finite(step) || step <= 0) step <- 4
         seq(0, 24 - step, by = step)
       }
-      cts_vec <- as.numeric(cts_vec)
-      cts_vec <- cts_vec[is.finite(cts_vec)]
-      if (length(cts_vec) == 0L) cts_vec <- seq(0, 22, by = 4)
+      validate(need(!is.null(cts_vec) && length(cts_vec) > 0L,
+                    "This pilot has no sampling distribution for a passive design."))
+      if (!inherits(cts_vec, "SCPTimeDistribution")) {
+        cts_vec <- as.numeric(cts_vec)
+        validate(need(length(cts_vec) > 0L && all(is.finite(cts_vec)),
+                      "The sampling times must be finite."))
+      }
       design <- SCP::CircadianDesignOptions(
         sample_sizes = n_grid,
         nsims        = 20L,   # fixed for a responsive, reproducible interactive run
@@ -1041,6 +1099,10 @@ server <- function(input, output, session) {
       )
       # Panel A: paired (A, sigma) draw -> realistic marginal power (p is paired).
       res <- run_sim(p, if (isTRUE(input$eff_sens)) "Panel A" else "Simulating")
+      res$input_metadata <- .app_time_metadata(p)
+      res$input_metadata$key <- paste(input$species, input$dataset, input$tissue,
+                                      res$input_metadata$gtex_release,
+                                      res$input_metadata$time_basis, sep = "_")
       # Panels B/C: unpaired draw for wide r-tilde, re-sliced from the same
       # rhythm_fit at the same threshold (no extra fitting).
       if (isTRUE(input$eff_sens) && !inherits(res, "sim_error")) {
@@ -1088,6 +1150,11 @@ server <- function(input, output, session) {
                                   vline_power = tpw, r_max = NULL,
                                   cex_main = 1.9, cex_lab = 1.85, cex_axis = 1.6)
     }
+    meta <- res$input_metadata
+    if (!is.null(meta)) grid::grid.text(
+      paste(c(if (!is.na(meta$gtex_release)) paste("GTEx", meta$gtex_release),
+              meta$label), collapse = " / "),
+      x = 0.5, y = 0.99, gp = grid::gpar(fontsize = 8, col = "grey30"))
   }
 
   output$power_curve <- renderPlot({
@@ -1101,23 +1168,36 @@ server <- function(input, output, session) {
   # Download the exact figure shown, as PDF or PNG.
   .fig_dims  <- function() if (isTRUE(input$eff_sens)) c(6.8, 14.5) else c(8, 5.5)
   .fig_fname <- function(ext) sprintf("SCP_power_%s.%s",
-      gsub("[^A-Za-z0-9]+", "_", paste(input$species %||% "", input$tissue %||% "pilot", sep = "_")), ext)
+      gsub("[^A-Za-z0-9]+", "_", sim_result()$input_metadata$key %||%
+             paste(input$species %||% "", input$tissue %||% "pilot", sep = "_")), ext)
   output$dl_pdf <- downloadHandler(
     filename = function() .fig_fname("pdf"),
     content  = function(file) {
       d <- .fig_dims(); grDevices::pdf(file, width = d[1], height = d[2]); on.exit(grDevices::dev.off())
       tryCatch(.draw_power(), error = function(e) { plot.new(); title(conditionMessage(e)) })
     })
-  # PNG device for headless servers: cairo, then ragg, then the stock device
-  # (the default png() needs an X11 display).
+  # Open a PNG device that is available on this system.
   .open_png <- function(file, width, height, res = 120) {
-    if (isTRUE(capabilities("cairo"))) {
-      grDevices::png(file, width = width, height = height, res = res, type = "cairo")
-    } else if (requireNamespace("ragg", quietly = TRUE)) {
-      ragg::agg_png(file, width = width, height = height, units = "px", res = res)
-    } else {
-      grDevices::png(file, width = width, height = height, res = res)
+    previous <- grDevices::dev.cur()
+    opened <- function(expression) {
+      tryCatch({
+        suppressWarnings(force(expression))
+        grDevices::dev.cur() != previous
+      }, error = function(e) {
+        if (grDevices::dev.cur() != previous) grDevices::dev.off()
+        FALSE
+      })
     }
+    if (requireNamespace("ragg", quietly = TRUE) &&
+        opened(ragg::agg_png(file, width = width, height = height,
+                             units = "px", res = res))) return(invisible(NULL))
+    if (isTRUE(capabilities("cairo")) &&
+        opened(grDevices::png(file, width = width, height = height,
+                              res = res, type = "cairo"))) return(invisible(NULL))
+    if (opened(grDevices::png(file, width = width, height = height,
+                              res = res))) return(invisible(NULL))
+    stop("Unable to open a PNG device. Install the 'ragg' package and try again.",
+         call. = FALSE)
   }
   output$dl_png <- downloadHandler(
     filename = function() .fig_fname("png"),
@@ -1219,39 +1299,11 @@ server <- function(input, output, session) {
     stats::setNames(rep(cn, length(.CLOCK_ALIASES[[cn]])), .CLOCK_ALIASES[[cn]])))
   .clock_canon <- function(syms) unname(.CLOCK_LOOKUP[toupper(syms)])   # NA if not a clock gene
 
-  # Per-gene table from the loaded pilot's rhythm_fit: BH q-value, r-tilde, peak,
-  # mesor (if stored). Sorted by p-value. Reacts to the left-panel threshold via
-  # pilot() (which carries the full capped rhythm_fit regardless of threshold).
+  # Full model fits supply gene ranks, FDR values, and downloads.
   gene_tbl <- reactive({
-    p <- pilot(); req(p); rf <- p$rhythm_fit
-    if (is.null(rf) || !nrow(rf)) return(NULL)
-    n_total <- p$rhythm_denom %||% p$ngenes %||% nrow(rf)
-    # K=2 pilots carry p_joint (the two-harmonic F-test); rank on it when present,
-    # else on the cosinor p.
-    is_k2 <- !is.null(rf$p_joint) && any(is.finite(rf$p_joint))
-    pp    <- if (is_k2) rf$p_joint else rf$pvalue
-    ord   <- order(pp)
-    rf <- rf[ord, , drop = FALSE]; pp <- pp[ord]
-    n  <- nrow(rf); i <- seq_len(n)
-    q  <- pmin(rev(cummin(rev(pp * n_total / i))), 1)
-    # Fall back gracefully for older pilots missing gene/symbol/mesor columns.
-    gene_id <- if (!is.null(rf$gene))   as.character(rf$gene)   else as.character(i)
-    gene_nm <- if (!is.null(rf$symbol)) as.character(rf$symbol) else gene_id
-    mesor_v <- if (!is.null(rf$mesor))  rf$mesor                else rep(NA_real_, n)
-    A2_v    <- if (!is.null(rf$A2))     rf$A2                   else rep(NA_real_, n)
-    phi2_v  <- if (!is.null(rf$phi2))   rf$phi2                 else rep(NA_real_, n)
-    p2h_v   <- if (!is.null(rf$p_2h))   rf$p_2h                 else rep(NA_real_, n)
-    data.frame(
-      Gene   = gene_nm,
-      ID     = gene_id,
-      p      = pp, q = q,
-      p_K1   = rf$pvalue,                 # 1st-harmonic F-test (the pre-screen)
-      p_2h   = p2h_v,                     # 2nd-harmonic-only F-test
-      Amp    = rf$A, Sigma = rf$sigma, rtilde = rf$A / rf$sigma,
-      Peak_h = round(rf$phi %% 24, 2),    # phi1 = 1st-harmonic acrophase
-      Mesor  = mesor_v,
-      A2     = A2_v, phi2 = phi2_v, K2 = is_k2,
-      stringsAsFactors = FALSE)
+    p <- pilot()
+    req(p)
+    .app_explorer_table(p)
   })
 
   # Notice shown under K=2: confirms a working two-harmonic fit, or explains the
@@ -1260,7 +1312,8 @@ server <- function(input, output, session) {
     if (!isTRUE(input$K == "2")) return(NULL)
     p <- pilot(); if (is.null(p)) return(NULL)
     rf <- p$rhythm_fit
-    nt <- length(unique(round((p$times %||% p$cts %||% numeric(0)) %% 24, 3)))
+    nt <- p$n_distinct_times %||%
+      length(unique(round((p$times %||% p$cts %||% numeric(0)) %% 24, 3)))
     has_k2 <- !is.null(rf$A2) && any(is.finite(rf$A2)) && !isTRUE(attr(p, "k2_unavailable"))
     if (has_k2)
       div(style = "padding:7px 12px; background:#e9f5ea; border-left:4px solid #4a9c5d; border-radius:0 4px 4px 0; margin-bottom:8px; font-size:0.9em;",
@@ -1276,7 +1329,7 @@ server <- function(input, output, session) {
     g <- gene_tbl(); req(g)
     thr  <- as.numeric(input$rhy_thresh)
     sval <- if (identical(input$rhy_stat, "q")) g$q else g$p
-    g[sval < thr, , drop = FALSE]
+    g[which(is.finite(sval) & sval < thr), , drop = FALSE]
   })
 
   # Human-readable description of the current alpha_pilot threshold.
@@ -1304,7 +1357,7 @@ server <- function(input, output, session) {
     if (k2) ch <- c(ch, "1st-harmonic p-value" = "p_K1", "2nd-harmonic p-value" = "p_2h")
     ch <- c(ch, "Peak 1 (h)" = "peak1")
     if (k2) ch <- c(ch, "Peak 2 (h)" = "peak2")
-    ch <- c(ch, "Effect size r (A/sigma)" = "rtilde",
+    ch <- c(ch, "Signal-to-noise ratio (r)" = "rtilde",
                 "Amplitude A1" = "Amp", "Gene symbol (A-Z)" = "Gene")
     sel <- isolate(input$gene_sort); if (is.null(sel) || !(sel %in% ch)) sel <- "p"
     updateSelectInput(session, "gene_sort", choices = ch, selected = sel)
@@ -1389,10 +1442,10 @@ server <- function(input, output, session) {
     if (!is.null(row$A2) && is.finite(row$A2) && !is.null(row$phi2) && is.finite(row$phi2))
       y <- y + row$A2 * cos(2 * w * (t - row$phi2))
     band <- 1.96 * row$Sigma
-    ylab <- if (m0 != 0) "Expression (log2)" else "Expression (centered)"
+    ylab <- "Expression"
     yl   <- range(c(y + band, y - band, if (!is.null(pts)) pts$y))
     plot(t, y, type = "n", ylim = yl,
-         xlab = "Time of day (h)", ylab = if (compact) "centered" else ylab,
+         xlab = "Input time (h)", ylab = if (compact) "Centered expression" else ylab,
          main = row$Gene, xaxt = "n", bty = "l",
          cex.lab = if (compact) 1.0 else 1.2,
          cex.main = if (compact) 1.2 else 1.45, font.main = 2)
@@ -1559,11 +1612,11 @@ server <- function(input, output, session) {
     df
   }, striped = TRUE, hover = TRUE, width = "100%", digits = 3)
 
-  # Export every fitted gene (full rhythm_fit, p-sorted) with all parameters.
+  # Export the stored model fits, including the complete table when available.
   gene_export <- reactive({
     g <- gene_tbl(); req(g)
     is_k2 <- isTRUE(any(g$K2)) && any(is.finite(g$p_2h))
-    if (!is_k2) {
+    out <- if (!is_k2) {
       # K=1: one harmonic, one peak (= the acrophase).
       data.frame(
         gene       = g$Gene, gene_id = g$ID,
@@ -1587,10 +1640,16 @@ server <- function(input, output, session) {
         peak2_hours = round(pks["peak2", ], 3),
         stringsAsFactors = FALSE)
     }
+    meta <- .app_time_metadata(pilot())
+    out$gtex_release <- meta$gtex_release
+    out$time_basis <- meta$time_basis
+    out$input_time <- meta$label
+    out
   })
   .gene_fname <- function() gsub("[^A-Za-z0-9]+", "_",
       paste(if (isTRUE(input$pilot_source == "upload")) "upload" else input$species %||% "pilot",
-            input$dataset %||% "", input$tissue %||% ""))
+            input$dataset %||% "", input$tissue %||% "",
+            pilot()$gtex_release %||% "", pilot()$time_basis %||% "native"))
 
   output$dl_genes <- downloadHandler(
     filename = function() sprintf("SCP_genes_%s.csv", .gene_fname()),

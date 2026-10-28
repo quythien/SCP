@@ -4,7 +4,7 @@
 \alias{scp_pilots}
 \title{List Bundled SCP Pilot Datasets}
 \usage{
-scp_pilots(species = NULL, status = "ingested")
+scp_pilots(species = NULL, status = "ingested", time_basis = NULL)
 }
 \arguments{
 \item{species}{Optional character. One or more of
@@ -16,9 +16,13 @@ to \code{"ingested"} (datasets actually present on disk). Use
 \code{NULL} or \code{"all"} to return every row, including
 \code{"pending"}, \code{"verify_failed"}, \code{"controlled"}, and
 \code{"ingest_failed"} entries.}
+
+\item{time_basis}{GTEx input time. \code{NULL} selects CHIRAL-estimated
+time (DIP). Use \code{"TOD"} for season-adjusted time of death or
+\code{"all"} to list both. Other datasets retain native time.}
 }
 \value{
-A data.frame with one row per (dataset, tissue, condition)
+A data.frame with one row per (dataset, tissue, condition, time basis)
   pilot. Columns: \code{species}, \code{dataset}, \code{tissue},
   \code{condition}, \code{n}, \code{ngenes}, \code{design},
   \code{assay}, \code{sample_type}, \code{accession}, \code{citation},

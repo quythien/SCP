@@ -22,11 +22,8 @@ knitr::opts_chunk$set(
 )
 set.seed(2026)
 
-# Simulations run in parallel; single-core is impractically slow. We use a few
-# cores here (fork on Linux/macOS; 1 on Windows, which cannot fork).
-NCORES <- if (nzchar(Sys.getenv("_R_CHECK_LIMIT_CORES_"))) 2L else  # R CMD check caps at 2
-          if (.Platform$OS.type == "windows") 1L else
-            max(1L, min(4L, parallel::detectCores() - 1L))
+# One core keeps the tutorial portable across machines and package builders.
+NCORES <- 1L
 ```
 
 # What this tutorial covers
@@ -46,12 +43,11 @@ experiment in a comparable tissue. The workflow has four steps:
 3. **Simulate cohorts** at candidate sample sizes and run a detector with
    `runSimsSingleCohort()` (cosinor F-test, K = 1 single harmonic or K = 2
    two-harmonic).
-4. **Plot the power curve** and read off the smallest N that reaches your target
-   power (the chance of detecting a gene that truly is rhythmic) while keeping
-   the false discovery rate (FDR, the share of flagged genes that are not really
-   rhythmic) at the level you set.
+4. **Plot the power curve** and identify the sample size that reaches the target
+   power. SCP applies BH at the selected level and reports simulated FDR, the
+   expected proportion of false discoveries among all discoveries.
 
-This vignette walks the whole loop in under a minute using a bundled
+This vignette walks through the workflow using a bundled v10
 GTEx Adrenal Gland pilot. It is intentionally small (NSIMS = 50, a coarse N
 grid) so it builds quickly. For publication-grade numbers use NSIMS >= 200 and
 a finer N grid.
@@ -91,17 +87,19 @@ library(SCP)
 
 # 2. Load a bundled pilot
 
-SCP ships a pilot database; `scp_pilots()` lists every entry. We load
-the GTEx Adrenal Gland pilot, a strong-rhythmicity human tissue, as a pre-built
-`CircadianBioOptions` object so we can go straight to simulation. (If you have
-your own raw expression matrix, run `estCircadianParam()` first; see Section 7.)
+`scp_pilots()` lists the default pilots. We load the v10 GTEx Adrenal Gland
+pilot as a `CircadianBioOptions` object and go straight to simulation.
+For your own expression matrix, run `estCircadianParam()` first, as in Section 7.
+
+The default GTEx input is **CHIRAL-estimated time (DIP)**. CHIRAL estimates a
+donor's internal circadian time from clock-gene expression across tissues
+([Talamanca et al. 2023](https://doi.org/10.1126/science.add0846)). This is done
+once during data preparation. SCP then estimates gene acrophase relative to the
+chosen input time. CHIRAL is not rerun during simulation.
 
 ```{r load-pilot}
 bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
 
-# Power is a proportion, so it is essentially invariant to the simulated gene
-# count; we cap it here only to keep this vignette fast to build. Drop this line
-# (or raise it) for your own runs.
 bio$ngenes <- 1200L
 
 class(bio)
@@ -109,11 +107,35 @@ cat(sprintf("Pilot: %d genes, %.1f%% rhythmic, period = %g h\n",
             bio$ngenes, 100 * bio$prop_rhythmic, bio$period))
 ```
 
-# 3. Inspect the effect-size distribution
+The examples provide two sources of donor input time: DIP and
+**season-adjusted time of death (TOD)**. Both use v10 expression. SCP estimates
+power conditional on the fitted pilot, input time, sampling design, and model.
 
-The effect size that matters here is each gene's signal-to-noise ratio,
-`r = A / sigma` (rhythm amplitude over noise): the larger it is, the
-easier that gene is to detect.
+The cosinor model describes mean expression over input time. It does not require
+sampling times to follow a cosine distribution. The app uses DIP for its bundled
+GTEx examples.
+
+```{r input-time-options}
+bio_tod <- scp_load_pilot("human", "GTEx", "Adrenal", "All", time_basis = "TOD")
+scp_pilot_search("adrenal", time_basis = "all")[,
+  c("dataset", "tissue", "gtex_release", "time_basis", "n")]
+
+# Passive sampling uses an aggregate distribution of the pilot input times.
+design_passive <- CircadianDesignOptions(
+  sample_sizes = c(100, 200, 400), nsims = 50,
+  design = "passive", cts = bio$time_distribution
+)
+```
+
+The GTEx project reference is the [GTEx Consortium atlas
+(2020)](https://doi.org/10.1126/science.aaz1776). The source manifest identifies
+v10 files, their preprocessing, and cohort exclusions. Earlier package pilots
+remain available in the GitHub release history.
+
+# 3. Inspect the signal-to-noise ratios
+
+Each gene's signal-to-noise ratio is $r = A / \sigma$.
+Larger values make its rhythmicity easier to detect.
 
 ```{r r-dist}
 r_tilde <- bio$amplitude / bio$sigma_rhythmic
@@ -182,8 +204,9 @@ plotSingleCohortPower(
 Read the smallest N where the panel-A curve crosses 0.80 at the FDR you care
 about; that is your recommended sample size.
 
-If the simulated grid never reaches your target power, `npower()` returns
-`NA`. Use the closed-form CircaPower extrapolation instead:
+If the simulated grid never reaches the target power, extend the sample-size
+grid. The closed-form approximation below provides a starting value. It uses
+the pilot median signal-to-noise ratio and a single-test significance level.
 
 ```{r closed-form}
 n80 <- circaPowerApproxN80(
@@ -197,10 +220,7 @@ n80
 
 # 6. Compare K = 1 vs K = 2
 
-The two-harmonic detector (K = 2) adds a 12 h harmonic and is more sensitive
-when the underlying waveform has a non-sinusoidal shape (asymmetric peaks,
-twin peaks). It costs two extra degrees of freedom, so it loses power on
-clean sinusoidal genes.
+The two-harmonic detector (K = 2) adds a 12-hour component to the 24-hour model.
 
 ```{r run-k2, message = FALSE}
 res_K2 <- runSimsSingleCohort(
@@ -220,8 +240,8 @@ data.frame(
 )
 ```
 
-On a sinusoidal pilot the two curves should be close, with K = 1 a touch
-higher. If your pilot has clear 12 h components, K = 2 wins.
+The table compares marginal power for K = 1 and K = 2 under the selected pilot
+and sampling design.
 
 # 7. Starting from your own expression matrix
 

@@ -1,37 +1,80 @@
-#' Sample Time Points from an Empirical TOD Distribution
+# Validate a saved aggregate without reconstructing individual input times.
+.scp_validate_time_distribution <- function(cts) {
+  fields <- c("grid", "weights", "period", "jitter_sd", "n_observed")
+  if (!inherits(cts, "SCPTimeDistribution") || !is.list(cts) ||
+      !all(fields %in% names(cts))) {
+    stop("An SCPTimeDistribution needs grid, weights, period, jitter_sd, and n_observed.",
+         call. = FALSE)
+  }
+  if (!is.numeric(cts$period) || length(cts$period) != 1L ||
+      !is.finite(cts$period) || cts$period <= 0 ||
+      !is.numeric(cts$jitter_sd) || length(cts$jitter_sd) != 1L ||
+      !is.finite(cts$jitter_sd) || cts$jitter_sd < 0 ||
+      !is.numeric(cts$n_observed) || length(cts$n_observed) != 1L ||
+      !is.finite(cts$n_observed) || cts$n_observed < 2) {
+    stop("The aggregate input-time distribution has invalid period, jitter, or sample count.",
+         call. = FALSE)
+  }
+  if (!is.numeric(cts$grid) || !is.numeric(cts$weights) ||
+      length(cts$grid) < 2L || length(cts$grid) != length(cts$weights) ||
+      any(!is.finite(cts$grid)) || any(!is.finite(cts$weights)) ||
+      any(cts$grid < 0 | cts$grid > cts$period) ||
+      any(diff(cts$grid) <= 0) || any(cts$weights < 0) ||
+      sum(cts$weights) <= 0 || !is.finite(sum(cts$weights))) {
+    stop("The aggregate input-time distribution needs an ordered grid and finite nonnegative weights.",
+         call. = FALSE)
+  }
+  invisible(cts)
+}
+
+.scp_validate_realized_times <- function(cts) {
+  if (inherits(cts, "SCPTimeDistribution") || is.list(cts)) {
+    stop("Supply a numeric sampling schedule. Draw one first with sampleTimesFromDist(n, distribution).",
+         call. = FALSE)
+  }
+  if (!is.numeric(cts) || !length(cts) || any(!is.finite(cts))) {
+    stop("The sampling schedule must contain finite numeric times.", call. = FALSE)
+  }
+  invisible(cts)
+}
+
+#' Sample Time Points from an Input-Time Distribution
 #'
 #' @description
-#' Draws \code{n} time-of-day (TOD) values from a circular kernel density
-#' estimate of a pilot TOD distribution. Handles wrap-around at 0h/24h
-#' using a tripled-data trick so boundary contributions are preserved.
+#' Draws sampling times from a circular kernel density estimate of observed
+#' input times, or from the saved aggregate distribution in a bundled pilot.
 #'
-#' @param n Integer. Number of time points to sample.
-#' @param cts Numeric vector. Pilot TOD values (hours, any range, wrapped to
-#'   \code{[0, 24)} internally).
+#' @param n Integer. Number of sampling times to draw.
+#' @param cts Numeric vector of observed times in hours, or the
+#'   \code{time_distribution} object stored in a bundled GTEx pilot.
 #'
-#' @return Numeric vector of length \code{n} with sampled TOD values in
-#'   \code{[0, 24)}.
+#' @return Numeric vector of length \code{n} with sampled times in hours.
+#' @export
 sampleTimesFromDist <- function(n, cts) {
-  # Map all times to [0, 24) first.  Pilot TOD values can be negative (e.g.,
-  # -5.6h = 18.4h in circular time); the original density(from=0,to=24) call
-  # silently discarded those, causing the passive simulation to miss evening
-  # coverage that the real pilot has.
-  cts_circ <- cts %% 24
-
-  # Circular (wrap-around) KDE: replicate the data at -24 and +24 so that
-  # boundary contributions near 0h and 24h are handled correctly, then
-  # evaluate only on [0, 24].
-  cts_ext    <- c(cts_circ - 24, cts_circ, cts_circ + 24)
-  tod_density <- density(cts_ext, from = 0, to = 24)
-
-  # Sample n time points from the wrapped density
-  probs   <- pmax(tod_density$y, 1e-10)   # floor prevents zero-sum crash on tight clusters
-  sampled <- sample(tod_density$x, size = n, replace = TRUE, prob = probs)
-
-  # Add small noise to avoid exact ties, then wrap back to [0, 24)
-  sampled <- (sampled + rnorm(n, 0, 0.1)) %% 24
-
-  return(sampled)
+  if (length(n) != 1L || !is.numeric(n) || !is.finite(n) ||
+      n < 0 || n != as.integer(n)) {
+    stop("n must be a nonnegative integer.", call. = FALSE)
+  }
+  if (inherits(cts, "SCPTimeDistribution")) {
+    .scp_validate_time_distribution(cts)
+    grid <- cts$grid
+    probs <- cts$weights
+    period <- cts$period
+    jitter_sd <- cts$jitter_sd
+  } else {
+    if (!is.numeric(cts) || length(cts) < 2L || any(!is.finite(cts))) {
+      stop("cts must be finite numeric times or an SCPTimeDistribution.", call. = FALSE)
+    }
+    cts_circ <- cts %% 24
+    cts_ext <- c(cts_circ - 24, cts_circ, cts_circ + 24)
+    time_density <- density(cts_ext, from = 0, to = 24)
+    grid <- time_density$x
+    probs <- pmax(time_density$y, 1e-10)
+    period <- 24
+    jitter_sd <- 0.1
+  }
+  sampled <- sample(grid, size = n, replace = TRUE, prob = probs)
+  (sampled + rnorm(n, 0, jitter_sd)) %% period
 }
 #' Simulate Two-Group Differential Circadian Data
 #'
@@ -363,6 +406,8 @@ simCircadianDiff <- function(ngenes = 5000,
 
   # Generate time points (depends on n1, n2)
   if (design == "active") {
+    if (!is.null(cts)) .scp_validate_realized_times(cts)
+    if (!is.null(cts2)) .scp_validate_realized_times(cts2)
     # If fixed times are provided, use them (enables replicated active designs).
     # If cts is a ZT template shorter than n1 (e.g., a 6-ZT grid passed from
     # runner.R before expansion), expand it by repeating to match n1.
@@ -515,6 +560,7 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
                                      omega = 1.0, beta = pi,
                                      seed = NULL) {
   stopifnot(inherits(bio.opts, "CircadianBioOptions"))
+  .scp_validate_realized_times(cts)
   if (omega <= 0 || omega > 1)
     stop("omega must be in (0, 1]. Use omega = 1 (default) for cosinor simulation.")
 
@@ -656,6 +702,7 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
 #' @export
 simCircadianSingleCohort2H <- function(bio.opts, cts, seed = NULL) {
   stopifnot(inherits(bio.opts, "CircadianBioOptions"))
+  .scp_validate_realized_times(cts)
   if (!isTRUE(bio.opts$paired_2h) ||
       is.null(bio.opts$amplitude2) || is.null(bio.opts$phase2))
     stop("simCircadianSingleCohort2H requires bio.opts produced by ",

@@ -21,11 +21,8 @@ knitr::opts_chunk$set(
 )
 set.seed(2026)
 
-# Simulations run in parallel; single-core is impractically slow. We use a few
-# cores here (fork on Linux/macOS; 1 on Windows, which cannot fork).
-NCORES <- if (nzchar(Sys.getenv("_R_CHECK_LIMIT_CORES_"))) 2L else  # R CMD check caps at 2
-          if (.Platform$OS.type == "windows") 1L else
-            max(1L, min(4L, parallel::detectCores() - 1L))
+# One core keeps the tutorial portable across machines and package builders.
+NCORES <- 1L
 ```
 
 # Overview
@@ -46,8 +43,8 @@ Simulations are calibrated from real pilot data. SCP estimates the empirical
 distributions of gene-level amplitude (A), noise (sigma), phase, and the
 proportion of rhythmic genes, then simulates cohorts under the cosinor model (a
 cosine wave fitted to each gene's expression over the day). Detection is
-FDR-controlled, meaning it holds down the fraction of false positives among the
-genes it flags. Every chunk below runs as-is on the bundled pilots and example
+based on BH at the selected level. SCP reports simulated FDR, the expected
+proportion of false discoveries among all discoveries. Every chunk below runs as-is on the bundled pilots and example
 data.
 
 ---
@@ -71,8 +68,20 @@ biology), a **design** object (sampling plan), and an **analysis** object
 
 # Quick start
 
-SCP ships a pilot database; `scp_pilots()` lists every entry and
-`scp_pilot_search()` filters it.
+SCP includes a pilot database. `scp_pilots()` lists the default entries and
+`scp_pilot_search()` filters them.
+
+Active GTEx pilots use v10 expression. Their default input is
+**CHIRAL-estimated time (DIP)**, a donor's estimated internal circadian time
+([Talamanca et al. 2023](https://doi.org/10.1126/science.add0846)). CHIRAL is run
+offline from clock-gene expression across tissues. It does not use recorded
+time of death to infer these times or align their origin. The GTEx project
+reference is the [GTEx Consortium atlas
+(2020)](https://doi.org/10.1126/science.aaz1776).
+
+SCP estimates each gene's acrophase relative to its input time. This gene
+parameter is separate from DIP. Power simulations reuse the prepared pilot
+and do not estimate DIP again.
 
 ```{r discover}
 head(scp_pilots()[, c("species", "dataset", "tissue", "condition", "design")])
@@ -84,14 +93,12 @@ Load a bundled pilot as a ready-to-use `CircadianBioOptions` object:
 ```{r load-pilot}
 bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
 
-# Power is a proportion, so it is essentially invariant to the simulated gene
-# count; we cap it here only to keep this guide fast to build. Remove for real runs.
 bio$ngenes <- 1200L
 
 design <- CircadianDesignOptions(
   sample_sizes = c(20, 40, 60, 80),
   nsims        = 30,
-  design       = "active",          # "active" = equispaced grid; "passive" = pilot TOD
+  design       = "active",          # "active" = equispaced grid; "passive" = pilot input-time distribution
   cts          = seq(0, 20, by = 4)
 )
 
@@ -102,11 +109,36 @@ analysis <- CircadianAnalysisOptions(
 )
 ```
 
+The examples use two sources of donor input time: **CHIRAL-estimated time
+(DIP)** and **season-adjusted time of death (TOD)**. SCP estimates power
+conditional on the fitted pilot, input time, sampling design, and model.
+The cosinor model describes mean expression over input time and does not
+require the sampling times to follow a cosine distribution.
+
+The app uses DIP for bundled GTEx pilots and keeps uploaded collection times
+unchanged.
+
+```{r input-time-basis}
+bio_tod <- scp_load_pilot("human", "GTEx", "Adrenal", "All", time_basis = "TOD")
+head(scp_pilots(species = "human", time_basis = "all")[,
+  c("dataset", "tissue", "gtex_release", "time_basis", "n")])
+
+# Use this distribution for a passive study with the default GTEx pilot.
+design_passive <- CircadianDesignOptions(
+  sample_sizes = c(100, 200, 400), nsims = 15,
+  design = "passive", cts = bio$time_distribution
+)
+```
+
+The source manifest records the v10 inputs and exclusions. Earlier package
+versions remain available through the GitHub release history. A stronger fit
+or a smaller simulated N80 does not independently validate the inferred time.
+
 ---
 
 # Single-cohort power
 
-`runSimsSingleCohort()` sweeps N under the pilot effect-size distribution and
+`runSimsSingleCohort()` sweeps N under the pilot signal-to-noise distribution and
 returns a rich result that feeds `plotSingleCohortPower()`. The detector is the
 cosinor F-test; `K = 1` is the single-harmonic (24 h) model.
 
@@ -139,7 +171,7 @@ plotSingleCohortPower(res, title = "GTEx Adrenal Gland, single-cohort power",
 ```
 
 Panel A is the marginal power curve at several FDR levels; panel B stratifies
-power by the per-gene effect size r = A / sigma; panel C shows the true-discovery
+power by the per-gene signal-to-noise ratio r = A / sigma; panel C shows the true-discovery
 count per stratum.
 
 ---
@@ -251,8 +283,8 @@ defaults are estimated from the data; override any of them to ask "what if".
 | `prop_DR`, `prop_DP`, `prop_DM` | fraction of genes that differ in rhythmicity / phase / mesor |
 | `phase_diff` + `dp_shift_mode` | DP phase shift (hours); `"fixed"` uses `phase_diff[2]`, `"uniform"` draws in the range |
 | `mesor_diff` | DM baseline-shift range |
-| `dr_amp_scale` | global multiplier on rhythmic amplitude (effect-size sensitivity) |
-| `dr_sigma_scale` | global multiplier on noise (effect-size sensitivity) |
+| `dr_amp_scale` | global multiplier on rhythmic amplitude (signal-to-noise sensitivity) |
+| `dr_sigma_scale` | global multiplier on noise (signal-to-noise sensitivity) |
 
 ```{r diff-scenario, message = FALSE}
 bio_plan <- bio_diff
@@ -261,7 +293,7 @@ bio_plan$prop_DP        <- 0.10        # 10% phase-shifted
 bio_plan$prop_DM        <- 0.05        # 5% mesor-shifted
 bio_plan$phase_diff     <- c(-6, 6)    # phase shifts up to 6 h
 bio_plan$dp_shift_mode  <- "fixed"     # fixed shift = phase_diff[2] (vs "uniform")
-bio_plan$dr_amp_scale   <- 1.0         # effect size as in pilot; lower to stress-test
+bio_plan$dr_amp_scale   <- 1.0         # signal-to-noise ratio as in pilot; lower to stress-test
 bio_plan$dr_sigma_scale <- 1.0
 
 res_plan <- runDifferentialPower(
@@ -344,8 +376,7 @@ boot_res <- runBootstrapDesignGrid(
 )
 ```
 
-Bootstrap CIs are wide when pilot n < 20 or median r < 0.5; in those cases treat
-the median power estimate conservatively and consider collecting more pilot data.
+Bootstrap intervals summarize sensitivity to the pilot sample.
 
 ---
 
@@ -359,7 +390,7 @@ saveRDS(res, "single_cohort_power.rds")
 
 res$sample_sizes     # N values swept
 res$marginal_power   # [N x nsims] marginal power
-res$strat_power      # [N x r_strata x nsims] power stratified by effect size
+res$strat_power      # [N x r_strata x nsims] power stratified by signal-to-noise ratio
 res$pvalues          # [N x genes x nsims] raw p-values (replot at any FDR)
 
 res_diff$fdr_DR      # [genes x N x nsims] FDR for the DR test

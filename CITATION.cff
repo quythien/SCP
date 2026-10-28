@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: >-
   If you use SCP in your research, please cite the manuscript and the software.
 title: "SCP: Simulation-Based Circadian Power Analysis"
-version: 0.4.60
-date-released: 2026-07-14
+version: 0.5.0
+date-released: 2026-10-28
 authors:
   - family-names: Pham
     given-names: Thien Quy
@@ -60,3 +60,29 @@ preferred-citation:
       affiliation: University of Pittsburgh
   year: 2026
   journal: "Bioinformatics"
+references:
+  - type: article
+    title: "Sex-dimorphic and age-dependent organization of 24-hour gene expression rhythms in humans"
+    authors:
+      - family-names: Talamanca
+        given-names: Lorenzo
+      - family-names: Gobet
+        given-names: Cedric
+      - family-names: Naef
+        given-names: Felix
+    year: 2023
+    journal: Science
+    volume: 379
+    start: 478
+    end: 483
+    doi: 10.1126/science.add0846
+  - type: article
+    title: "The GTEx Consortium atlas of genetic regulatory effects across human tissues"
+    authors:
+      - name: GTEx Consortium
+    year: 2020
+    journal: Science
+    volume: 369
+    start: 1318
+    end: 1330
+    doi: 10.1126/science.aaz1776

@@ -27,7 +27,8 @@ Invisibly returns \code{NULL}. Called for its side effect of
 Opens the bundled simulation-based power-analysis app in the user's
 default browser. The app lets the user pick a bundled pilot (or upload
 their own), set target power and FDR, read off the recommended sample
-size, explore per-gene rhythmicity, and run pathway enrichment.
+size, explore per-gene rhythmicity, and run pathway enrichment. Bundled
+GTEx datasets use v10 expression with CHIRAL-estimated input time (DIP).
 }
 \details{
 On first launch the function checks for the app's optional helper packages

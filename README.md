@@ -3,37 +3,36 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![R](https://img.shields.io/badge/R-%E2%89%A54.4.0-blue.svg)](https://www.r-project.org/)
 
-*How many samples, collected at what times of day, in which tissue, do you need
-to find the genes that keep 24 hour time?*
+*How many samples, collected at what times of day and in which tissue, are needed to identify genes with 24-hour rhythmic expression?*
 
-## What SCP does
+## Overview
 
-Circadian rhythms, the roughly 24 hour oscillations that regulate metabolism,
-physiology, and disease, are carried by only a fraction of the transcriptome
-([Takahashi 2017](https://doi.org/10.1038/nrg.2016.150)). Finding those genes,
-or comparing their rhythms between conditions, takes enough samples collected
-across enough times of day to separate a real rhythm from genome-wide noise, yet
-circadian omics studies are usually short on samples. Established tools analyze
-the data *after* it is collected: JTK_CYCLE and RAIN detect rhythms within a
-condition ([Hughes 2010](https://doi.org/10.1177/0748730410379711); [Thaben
-2014](https://doi.org/10.1177/0748730414553029)), while CircaCompare and
-DiffCircaPipeline compare rhythms across conditions ([Parsons
+Circadian rhythms, the approximately 24-hour oscillations that shape metabolism,
+physiology, and disease, are present in only a subset of the transcriptome
+([Takahashi 2017](https://doi.org/10.1038/nrg.2016.150)). Detecting those genes,
+or comparing their rhythmic behavior across conditions, requires enough samples
+distributed across the day to distinguish true rhythmicity from genome-wide
+noise. In practice, however, circadian omics studies are often limited by sample
+size. Existing methods are designed primarily for analysis after data collection:
+JTK_CYCLE and RAIN detect rhythmicity within a single condition ([Hughes
+2010](https://doi.org/10.1177/0748730410379711); [Thaben
+2014](https://doi.org/10.1177/0748730414553029)), whereas CircaCompare and
+DiffCircaPipeline compare rhythmic parameters between conditions ([Parsons
 2020](https://doi.org/10.1093/bioinformatics/btz730); [Xue
-2023](https://doi.org/10.1093/bioinformatics/btad039)). None of them answer the
-question that comes first: how many samples do you need? The one dedicated power
-tool, CircaPower, assumes a single effect size shared by every rhythmic gene and
-does not account for the multiple testing incurred when screening thousands of
-genes at once ([Zong 2023](https://doi.org/10.1002/sim.9803)), assumptions that
-rarely hold across real tissues and species.
+2023](https://doi.org/10.1093/bioinformatics/btad039)). CircaPower provides
+cosinor power calculations using a common signal-to-noise ratio and a
+single-test significance threshold ([Zong
+2023](https://doi.org/10.1002/sim.9803)). SCP uses the pilot distribution of
+signal-to-noise ratios and simulates multiple testing across genes.
 
 SCP answers the sample-size question by simulation, calibrated to your own data.
 You give it a small *pilot* dataset (a preliminary experiment in a comparable
-tissue, or one of the 160+ pilots bundled with the package), and SCP learns from
+tissue, or one of the pilots bundled with the package), and SCP learns from
 that pilot how strong each gene's rhythm is, how noisy it is, and when during the
 day samples were collected, capturing the transcriptome-wide spread of effect
 sizes that a single fixed value cannot. It then simulates studies of many sizes
-and reports how often each would succeed while holding the false discovery rate
-at the level you choose. The result is a recommended number of samples for
+and applies the Benjamini-Hochberg procedure at the selected level. It reports
+simulated power and false discovery rate. The result is a recommended number of samples for
 **circadian biomarker detection** in one group, or for **differential
 rhythmicity analysis** between two groups (differences in rhythmicity, phase, or
 mesor). A bootstrap layer reports how sensitive that recommendation is to the
@@ -41,19 +40,17 @@ particular pilot you started from.
 
 A few terms used throughout, in plain language. **Power** is the chance that a
 study of a given size detects a gene that truly is rhythmic. **False discovery
-rate (FDR)** is the share of the genes a study flags as rhythmic that are not
-really rhythmic; you pick the level you are willing to tolerate (5 percent is
-common), and SCP controls it with the Benjamini-Hochberg procedure (Benjamini
-and Hochberg 1995). **Effect size** here is a gene's rhythm amplitude divided by
-its noise, written `r = A / sigma`; larger means easier to detect.
-**Noise (`sigma`)** is the gene-to-gene scatter of a gene's expression around its
-cosinor fit, the residual variability SCP estimates per gene from the pilot (kept
-on the log scale internally as `lOD`); a noisier gene is harder to detect at the
-same amplitude. **Cosinor** is the standard model that fits a cosine wave to a
+rate (FDR)** is the expected proportion of false discoveries among all
+discoveries. SCP applies the Benjamini-Hochberg procedure at the selected level
+(Benjamini and Hochberg 1995). **Signal-to-noise ratio** is written `r = A / sigma`. Larger values mean
+easier detection.
+**Noise (`sigma`)** is the residual standard deviation of a gene's expression
+around its cosinor fit. Larger noise makes a rhythm harder to detect at the same
+amplitude. **Cosinor** is the standard model that fits a cosine wave to a
 gene's expression over the day ([Cornelissen
 2014](https://doi.org/10.1186/1742-4682-11-16)).
 
-## Install
+## Installation
 
 SCP is an R package. It depends on the Bioconductor package `limma`, so point
 the installer at the Bioconductor repositories first.
@@ -61,20 +58,21 @@ the installer at the Bioconductor repositories first.
 ```r
 install.packages(c("remotes", "BiocManager"))
 options(repos = BiocManager::repositories())   # resolves the Bioconductor dep 'limma'
-options(timeout = 600)                          # bundled pilot data is about 100 MB
-remotes::install_github("quythien/SCP", upgrade = "never", build_vignettes = TRUE)
+options(timeout = 600)
+remotes::install_github("quythien/SCP", upgrade = "never", build_vignettes = FALSE)
 library(SCP)
 ```
 
-`build_vignettes = TRUE` builds the runnable tutorial so you can open it with
-`browseVignettes("SCP")` after installing. If the GitHub download times out,
+To build the runnable tutorials, use `build_vignettes = TRUE` in that installation
+call. You can then open them with `browseVignettes("SCP")`. This option applies
+to that call and is not retained for later installations. If the GitHub download times out,
 clone the repository and install from the local copy instead (`git` handles the
 large download more reliably):
 
 ```r
 # in a shell:  git clone https://github.com/quythien/SCP.git
 options(repos = BiocManager::repositories())
-remotes::install_local("SCP", upgrade = "never", build_vignettes = TRUE)
+remotes::install_local("SCP", upgrade = "never", build_vignettes = FALSE)
 ```
 
 System requirements: R version 4.4.0 or newer and a C++ compiler (SCP uses Rcpp
@@ -109,15 +107,28 @@ for reproducible analyses.
 Load a bundled pilot, set the study design, simulate, and read off the
 recommended sample size.
 
+SCP uses pilot expression data and sample times to estimate power under a
+specified circadian model and sampling design. The GTEx examples illustrate
+two sources of input time: CHIRAL-estimated DIP and season-adjusted TOD.
+
+Both examples use v10 expression. DIP is the default in the package and app.
+
+DIP is estimated once during data preparation with CHIRAL
+([Talamanca et al. 2023](https://doi.org/10.1126/science.add0846)). SCP then
+estimates each gene's acrophase relative to that input time. The cosinor model
+describes mean expression over input time. Sampling times can be evenly spaced
+or unevenly distributed and do not need to follow a cosine curve.
+
+The figures on this page illustrate the manuscript analyses and retain their
+original inputs. Results from the current GTEx pilots can differ because the
+release, input time, and eligible samples have changed.
+
 ```r
 library(SCP)
 
 # 1. Load a bundled pilot as a ready-to-use options object.
 bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
 
-# Power is a proportion, so it barely depends on how many genes we simulate; we
-# cap the gene count here only to keep this example fast. Drop this line for
-# real runs.
 bio$ngenes <- 1200
 
 # 2. Describe the planned study: a range of total sample sizes, an active
@@ -164,10 +175,9 @@ the sampling design. This is where the active versus passive choice lives.
 design <- CircadianDesignOptions(sample_sizes = c(24, 48, 72, 96), nsims = 100,
                                  design = "active", cts = seq(0, 20, by = 4))
 
-# passive: a human post-mortem study where collection times cannot be controlled,
-# so SCP draws them from the pilot's own time-of-day distribution (no cts needed)
+# Passive sampling draws input times from the bundled pilot distribution.
 design <- CircadianDesignOptions(sample_sizes = c(50, 100, 150, 200), nsims = 100,
-                                 design = "passive")
+                                 design = "passive", cts = bio$time_distribution)
 ```
 
 **3. `analysis` (the inference).** The significance level, the multiple-testing
@@ -194,14 +204,14 @@ The blocks below walk through the main analyses. Sections (a) through (d) and
 (f) run end to end on data that ships with the package, and each figure is the
 one the shown code produces (section (d) embeds the matching panel from the
 manuscript). Section (e) is *illustrative*: it shows the exact two-harmonic
-analysis and reports the numbers the paper reports, because the raw GTEx Liver
-expression behind those figures is controlled-access and cannot be redistributed.
+analysis and reports the numbers the paper reports, because the GTEx Liver
+comparison uses subject-level collection-time metadata that are not distributed
+with the package.
 
 ### a. Pick a pilot
 
 The pilots differ in how strong their rhythms are, and that is what decides how
-many samples you will need. Loading a pilot and looking at its effect-size
-distribution (`r = A / sigma`, amplitude over noise, per gene) tells you
+many samples you will need. Loading a pilot and looking at its distribution of signal-to-noise ratios (`r = A / sigma`, per gene) tells you
 what you are working with before you simulate anything.
 
 ```r
@@ -212,8 +222,8 @@ bio  <- estCircadianParam(prep$data, prep$times, period = 24)
 r_tilde <- bio$amplitude / bio$sigma_rhythmic
 med     <- median(r_tilde, na.rm = TRUE)
 hist(r_tilde, breaks = 40, col = "#4C79A6", border = "white",
-     main = "GSE160521 Caudate control pilot: per-gene effect size",
-     xlab = expression("effect size  " * r == A / sigma))
+     main = "GSE160521 Caudate control pilot: per-gene signal-to-noise ratio",
+     xlab = expression("signal-to-noise ratio  " * r == A / sigma))
 abline(v = med, col = "#C0392B", lwd = 2)
 text(med, par("usr")[4] * 0.9, bquote(median ~ tilde(r) == .(round(med, 2))),
      col = "#C0392B", pos = 4)
@@ -234,7 +244,7 @@ section loads the caudate control pilot.
 cau   <- readRDS(system.file("extdata", "caudate_control_GSE160521.rds", package = "SCP"))
 prep  <- prepCircadianData(cau$expr, cau$times, input_type = "log2")
 bio_c <- estCircadianParam(prep$data, prep$times, period = 24)
-bio_c$ngenes <- 1200   # power is a proportion, so cap genes to keep the example fast
+bio_c$ngenes <- 1200
 ```
 
 A quick closed-form estimate comes from `circaPowerApproxN80()`, the analytical
@@ -247,9 +257,9 @@ circaPowerApproxN80(bio_c, alpha = 0.05, target_power = 0.80)
 #> [1] 40
 ```
 
-The closed form assumes one effect size shared by every gene and ignores the
+The closed form assumes one signal-to-noise ratio shared by every gene and ignores the
 multiple testing across the transcriptome. The simulation drops both assumptions:
-it draws the full spread of per-gene effect sizes from the pilot and controls the
+it draws the full spread of per-gene signal-to-noise ratios from the pilot and controls the
 FDR across all genes at once. `runSimsSingleCohort()` runs it over a grid of
 sample sizes, and `npower()` reads off the recommended N:
 
@@ -270,8 +280,8 @@ cannot be controlled, so SCP draws them from the pilot's own time-of-day
 distribution. The simulation lands far above the closed form (113 against 40),
 because the weak-gene tail and the genome-wide FDR control, which the
 single-number formula leaves out, both cost samples, and this striatal pilot
-spans a broad range of effect sizes. That gap reflects the transcriptome-wide
-effect-size heterogeneity a single-summary formula cannot capture but the
+spans a broad range of signal-to-noise ratios. That gap reflects the transcriptome-wide
+variation in signal-to-noise ratios a single-summary formula cannot capture but the
 simulation does. Draw the panels straight from the pilot:
 
 ```r
@@ -280,10 +290,10 @@ plotSingleCohortPower(bio.opts = bio_c, design.opts = design,
                       title = "GSE160521 Caudate control, passive", fdr = 0.05)
 ```
 
-![Single-cohort power curve, effect-size strata, and discovery counts](man/figures/single_cohort_power.png)
+![Single-cohort power curve, signal-to-noise strata, and discovery counts](man/figures/single_cohort_power.png)
 
 Panel A is genome-wide power against sample size at several FDR levels, with the
-dashed line at the recommended N. Panel B breaks that down by effect size
+dashed line at the recommended N. Panel B breaks that down by signal-to-noise ratio
 (`r = A / sigma`), so you can see which genes are within reach at a given N.
 Panel C is the number of true rhythmic genes recovered in each band. Pass `panels
 = "A"` for just the power curve; the legend sits in the bottom-right corner.
@@ -311,7 +321,7 @@ bio_diff <- estCircadianParamTwoGroup(
   data_1  = caudate$expr[common, ], data_2  = putamen$expr[common, ],
   times_1 = caudate$times,          times_2 = putamen$times,
   paired_sigma = TRUE)
-bio_diff$ngenes <- 3000   # power is a proportion, so cap genes to keep the example fast
+bio_diff$ngenes <- 3000
 
 design_d <- CircadianDesignOptions(
   sample_sizes = c(20, 40, 60, 80, 100, 120, 160, 220), nsims = 30,
@@ -396,35 +406,40 @@ therefore carries real uncertainty and should be treated with caution.
 
 ### e. Two-harmonic detection (K = 2)
 
-Not every rhythmic gene follows a clean 24 hour cosine. Many transcripts carry a
-second, 12 hour harmonic, an ultradian program documented across mammalian
-tissues and in human liver, brain, and blood ([Hughes
+Not every rhythmic gene follows a simple 24-hour cosine. Many transcripts also
+carry a second, 12-hour harmonic, an ultradian pattern documented across
+mammalian tissues and in human liver, brain, and blood ([Hughes
 2009](https://doi.org/10.1371/journal.pgen.1000442); [Zhu
 2017](https://doi.org/10.1016/j.cmet.2017.05.004); [Scott
 2023](https://doi.org/10.1371/journal.pbio.3001688); [Zhu
 2024](https://doi.org/10.1038/s44323-024-00005-1)). A single-harmonic cosinor
-test can miss these genes because their waveform departs from a simple sinusoid.
-The two-harmonic detector (`K = 2`) adds the 12 hour component and recovers them,
-at the cost of two extra degrees of freedom that slightly lower power on genes
-that really are sinusoidal. You switch to it with one argument, `K = 2`, on the
-same run function.
+test can miss these genes because their waveforms depart from a simple sinusoid.
+The two-harmonic detector (`K = 2`) adds the 12-hour component and can recover
+them, at the cost of two additional degrees of freedom that can reduce
+power for genes that follow a single sinusoid. You enable it by setting `K = 2` in
+the same run function.
 
-The two figures below are the manuscript GTEx Liver comparison. Liver has real 12
-hour structure: at FDR 5 percent the single-harmonic test detects 210 rhythmic
-genes and the two-harmonic test detects 725. Several clock and metabolic genes
-(ARNTL, RORC, IK, GBA) are fit far better by the two-harmonic model (Panel A), the
-two detectors share 207 discoveries while the two-harmonic detector adds 518 genes
-the single-harmonic detector misses and loses only 3 (Panel B), and that added set
-enriches for lysosome, oxidative-phosphorylation, and complement pathways (Panel
-C).
+The two figures below show the manuscript's GTEx Liver comparison. Liver has
+substantial 12-hour structure: at FDR 5 percent, the single-harmonic test
+detects 210 rhythmic genes, whereas the two-harmonic test detects 725. Several
+clock and metabolic genes (ARNTL, RORC, IK, and GBA) are fit much better by the
+two-harmonic model (Panel A). The two methods share 207 discoveries, while the
+two-harmonic detector adds 518 genes missed by the single-harmonic detector and
+loses only 3 (Panel B). That additional set is enriched for lysosome,
+oxidative-phosphorylation, and complement pathways (Panel C).
+
 
 ![Single- vs two-harmonic cosinor fits, rhythmicity overlap, and pathway enrichment on GTEx Liver](man/figures/two_harmonic_compare.png)
 
-GTEx raw expression is controlled-access, so the block below is illustrative: it
-shows the two detectors side by side but does not run from the bundled package.
+The example below is illustrative only. Reproducing this analysis requires
+subject-level GTEx metadata, including collection-time information, which is
+controlled-access and not distributed with the package.
+
 
 ```r
-# ILLUSTRATIVE (manuscript figure): raw GTEx Liver expression is controlled-access.
+# ILLUSTRATIVE (manuscript figure): the subject-level GTEx metadata required to
+# reproduce this Liver analysis, including collection-time information, are
+# controlled-access.
 # expr / tod are the raw Liver matrix and its collection times.
 bio_liver <- estCircadianParam(expr, tod, period = 24)
 design    <- CircadianDesignOptions(
@@ -446,25 +461,25 @@ data.frame(N        = design$sample_sizes,
 #> 6 250    0.947    0.812
 ```
 
-![Two-harmonic single-cohort power against sample size and stratified by effect size on GTEx Liver](man/figures/two_harmonic_power.png)
+![Two-harmonic single-cohort power against sample size and stratified by signal-to-noise ratio on GTEx Liver](man/figures/two_harmonic_power.png)
 
-The second figure is the two-harmonic power analysis: Panel A is genome-wide power
-against N at several FDR levels, and Panel B stratifies power by first-harmonic
-effect size. Because Liver carries genuine 12 hour structure, K = 2 recovers many
-more rhythmic genes here (725 against 210); on a purely sinusoidal pilot K = 1
-would be preferable, since the extra component only adds variance. The broader
-target set costs sample size, though: reaching 80 percent genome-wide power takes
-about N = 247 under K = 2 against about N = 154 under K = 1. The two-harmonic
-model also needs at least 5 distinct sampling times per day to be identifiable
-(K = 1 needs 3), so reach for it when your pilot or prior biology points to
-non-sinusoidal structure and the sampling grid is dense enough.
+The second figure shows the two-harmonic power analysis. Panel A plots
+genome-wide power against `N` at several FDR levels, and Panel B stratifies
+power by first-harmonic signal-to-noise ratio. The two-harmonic model detects more rhythmic genes in this Liver comparison
+(725 versus 210). For these fitted pilots, reaching 80 percent genome-wide power
+requires about `N = 247` under `K = 2`, compared with about `N = 154` under
+`K = 1`. The two-harmonic model also requires at least 5 distinct sampling
+times per day to be identifiable (`K = 1` requires 3), so it is most appropriate
+when the pilot or prior biology suggests non-sinusoidal structure and the
+sampling grid is sufficiently dense.
+
 
 ### f. Use your own pilot
 
 In practice you start from your own data: a gene by sample expression matrix and
 a vector of collection times in hours. `prepCircadianData()` cleans and aligns
 the inputs, and `estCircadianParam()` learns the pilot's rhythm parameters. Two
-of those parameters are shown below: the per-gene effect size, and the
+of those parameters are shown below: the per-gene signal-to-noise ratio, and the
 **acrophase** (the time of day at which each gene peaks). For a two-group pilot,
 use `estCircadianParamTwoGroup()` instead.
 
@@ -483,7 +498,7 @@ phase <- (bio_own$phase %% (2 * pi)) / (2 * pi) * 24   # radians to hours
 
 par(mfrow = c(1, 2))
 hist(r_own, breaks = 35, col = "#4C79A6", border = "white",
-     main = "Estimated effect size", xlab = expression(r == A / sigma))
+     main = "Estimated signal-to-noise ratio", xlab = expression(r == A / sigma))
 hist(phase, breaks = seq(0, 24, by = 1.5), col = "#6FA46F", border = "white",
      main = "Estimated acrophase (peak time)", xlab = "time of day (h)")
 ```
@@ -497,21 +512,21 @@ changes.
 
 ## The Shiny app
 
-`launchShiny()` opens a browser app with two linked halves.
+`launchShiny()` opens a browser app with two linked panels.
 
 **Circadian Power Study** (left) is the sample-size calculator. Cascading
 dropdowns pick a pilot (species, then dataset, then tissue, then condition), and
 you set a rhythmicity threshold, the sampling design (active timecourse or
-passive time-of-death), a grid of sample sizes, and sliders for target power and
+passive input-time sampling), a grid of sample sizes, and sliders for target power and
 FDR. Clicking *Run simulation* draws the power curve and the recommended sample
 size. On launch the app opens on the GTEx Adrenal (passive) pilot.
 
-![Power curve for the GTEx Adrenal (passive) pilot, the app's default view](man/figures/app_power_curve_adrenal.png)
+![The app's default view](man/figures/SCP_app_view.png)
 
 **Circadian Biomarker Detection** (right) explores the pilot itself: a core
 clock-gene cosinor panel, a ranked table of rhythmic genes with their FDR
-adjusted p-values and effect sizes, a per-gene cosinor fit, and pathway
-enrichment (KEGG, Reactome, GO). All 161 bundled pilots are available, and you
+adjusted p-values and signal-to-noise ratios, a per-gene cosinor fit, and pathway
+enrichment (KEGG, Reactome, GO). The bundled pilots are available, and you
 can also upload your own pilot (an expression-matrix CSV and a one-column
 time-of-day CSV) and get the same analyses on your data. An example pair of
 upload files ships with the package:
@@ -523,25 +538,33 @@ system.file("extdata/example/example_tod.csv",        package = "SCP")
 
 ## Pilot database
 
-SCP ships 161 public circadian transcriptomic pilots across human, baboon,
-mouse, and rat, spanning more than 100 tissue contexts. Three accessors browse
-and load them.
+SCP includes circadian transcriptomic pilots across human, baboon, mouse, and
+rat. Three accessors browse and load them. The app uses the v10 DIP pilots for
+GTEx. The package also offers **season-adjusted time of death (TOD)**.
 
 | Function | Use |
 |---|---|
-| `scp_pilots()` | Return the manifest as a data frame (species, dataset, tissue, condition, design, sample size, effect size, status) |
-| `scp_pilot_search(query, species, tissue_pattern)` | Filtered search |
+| `scp_pilots()` | List default pilots, including v10 DIP for GTEx |
+| `scp_pilot_search(query, species, tissue_pattern)` | Search the default pilots |
 | `scp_load_pilot(species, dataset, tissue, condition)` | Load one pilot as a `CircadianBioOptions` object |
+| `time_basis = "TOD"` | Select the GTEx TOD alternative in these accessors |
+| `time_basis = "all"` | List or search both current GTEx alternatives |
 
 ```r
-scp_pilots()                                             # full manifest
+scp_pilots()                                             # default pilots
 scp_pilot_search(species = "human", tissue_pattern = "adrenal")
 bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+
+# Load the season-adjusted TOD example.
+bio_tod <- scp_load_pilot("human", "GTEx", "Adrenal", "All", time_basis = "TOD")
+scp_pilots(species = "human", time_basis = "all")
 ```
 
-A per-pilot effect-size summary (median effect size, its spread, rhythmic-gene
-counts at several FDR thresholds, and the time-of-day sampling pattern) lives at
-`summary/tissue_signal_summary.csv`.
+The current GTEx summary is
+[`summary/gtex_v10_signal_summary.csv`](summary/gtex_v10_signal_summary.csv).
+It records the input time, sample and gene counts, signal strength, and discovery
+counts for both alternatives. The earlier signal summary remains with the
+manuscript examples and in the previous release.
 
 ## Documentation
 
@@ -556,12 +579,14 @@ counts at several FDR thresholds, and the time-of-day sampling pattern) lives at
 - Benjamini Y, Hochberg Y. 1995. Controlling the false discovery rate: a practical and powerful approach to multiple testing. *Journal of the Royal Statistical Society: Series B* 57:289-300.
 - Cornelissen G. 2014. Cosinor-based rhythmometry. *Theoretical Biology and Medical Modelling* 11:16. https://doi.org/10.1186/1742-4682-11-16
 - Efron B. 1979. Bootstrap methods: another look at the jackknife. *Annals of Statistics* 7:1-26. https://doi.org/10.1214/aos/1176344552
+- GTEx Consortium. 2020. The GTEx Consortium atlas of genetic regulatory effects across human tissues. *Science* 369:1318-1330. https://doi.org/10.1126/science.aaz1776
 - Hughes ME, DiTacchio L, Hayes KR, et al. 2009. Harmonics of circadian gene transcription in mammals. *PLoS Genetics* 5:e1000442. https://doi.org/10.1371/journal.pgen.1000442
 - Hughes ME, Hogenesch JB, Kornacker K. 2010. JTK_CYCLE: an efficient nonparametric algorithm for detecting rhythmic components in genome-scale data sets. *Journal of Biological Rhythms* 25:372-380. https://doi.org/10.1177/0748730410379711
 - Ketchesin KD, Zong W, Hildebrand MA, et al. 2021. Diurnal rhythms across the human dorsal and ventral striatum. *Proceedings of the National Academy of Sciences* 118:e2016150118. https://doi.org/10.1073/pnas.2016150118
 - Parsons R, Parsons R, Garner N, Oster H, Rawashdeh O. 2020. CircaCompare: a method to estimate and statistically support differences in mesor, amplitude and phase, between circadian rhythms. *Bioinformatics* 36:1208-1212. https://doi.org/10.1093/bioinformatics/btz730
 - Scott MR, Zong W, Ketchesin KD, et al. 2023. Twelve-hour rhythms in transcript expression within the human dorsolateral prefrontal cortex are altered in schizophrenia. *PLoS Biology* 21:e3001688. https://doi.org/10.1371/journal.pbio.3001688
 - Takahashi JS. 2017. Transcriptional architecture of the mammalian circadian clock. *Nature Reviews Genetics* 18:164-179. https://doi.org/10.1038/nrg.2016.150
+- Talamanca L, Gobet C, Naef F. 2023. Sex-dimorphic and age-dependent organization of 24-hour gene expression rhythms in humans. *Science* 379:478-483. https://doi.org/10.1126/science.add0846
 - Thaben PF, Westermark PO. 2014. Detecting rhythms in time series with RAIN. *Journal of Biological Rhythms* 29:391-400. https://doi.org/10.1177/0748730414553029
 - Xue X, Zong W, Huo Z, et al. 2023. DiffCircaPipeline: a framework for multifaceted characterization of differential rhythmicity. *Bioinformatics* 39:btad039. https://doi.org/10.1093/bioinformatics/btad039
 - Zhu B, Zhang Q, Pan Y, et al. 2017. A cell-autonomous mammalian 12 hr clock coordinates metabolic and stress rhythms. *Cell Metabolism* 25:1305-1319. https://doi.org/10.1016/j.cmet.2017.05.004
@@ -570,10 +595,21 @@ counts at several FDR thresholds, and the time-of-day sampling pattern) lives at
 
 ## GTEx pilot sources
 
-The pilot manifest records the GTEx release and time source. The database rebuild
-uses donor-matched seasonal CT and stages pilot and CSV updates separately from
-paper inputs. See the [GTEx analysis scripts](examples/pilots/README.md) for the
-numbered steps and local source settings.
+The default GTEx pilots use v10 expression with input times estimated from
+clock-gene expression using CHIRAL. The original CHIRAL study used v8. Our v10
+times are newly estimated with the pinned method and reference settings.
+Recorded TOD does not enter CHIRAL inference or set its time origin.
+
+The manifest records the release, input-time basis, source recipe, and cohort
+counts. The [v10 builders](examples/pilots/gtex_v10/README.md) document the
+numbered steps, preprocessing, and source settings.
+
+Both alternatives are calibrations from observational data. Better fitted
+signal or lower simulated N80 does not establish more accurate sample timing.
+The comparison report includes clock-gene exclusions and sensitivity to each
+target tissue's contribution to DIP.
+
+Earlier package versions are available under [GitHub releases](https://github.com/quythien/SCP/releases).
 
 ## Citation
 
@@ -584,11 +620,13 @@ Pham, T. Q. (2026). SCP: Simulation-Based Circadian Power Analysis.
   R package, latest version at https://github.com/quythien/SCP
 ```
 
-A `CITATION.cff` is provided.
+Use `citation("SCP")` for the software and source references. A `CITATION.cff`
+is also provided on GitHub.
 
 ## License
 
-MIT. See `LICENSE`.
+Package code is distributed under the MIT license. See `LICENSE`.
+GTEx data follow the [GTEx Portal Data License](https://gtexportal.org/home/license).
 
 ## Contact
 

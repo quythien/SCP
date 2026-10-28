@@ -17,12 +17,23 @@ From this calibration it estimates FDR-controlled power for two goals:
 single-cohort detection of rhythmic biomarkers, and two-group
 differential analysis of rhythmicity, phase, or mesor. A bootstrap layer
 quantifies the uncertainty that the finite pilot contributes to each
-power estimate, and the framework accommodates any model-based circadian
-detector (cosinor or non-cosinor). It bundles roughly 160 curated
+power estimate. Detection supports single-harmonic and two-harmonic
+cosinor models. It bundles curated
 circadian transcriptomic pilots spanning many tissues and several
 species, plus a Shiny application for point-and-click power calculation
 and biomarker exploration.
 }
+\section{GTEx input time}{
+
+Active GTEx pilots use release v10. The default input time is donor-internal
+phase (DIP), estimated offline with CHIRAL from clock-gene expression across
+tissues. Season-adjusted time of death (TOD) is available in the package by
+setting \code{time_basis = "TOD"} in \code{\link{scp_load_pilot}}. The app
+uses DIP for bundled GTEx pilots. CHIRAL is not rerun during power simulation.
+Gene acrophase is estimated relative to the selected input time and is a
+separate quantity. Use \code{citation("SCP")} for software and source citations.
+}
+
 \section{Main functions}{
 
 \describe{
@@ -85,6 +96,15 @@ and biomarker exploration.
 }
 }
 
+\references{
+Talamanca L, Gobet C, Naef F (2023). Sex-dimorphic and age-dependent
+organization of 24-hour gene expression rhythms in humans.
+Science 379:478-483. \doi{10.1126/science.add0846}.
+
+GTEx Consortium (2020). The GTEx Consortium atlas of genetic regulatory
+effects across human tissues. Science 369:1318-1330.
+\doi{10.1126/science.aaz1776}.
+}
 \seealso{
 Useful links:
 \itemize{

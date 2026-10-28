@@ -13,7 +13,7 @@ circaPowerApproxN80(
 }
 \arguments{
 \item{bio.opts}{A \code{CircadianBioOptions} pilot; its \code{amplitude}
-and \code{sigma_rhythmic} give the effect-size distribution.}
+and \code{sigma_rhythmic} give the signal-to-noise distribution.}
 
 \item{alpha}{Significance level for the per-gene test (default 0.05).}
 
@@ -27,13 +27,13 @@ A single integer: the smallest sample size in \code{n_search}
 }
 \description{
 Returns a fast closed-form estimate of the sample size needed for the
-target power, evaluated at the pilot's median effect size
+target power, evaluated at the pilot's median signal-to-noise ratio
 (\eqn{\tilde r = A / \sigma}). It uses the analytical cosinor F-test
 power formula rather than simulation, so it is a useful starting point
 before running the full simulation grid.
 }
 \examples{
-# Analytical sample size for the pilot's median effect size.
+# Analytical sample size for the pilot's median signal-to-noise ratio.
 bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
 circaPowerApproxN80(bio)
 }

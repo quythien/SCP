@@ -1,8 +1,8 @@
 Package: SCP
 Type: Package
 Title: Power Evaluation and Study Design for Circadian Biomarker Detection
-Version: 0.4.60
-Date: 2026-07-14
+Version: 0.5.0
+Date: 2026-10-28
 Authors@R: c(
     person("Thien Quy", "Pham", role = c("aut", "cre"),
            email = "qtp1@pitt.edu",
@@ -49,6 +49,7 @@ LinkingTo:
     RcppArmadillo
 Suggests:
     shiny,
+    ragg,
     shinyscreenshot,
     DT,
     writexl,
@@ -70,10 +71,11 @@ Suggests:
     BiocManager,
     knitr,
     rmarkdown,
-    testthat (>= 3.0.0)
+    testthat (>= 3.1.7)
+Config/testthat/edition: 3
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: false
 biocViews: Software, GeneExpression, TimeCourse, DifferentialExpression, Transcriptomics
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 VignetteBuilder: knitr
