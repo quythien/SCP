@@ -22,11 +22,8 @@ knitr::opts_chunk$set(
 )
 set.seed(2026)
 
-# Simulations run in parallel; single-core is impractically slow. We use a few
-# cores here (fork on Linux/macOS; 1 on Windows, which cannot fork).
-NCORES <- if (nzchar(Sys.getenv("_R_CHECK_LIMIT_CORES_"))) 2L else  # R CMD check caps at 2
-          if (.Platform$OS.type == "windows") 1L else
-            max(1L, min(4L, parallel::detectCores() - 1L))
+# One core keeps the tutorial portable across machines and package builders.
+NCORES <- 1L
 ```
 
 # What this tutorial covers
@@ -111,9 +108,8 @@ cat(sprintf("Pilot: %d genes, %.1f%% rhythmic, period = %g h\n",
 
 # 3. Inspect the effect-size distribution
 
-The effect size that matters here is each gene's signal-to-noise ratio,
-`r = A / sigma` (rhythm amplitude over noise): the larger it is, the
-easier that gene is to detect.
+Each gene's signal-to-noise ratio is $r = A / \sigma$.
+Larger values make its rhythmicity easier to detect.
 
 ```{r r-dist}
 r_tilde <- bio$amplitude / bio$sigma_rhythmic
