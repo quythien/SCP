@@ -1,0 +1,31 @@
+citHeader("To cite SCP, use the software citation. Also cite the data and input-time method when using the bundled GTEx pilots.")
+
+bibentry(
+  bibtype = "Manual",
+  title = "SCP: Simulation-Based Circadian Power Analysis",
+  author = c(person("Thien Quy", "Pham"), person("Hao", "Wang"),
+             person("Marianne L.", "Seney"), person("Colleen A.", "McClung"),
+             person("Guan", "Yu"), person("George C.", "Tseng")),
+  year = "2026",
+  note = "R package version 0.5.0",
+  url = "https://github.com/quythien/SCP"
+)
+
+bibentry(
+  bibtype = "Article",
+  title = "Sex-dimorphic and age-dependent organization of 24-hour gene expression rhythms in humans",
+  author = c(person("Lorenzo", "Talamanca"), person("Cedric", "Gobet"),
+             person("Felix", "Naef")),
+  year = "2023", journal = "Science", volume = "379", pages = "478--483",
+  doi = "10.1126/science.add0846",
+  note = "CHIRAL method used offline to estimate donor input times for the v10 pilots"
+)
+
+bibentry(
+  bibtype = "Article",
+  title = "The GTEx Consortium atlas of genetic regulatory effects across human tissues",
+  author = person(given = "GTEx Consortium"),
+  year = "2020", journal = "Science", volume = "369", pages = "1318--1330",
+  doi = "10.1126/science.aaz1776",
+  note = "GTEx project reference. The bundled GTEx pilots in SCP 0.5.0 use release v10"
+)

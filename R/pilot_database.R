@@ -43,6 +43,47 @@ NULL
 }
 
 
+# GTEx time choices apply only to GTEx rows. Other studies retain native time.
+.scp_filter_time_basis <- function(m, time_basis = NULL) {
+  if (!is.null(time_basis) &&
+      (length(time_basis) != 1L || is.na(time_basis) ||
+       !time_basis %in% c("DIP", "TOD", "all"))) {
+    stop("time_basis must be NULL, 'DIP', 'TOD', or 'all'.", call. = FALSE)
+  }
+  gtex <- !is.na(m$dataset) & toupper(m$dataset) == "GTEX"
+  if (!any(gtex)) return(m)
+  if (!all(c("gtex_release", "time_basis") %in% names(m))) {
+    stop("The GTEx manifest lacks release or input-time metadata. Reinstall SCP.",
+         call. = FALSE)
+  }
+  current <- gtex & !is.na(m$gtex_release) & m$gtex_release == "v10" &
+    !is.na(m$time_basis) & m$time_basis %in% c("DIP", "TOD")
+  chosen <- if (is.null(time_basis)) "DIP" else time_basis
+  keep <- !gtex | (current & (chosen == "all" | m$time_basis == chosen))
+  m[which(keep), , drop = FALSE]
+}
+
+.scp_validate_gtex_pilot <- function(p, row) {
+  release <- p$gtex_release %||% p$source_provenance$gtex_release %||%
+    p$source_provenance$release
+  basis <- p$time_basis %||% p$source_provenance$time_basis
+  if (!identical(release, "v10") || !identical(basis, row$time_basis[1])) {
+    stop("The GTEx pilot does not match its v10 input-time metadata. Reinstall SCP.",
+         call. = FALSE)
+  }
+  if (!inherits(p$time_distribution, "SCPTimeDistribution")) {
+    stop("The GTEx pilot has no aggregate input-time distribution. Reinstall SCP.",
+         call. = FALSE)
+  }
+  .scp_validate_time_distribution(p$time_distribution)
+  p$gtex_release <- release
+  p$time_basis <- basis
+  p$time_source <- p$time_source %||% row$time_source[1]
+  p$n_samples <- p$n_samples %||% row$n[1]
+  p
+}
+
+
 # scp_pilots: load the manifest
 
 #' List Bundled SCP Pilot Datasets
@@ -62,7 +103,11 @@ NULL
 #'   \code{"pending"}, \code{"verify_failed"}, \code{"controlled"}, and
 #'   \code{"ingest_failed"} entries.
 #'
-#' @return A data.frame with one row per (dataset, tissue, condition)
+#' @param time_basis GTEx input time. \code{NULL} selects CHIRAL-estimated
+#'   time (DIP). Use \code{"TOD"} for season-adjusted time of death or
+#'   \code{"all"} to list both. Other datasets retain native time.
+#'
+#' @return A data.frame with one row per (dataset, tissue, condition, time basis)
 #'   pilot. Columns: \code{species}, \code{dataset}, \code{tissue},
 #'   \code{condition}, \code{n}, \code{ngenes}, \code{design},
 #'   \code{assay}, \code{sample_type}, \code{accession}, \code{citation},
@@ -73,12 +118,14 @@ NULL
 #' scp_pilots(species = "human")
 #' scp_pilots(status = "all")
 #' @export
-scp_pilots <- function(species = NULL, status = "ingested") {
+scp_pilots <- function(species = NULL, status = "ingested",
+                       time_basis = NULL) {
   m <- utils::read.csv(.scp_manifest_path(), stringsAsFactors = FALSE)
   if (!is.null(species)) m <- m[m$species %in% species, , drop = FALSE]
   if (!is.null(status) && !identical(status, "all")) {
     m <- m[m$status %in% status, , drop = FALSE]
   }
+  m <- .scp_filter_time_basis(m, time_basis)
   rownames(m) <- NULL
   m
 }
@@ -130,6 +177,10 @@ scp_pilots <- function(species = NULL, status = "ingested") {
 #'   decouples sigma from amplitude, giving the wide \eqn{r} used by the
 #'   effect-size-stratified panels (Fig 1-2 Panels B/C).
 #'
+#' @param time_basis GTEx input time. \code{NULL} or \code{"DIP"}
+#'   selects CHIRAL-estimated time. \code{"TOD"} selects season-adjusted
+#'   time of death. Other datasets require \code{NULL}.
+#'
 #' @return A \code{CircadianBioOptions} object with empirical
 #'   distributions of mesor, log-sigma, amplitude, phase, and proportion
 #'   rhythmic, ready for downstream simulation.
@@ -145,11 +196,20 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
                            alpha_pilot = 0.01,
                            adjust = c("none", "BH"),
                            K = 1,
-                           paired_sigma = TRUE) {
+                           paired_sigma = TRUE,
+                           time_basis = NULL) {
   adjust <- match.arg(adjust)
   K <- as.integer(K)
+  if (length(K) != 1L || is.na(K) || !K %in% c(1L, 2L))
+    stop("K must be 1 or 2.", call. = FALSE)
+  if (identical(time_basis, "all"))
+    stop("Choose DIP or TOD when loading a GTEx pilot.", call. = FALSE)
+  if (!is.null(time_basis) && !identical(toupper(dataset), "GTEX"))
+    stop("DIP and TOD choices apply only to GTEx pilots. Use time_basis = NULL for this dataset.",
+         call. = FALSE)
   stopifnot(length(species) == 1, length(dataset) == 1, length(tissue) == 1)
-  m <- scp_pilots(species = species, status = "ingested")
+  m <- scp_pilots(species = species, status = "ingested",
+                  time_basis = time_basis)
   hit <- m$dataset == dataset & m$tissue == tissue
   if (!is.null(condition)) hit <- hit & m$condition == condition
   m <- m[hit, , drop = FALSE]
@@ -176,6 +236,7 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
     }
   }
   p <- readRDS(path)
+  if (identical(toupper(dataset), "GTEX")) p <- .scp_validate_gtex_pilot(p, m)
   # Harmonize amplitude / phase to match sigma_rhythmic length when the pilot
   # was built with mismatched per-slot gene sets (caught in several agent-
   # ingested GTEx pilots: amplitude held the full-threshold set while
@@ -310,6 +371,10 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
 #' @param sample_type Character. Default \code{"in_vivo"}. Use
 #'   \code{NULL} to include cell-line pilots as well.
 #'
+#' @param time_basis GTEx input time. \code{NULL} selects DIP. Use
+#'   \code{"TOD"} for season-adjusted time of death or \code{"all"}
+#'   to return both variants. Other datasets retain native time.
+#'
 #' @return A data.frame: rows of the manifest passing every active filter.
 #'
 #' @examples
@@ -320,8 +385,10 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
 scp_pilot_search <- function(query = NULL,
                              species = NULL,
                              tissue_pattern = NULL,
-                             sample_type = "in_vivo") {
-  m <- scp_pilots(species = species, status = "ingested")
+                             sample_type = "in_vivo",
+                             time_basis = NULL) {
+  m <- scp_pilots(species = species, status = "ingested",
+                  time_basis = time_basis)
   if (!is.null(sample_type)) m <- m[m$sample_type %in% sample_type, , drop = FALSE]
   if (!is.null(tissue_pattern)) {
     hit <- grepl(tissue_pattern, m$tissue, ignore.case = TRUE)

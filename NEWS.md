@@ -1,3 +1,16 @@
+# SCP 0.5.0
+
+## GTEx data
+
+* Updated the active GTEx database to v10. CHIRAL-estimated time (DIP) is the
+  default input time. Season-adjusted time of death (TOD) is available through
+  the package with `time_basis = "TOD"`.
+* The app uses DIP for bundled GTEx pilots. Other datasets and uploaded
+  collection times retain their existing timing conventions.
+* Added tracked builders, input-time metadata, source citations, and validation
+  for the v10 data. Earlier package versions remain available through GitHub
+  releases. Manuscript inputs and figures remain unchanged.
+
 # SCP 0.4.60
 
 ## Plotting

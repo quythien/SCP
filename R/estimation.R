@@ -231,7 +231,7 @@ estimate_circadian_params = function(data, times, period = 24,
     cat(sprintf("Phase mean: %.1f h (concentration: %.2f)\n",
                 params$phi_mean, params$phi_concentration))
     cat(sprintf("Noise (sigma): %.3f +/- %.3f\n", params$sigma_mean, params$sigma_sd))
-    cat(sprintf("Effect size (r = A/sigma): %.3f +/- %.3f (median: %.3f)\n",
+    cat(sprintf("Signal-to-noise ratio (r = A/sigma): %.3f +/- %.3f (median: %.3f)\n",
                 params$r_mean, params$r_sd, params$r_median))
     cat(sprintf("Proportion rhythmic: %.1f%%\n", 100 * params$prop_rhythmic))
     cat(sprintf("Phase distribution: %s\n",

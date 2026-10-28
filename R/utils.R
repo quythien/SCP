@@ -13,7 +13,7 @@
 #'
 #' @param n Sample size (NULL to solve for n)
 #' @param power Target power (NULL to solve for power)
-#' @param r Effect size (A/sigma)
+#' @param r Signal-to-noise ratio (A/sigma)
 #' @param alpha Significance level
 #' @param design_factor Sampling design factor (0.5 for even spacing)
 #'

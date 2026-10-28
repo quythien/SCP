@@ -21,8 +21,8 @@ CircadianDesignOptions(
 \item{design}{Sampling design: \code{"active"} places collection times on
 an even grid, \code{"passive"} draws them from \code{cts}.}
 
-\item{cts}{Numeric vector giving the time-of-day distribution used for a
-passive design.}
+\item{cts}{Numeric sampling times, or a bundled pilot's
+\code{time_distribution} aggregate for a passive design.}
 
 \item{B_values}{Optional vector of time-point counts (B) to sweep, in
 addition to \code{sample_sizes}. \code{NULL} runs the single B implied

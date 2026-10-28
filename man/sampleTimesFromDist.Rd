@@ -2,22 +2,20 @@
 % Please edit documentation in R/simulation.R
 \name{sampleTimesFromDist}
 \alias{sampleTimesFromDist}
-\title{Sample Time Points from an Empirical TOD Distribution}
+\title{Sample Time Points from an Input-Time Distribution}
 \usage{
 sampleTimesFromDist(n, cts)
 }
 \arguments{
-\item{n}{Integer. Number of time points to sample.}
+\item{n}{Integer. Number of sampling times to draw.}
 
-\item{cts}{Numeric vector. Pilot TOD values (hours, any range, wrapped to
-\code{[0, 24)} internally).}
+\item{cts}{Numeric vector of observed times in hours, or the
+\code{time_distribution} object stored in a bundled GTEx pilot.}
 }
 \value{
-Numeric vector of length \code{n} with sampled TOD values in
-  \code{[0, 24)}.
+Numeric vector of length \code{n} with sampled times in hours.
 }
 \description{
-Draws \code{n} time-of-day (TOD) values from a circular kernel density
-estimate of a pilot TOD distribution. Handles wrap-around at 0h/24h
-using a tripled-data trick so boundary contributions are preserved.
+Draws sampling times from a circular kernel density estimate of observed
+input times, or from the saved aggregate distribution in a bundled pilot.
 }

@@ -378,8 +378,8 @@ CircadianBioOptions <- function(ngenes = 5000,
 #' @param nsims Number of simulation replicates run at each sample size.
 #' @param design Sampling design: \code{"active"} places collection times on
 #'   an even grid, \code{"passive"} draws them from \code{cts}.
-#' @param cts Numeric vector giving the time-of-day distribution used for a
-#'   passive design.
+#' @param cts Numeric sampling times, or a bundled pilot's
+#'   \code{time_distribution} aggregate for a passive design.
 #' @param B_values Optional vector of time-point counts (B) to sweep, in
 #'   addition to \code{sample_sizes}. \code{NULL} runs the single B implied
 #'   by \code{cts}.
@@ -402,7 +402,14 @@ CircadianDesignOptions <- function(sample_sizes = c(10, 20, 40, 60, 80, 100),
   design <- match.arg(design)
   stopifnot(all(sample_sizes > 0), nsims > 0)
   if (design == "passive" && is.null(cts))
-    stop("cts (time-of-day vector) is required for passive design")
+    stop("cts is required for passive design. Supply pilot$time_distribution or observed numeric times.")
+  if (inherits(cts, "SCPTimeDistribution")) {
+    .scp_validate_time_distribution(cts)
+    if (design != "passive")
+      stop("Use an aggregate input-time distribution only with a passive design.", call. = FALSE)
+  } else if (!is.null(cts)) {
+    .scp_validate_realized_times(cts)
+  }
 
   opts <- list(
     sample_sizes = sample_sizes,
@@ -694,7 +701,10 @@ print.CircadianDesignOptions <- function(x, ...) {
   if (!is.null(x$B_values)) {
     cat(sprintf("  B_values:       %s\n", paste(x$B_values, collapse = ", ")))
   }
-  if (!is.null(x$cts)) {
+  if (inherits(x$cts, "SCPTimeDistribution")) {
+    cat(sprintf("  cts:            aggregate distribution from %d samples\n",
+                x$cts$n_observed))
+  } else if (!is.null(x$cts)) {
     cat(sprintf("  cts:            %d time points\n", length(x$cts)))
   }
   invisible(x)

@@ -29,7 +29,7 @@ are simulated under a population-average cosinor model for candidate designs.
 The bootstrap quantifies uncertainty in the pilot-implied parameter distribution
 (mesor, amplitude, phase, noise). It does NOT create subject-level variability
 within a single simulation; that is captured by sigma_g (residual SD from the
-cosinor fit), which represents pooled between-subject spread conditional on TOD.
+cosinor fit), which represents pooled between-subject spread conditional on the supplied input time.
 sigma_g does NOT model subject-specific random effects in M, A, or phi, the
 model is a population-average cosinor, which is a defensible first-order
 baseline for cross-sectional post-mortem studies.

@@ -12,7 +12,8 @@ scp_load_pilot(
   alpha_pilot = 0.01,
   adjust = c("none", "BH"),
   K = 1,
-  paired_sigma = TRUE
+  paired_sigma = TRUE,
+  time_basis = NULL
 )
 }
 \arguments{
@@ -54,6 +55,10 @@ the same pilot gene, preserving the realistic narrow \eqn{r = A/\sigma}
 distribution (the marginal-power / Fig 1-2 Panel A convention). \code{FALSE}
 decouples sigma from amplitude, giving the wide \eqn{r} used by the
 effect-size-stratified panels (Fig 1-2 Panels B/C).}
+
+\item{time_basis}{GTEx input time. \code{NULL} or \code{"DIP"}
+selects CHIRAL-estimated time. \code{"TOD"} selects season-adjusted
+time of death. Other datasets require \code{NULL}.}
 }
 \value{
 A \code{CircadianBioOptions} object with empirical
