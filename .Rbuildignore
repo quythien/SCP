@@ -59,3 +59,5 @@
 ^inst/extdata/pilots/human/GTEx_[^/]*[.]rds$
 ^publication$
 ^scratchpad$
+^inst/extdata/pilots/human/gtex_v10/dip$
+^paper_reproduction$

@@ -1,0 +1,40 @@
+\begin{table}[!htbp]
+\caption{Intrinsic effect sizes ($r = A/\sigma$) from selected public
+circadian transcriptomic datasets in human and mouse. Rows other than the GTEx
+tissues are adapted from \citet{zong2023circapower}; the three GTEx rows
+(Adrenal Gland, Liver, Skeletal Muscle) are computed from this study's GTEx
+pilots. Per-gene $r$ is summarized by the median across the seven canonical
+core clock genes (\textit{ARNTL}, \textit{CLOCK}, \textit{NR1D1},
+\textit{PER1}, \textit{PER2}, \textit{CRY1}, \textit{CRY2}) and across the
+top 100 rhythmic genes; this top-100 median differs slightly from the median
+effect size $\tilde{r}$ quoted in the main text, which is taken over the top
+$K_{\mathrm{top}}$ ($\leq 300$) rhythmic genes used to calibrate the
+simulations.\label{tab:effect_sizes}}%
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{@{}llrcc@{}}
+\toprule
+Study & Tissue & $n_{\mathrm{pilot}}$ & \multicolumn{2}{c@{}}{Median $r$} \\
+\cmidrule(l){4-5}
+ & & & 7 core & top 100 \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{H.\ sapiens}} \\
+Chen et al.\ \citeyearpar{chen2016aging} & PFC (BA11) & 147 & 0.91 & 0.46 \\
+\quad GSE71620 & PFC (BA47) & 147 & 0.77 & 0.44 \\
+Ketchesin et al.\ \citeyearpar{ketchesin2021diurnal} & Striatum (NAc) & 59 & 0.71 & 1.06 \\
+\quad GSE160521 & Striatum (Caudate) & 59 & 1.04 & 0.82 \\
+ & Striatum (Putamen) & 59 & 0.76 & 1.04 \\
+GTEx Consortium \citeyearpar{gtex2020atlas} & Adrenal Gland & 187 & 0.90 & 1.05 \\
+ & Liver & 154 & 0.36 & 0.54 \\
+ & Skeletal Muscle & 748 & 0.31 & 0.62 \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{M.\ musculus}} \\
+Hughes et al.\ \citeyearpar{hughes2009harmonics} & Liver & 48 & 2.00 & 2.77 \\
+\quad GSE11923 & & & & \\
+Zhang et al.\ \citeyearpar{zhang2014comprehensive} & Liver (GSE54650) & 24 & 3.51 & 3.67 \\
+ & Kidney & 24 & 6.33 & 3.65 \\
+ & Cerebellum & 24 & 3.52 & 2.01 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -25,15 +25,38 @@ options(shiny.maxRequestSize = 5 * 1024^3)
 .demo_mode <- nzchar(Sys.getenv("SCP_SHINY_DEMO"))
 .demo_pilots <- Sys.getenv("SCP_SHINY_DEMO_PILOTS", file.path(getwd(), "pilots"))
 
+
+# GTEx retains aggregate counts rather than individual sampling times.
+.sampling_histogram_file <- if (.demo_mode)
+  file.path(.demo_pilots, "gtex_v10_TOD_sampling_histograms.csv") else
+  system.file("extdata", "pilots", "gtex_v10_TOD_sampling_histograms.csv", package = "SCP")
+.sampling_histograms <- if (nzchar(.sampling_histogram_file) &&
+                            file.exists(.sampling_histogram_file))
+  utils::read.csv(.sampling_histogram_file, stringsAsFactors = FALSE) else NULL
+
+.app_sampling_histogram <- function(tissue, condition, table = .sampling_histograms) {
+  if (is.null(table)) return(NULL)
+  selected <- table$dataset == "GTEx" & table$tissue == tissue &
+    table$condition == condition & table$gtex_release == "v10" & table$time_basis == "TOD"
+  out <- table[which(selected), , drop = FALSE]
+  out <- out[order(out$bin_start), , drop = FALSE]
+  if (nrow(out) != 24L || !identical(as.numeric(out$bin_start), as.numeric(0:23)) ||
+      !identical(as.numeric(out$bin_end), as.numeric(1:24)) ||
+      any(!is.finite(out$count)) || any(out$count < 0 | out$count != floor(out$count)) ||
+      length(unique(out$n_samples)) != 1L || sum(out$count) != out$n_samples[1])
+    return(NULL)
+  out
+}
+
 .read_manifest <- function() {
   if (.demo_mode) {
     manifest_file <- file.path(.demo_pilots, "manifest.csv")
     if (!file.exists(manifest_file)) stop("The demo pilot manifest is missing.")
     m <- utils::read.csv(manifest_file, stringsAsFactors = FALSE)
     m <- m[m$status == "ingested", , drop = FALSE]
-    getFromNamespace(".scp_filter_time_basis", "SCP")(m, time_basis = "DIP")
+    getFromNamespace(".scp_filter_time_basis", "SCP")(m, time_basis = "TOD")
   } else {
-    SCP::scp_pilots(status = "ingested", time_basis = "DIP")
+    SCP::scp_pilots(status = "ingested", time_basis = "TOD")
   }
 }
 
@@ -54,14 +77,13 @@ options(shiny.maxRequestSize = 5 * 1024^3)
       p <- getFromNamespace(".scp_validate_gtex_pilot", "SCP")(p, row)
     p
   } else {
-    basis <- if (identical(toupper(dataset), "GTEX")) "DIP" else NULL
+    basis <- if (identical(toupper(dataset), "GTEX")) "TOD" else NULL
     SCP::scp_load_pilot(species, dataset, tissue, condition, K = K,
                         time_basis = basis)
   }
 }
 
 .app_input_time_label <- function(p) {
-  if (identical(p$time_basis, "DIP")) return("CHIRAL-estimated time (DIP)")
   if (identical(p$time_basis, "TOD")) return("Season-adjusted time of death (TOD)")
   "Study sampling time"
 }
@@ -365,7 +387,7 @@ ui <- fluidPage(
       h4("Sample size grid"),
       sliderInput("n_min", HTML("N<sub>min</sub> (minimum sample size)"), min = 4, max = 100,
                   value = 20, step = 2),
-      sliderInput("n_max", HTML("N<sub>max</sub> (maximum sample size)"), min = 20, max = 500,
+      sliderInput("n_max", HTML("N<sub>max</sub> (maximum sample size)"), min = 20, max = 5000,
                   value = 120, step = 10),
       sliderInput("n_step", "Step", min = 2, max = 60,
                   value = 20, step = 2),
@@ -399,7 +421,7 @@ ui <- fluidPage(
           uiOutput("pilot_links")
         ),
         column(5,
-          h4("Sampling input time", style = "text-align:center;"),
+          h4("Pilot sampling times", style = "text-align:center;"),
           plotOutput("tod_plot", height = "auto", width = "auto")
         )
       ),
@@ -797,6 +819,7 @@ server <- function(input, output, session) {
   })
 
   output$pilot_links <- renderUI({
+    if (identical(input$pilot_source, "upload")) return(NULL)
     req(input$species, input$dataset, input$tissue, input$condition)
     m <- manifest()
     sub <- m[m$species == input$species & m$design == input$design_filter &
@@ -809,60 +832,66 @@ server <- function(input, output, session) {
     if (grepl("^GSE[0-9]+", acc)) {
       gse <- regmatches(acc, regexpr("GSE[0-9]+", acc))
       url <- sprintf("https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=%s", gse)
-    } else if (grepl("GTEx", acc, ignore.case = TRUE)) {
+    } else if (identical(input$dataset, "GTEx")) {
       url <- "https://gtexportal.org/"
     } else if (grepl("CMC|Seney", acc, ignore.case = TRUE)) {
       url <- "https://www.synapse.org/#!Synapse:syn2759792"
     } else if (grepl("E-MTAB", acc)) {
       url <- sprintf("https://www.ebi.ac.uk/biostudies/arrayexpress/studies/%s", acc)
     }
-    HTML(sprintf(
-      "<div style='margin-top:6px; font-size:0.9em;'><b>Accession:</b> %s%s<br/><b>Citation:</b> <i>%s</i></div>",
-      acc,
-      if (nzchar(url)) sprintf(" &nbsp;<a href='%s' target='_blank'>open page &rarr;</a>", url) else "",
-      paste0(cit, if (identical(input$dataset, "GTEx"))
-        "<br/><b>Input time:</b> CHIRAL-estimated time (DIP). Talamanca, Gobet and Naef (2023), <a href='https://doi.org/10.1126/science.add0846' target='_blank'>Science</a>." else "")
-    ))
+    if (identical(input$dataset, "GTEx")) {
+      return(tags$div(style = "margin-top:6px; font-size:0.9em;",
+        tags$b("Data source: "), paste0("GTEx v10 (", acc, "). "),
+        tags$a(href = url, target = "_blank", "GTEx Portal"), tags$br(),
+        tags$b("Data reference: "),
+        tags$a(href = "https://doi.org/10.1126/science.aaz1776", target = "_blank",
+               "GTEx Consortium (2020)"), ".", tags$br(),
+        tags$b("Expression normalization: "),
+        tags$a(href = "https://doi.org/10.1126/science.add0846", target = "_blank",
+               "Talamanca et al. (2023)"), ".", tags$br(),
+        tags$b("Input time: "), "Season-adjusted time of death (TOD)."))
+    }
+    tags$div(style = "margin-top:6px; font-size:0.9em;",
+      tags$b("Accession: "), acc,
+      if (nzchar(url)) tags$a(href = url, target = "_blank", " open page"),
+      tags$br(), tags$b("Citation: "), tags$i(cit))
   })
 
   output$pilot_summary <- renderText({
     p <- pilot()
     if (is.null(p)) return("Pick a (species, dataset, tissue, condition) above.")
-    # Uploaded pilots have no manifest row; summarise straight from the object.
-    if (isTRUE(input$pilot_source == "upload")) {
-      amp <- p$amplitude %||% numeric(0); sig <- p$sigma_rhythmic %||% numeric(0)
-      k <- min(length(amp), length(sig))
-      rv <- if (k > 0L) { v <- amp[seq_len(k)] / sig[seq_len(k)]; v[is.finite(v) & v > 0] } else numeric(0)
+    amp <- p$amplitude %||% numeric(0)
+    sig <- p$sigma_rhythmic %||% numeric(0)
+    k <- min(length(amp), length(sig))
+    ratio <- if (k) amp[seq_len(k)] / sig[seq_len(k)] else numeric(0)
+    ratio <- ratio[is.finite(ratio) & ratio > 0]
+    effect_n <- length(ratio)
+    r_med <- if (effect_n) median(ratio) else NA_real_
+    r_q25 <- if (effect_n) unname(quantile(ratio, 0.25)) else NA_real_
+    r_q75 <- if (effect_n) unname(quantile(ratio, 0.75)) else NA_real_
+    ratio_text <- if (!effect_n) "NA" else if (effect_n == 1L) {
+      sprintf("%.3f (one selected gene)", r_med)
+    } else {
+      sprintf("%.3f   IQR [%.3f, %.3f]", r_med, r_q25, r_q75)
+    }
+    rhy_label <- if (input$rhy_stat == "q") {
+      sprintf("FDR %.0f%%", 100 * as.numeric(input$rhy_thresh))
+    } else sprintf("p < %.3g", as.numeric(input$rhy_thresh))
+
+    if (identical(input$pilot_source, "upload")) {
       nsamp <- length(p$times %||% p$raw$times %||% numeric(0))
-      rlab  <- if (input$rhy_stat == "q") sprintf("FDR %.0f%%", 100*as.numeric(input$rhy_thresh))
-               else sprintf("p < %.3g", as.numeric(input$rhy_thresh))
       return(sprintf(paste0(
         "Pilot     : User-uploaded\n",
         "Samples (n) : %s\nGenes     : %s\n",
         "Prop. rhythmic (%s) : %s\n",
-        "Median signal-to-noise ratio (r) : %s   IQR [%s, %s]"),
+        "Effect-size genes : %s\n",
+        "Median signal-to-noise ratio (r) : %s"),
         if (nsamp > 0L) nsamp else "NA",
-        format(p$ngenes %||% NA_integer_, big.mark = ","),
-        rlab,
-        if (is.finite(p$prop_rhythmic %||% NA_real_)) sprintf("%.1f%%", 100*p$prop_rhythmic) else "NA",
-        if (length(rv) >= 3L) sprintf("%.2f", median(rv)) else "NA",
-        if (length(rv) >= 3L) sprintf("%.2f", quantile(rv, .25)) else "NA",
-        if (length(rv) >= 3L) sprintf("%.2f", quantile(rv, .75)) else "NA"))
-    }
-    # Prefer cached r-tilde summaries baked into the pilot (correct gene pairing)
-    r_med <- p$r_median %||% NA_real_
-    r_q25 <- p$r_q25    %||% NA_real_
-    r_q75 <- p$r_q75    %||% NA_real_
-    if (!is.finite(r_med)) {
-      amp <- p$amplitude %||% numeric(0); sig <- p$sigma_rhythmic %||% numeric(0)
-      n_min <- min(length(amp), length(sig))
-      if (n_min > 0L) {
-        r <- amp[seq_len(n_min)] / sig[seq_len(n_min)]
-        r <- r[is.finite(r) & r > 0]
-        if (length(r) > 0) {
-          r_med <- median(r); r_q25 <- quantile(r, 0.25); r_q75 <- quantile(r, 0.75)
-        }
-      }
+        format(p$ngenes %||% NA_integer_, big.mark = ","), rhy_label,
+        if (is.finite(p$prop_rhythmic %||% NA_real_)) {
+          sprintf("%.1f%%", 100 * p$prop_rhythmic)
+        } else "NA",
+        format(effect_n, big.mark = ","), ratio_text))
     }
     # prop_rhythmic was already set at the chosen threshold in pilot(); for legacy
     # pilots without rhythm_fit, recompute from the raw p-vector.
@@ -882,7 +911,8 @@ server <- function(input, output, session) {
         "Samples (n) : %s\n",
         "Genes     : %s\n",
         "Prop. rhythmic (%s) : %s\n",
-        "Median signal-to-noise ratio (r) : %s   IQR [%s, %s]"
+        "Effect-size genes : %s\n",
+        "Median signal-to-noise ratio (r) : %s"
       ),
       input$species, input$dataset, input$tissue, input$condition,
       paste(c(if (!is.null(p$gtex_release)) paste("GTEx", p$gtex_release),
@@ -920,9 +950,7 @@ server <- function(input, output, session) {
       },
       rhy_label,
       if (!is.finite(prop_at_fdr)) "NA" else sprintf("%.1f%%", 100 * prop_at_fdr),
-      if (!is.finite(r_med)) "NA" else sprintf("%.2f", r_med),
-      if (!is.finite(r_q25)) "NA" else sprintf("%.2f", r_q25),
-      if (!is.finite(r_q75)) "NA" else sprintf("%.2f", r_q75)
+      format(effect_n, big.mark = ","), ratio_text
     )
   })
 
@@ -935,14 +963,17 @@ server <- function(input, output, session) {
       text(0, 0, "No pilot loaded", cex = 1.2, col = "grey40")
       return()
     }
-    if (inherits(p$time_distribution, "SCPTimeDistribution")) {
-      td <- p$time_distribution
-      density <- td$weights / sum(td$weights) / mean(diff(td$grid))
-      plot(td$grid, density, type = "l", lwd = 2, col = "#1f78b4",
-           xlim = c(0, td$period), xlab = "Input time (h)", ylab = "Density",
-           main = "", xaxt = "n", ylim = c(0, max(density) * 1.05))
-      axis(1, at = seq(0, td$period, by = 4))
-      title(main = sprintf("%s samples, %s", td$n_observed, p$time_basis),
+    if (identical(p$gtex_release, "v10") && identical(p$time_basis, "TOD")) {
+      sampling <- .app_sampling_histogram(.resolve_actual_tissue(), input$condition)
+      validate(need(!is.null(sampling), "Sampling counts are not available for this pilot."))
+      plot(c(0, 24), c(0, max(1, sampling$count) * 1.1), type = "n",
+           xlim = c(0, 24), ylim = c(0, max(1, sampling$count) * 1.1),
+           xlab = "Season-adjusted TOD (h)", ylab = "Samples", main = "",
+           xaxt = "n", xaxs = "i", yaxs = "i")
+      rect(sampling$bin_start, 0, sampling$bin_end, sampling$count,
+           col = "#a6cee3", border = "#1f78b4")
+      axis(1, at = seq(0, 24, by = 4))
+      title(main = sprintf("%s samples, one-hour bins", sampling$n_samples[1]),
             cex.main = 1.0, line = 0.6)
       return()
     }
@@ -982,7 +1013,7 @@ server <- function(input, output, session) {
     }
 
     n_u <- length(unique(round(phases, 1)))
-    h <- hist(phases, breaks = seq(0, 24, by = 1), plot = FALSE)
+    h <- hist(phases, breaks = seq(0, 24, by = 1), right = FALSE, plot = FALSE)
     plot(h, col = "#a6cee3", border = "#1f78b4", xlim = c(0, 24),
          xlab = "Sampling time (h, mod 24)", ylab = "Samples", main = "",
          xaxt = "n")
@@ -996,6 +1027,8 @@ server <- function(input, output, session) {
   sim_result <- eventReactive(input$run, {
     p <- pilot()
     req(p)
+    validate(need(length(p$amplitude) > 0L && isTRUE(p$prop_rhythmic > 0),
+                  "No genes pass the pilot rhythmicity threshold. Power cannot be estimated from this selection."))
     withProgress(message = "Running simulation...", value = 0.1, {
       n_cores <- .safe_cores(4L)
       incProgress(0.2, detail = "Setting up design")

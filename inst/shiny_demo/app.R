@@ -1,7 +1,7 @@
 # Run the demo with the same app code as the installed package.
 version_file <- file.path(getwd(), "SCP_VERSION")
 expected_version <- Sys.getenv("SCP_SHINY_PACKAGE_VERSION",
-  if (file.exists(version_file)) readLines(version_file, n = 1L) else "0.5.0")
+  if (file.exists(version_file)) readLines(version_file, n = 1L) else "0.5.1")
 if (!requireNamespace("SCP", quietly = TRUE) ||
     as.character(utils::packageVersion("SCP")) != expected_version) {
   stop("Install SCP ", expected_version, " before launching this demo.")

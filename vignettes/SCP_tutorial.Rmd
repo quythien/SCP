@@ -91,11 +91,9 @@ library(SCP)
 pilot as a `CircadianBioOptions` object and go straight to simulation.
 For your own expression matrix, run `estCircadianParam()` first, as in Section 7.
 
-The default GTEx input is **CHIRAL-estimated time (DIP)**. CHIRAL estimates a
-donor's internal circadian time from clock-gene expression across tissues
-([Talamanca et al. 2023](https://doi.org/10.1126/science.add0846)). This is done
-once during data preparation. SCP then estimates gene acrophase relative to the
-chosen input time. CHIRAL is not rerun during simulation.
+The bundled GTEx pilots use normalized v10 expression and **season-adjusted
+time of death (TOD)**. SCP estimates gene acrophase relative to this input
+time.
 
 ```{r load-pilot}
 bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
@@ -107,17 +105,16 @@ cat(sprintf("Pilot: %d genes, %.1f%% rhythmic, period = %g h\n",
             bio$ngenes, 100 * bio$prop_rhythmic, bio$period))
 ```
 
-The examples provide two sources of donor input time: DIP and
-**season-adjusted time of death (TOD)**. Both use v10 expression. SCP estimates
-power conditional on the fitted pilot, input time, sampling design, and model.
+SCP estimates power conditional on the fitted pilot, input time, sampling
+design, and model. Users can also provide their own expression data and sample
+times, as illustrated in Section 7.
 
 The cosinor model describes mean expression over input time. It does not require
-sampling times to follow a cosine distribution. The app uses DIP for its bundled
+sampling times to follow a cosine distribution. The app uses TOD for its bundled
 GTEx examples.
 
 ```{r input-time-options}
-bio_tod <- scp_load_pilot("human", "GTEx", "Adrenal", "All", time_basis = "TOD")
-scp_pilot_search("adrenal", time_basis = "all")[,
+scp_pilot_search("adrenal")[,
   c("dataset", "tissue", "gtex_release", "time_basis", "n")]
 
 # Passive sampling uses an aggregate distribution of the pilot input times.
@@ -128,8 +125,12 @@ design_passive <- CircadianDesignOptions(
 ```
 
 The GTEx project reference is the [GTEx Consortium atlas
-(2020)](https://doi.org/10.1126/science.aaz1776). The source manifest identifies
-v10 files, their preprocessing, and cohort exclusions. Earlier package pilots
+(2020)](https://doi.org/10.1126/science.aaz1776). Within-tissue TMM normalization
+and log-CPM calculation follow the normalization step of [Talamanca et al.
+(2023)](https://doi.org/10.1126/science.add0846). The builder retains samples
+with valid TOD, keeps the first gene for each symbol, and selects genes with
+mean log-CPM greater than 3. Cosinor models are fitted to normalized expression.
+The source manifest records the inputs and recipe. Earlier package pilots
 remain available in the GitHub release history.
 
 # 3. Inspect the signal-to-noise ratios

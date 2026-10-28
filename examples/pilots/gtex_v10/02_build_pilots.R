@@ -15,7 +15,7 @@ original_manifest <- utils::read.csv("inst/extdata/pilots/manifest.csv",
 targets <- original_manifest[original_manifest$dataset == "GTEx" &
                                original_manifest$status == "ingested" &
                                !grepl("^Cells", original_manifest$tissue) &
-                               original_manifest$time_basis == "DIP", , drop = FALSE]
+                               original_manifest$time_basis == "TOD", , drop = FALSE]
 stopifnot(nrow(targets) == 46L)
 targets$source_tissue <- ifelse(targets$tissue == "Adrenal", "Adrenal_Gland", targets$tissue)
 stopifnot(all(targets$source_tissue %in% names(broad)))
@@ -67,7 +67,7 @@ signal_summary <- function(fit, tissue, basis, n, n_source, n_dip, n_tod) {
   quant <- function(p) if (length(ratio)) unname(stats::quantile(ratio, p)) else NA_real_
   data.frame(species = "human", dataset = "GTEx", tissue = tissue,
              condition = "All", gtex_release = "v10", time_basis = basis,
-             is_default = basis == "DIP", n = n, n_source = n_source,
+             is_default = basis == "TOD", n = n, n_source = n_source,
              n_with_DIP = n_dip, n_with_TOD = n_tod, ngenes = nrow(fit),
              n_selected = length(selected), r_median_top300 = quant(0.5),
              r_q25_top300 = quant(0.25), r_q75_top300 = quant(0.75),
@@ -140,16 +140,17 @@ for (i in seq_len(nrow(targets))) {
     row_out$license <- "GTEx Portal Data License"
     row_out$time_basis <- basis
     row_out$time_source <- source_label
-    row_out$citation <- paste("GTEx Consortium. GTEx v10. phs000424.",
-      "CHIRAL: Talamanca, Gobet and Naef (2023). Science 379:478-483. doi:10.1126/science.add0846")
-    row_out$is_default <- basis == "DIP"
+    row_out$citation <- paste("GTEx Consortium (2020).",
+      "The GTEx Consortium atlas of genetic regulatory effects across human tissues.",
+      "Science 369(6509):1318-1330. doi:10.1126/science.aaz1776.")
+    row_out$is_default <- basis == "TOD"
     row_out$n_source <- ncol(expr_all)
     row_out$n_excluded <- ncol(expr_all) - ncol(expr)
     row_out$tod_n_unique <- length(unique(times))
     row_out$tod_cycles <- NA_real_
     row_out$tod_step_hr <- NA_character_
     row_out$tod_phases <- NA_character_
-    row_out$note <- if (source_tissue == "Whole_Blood")
+    row_out$note <- if (source_tissue == "Whole_Blood" && basis == "DIP")
       "Donor DIP transferred from other organs. Whole Blood was not used for inference." else ""
     row_out$has_k2 <- TRUE
 

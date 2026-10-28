@@ -1,4 +1,4 @@
-citHeader("To cite SCP, use the software citation. Also cite the data and input-time method when using the bundled GTEx pilots.")
+citHeader("To cite SCP, use the software citation. Also cite the data and expression normalization reference when using the bundled GTEx pilots.")
 
 bibentry(
   bibtype = "Manual",
@@ -7,7 +7,7 @@ bibentry(
              person("Marianne L.", "Seney"), person("Colleen A.", "McClung"),
              person("Guan", "Yu"), person("George C.", "Tseng")),
   year = "2026",
-  note = "R package version 0.5.0",
+  note = "R package version 0.5.1",
   url = "https://github.com/quythien/SCP"
 )
 
@@ -18,7 +18,7 @@ bibentry(
              person("Felix", "Naef")),
   year = "2023", journal = "Science", volume = "379", pages = "478--483",
   doi = "10.1126/science.add0846",
-  note = "CHIRAL method used offline to estimate donor input times for the v10 pilots"
+  note = "Expression normalization reference for the v10 TOD pilots"
 )
 
 bibentry(
@@ -27,5 +27,5 @@ bibentry(
   author = person(given = "GTEx Consortium"),
   year = "2020", journal = "Science", volume = "369", pages = "1318--1330",
   doi = "10.1126/science.aaz1776",
-  note = "GTEx project reference. The bundled GTEx pilots in SCP 0.5.0 use release v10"
+  note = "GTEx project reference. The bundled GTEx pilots in SCP 0.5.1 use release v10"
 )

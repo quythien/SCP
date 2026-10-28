@@ -56,9 +56,8 @@ distribution (the marginal-power / Fig 1-2 Panel A convention). \code{FALSE}
 decouples sigma from amplitude, giving the wide \eqn{r} used by the
 effect-size-stratified panels (Fig 1-2 Panels B/C).}
 
-\item{time_basis}{GTEx input time. \code{NULL} or \code{"DIP"}
-selects CHIRAL-estimated time. \code{"TOD"} selects season-adjusted
-time of death. Other datasets require \code{NULL}.}
+\item{time_basis}{GTEx input time. \code{NULL} (default) or \code{"TOD"}
+selects season-adjusted time of death. Other datasets require \code{NULL}.}
 }
 \value{
 A \code{CircadianBioOptions} object with empirical

@@ -71,17 +71,17 @@ biology), a **design** object (sampling plan), and an **analysis** object
 SCP includes a pilot database. `scp_pilots()` lists the default entries and
 `scp_pilot_search()` filters them.
 
-Active GTEx pilots use v10 expression. Their default input is
-**CHIRAL-estimated time (DIP)**, a donor's estimated internal circadian time
-([Talamanca et al. 2023](https://doi.org/10.1126/science.add0846)). CHIRAL is run
-offline from clock-gene expression across tissues. It does not use recorded
-time of death to infer these times or align their origin. The GTEx project
-reference is the [GTEx Consortium atlas
+The bundled GTEx pilots use normalized v10 expression and **season-adjusted
+time of death (TOD)**. Within-tissue TMM normalization and log-CPM calculation
+follow the normalization step of [Talamanca et al.
+(2023)](https://doi.org/10.1126/science.add0846). The builder retains samples
+with valid TOD, keeps the first gene for each symbol, and selects genes with
+mean log-CPM greater than 3. Cosinor models are fitted to normalized expression.
+The GTEx project reference is the [GTEx Consortium atlas
 (2020)](https://doi.org/10.1126/science.aaz1776).
 
-SCP estimates each gene's acrophase relative to its input time. This gene
-parameter is separate from DIP. Power simulations reuse the prepared pilot
-and do not estimate DIP again.
+SCP estimates each gene's acrophase relative to the input time. Power
+simulations reuse the prepared pilot.
 
 ```{r discover}
 head(scp_pilots()[, c("species", "dataset", "tissue", "condition", "design")])
@@ -109,18 +109,17 @@ analysis <- CircadianAnalysisOptions(
 )
 ```
 
-The examples use two sources of donor input time: **CHIRAL-estimated time
-(DIP)** and **season-adjusted time of death (TOD)**. SCP estimates power
-conditional on the fitted pilot, input time, sampling design, and model.
+SCP estimates power conditional on the fitted pilot, input time, sampling
+design, and model. Users can also provide their own expression data and sample
+times.
 The cosinor model describes mean expression over input time and does not
 require the sampling times to follow a cosine distribution.
 
-The app uses DIP for bundled GTEx pilots and keeps uploaded collection times
+The app uses TOD for bundled GTEx pilots and keeps uploaded collection times
 unchanged.
 
 ```{r input-time-basis}
-bio_tod <- scp_load_pilot("human", "GTEx", "Adrenal", "All", time_basis = "TOD")
-head(scp_pilots(species = "human", time_basis = "all")[,
+head(scp_pilots(species = "human")[,
   c("dataset", "tissue", "gtex_release", "time_basis", "n")])
 
 # Use this distribution for a passive study with the default GTEx pilot.
@@ -131,8 +130,7 @@ design_passive <- CircadianDesignOptions(
 ```
 
 The source manifest records the v10 inputs and exclusions. Earlier package
-versions remain available through the GitHub release history. A stronger fit
-or a smaller simulated N80 does not independently validate the inferred time.
+versions remain available through the GitHub release history.
 
 ---
 
