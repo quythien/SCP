@@ -1,7 +1,7 @@
 Package: SCP
 Type: Package
 Title: Power Evaluation and Study Design for Circadian Biomarker Detection
-Version: 0.5.0
+Version: 0.5.1
 Date: 2026-10-28
 Authors@R: c(
     person("Thien Quy", "Pham", role = c("aut", "cre"),

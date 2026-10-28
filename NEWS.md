@@ -1,3 +1,14 @@
+# SCP 0.5.1
+
+## GTEx data
+
+* Updated the bundled GTEx pilots to normalized v10 expression with
+  season-adjusted TOD in the package and app.
+* The builders use all samples with valid TOD and the original SCP gene filter.
+  Added numbered scripts to rebuild the pilots, compare sample sizes, and
+  render the report.
+* Earlier DIP analyses remain in the release history.
+
 # SCP 0.5.0
 
 ## GTEx data

@@ -69,7 +69,8 @@
     "uses_subject_phenotypes": true,
     "uses_exact_age": false,
     "uses_recorded_death_time": false,
-    "complete_case_rule": "Author residual output with samples missing in the first gene removed by CPM_to_E"
+    "complete_case_rule": "Author residual output with samples missing in the first gene removed by CPM_to_E",
+    "scope": "Earlier paired CHIRAL research pipeline in scripts 00 through 09"
   },
   "CHIRAL": {
     "revision": "1f78a9a60b6d18facfedf5923d43bae9fa79f0b0",
@@ -78,7 +79,8 @@
     "maximum_iterations": 500,
     "consensus_function": "Phi.from.phi_mat",
     "consensus_ct": 1.95,
-    "consensus_min_tissues": 1
+    "consensus_min_tissues": 1,
+    "scope": "Earlier paired research analysis retained with SCP 0.5.0"
   },
   "normalized_CPM_cache": {
     "file": "v10_CPM_full.RData",
@@ -116,8 +118,55 @@
     "active_normalization": {
       "file": "examples/pilots/gtex_v10/00_normalize_inputs.R",
       "sha256": "9de8454ff0edf79282b7b7b4af9d8a98424b83b5be0ac3771bd4cc1a0ec92aab",
-      "scope": "Active recipe for new builds"
+      "scope": "Normalization and covariate preparation for the earlier paired research pipeline"
     },
-    "difference": "The active recipe fixes tissue ordering when creating a new CPM cache. The verified existing-cache branch and normalization functions are unchanged."
+    "difference": "The retained research recipe fixes tissue ordering when creating its CPM cache. The verified existing-cache normalization functions are unchanged.",
+    "pilot_build_at_v0_5_0": {
+      "file": "examples/pilots/gtex_v10/source_snapshots/pilots_at_v0.5.0.R",
+      "sha256": "186b695fd01bc64339d6741b37dc5b8d8c4f3c2541e9027c93a71bd7d452a1a6",
+      "scope": "Exact source recorded by the v0.5.0 pilots, retained for reproducing the paired research analysis"
+    },
+    "active_pilot_build": {
+      "file": "examples/pilots/gtex_v10/02_build_pilots.R",
+      "sha256": "ae2e63eb24ec8c7e94610f40e0f097f9958f363ee6d129ec04966ed1cbab84a1",
+      "scope": "Paired research builder in script 02. The current normalized TOD pilots use script 10."
+    },
+    "normalized_TOD_build": {
+      "file": "examples/pilots/gtex_v10/10_build_normalized_TOD.R",
+      "sha256": "3ad7d095e5a223523e30fc31122756f8962dcf13176a58fd342f993f53710353",
+      "scope": "Current normalized-expression TOD pilot builder"
+    },
+    "normalized_TOD_sample_sizes": {
+      "file": "examples/pilots/gtex_v10/11_compare_normalized_TOD_sample_sizes.R",
+      "sha256": "32061785a320a28d7e16740ddd23319745d59c93d398ad7e6cb75af1e57b17ed",
+      "scope": "Ten-tissue sample-size comparison for the normalized TOD pilots"
+    },
+    "normalized_TOD_report": {
+      "file": "examples/pilots/gtex_v10/12_render_normalized_TOD_report.R",
+      "sha256": "9321a8971b26a19e9ba085bc3ec56398d4692aa89ddab04b866ada28b32da328",
+      "scope": "Report from the saved normalized TOD fits and simulations"
+    }
+  },
+  "active_pipeline": "Normalized expression with season-adjusted TOD",
+  "active_TOD_recipe": {
+    "expression_release": "v10",
+    "normalization": "Within-tissue raw gene mean >10, edgeR TMM, cpm(log=TRUE, prior.count=0.25)",
+    "cohort": "All source samples with finite donor-matched season-adjusted TOD",
+    "gene_filter": "First valid annotation symbol, then mean normalized log-CPM >3 within the retained cohort",
+    "covariate_adjustment": false,
+    "input_time": "Season-adjusted time of death (TOD)",
+    "pilot_selection": {
+      "nominal_p_threshold": 0.01,
+      "top_k": 300,
+      "paired_sigma": true
+    },
+    "harmonic_orders": [
+      1,
+      2
+    ],
+    "tissues": 46,
+    "public_pilots": "Gene fit parameters and aggregate sampling distributions",
+    "sampling_histograms": "24 observed one-hour counts per tissue",
+    "individual_TOD_in_public_pilots": false
   }
 }

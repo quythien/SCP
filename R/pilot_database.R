@@ -43,12 +43,16 @@ NULL
 }
 
 
-# GTEx time choices apply only to GTEx rows. Other studies retain native time.
+# GTEx pilots use current v10 TOD. Other studies retain native time.
 .scp_filter_time_basis <- function(m, time_basis = NULL) {
-  if (!is.null(time_basis) &&
-      (length(time_basis) != 1L || is.na(time_basis) ||
-       !time_basis %in% c("DIP", "TOD", "all"))) {
-    stop("time_basis must be NULL, 'DIP', 'TOD', or 'all'.", call. = FALSE)
+  if (!is.null(time_basis)) {
+    if (!is.character(time_basis) || length(time_basis) != 1L || is.na(time_basis))
+      stop("time_basis must be NULL, 'TOD', or 'all'.", call. = FALSE)
+    if (identical(time_basis, "DIP"))
+      stop("DIP pilots are not bundled. GTEx pilots use season-adjusted time of death (TOD).",
+           call. = FALSE)
+    if (!time_basis %in% c("TOD", "all"))
+      stop("time_basis must be NULL, 'TOD', or 'all'.", call. = FALSE)
   }
   gtex <- !is.na(m$dataset) & toupper(m$dataset) == "GTEX"
   if (!any(gtex)) return(m)
@@ -57,18 +61,18 @@ NULL
          call. = FALSE)
   }
   current <- gtex & !is.na(m$gtex_release) & m$gtex_release == "v10" &
-    !is.na(m$time_basis) & m$time_basis %in% c("DIP", "TOD")
-  chosen <- if (is.null(time_basis)) "DIP" else time_basis
-  keep <- !gtex | (current & (chosen == "all" | m$time_basis == chosen))
-  m[which(keep), , drop = FALSE]
+    !is.na(m$time_basis) & m$time_basis == "TOD"
+  m[which(!gtex | current), , drop = FALSE]
 }
 
 .scp_validate_gtex_pilot <- function(p, row) {
-  release <- p$gtex_release %||% p$source_provenance$gtex_release %||%
-    p$source_provenance$release
-  basis <- p$time_basis %||% p$source_provenance$time_basis
-  if (!identical(release, "v10") || !identical(basis, row$time_basis[1])) {
-    stop("The GTEx pilot does not match its v10 input-time metadata. Reinstall SCP.",
+  releases <- Filter(Negate(is.null), list(p$gtex_release,
+    p$source_provenance$gtex_release, p$source_provenance$release))
+  bases <- Filter(Negate(is.null), list(p$time_basis, p$source_provenance$time_basis))
+  if (!length(releases) || !all(vapply(releases, identical, logical(1), y = "v10")) ||
+      !length(bases) || !all(vapply(bases, identical, logical(1), y = "TOD")) ||
+      !identical(row$time_basis[1], "TOD")) {
+    stop("The GTEx pilot does not match its v10 TOD metadata. Reinstall SCP.",
          call. = FALSE)
   }
   if (!inherits(p$time_distribution, "SCPTimeDistribution")) {
@@ -76,8 +80,8 @@ NULL
          call. = FALSE)
   }
   .scp_validate_time_distribution(p$time_distribution)
-  p$gtex_release <- release
-  p$time_basis <- basis
+  p$gtex_release <- "v10"
+  p$time_basis <- "TOD"
   p$time_source <- p$time_source %||% row$time_source[1]
   p$n_samples <- p$n_samples %||% row$n[1]
   p
@@ -101,11 +105,12 @@ NULL
 #'   to \code{"ingested"} (datasets actually present on disk). Use
 #'   \code{NULL} or \code{"all"} to return every row, including
 #'   \code{"pending"}, \code{"verify_failed"}, \code{"controlled"}, and
-#'   \code{"ingest_failed"} entries.
+#'   \code{"ingest_failed"} entries. GTEx rows always use the current v10
+#'   TOD pilots.
 #'
-#' @param time_basis GTEx input time. \code{NULL} selects CHIRAL-estimated
-#'   time (DIP). Use \code{"TOD"} for season-adjusted time of death or
-#'   \code{"all"} to list both. Other datasets retain native time.
+#' @param time_basis GTEx input time. \code{NULL} (default), \code{"TOD"},
+#'   and \code{"all"} list the current v10 pilots with season-adjusted time
+#'   of death (TOD). Other datasets retain native time.
 #'
 #' @return A data.frame with one row per (dataset, tissue, condition, time basis)
 #'   pilot. Columns: \code{species}, \code{dataset}, \code{tissue},
@@ -177,9 +182,8 @@ scp_pilots <- function(species = NULL, status = "ingested",
 #'   decouples sigma from amplitude, giving the wide \eqn{r} used by the
 #'   effect-size-stratified panels (Fig 1-2 Panels B/C).
 #'
-#' @param time_basis GTEx input time. \code{NULL} or \code{"DIP"}
-#'   selects CHIRAL-estimated time. \code{"TOD"} selects season-adjusted
-#'   time of death. Other datasets require \code{NULL}.
+#' @param time_basis GTEx input time. \code{NULL} (default) or \code{"TOD"}
+#'   selects season-adjusted time of death. Other datasets require \code{NULL}.
 #'
 #' @return A \code{CircadianBioOptions} object with empirical
 #'   distributions of mesor, log-sigma, amplitude, phase, and proportion
@@ -202,10 +206,13 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
   K <- as.integer(K)
   if (length(K) != 1L || is.na(K) || !K %in% c(1L, 2L))
     stop("K must be 1 or 2.", call. = FALSE)
+  if (identical(time_basis, "DIP"))
+    stop("DIP pilots are not bundled. GTEx pilots use season-adjusted time of death (TOD).",
+         call. = FALSE)
   if (identical(time_basis, "all"))
-    stop("Choose DIP or TOD when loading a GTEx pilot.", call. = FALSE)
+    stop("Use time_basis = NULL or 'TOD' when loading a GTEx pilot.", call. = FALSE)
   if (!is.null(time_basis) && !identical(toupper(dataset), "GTEX"))
-    stop("DIP and TOD choices apply only to GTEx pilots. Use time_basis = NULL for this dataset.",
+    stop("time_basis applies only to GTEx pilots. Use time_basis = NULL for this dataset.",
          call. = FALSE)
   stopifnot(length(species) == 1, length(dataset) == 1, length(tissue) == 1)
   m <- scp_pilots(species = species, status = "ingested",
@@ -371,9 +378,9 @@ scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
 #' @param sample_type Character. Default \code{"in_vivo"}. Use
 #'   \code{NULL} to include cell-line pilots as well.
 #'
-#' @param time_basis GTEx input time. \code{NULL} selects DIP. Use
-#'   \code{"TOD"} for season-adjusted time of death or \code{"all"}
-#'   to return both variants. Other datasets retain native time.
+#' @param time_basis GTEx input time. \code{NULL} (default), \code{"TOD"},
+#'   and \code{"all"} search the current v10 pilots with season-adjusted
+#'   time of death. Other datasets retain native time.
 #'
 #' @return A data.frame: rows of the manifest passing every active filter.
 #'

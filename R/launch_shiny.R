@@ -4,7 +4,7 @@
 #' default browser. The app lets the user pick a bundled pilot (or upload
 #' their own), set target power and FDR, read off the recommended sample
 #' size, explore per-gene rhythmicity, and run pathway enrichment. Bundled
-#' GTEx datasets use v10 expression with CHIRAL-estimated input time (DIP).
+#' GTEx datasets use v10 expression with season-adjusted time of death (TOD).
 #'
 #' On first launch the function checks for the app's optional helper packages
 #' and offers to install any that are missing (so the gene-symbol mapping,

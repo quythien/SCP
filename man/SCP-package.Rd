@@ -25,13 +25,14 @@ and biomarker exploration.
 }
 \section{GTEx input time}{
 
-Active GTEx pilots use release v10. The default input time is donor-internal
-phase (DIP), estimated offline with CHIRAL from clock-gene expression across
-tissues. Season-adjusted time of death (TOD) is available in the package by
-setting \code{time_basis = "TOD"} in \code{\link{scp_load_pilot}}. The app
-uses DIP for bundled GTEx pilots. CHIRAL is not rerun during power simulation.
-Gene acrophase is estimated relative to the selected input time and is a
-separate quantity. Use \code{citation("SCP")} for software and source citations.
+GTEx pilots use normalized release v10 expression with season-adjusted
+time of death (TOD) in the package and app. Gene acrophase is estimated
+relative to TOD. Within-tissue TMM normalization and log-CPM calculation
+follow the normalization step of Talamanca et al. (2023). The builder
+retains samples with valid TOD, keeps the first gene for each symbol,
+and selects genes with mean log-CPM greater than 3. Cosinor models are
+fitted to normalized expression. Use \code{citation("SCP")} for software
+and source citations.
 }
 
 \section{Main functions}{

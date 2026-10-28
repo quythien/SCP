@@ -108,14 +108,12 @@ Load a bundled pilot, set the study design, simulate, and read off the
 recommended sample size.
 
 SCP uses pilot expression data and sample times to estimate power under a
-specified circadian model and sampling design. The GTEx examples illustrate
-two sources of input time: CHIRAL-estimated DIP and season-adjusted TOD.
+specified circadian model and sampling design. The bundled GTEx examples use
+normalized v10 expression and season-adjusted time of death (TOD) in the
+package and app. Users can also provide their own expression data and sample
+times.
 
-Both examples use v10 expression. DIP is the default in the package and app.
-
-DIP is estimated once during data preparation with CHIRAL
-([Talamanca et al. 2023](https://doi.org/10.1126/science.add0846)). SCP then
-estimates each gene's acrophase relative to that input time. The cosinor model
+SCP estimates each gene's acrophase relative to the input time. The cosinor model
 describes mean expression over input time. Sampling times can be evenly spaced
 or unevenly distributed and do not need to follow a cosine curve.
 
@@ -148,7 +146,6 @@ res <- runSimsSingleCohort(bio.opts      = bio,
 
 # 4. Smallest N reaching 80 percent power at FDR 5 percent.
 npower(res, target_power = 0.80, fdr = 0.05)$n
-#> [1] 33
 
 # 5. Plot the power curve.
 plotSingleCohortPower(res, fdr = 0.05)
@@ -521,7 +518,9 @@ passive input-time sampling), a grid of sample sizes, and sliders for target pow
 FDR. Clicking *Run simulation* draws the power curve and the recommended sample
 size. On launch the app opens on the GTEx Adrenal (passive) pilot.
 
-![The app's default view](man/figures/SCP_app_view.png)
+![The SCP app with the GTEx v10 Brain Cortex TOD pilot](man/figures/SCP_app_view.png)
+
+The example uses Brain Cortex with a pilot threshold of BH FDR 5%.
 
 **Circadian Biomarker Detection** (right) explores the pilot itself: a core
 clock-gene cosinor panel, a ranked table of rhythmic genes with their FDR
@@ -539,37 +538,28 @@ system.file("extdata/example/example_tod.csv",        package = "SCP")
 ## Pilot database
 
 SCP includes circadian transcriptomic pilots across human, baboon, mouse, and
-rat. Three accessors browse and load them. The app uses the v10 DIP pilots for
-GTEx. The package also offers **season-adjusted time of death (TOD)**.
+rat. Three accessors browse and load them. The package and app use v10
+**season-adjusted time of death (TOD)** pilots for GTEx.
 
 | Function | Use |
 |---|---|
-| `scp_pilots()` | List default pilots, including v10 DIP for GTEx |
+| `scp_pilots()` | List default pilots, including v10 TOD for GTEx |
 | `scp_pilot_search(query, species, tissue_pattern)` | Search the default pilots |
 | `scp_load_pilot(species, dataset, tissue, condition)` | Load one pilot as a `CircadianBioOptions` object |
-| `time_basis = "TOD"` | Select the GTEx TOD alternative in these accessors |
-| `time_basis = "all"` | List or search both current GTEx alternatives |
 
 ```r
 scp_pilots()                                             # default pilots
 scp_pilot_search(species = "human", tissue_pattern = "adrenal")
 bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
 
-# Load the season-adjusted TOD example.
-bio_tod <- scp_load_pilot("human", "GTEx", "Adrenal", "All", time_basis = "TOD")
-scp_pilots(species = "human", time_basis = "all")
 ```
 
 The current GTEx summary is
 [`summary/gtex_v10_signal_summary.csv`](summary/gtex_v10_signal_summary.csv).
 It records the input time, sample and gene counts, signal strength, and discovery
-counts for both alternatives. The earlier signal summary remains with the
-manuscript examples and in the previous release.
-
-The [full GTEx v10 analysis dataset](https://github.com/quythien/SCP/releases/download/v0.5.0/GTEx_v10_full_DIP.tar)
-(2.0 GiB) contains the retained expression matrices for 46 tissues, gene
-annotation, and CHIRAL-estimated DIP. Expression values are covariate-adjusted
-log-CPM residuals.
+counts for 46 tissues. The earlier catalogue summary,
+[`summary/tissue_signal_summary.csv`](summary/tissue_signal_summary.csv),
+remains with the manuscript examples and previous releases.
 
 ## Documentation
 
@@ -600,19 +590,21 @@ log-CPM residuals.
 
 ## GTEx pilot sources
 
-The default GTEx pilots use v10 expression with input times estimated from
-clock-gene expression using CHIRAL. The original CHIRAL study used v8. Our v10
-times are newly estimated with the pinned method and reference settings.
-Recorded TOD does not enter CHIRAL inference or set its time origin.
+The active GTEx pilots use normalized v10 expression with season-adjusted
+TOD. Within each tissue, TMM normalization and log-CPM calculation follow the
+normalization step of [Talamanca et al.
+(2023)](https://doi.org/10.1126/science.add0846). The builder retains samples
+with valid TOD, keeps the first gene for each symbol, and selects genes with
+mean log-CPM greater than 3. Cosinor models are fitted to the normalized
+expression.
 
 The manifest records the release, input-time basis, source recipe, and cohort
 counts. The [v10 builders](examples/pilots/gtex_v10/README.md) document the
 numbered steps, preprocessing, and source settings.
 
-Both alternatives are calibrations from observational data. Better fitted
-signal or lower simulated N80 does not establish more accurate sample timing.
-The comparison report includes clock-gene exclusions and sensitivity to each
-target tissue's contribution to DIP.
+The earlier DIP analysis and its [full expression and DIP archive](https://github.com/quythien/SCP/releases/download/v0.5.0/GTEx_v10_full_DIP.tar)
+remain available from SCP 0.5.0 for research. The archive contains
+covariate-adjusted log-CPM residuals and CHIRAL-estimated DIP for 46 tissues.
 
 Earlier package versions are available under [GitHub releases](https://github.com/quythien/SCP/releases).
 

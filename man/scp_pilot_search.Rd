@@ -25,9 +25,9 @@ against \code{tissue} (case-insensitive).}
 \item{sample_type}{Character. Default \code{"in_vivo"}. Use
 \code{NULL} to include cell-line pilots as well.}
 
-\item{time_basis}{GTEx input time. \code{NULL} selects DIP. Use
-\code{"TOD"} for season-adjusted time of death or \code{"all"}
-to return both variants. Other datasets retain native time.}
+\item{time_basis}{GTEx input time. \code{NULL} (default), \code{"TOD"},
+and \code{"all"} search the current v10 pilots with season-adjusted
+time of death. Other datasets retain native time.}
 }
 \value{
 A data.frame: rows of the manifest passing every active filter.

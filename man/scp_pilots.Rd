@@ -15,11 +15,12 @@ scp_pilots(species = NULL, status = "ingested", time_basis = NULL)
 to \code{"ingested"} (datasets actually present on disk). Use
 \code{NULL} or \code{"all"} to return every row, including
 \code{"pending"}, \code{"verify_failed"}, \code{"controlled"}, and
-\code{"ingest_failed"} entries.}
+\code{"ingest_failed"} entries. GTEx rows always use the current v10
+TOD pilots.}
 
-\item{time_basis}{GTEx input time. \code{NULL} selects CHIRAL-estimated
-time (DIP). Use \code{"TOD"} for season-adjusted time of death or
-\code{"all"} to list both. Other datasets retain native time.}
+\item{time_basis}{GTEx input time. \code{NULL} (default), \code{"TOD"},
+and \code{"all"} list the current v10 pilots with season-adjusted time
+of death (TOD). Other datasets retain native time.}
 }
 \value{
 A data.frame with one row per (dataset, tissue, condition, time basis)
