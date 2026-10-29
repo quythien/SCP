@@ -1031,7 +1031,7 @@ server <- function(input, output, session) {
                   "No genes pass the pilot rhythmicity threshold. Power cannot be estimated from this selection."))
     withProgress(message = "Running simulation...", value = 0.1, {
       n_cores <- .safe_cores(4L)
-      incProgress(0.2, detail = "Setting up design")
+      incProgress(0.2)
 
       # Coerce numeric fields (some pilots store them as character/list).
       .as_num <- function(x) suppressWarnings(as.numeric(x))
@@ -1116,14 +1116,13 @@ server <- function(input, output, session) {
       # Step the progress bar per sample size (x2 when sensitivity is on).
       n_steps  <- length(n_grid) * (if (isTRUE(input$eff_sens)) 2L else 1L)
       step_amt <- 0.8 / max(n_steps, 1L)
-      run_sim <- function(bio, label) tryCatch(
+      run_sim <- function(bio) tryCatch(
         { set.seed(2025)
           SCP::runSimsSingleCohort(
             bio.opts = bio, design.opts = design, analysis.opts = analysis,
             K = K_val, mc.cores = n_cores,
             progress = function(j, nj, n)
-              incProgress(step_amt,
-                          detail = sprintf("%s | N = %d  (%d of %d)", label, n, j, nj))) },
+              incProgress(step_amt)) },
         error = function(e) {
           showNotification(sprintf("Simulation failed: %s", conditionMessage(e)),
                            type = "error", duration = 8)
@@ -1131,7 +1130,7 @@ server <- function(input, output, session) {
         }
       )
       # Panel A: paired (A, sigma) draw -> realistic marginal power (p is paired).
-      res <- run_sim(p, if (isTRUE(input$eff_sens)) "Panel A" else "Simulating")
+      res <- run_sim(p)
       res$input_metadata <- .app_time_metadata(p)
       res$input_metadata$key <- paste(input$species, input$dataset, input$tissue,
                                       res$input_metadata$gtex_release,
@@ -1142,9 +1141,9 @@ server <- function(input, output, session) {
         p_unpaired <- .app_apply_threshold(p, input$rhy_stat,
                                            as.numeric(input$rhy_thresh),
                                            paired_sigma = FALSE)
-        res$.bc <- run_sim(p_unpaired, "Panels B & C")
+        res$.bc <- run_sim(p_unpaired)
       }
-      incProgress(1, detail = "Done")
+      incProgress(1)
       last_run_state(isolate(current_state()))
       res
     })
