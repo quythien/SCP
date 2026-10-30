@@ -16,7 +16,6 @@
 # Required packages - will be loaded when functions are called
 # - limma (linear models)
 # - nloptr (non-linear optimization)
-# - minpack.lm (Levenberg-Marquardt)
 # - Matrix (matrix operations)
 # - rootSolve (root finding)
 # - lubridate (time zones)
@@ -60,38 +59,32 @@
 #'
 #' @keywords internal
 fitSinCurve <- function(tt, yy, period = 24, parStart = list(amp=3,phase=0,offset=0)){
+  stopifnot(length(tt) == length(yy), length(tt) >= 3L,
+    all(is.finite(tt)), all(is.finite(yy)), length(period) == 1L,
+    is.finite(period), period > 0)
 
-  getPred <- function(parS, tt) {
-    parS$amp * sin(2*pi/period * (tt + parS$phase)) + parS$offset
-  }
+  # The sine and cosine coefficients have an exact least-squares solution.
+  w <- 2 * pi / period
+  design <- cbind(1, sin(w * tt), cos(w * tt))
+  fit <- stats::lm.fit(design, yy)
+  if (fit$rank != 3L) stop("The cosinor design is rank deficient.", call. = FALSE)
+  coefficients <- unname(fit$coefficients)
+  A <- coefficients[2]
+  B <- coefficients[3]
+  amp <- sqrt(A^2 + B^2)
+  phase <- (atan2(B, A) / w) %% period
+  offset <- coefficients[1]
 
-  residFun <- function(p, yy, tt) yy - getPred(p,tt)
-
-  nls.out <- minpack.lm::nls.lm(par=parStart, fn = residFun, yy = yy, tt = tt)
-
-  apar <- nls.out$par
-
-  amp0 <- apar$amp
-  asign <- sign(amp0)
-  amp <- amp0 * asign
-
-  phase0 <- apar$phase
-  phase <- (phase0 + ifelse(asign==1,0,period/2)) %% period
-  offset <- apar$offset
-
-  peak <- (period/2 * sign(amp0) - period/4 - phase) %%period
-  if(peak > period/4*3) peak = peak - period
-
-  A <- amp0 * cos(2*pi/period * phase0)
-  B <- amp0 * sin(2*pi/period * phase0)
-
-  rss <- sum(nls.out$fvec^2)
+  # Keep the peak convention used by the differential detector.
+  peak <- (period / 4 - phase) %% period
+  if (peak > period * 3 / 4) peak <- peak - period
+  rss <- sum(fit$residuals^2)
   tss <- sum((yy - mean(yy))^2)
-  R2 <- 1 - rss/tss
 
-  res <- list(amp=amp, phase=phase, offset=offset, peak=peak, A=A, B=B, tss=tss, rss=rss, R2=R2)
-  res
+  list(amp = amp, phase = phase, offset = offset, peak = peak,
+    A = A, B = B, tss = tss, rss = rss, R2 = 1 - rss / tss)
 }
+
 
 #' Single Group Rhythmicity Analysis (Internal)
 #'

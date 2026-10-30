@@ -131,12 +131,12 @@ CircaPower = function(n = NULL, power = NULL, r = NULL,
 #'   \item{input_type}{The \code{input_type} used}
 #'
 #' @examples
-#' # Wrap a bundled log2 pilot matrix into the (data, times) format.
-#' praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+#' # Prepare a synthetic log-scale matrix and its scheduled times in hours.
+#' praw <- readRDS(system.file("extdata", "example_caudate_liver.rds",
 #'                             package = "SCP"))
-#' expr <- praw$adrenal$expr[1:200, ]
-#' tod  <- praw$adrenal$times
-#' prep <- prepCircadianData(expr, tod, input_type = "log2")
+#' expr <- praw$caudate$expr[1:200, ]
+#' times <- praw$caudate$times
+#' prep <- prepCircadianData(expr, times, input_type = "log2")
 #' str(prep[c("n_genes", "n_samples", "input_type")])
 #' @export
 prepCircadianData <- function(expr,

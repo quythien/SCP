@@ -280,17 +280,18 @@ bootstrapParams <- function(param_df, nboot, seed = 42) {
 #'   }
 #' @examples
 #' \donttest{
-#' praw  <- readRDS(system.file("extdata", "example_pilot_raw.rds",
-#'                              package = "SCP"))
-#' expr  <- praw$adrenal$expr[1:300, ]
-#' times <- praw$adrenal$times
-#' bio   <- estCircadianParam(expr, times, verbose = FALSE)
-#' bopt  <- CircadianBootstrapOptions(
-#'            design_vector = sort(unique(round(times))),
-#'            B_values = 4, N_values = c(24, 48),
-#'            nboot = 3, nsims_inner = 4, design = "passive")
-#' aopt  <- CircadianAnalysisOptions(alpha = 0.05)
-#' grid  <- runBootstrapDesignGrid(expr, times, bopt, aopt,
+#' # Tiny active-design bootstrap using synthetic data, for API illustration.
+#' praw <- readRDS(system.file("extdata", "example_caudate_liver.rds",
+#'                             package = "SCP"))
+#' expr <- praw$caudate$expr[1:300, ]
+#' times <- praw$caudate$times
+#' bio <- estCircadianParam(expr, times, top_k = "all", verbose = FALSE)
+#' bopt <- CircadianBootstrapOptions(
+#'            design_vector = sort(unique(times)),
+#'            B_values = 6, N_values = c(24, 48),
+#'            nboot = 3, nsims_inner = 4, design = "active")
+#' aopt <- CircadianAnalysisOptions(alpha = 0.05, fdr_thresholds = 0.05)
+#' grid <- runBootstrapDesignGrid(expr, times, bopt, aopt,
 #'                                 bio_diff.opts = bio, mode = "single",
 #'                                 verbose = FALSE)
 #' grid$power_mean
@@ -617,17 +618,18 @@ runBootstrapDesignGrid <- function(pilot_data,
 #' @param output_file Path for PDF output (NULL = screen)
 #' @examples
 #' \donttest{
-#' praw  <- readRDS(system.file("extdata", "example_pilot_raw.rds",
-#'                              package = "SCP"))
-#' expr  <- praw$adrenal$expr[1:300, ]
-#' times <- praw$adrenal$times
-#' bio   <- estCircadianParam(expr, times, verbose = FALSE)
-#' bopt  <- CircadianBootstrapOptions(
-#'            design_vector = sort(unique(round(times))),
-#'            B_values = 4, N_values = c(24, 48),
-#'            nboot = 3, nsims_inner = 4, design = "passive")
-#' aopt  <- CircadianAnalysisOptions(alpha = 0.05)
-#' grid  <- runBootstrapDesignGrid(expr, times, bopt, aopt,
+#' # Tiny active-design bootstrap using synthetic data, for API illustration.
+#' praw <- readRDS(system.file("extdata", "example_caudate_liver.rds",
+#'                             package = "SCP"))
+#' expr <- praw$caudate$expr[1:300, ]
+#' times <- praw$caudate$times
+#' bio <- estCircadianParam(expr, times, top_k = "all", verbose = FALSE)
+#' bopt <- CircadianBootstrapOptions(
+#'            design_vector = sort(unique(times)),
+#'            B_values = 6, N_values = c(24, 48),
+#'            nboot = 3, nsims_inner = 4, design = "active")
+#' aopt <- CircadianAnalysisOptions(alpha = 0.05, fdr_thresholds = 0.05)
+#' grid <- runBootstrapDesignGrid(expr, times, bopt, aopt,
 #'                                 bio_diff.opts = bio, mode = "single",
 #'                                 verbose = FALSE)
 #' plotBootstrapDesignGrid(grid, test_type = "rhythmic",

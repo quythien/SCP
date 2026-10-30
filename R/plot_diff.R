@@ -198,19 +198,23 @@ if (!exists("add_se_bars")) {
 #' @return Invisibly, list of panel data per comparison/endpoint.
 #' @examples
 #' \donttest{
-#' praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+#' # Compact plotting example using synthetic Caudate/Liver data.
+#' praw <- readRDS(system.file("extdata", "example_caudate_liver.rds",
 #'                             package = "SCP"))
-#' e1 <- praw$adrenal$expr[1:300, ]; t1 <- praw$adrenal$times
-#' e2 <- praw$liver$expr[1:300, ];   t2 <- praw$liver$times
-#' bio  <- estCircadianParamTwoGroup(e1, e2, t1, t2, top_k = 100,
-#'                                   verbose = FALSE)
+#' e1 <- praw$caudate$expr[1:300, ]
+#' t1 <- praw$caudate$times
+#' e2 <- praw$liver$expr[1:300, ]
+#' t2 <- praw$liver$times
+#' bio <- estCircadianParamTwoGroup(e1, e2, t1, t2, top_k = "all",
+#'                                  paired_sigma = TRUE, verbose = FALSE)
 #' bio$ngenes <- 200L
-#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5,
+#'                                design = "passive", cts = bio$cts)
 #' aopt <- CircadianAnalysisOptions(alpha = 0.05)
-#' res  <- runDifferentialPower(bio, dopt, aopt, test_types = "DR",
+#' res <- runDifferentialPower(bio, dopt, aopt, test_types = "DR",
 #'                              plot = FALSE, verbose = FALSE)
-#' plotDiffPower(list(res), endpoints = "DR",
-#'               out_pdf = tempfile(fileext = ".pdf"))
+#' plotDiffPower(list(res), comp_labels = "Synthetic Caudate vs Liver",
+#'               endpoints = "DR", out_pdf = tempfile(fileext = ".pdf"))
 #' }
 #' @export
 plotDiffPower <- function(res_list,

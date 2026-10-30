@@ -121,6 +121,15 @@ options(shiny.maxRequestSize = 5 * 1024^3)
   x
 }
 
+.app_format_proportion <- function(x) {
+  if (!is.finite(x)) return("NA")
+  percent <- 100 * x
+  if (percent == 0) return("0.0%")
+  if (percent > 0 && percent < 0.01) return("<0.01%")
+  if (percent < 0.1) return(sprintf("%.2f%%", percent))
+  sprintf("%.1f%%", percent)
+}
+
 # Notify (de-duplicated) when the requested top-K exceeded the number of
 # rhythmic genes available, so the effect-size pool was capped to all of them.
 .app_topk_notice <- function(p, requested) {
@@ -375,7 +384,7 @@ ui <- fluidPage(
         "design", NULL,
         choices  = c("Active (controlled timecourse)" = "active",
                      "Passive (uncontrolled sampling)"         = "passive"),
-        selected = "active"
+        selected = "passive"
       ),
       conditionalPanel(
         condition = "input.design == 'active'",
@@ -574,10 +583,7 @@ server <- function(input, output, session) {
                       selected = if ("human" %in% sp) "human" else sp[1])
   })
 
-  # Land on GTEx Adrenal (passive) the first time the app opens. This is a
-  # one-shot: the cascade below applies these preferred values only while
-  # `startup` is TRUE (cleared once the first full selection resolves), so it
-  # never overrides the user's later navigation.
+  # Start with the Caudate control pilot. Apply these preferences once.
   startup <- reactiveVal(TRUE)
   .pick   <- function(choices, prefer, fallback)
     if (!is.null(prefer) && prefer %in% choices) prefer else fallback
@@ -602,7 +608,7 @@ server <- function(input, output, session) {
     req(m, input$species, input$design_filter)
     sub <- m[m$species == input$species & m$design == input$design_filter, , drop = FALSE]
     ts <- sort(unique(.tissue_display(sub)))
-    sel <- if (isolate(startup())) .pick(ts, "Adrenal", ts[1]) else ts[1]
+    sel <- if (isolate(startup())) .pick(ts, "Caudate", ts[1]) else ts[1]
     updateSelectInput(session, "tissue", choices = ts, selected = sel)
   })
 
@@ -612,7 +618,7 @@ server <- function(input, output, session) {
     sub <- m[m$species == input$species & m$design == input$design_filter, , drop = FALSE]
     sub <- sub[.tissue_display(sub) == input$tissue, , drop = FALSE]
     ds <- sort(unique(sub$dataset))
-    sel <- if (isolate(startup())) .pick(ds, "GTEx", ds[1]) else ds[1]
+    sel <- if (isolate(startup())) .pick(ds, "GSE160521", ds[1]) else ds[1]
     updateSelectInput(session, "dataset", choices = ds, selected = sel)
   })
 
@@ -623,7 +629,7 @@ server <- function(input, output, session) {
              m$dataset == input$dataset, , drop = FALSE]
     sub <- sub[.tissue_display(sub) == input$tissue, , drop = FALSE]
     cd <- sort(unique(sub$condition))
-    sel <- if (isolate(startup())) .pick(cd, "All", cd[1]) else cd[1]
+    sel <- if (isolate(startup())) .pick(cd, "Control", cd[1]) else cd[1]
     updateSelectInput(session, "condition", choices = .cap_choices(cd), selected = sel)
     if (isolate(startup())) startup(FALSE)        # default applied; stop overriding navigation
   })
@@ -888,9 +894,7 @@ server <- function(input, output, session) {
         "Median signal-to-noise ratio (r) : %s"),
         if (nsamp > 0L) nsamp else "NA",
         format(p$ngenes %||% NA_integer_, big.mark = ","), rhy_label,
-        if (is.finite(p$prop_rhythmic %||% NA_real_)) {
-          sprintf("%.1f%%", 100 * p$prop_rhythmic)
-        } else "NA",
+        .app_format_proportion(p$prop_rhythmic %||% NA_real_),
         format(effect_n, big.mark = ","), ratio_text))
     }
     # prop_rhythmic was already set at the chosen threshold in pilot(); for legacy
@@ -949,7 +953,7 @@ server <- function(input, output, session) {
         if (is.null(ng) || is.na(ng)) "NA" else format(ng, big.mark = ",")
       },
       rhy_label,
-      if (!is.finite(prop_at_fdr)) "NA" else sprintf("%.1f%%", 100 * prop_at_fdr),
+      .app_format_proportion(prop_at_fdr),
       format(effect_n, big.mark = ","), ratio_text
     )
   })
@@ -1031,7 +1035,7 @@ server <- function(input, output, session) {
                   "No genes pass the pilot rhythmicity threshold. Power cannot be estimated from this selection."))
     withProgress(message = "Running simulation...", value = 0.1, {
       n_cores <- .safe_cores(4L)
-      incProgress(0.2, detail = "Setting up design")
+      incProgress(0.2)
 
       # Coerce numeric fields (some pilots store them as character/list).
       .as_num <- function(x) suppressWarnings(as.numeric(x))
@@ -1116,14 +1120,13 @@ server <- function(input, output, session) {
       # Step the progress bar per sample size (x2 when sensitivity is on).
       n_steps  <- length(n_grid) * (if (isTRUE(input$eff_sens)) 2L else 1L)
       step_amt <- 0.8 / max(n_steps, 1L)
-      run_sim <- function(bio, label) tryCatch(
+      run_sim <- function(bio) tryCatch(
         { set.seed(2025)
           SCP::runSimsSingleCohort(
             bio.opts = bio, design.opts = design, analysis.opts = analysis,
             K = K_val, mc.cores = n_cores,
             progress = function(j, nj, n)
-              incProgress(step_amt,
-                          detail = sprintf("%s | N = %d  (%d of %d)", label, n, j, nj))) },
+              incProgress(step_amt)) },
         error = function(e) {
           showNotification(sprintf("Simulation failed: %s", conditionMessage(e)),
                            type = "error", duration = 8)
@@ -1131,7 +1134,7 @@ server <- function(input, output, session) {
         }
       )
       # Panel A: paired (A, sigma) draw -> realistic marginal power (p is paired).
-      res <- run_sim(p, if (isTRUE(input$eff_sens)) "Panel A" else "Simulating")
+      res <- run_sim(p)
       res$input_metadata <- .app_time_metadata(p)
       res$input_metadata$key <- paste(input$species, input$dataset, input$tissue,
                                       res$input_metadata$gtex_release,
@@ -1142,9 +1145,9 @@ server <- function(input, output, session) {
         p_unpaired <- .app_apply_threshold(p, input$rhy_stat,
                                            as.numeric(input$rhy_thresh),
                                            paired_sigma = FALSE)
-        res$.bc <- run_sim(p_unpaired, "Panels B & C")
+        res$.bc <- run_sim(p_unpaired)
       }
-      incProgress(1, detail = "Done")
+      incProgress(1)
       last_run_state(isolate(current_state()))
       res
     })

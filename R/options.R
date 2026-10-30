@@ -155,25 +155,33 @@ setPhase <- function(input, n_rhythmic, period) {
 #'   for all genes), a numeric vector (resampled to \code{ngenes}), a function
 #'   \code{f(n)} returning \code{n} values, or a character string naming a built-in
 #'   pilot dataset stored in \code{data/}. No default, must be supplied.
-#' @param lBaselineExpr2 As \code{lBaselineExpr} but for group 2 (differential
-#'   analyses only). \code{NULL} uses the same distribution as group 1.
+#' @param lBaselineExpr2 Optional group-2 pilot MESOR distribution, retained
+#'   as calibration metadata. Differential simulations share the realized
+#'   group-1 MESOR outside DM and add \code{mesor_diff} for DM genes.
 #' @param lOD Log residual noise: \code{log(sigma)}, the per-gene noise around
 #'   the cosinor fit (\code{sigma = exp(lOD)}). Same forms accepted as
 #'   \code{lBaselineExpr}. No default, must be supplied.
-#' @param lOD2 As \code{lOD} (the residual noise) but for group 2. \code{NULL}
-#'   shares group 1 values.
+#' @param lOD2 As \code{lOD} but for group 2. It supplies marginal noise for
+#'   arrhythmic and DR-only states. Jointly rhythmic non-DR states share the
+#'   realized group-1 standard deviation and have independent errors.
 #' @param amplitude Amplitude distribution for rhythmic genes, given in any
 #'   of the forms accepted for \code{lBaselineExpr}. This argument is
 #'   required and has no default.
-#' @param amplitude2 As \code{amplitude} but for group 2.
+#' @param amplitude2 As \code{amplitude} but for group-2-only DR genes.
+#'   This differential input is separate from the second-harmonic field
+#'   attached by \code{estCircadianParam2H}.
+#' @param sigma_rhythmic2 Optional selected group-2 standard deviations,
+#'   matched by gene index to \code{amplitude2}. With \code{paired_sigma=TRUE},
+#'   both vectors are resampled together. Without this vector, old two-group
+#'   objects use marginal group-2 noise and do not preserve group-2 pairing.
 #' @param sigma_rhythmic Optional numeric vector of per-gene noise values for
 #'   rhythmic genes (same length as \code{amplitude}). When provided, amplitude
 #'   and sigma are drawn jointly to preserve pilot A-sigma correlation.
 #' @param paired_sigma Logical. If \code{TRUE} and \code{sigma_rhythmic} is
 #'   supplied, expand \code{amplitude} and \code{sigma_rhythmic} jointly by the
-#'   same resampled gene index so their pilot-estimated pairwise correlation is
-#'   preserved; if \code{FALSE} (default), amplitude and sigma are expanded
-#'   independently.
+#'   same resampled gene index. The same rule applies separately to
+#'   \code{amplitude2} and \code{sigma_rhythmic2}. If \code{FALSE} (default),
+#'   the marginal distributions are expanded independently.
 #' @param cts Numeric vector of sample collection times for passive design.
 #' @param cts2 As \code{cts} for group 2.
 #' @param phase Phase distribution for rhythmic genes. \code{"uniform"} (default)
@@ -226,7 +234,8 @@ CircadianBioOptions <- function(ngenes = 5000,
                                 dr_amp_scale = 1.0,
                                 dr_sigma_scale = 1.0,
                                 alpha_pilot = NULL,
-                                sim.seed = 12345) {
+                                sim.seed = 12345,
+                                sigma_rhythmic2 = NULL) {
 
   dp_shift_mode <- match.arg(dp_shift_mode)
 
@@ -294,6 +303,24 @@ CircadianBioOptions <- function(ngenes = 5000,
   )
   n_rhythmic <- round(ngenes * prop_rhythmic)
 
+  # Selected-noise vectors identify the same genes as their amplitude vectors.
+  if (isTRUE(paired_sigma) && !is.null(sigma_rhythmic) &&
+      (!is.numeric(amplitude) || !length(amplitude) ||
+       length(amplitude) != length(sigma_rhythmic) ||
+       any(!is.finite(amplitude)) || any(amplitude < 0) ||
+       !is.numeric(sigma_rhythmic) || any(!is.finite(sigma_rhythmic)) ||
+       any(sigma_rhythmic <= 0)))
+    stop("paired_sigma requires finite matched amplitude and positive sigma_rhythmic vectors.",
+         call. = FALSE)
+  if (!is.null(sigma_rhythmic2) &&
+      (!is.numeric(amplitude2) || !length(amplitude2) ||
+       length(amplitude2) != length(sigma_rhythmic2) ||
+       any(!is.finite(amplitude2)) || any(amplitude2 < 0) ||
+       !is.numeric(sigma_rhythmic2) || any(!is.finite(sigma_rhythmic2)) ||
+       any(sigma_rhythmic2 <= 0)))
+    stop("sigma_rhythmic2 must be positive and matched by gene to amplitude2.",
+         call. = FALSE)
+
   # Resolve distributions using existing set*() helpers, store specs for re-seeding
   lBaselineExpr_resolved  <- setBaselineExpr(lBaselineExpr, ngenes)
   lBaselineExpr2_resolved <- if (!is.null(lBaselineExpr2)) setBaselineExpr(lBaselineExpr2, ngenes) else NULL
@@ -326,7 +353,19 @@ CircadianBioOptions <- function(ngenes = 5000,
     }
   }
 
-  amplitude2_resolved <- if (!is.null(amplitude2)) setAmplitude(amplitude2, n_rhythmic) else NULL
+  # Expand the second group's selected pairs with its own shared index.
+  if (isTRUE(paired_sigma) && !is.null(sigma_rhythmic2)) {
+    ji2 <- if (length(amplitude2) == n_rhythmic) seq_len(n_rhythmic) else
+      if (length(amplitude2) == 1L) rep.int(1L, n_rhythmic) else
+        sample.int(length(amplitude2), n_rhythmic, replace = TRUE)
+    amplitude2_resolved <- amplitude2[ji2]
+    sigma_rhythmic2 <- sigma_rhythmic2[ji2]
+  } else {
+    amplitude2_resolved <- if (!is.null(amplitude2)) setAmplitude(amplitude2, n_rhythmic) else NULL
+    if (!is.null(sigma_rhythmic2) && length(sigma_rhythmic2) != n_rhythmic)
+      sigma_rhythmic2 <- if (length(sigma_rhythmic2) == 1L) rep(sigma_rhythmic2, n_rhythmic) else
+        sample(sigma_rhythmic2, n_rhythmic, replace = TRUE)
+  }
   phase_resolved <- setPhase(phase, n_rhythmic, period)
 
   opts <- list(
@@ -343,6 +382,8 @@ CircadianBioOptions <- function(ngenes = 5000,
     amplitude_spec = amplitude,
     amplitude2 = amplitude2_resolved,
     sigma_rhythmic = sigma_rhythmic,
+    sigma_rhythmic2 = sigma_rhythmic2,
+    paired_sigma2 = isTRUE(paired_sigma) && !is.null(sigma_rhythmic2),
     cts = cts,
     cts2 = cts2,
     phase = phase_resolved,

@@ -31,7 +31,7 @@ stepping by bin_width, then appends Inf. Every bin width is identical,
 but the number of bins adapts to the empirical r range of the pilot data.
 }
 \examples{
-# Adaptive r = A/sigma strata from a bundled pilot.
-bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+# Signal-to-noise ratio strata from the bundled Caudate pilot.
+bio <- scp_load_pilot("human", "GSE160521", "Caudate", "Control")
 makeAdaptiveRStrata(bio, bin_width = 0.5)
 }

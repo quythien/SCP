@@ -47,10 +47,11 @@ experiment in a comparable tissue. The workflow has four steps:
    power. SCP applies BH at the selected level and reports simulated FDR, the
    expected proportion of false discoveries among all discoveries.
 
-This vignette walks through the workflow using a bundled v10
-GTEx Adrenal Gland pilot. It is intentionally small (NSIMS = 50, a coarse N
-grid) so it builds quickly. For publication-grade numbers use NSIMS >= 200 and
-a finer N grid.
+This vignette uses the bundled GSE160521 Caudate control pilot for a passive
+study. It uses 1,200 simulated genes, 20 experiments per sample size and a coarse
+sample-size grid to keep the demonstration small. These settings illustrate the
+workflow. Increase the number of experiments and refine the grid before using
+the results for study planning.
 
 # Point-and-click app
 
@@ -67,8 +68,9 @@ own), pick a sampling design and your target power and FDR, and click *Run
 simulation* to get the power curve and the recommended N. The **Circadian
 Biomarker Detection** (right) explores the pilot's genes: a core clock-gene
 cosinor panel, a sortable table of rhythmic genes, a per-gene fit, and pathway
-enrichment. The app opens on the GTEx Adrenal (passive) pilot shown here, which
-matches the power curve below.
+enrichment. Select human, GSE160521, Caudate, Control and a passive design to
+use the pilot shown here. The numerical results also depend on the simulation
+settings you choose.
 
 The rest of this vignette covers the same workflow in R, for scripted or
 reproducible analyses.
@@ -87,21 +89,23 @@ library(SCP)
 
 # 2. Load a bundled pilot
 
-`scp_pilots()` lists the default pilots. We load the v10 GTEx Adrenal Gland
+`scp_pilots()` lists the default pilots. We load the GSE160521 Caudate control
 pilot as a `CircadianBioOptions` object and go straight to simulation.
 For your own expression matrix, run `estCircadianParam()` first, as in Section 7.
 
-The bundled GTEx pilots use normalized v10 expression and **season-adjusted
-time of death (TOD)**. SCP estimates gene acrophase relative to this input
-time.
+The Caudate pilot uses the study's corrected time-of-death values, stored in
+hours in `bio$cts`. The bundled GTEx Liver pilot uses normalized v10 expression
+and **season-adjusted time of death (TOD)**. Its passive time law is stored as
+an aggregate in `time_distribution`. SCP estimates gene acrophase relative to
+the corresponding input time.
 
 ```{r load-pilot}
-bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+bio <- scp_load_pilot("human", "GSE160521", "Caudate", "Control")
 
 bio$ngenes <- 1200L
 
 class(bio)
-cat(sprintf("Pilot: %d genes, %.1f%% rhythmic, period = %g h\n",
+cat(sprintf("Simulation: %d genes, %.1f%% rhythmic, period = %g h\n",
             bio$ngenes, 100 * bio$prop_rhythmic, bio$period))
 ```
 
@@ -114,13 +118,14 @@ sampling times to follow a cosine distribution. The app uses TOD for its bundled
 GTEx examples.
 
 ```{r input-time-options}
-scp_pilot_search("adrenal")[,
-  c("dataset", "tissue", "gtex_release", "time_basis", "n")]
+scp_pilot_search("caudate")[,
+  c("dataset", "tissue", "time_basis", "n", "ngenes")]
 
-# Passive sampling uses an aggregate distribution of the pilot input times.
-design_passive <- CircadianDesignOptions(
-  sample_sizes = c(100, 200, 400), nsims = 50,
-  design = "passive", cts = bio$time_distribution
+# Liver uses its saved aggregate time distribution for a passive design.
+bio_liver <- scp_load_pilot("human", "GTEx", "Liver", "All")
+design_liver <- CircadianDesignOptions(
+  sample_sizes = c(120, 240, 360), nsims = 20,
+  design = "passive", cts = bio_liver$time_distribution
 )
 ```
 
@@ -143,25 +148,23 @@ r_tilde <- bio$amplitude / bio$sigma_rhythmic
 summary(r_tilde)
 
 hist(r_tilde, breaks = 40, col = "steelblue", border = "white",
-     main = "Pilot r = A / sigma  (GTEx Adrenal Gland)",
+     main = "Pilot r = A / sigma  (Caudate control)",
      xlab = expression(r == A / sigma))
 abline(v = median(r_tilde), col = "red", lwd = 2)
 ```
 
 # 4. Run a single-cohort power simulation
 
-Goal: how many adrenal samples does an *active* design with q4h x 24h sampling
-need to reach 80% power at FDR 5%? An active q4h x 24h design has 6 distinct
-time points (B = 6); the total N is 6 x m where m is replicates per timepoint.
-
-We sweep total N = 24, 36, 48, 72, 96 (i.e. m = 4, 6, 8, 12, 16 per timepoint).
+Goal: how many Caudate samples does a passive design need to reach 80% power
+at BH 5%? Each simulated cohort draws times from the pilot's input-time
+distribution. We evaluate total N = 20, 40, 60, 80 and 120.
 
 ```{r design-options}
 design <- CircadianDesignOptions(
-  sample_sizes = c(24, 36, 48, 72, 96),
-  nsims        = 50,
-  design       = "active",
-  cts          = seq(0, 20, by = 4)
+  sample_sizes = c(20, 40, 60, 80, 120),
+  nsims        = 20,
+  design       = "passive",
+  cts          = bio$cts
 )
 
 analysis <- CircadianAnalysisOptions(
@@ -184,7 +187,9 @@ res_K1 <- runSimsSingleCohort(
 )
 
 marg_power_K1 <- rowMeans(res_K1$marginal_power, na.rm = TRUE)
-data.frame(N = design$sample_sizes, power_K1 = round(marg_power_K1, 3))
+data.frame(N = design$sample_sizes,
+           power_K1 = round(marg_power_K1, 3),
+           MCSE = round(apply(res_K1$marginal_power, 1, sd) / sqrt(res_K1$nsims), 3))
 ```
 
 # 5. Plot the power curve
@@ -196,14 +201,18 @@ at several FDR levels (panel A), stratified power by `r` band
 ```{r plot-power, fig.width = 11, fig.height = 4.2}
 plotSingleCohortPower(
   res_K1,
-  title       = "GTEx Adrenal Gland pilot, active q4h x 24h",
+  title       = "Caudate control pilot, passive design",
   fdr         = 0.05,          # focus panels B and C at FDR 5%
-  reference_n = 48
+  reference_n = 60
 )
 ```
 
-Read the smallest N where the panel-A curve crosses 0.80 at the FDR you care
-about; that is your recommended sample size.
+Use `npower()` to summarize the estimated crossing. With this small run,
+the crossing is a demonstration rather than a final planning estimate.
+
+```{r n80-simulation}
+npower(res_K1, target_power = 0.80, fdr = 0.05)
+```
 
 If the simulated grid never reaches the target power, extend the sample-size
 grid. The closed-form approximation below provides a starting value. It uses
@@ -219,9 +228,12 @@ n80 <- circaPowerApproxN80(
 n80
 ```
 
-# 6. Compare K = 1 vs K = 2
+# 6. Compare detectors under first-harmonic truth
 
 The two-harmonic detector (K = 2) adds a 12-hour component to the 24-hour model.
+Here the simulated truth still comes from the first-harmonic Caudate pilot.
+This is a detector sensitivity example. It is separate from a matched
+comparison calibrated to two-harmonic truth.
 
 ```{r run-k2, message = FALSE}
 res_K2 <- runSimsSingleCohort(
@@ -248,15 +260,16 @@ and sampling design.
 
 In practice you usually start from your *own* pilot: a gene-by-sample log-CPM
 matrix plus a vector of collection times (hours). To make this runnable, SCP
-bundles a small demo matrix in `inst/extdata/example_pilot_raw.rds`
-(1200 genes x 48 samples, **simulated to resemble GTEx Adrenal Gland and
-Liver** so it is freely shareable; it is not real GTEx expression). Swap in
-your own `expr` / `times` and the rest of the workflow is identical.
+bundles `inst/extdata/example_caudate_liver.rds`, with synthetic Caudate and
+Liver arms of 1,200 genes by 48 samples each. These data were simulated from a
+joint aggregate calibration. They contain no observed donor expression or
+individual TOD values. The times are scheduled simulation times in hours.
+Swap in your own `expr` / `times` to fit your data.
 
 ```{r own-data}
-ex   <- readRDS(system.file("extdata", "example_pilot_raw.rds", package = "SCP"))
-expr <- ex$adrenal$expr     # genes x samples; rows = genes, cols = samples
-times <- ex$adrenal$times   # collection time of day per sample, in hours
+ex <- readRDS(system.file("extdata", "example_caudate_liver.rds", package = "SCP"))
+expr <- ex$caudate$expr     # genes x independent simulated samples
+times <- ex$caudate$times   # scheduled simulation times in hours
 dim(expr)
 head(times)
 ```
@@ -269,6 +282,7 @@ bio_own <- estCircadianParam(
   data    = expr,
   times   = times,
   period  = 24,
+  top_k   = "all",
   verbose = FALSE
 )
 cat(sprintf("Own pilot: %d genes, %.1f%% rhythmic, median r = %.2f\n",
@@ -276,13 +290,21 @@ cat(sprintf("Own pilot: %d genes, %.1f%% rhythmic, median r = %.2f\n",
             median(bio_own$amplitude / bio_own$sigma_rhythmic, na.rm = TRUE)))
 ```
 
-Step 2 onward is exactly as before: feed `bio_own` into `runSimsSingleCohort()`.
+Here `top_k = "all"` retains every rhythmic synthetic gene. Estimated phases
+are already in hours.
+
+```{r phase-hours}
+summary(bio_own$phase %% bio_own$period)
+```
+
+For a separate active-design example, plan six equally spaced collection times
+with equal replication. The sample sizes below are all multiples of six.
 
 ```{r own-data-power, message = FALSE}
 res_own <- runSimsSingleCohort(
   bio.opts      = bio_own,
-  design.opts   = CircadianDesignOptions(sample_sizes = c(24, 36, 48, 72, 96),
-                                         nsims = 50, design = "active",
+  design.opts   = CircadianDesignOptions(sample_sizes = c(24, 48, 72),
+                                         nsims = 10, design = "active",
                                          cts = seq(0, 20, by = 4)),
   analysis.opts = CircadianAnalysisOptions(alpha = 0.05),
   K             = 1,
@@ -293,9 +315,10 @@ data.frame(N = res_own$sample_sizes,
            power = round(rowMeans(res_own$marginal_power, na.rm = TRUE), 3))
 ```
 
-The Liver demo (`ex$liver`) works the same way and, being a weaker-signal
-tissue, needs a larger N to reach the same power; that contrast is the whole
-point of pilot-calibrated planning.
+The synthetic Liver arm (`ex$liver`) can be fitted using its own expression
+matrix and times. Compare the fitted parameters and simulated power before
+choosing a sample size. These fitting examples do not reproduce the official
+empirical power results.
 
 # Where to go next
 

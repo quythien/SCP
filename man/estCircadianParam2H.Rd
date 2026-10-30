@@ -32,12 +32,12 @@ length \code{ncol(data)}.}
 
 \item{period}{Period in the same units as \code{times} (default 24 hours).}
 
-\item{min_rhythm_pval}{P-value threshold for the joint 4-d.f. F-test
+\item{min_rhythm_pval}{P-value threshold for the K=1 2-d.f. F-test
 (default 0.01). Genes with p < this define the candidate set.}
 
 \item{top_k}{Cap on number of genes contributing to the joint
 \eqn{(A_1, \phi_1, A_2, \phi_2, \sigma)} distribution (default 500),
-ranked by F-test p-value.}
+ranked by K=1 F-test p-value.}
 
 \item{prop_DR, prop_DP, prop_DM}{Differential proportions (defaults 0.15,
 0.10, 0.00). Forwarded unchanged to \code{CircadianBioOptions}; note the
@@ -70,7 +70,7 @@ regression
 to each gene by OLS, tests the joint rhythmicity null
 \eqn{H_0: a_1 = b_1 = a_2 = b_2 = 0} on 4 d.f., and returns a
 \code{CircadianBioOptions} object whose 5-way joint empirical distribution
-\eqn{F_{(\mu, A_1, \phi_1, A_2, \phi_2, \sigma)}} is preserved by gene-paired
+\eqn{F_{(A_1, \phi_1, A_2, \phi_2, \sigma)}} is preserved by gene-paired
 index draws downstream.
 
 The returned object carries the standard 1-harmonic fields
@@ -95,7 +95,7 @@ modified.
         across \eqn{(A_1, \phi_1, A_2, \phi_2, \sigma)}, preserving the
         cross-parameter dependence observed in the pilot.
   \item No 2nd-harmonic significance threshold is applied: ALL top-K genes
-        passing the joint 4-d.f. F-test contribute, even those whose
+        passing the K=1 2-d.f. F-test contribute, even those whose
         \eqn{A_2} is essentially noise. The empirical \eqn{F_{A_2}} will
         have a noise spike near zero, which is fine.
   \item The K=2 extension is single-cohort only; the differential
@@ -104,14 +104,13 @@ modified.
 }
 
 \examples{
-# Two-harmonic pilot fit on a bundled raw pilot (first 300 genes).
-praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+# Fit K = 2 to synthetic Liver data generated under K = 1.
+praw <- readRDS(system.file("extdata", "example_caudate_liver.rds",
                             package = "SCP"))
-expr <- praw$adrenal$expr[1:300, ]
-bio2h <- estCircadianParam2H(expr, praw$adrenal$times,
+expr <- praw$liver$expr[1:300, ]
+bio2h <- estCircadianParam2H(expr, praw$liver$times,
                              top_k = 100, verbose = FALSE)
 bio2h$prop_rhythmic
-
 }
 \seealso{
 \code{\link{estCircadianParam}} for the 1-harmonic case,

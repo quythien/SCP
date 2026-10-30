@@ -77,11 +77,13 @@ simulation for detectors that have no closed form. A previous result can
 be supplied to reuse its simulation instead of running it again.
 }
 \examples{
-# Analytical (CircaPower) design guidance, no simulation.
-bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
-dopt <- CircadianDesignOptions(sample_sizes = c(24, 48, 96), nsims = 5)
+# Analytical guidance for a planned balanced active design.
+bio <- scp_load_pilot("human", "GSE160521", "Caudate", "Control")
+dopt <- CircadianDesignOptions(sample_sizes = c(24, 48, 96), nsims = 5,
+                               design = "active", cts = seq(0, 20, by = 4),
+                               B_values = c(3, 6))
 aopt <- CircadianAnalysisOptions(alpha = 0.05)
-rec  <- recommendDesign(bio, dopt, aopt, methods = "DCP",
+rec <- recommendDesign(bio, dopt, aopt, methods = "DCP",
                         run_simulation = FALSE, plot = FALSE,
                         verbose = FALSE)
 rec$analytical_df

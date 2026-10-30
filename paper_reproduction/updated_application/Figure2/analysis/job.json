@@ -1,0 +1,26 @@
+{
+  "stage": "production",
+  "proposal_only": true,
+  "model_id": "4a0c3ba9ac842bace5be27907a44882763dc70cdda82c4838c3bc72fc60a1161",
+  "expression_backend": "compiled",
+  "source_pilot_sha256": "1c864d987336c666f1bea5ff92b7ad763adfb86f6de92d1618d9652352cc464f",
+  "MC_per_cell": 600,
+  "wave": "coarse",
+  "files_sha256": {
+    "SCP_v2_source.tar.gz": "06a1d41351cf5ab8b06d67f0f6cc40746d519c7aba9ce7423dffda18bfcf8087",
+    "Caudate_Putamen_pilot.rds": "1c864d987336c666f1bea5ff92b7ad763adfb86f6de92d1618d9652352cc464f",
+    "02_production_functions.R": "74ac5cd333de311e8f05d02aab1c7a641a7a25dfd8f58055bfc3acfc3eb7efc2",
+    "v2_model_manifest.json": "2f715478fddd795d87c698eaf99b7dff166008ce776aaa357c8cef2fb090378a",
+    "03_run_production.R": "c683491a05836bf480b344012c2defc1c54e4e6c760b5eeefa8d7e3bc95408ad",
+    "cells.csv": "9f56f82a8cfa3635b4a527de9580ece8d4b1ea819528290e6305829f41b262f1",
+    "cases.csv": "18feb228a6dd02728aaac24f928e31d232bf9feb0f617a681bf0e7493b80c56a",
+    "model_contract.json": "4a0c3ba9ac842bace5be27907a44882763dc70cdda82c4838c3bc72fc60a1161"
+  },
+  "workers_by_shard": {
+    "speed5": 8,
+    "speed6": 8,
+    "speed7": 8
+  },
+  "maximum_production_workers": 24,
+  "production_launch_requires_independent_root_gate": true
+}

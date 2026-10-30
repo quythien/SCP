@@ -41,12 +41,13 @@ to match the existing r-stratification machinery and the manuscript's
 \eqn{r_g} notation.
 }
 \examples{
-# Generate one two-harmonic dataset from a 2H pilot fit.
-praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+# Fit K = 2 to synthetic Liver data generated under K = 1.
+praw <- readRDS(system.file("extdata", "example_caudate_liver.rds",
                             package = "SCP"))
-expr <- praw$adrenal$expr[1:300, ]
-bio2h <- estCircadianParam2H(expr, praw$adrenal$times,
+expr <- praw$liver$expr[1:300, ]
+bio2h <- estCircadianParam2H(expr, praw$liver$times,
                              top_k = 100, verbose = FALSE)
+# Draw a new dataset from this fitted two-harmonic model.
 bio2h$ngenes <- 300L
 cts <- rep(seq(0, 22, by = 2), 2)
 sim <- simCircadianSingleCohort2H(bio2h, cts, seed = 1)

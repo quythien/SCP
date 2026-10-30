@@ -1,0 +1,11 @@
+Appendix A: matched K1/K2 comparison under the same two-harmonic truth.
+This calibration also compares balanced-six versus passive sampling for each detector.
+These K1 curves do not represent the pure single-harmonic truth used for Figure 2.5A.
+Each of 600 replicates per N shares parameters and truth across designs. Design noise is independent.
+Both detectors share the same dataset within each design. K1 retains omitted second-harmonic energy in its residual denominator.
+Balanced-six uses phases 0, 4, 8, 12, 16 and 20 hours, with N/6 samples per phase.
+Passive sampling retains the frozen source grid and weights, Gaussian jitter SD 0.1 hours and modulo-24 wrap.
+BH thresholds are 0.01, 0.05, 0.10 and 0.20. BH 0.05 is primary. FDP is zero when no genes are discovered.
+All MCSEs describe fixed-pilot Monte Carlo error and exclude uncertainty in the fitted pilot.
+N80 brackets are tested-grid crossings. Interpolation is descriptive. Pointwise 1.96-MCSE bounds are not simultaneous confidence bands or an N80 confidence interval.
+Rows with extension_needed=TRUE require a separately reviewed grid extension. No detector or design advantage is assumed.

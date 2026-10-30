@@ -190,11 +190,14 @@ scp_pilots <- function(species = NULL, status = "ingested",
 #'   rhythmic, ready for downstream simulation.
 #'
 #' @examples
-#' bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
-#' bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All",
-#'                       alpha_pilot = 0.05)
-#' bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All",
-#'                       alpha_pilot = 0.1, adjust = "BH")
+#' bio <- scp_load_pilot("human", "GSE160521", "Caudate", "Control")
+#' bio_relaxed <- scp_load_pilot("human", "GSE160521", "Caudate", "Control",
+#'                               alpha_pilot = 0.05)
+#' # Explicit GTEx seasonal-TOD and two-harmonic examples use Liver.
+#' bio_liver <- scp_load_pilot("human", "GTEx", "Liver", "All",
+#'                             alpha_pilot = 0.1, adjust = "BH", time_basis = "TOD")
+#' bio_liver2h <- scp_load_pilot("human", "GTEx", "Liver", "All",
+#'                               K = 2, time_basis = "TOD")
 #' @export
 scp_load_pilot <- function(species, dataset, tissue, condition = NULL,
                            alpha_pilot = 0.01,

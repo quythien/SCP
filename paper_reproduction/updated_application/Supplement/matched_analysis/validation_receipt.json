@@ -1,0 +1,50 @@
+{
+  "completed_at_UTC": "2026-10-29 04:33:43 UTC",
+  "status": "VALIDATED_LOCALLY_REQUIRES_INDEPENDENT_GATE",
+  "oracle_cases": 6,
+  "oracle_N": [12, 24, 48],
+  "oracle_designs": ["passive", "balanced6"],
+  "maximum_pvalue_error": 1.1979306435705439e-13,
+  "maximum_projected_mean_error": 4.1909590849644405e-14,
+  "balanced_six_energy_errors": {
+    "12": 1.3322676295501878e-15,
+    "24": 2.6645352591003757e-15,
+    "48": 4.4408920985006262e-15,
+    "240": 7.1054273576010019e-14,
+    "1200": 7.673861546209082e-13
+  },
+  "passive_schedule_byte_replay": true,
+  "deterministic_pair_replay": true,
+  "same_truth_and_parameters_across_designs": true,
+  "independent_noise_streams_across_designs": true,
+  "K1_omitted_harmonic_in_denominator": true,
+  "five_way_tuples_preserved": true,
+  "A1_floor": 0.050000000000000003,
+  "A2_floor": 0,
+  "sigma_floor": 9.9999999999999995e-07,
+  "source_A1_below_floor": 0,
+  "source_A2_below_floor": 0,
+  "calibration_and_sampler_sha256": "5d86ea5aef6b0a05a95ab0aebf8bd35fc9d0056a03e5afb0358d77c9cae328cd",
+  "source_hashes": {
+    "source_pilot": "1a7f2873a938e425585b3a900d49789d09b9db67eb9978e6ab2d32fef06734cb",
+    "source_sampler": "aded83c17a0386748d26a9b7d91d11de7b3970e2e736b2f1bf47107b10c4b4e6",
+    "prior_engine": "84e7d4cbbf64eae9c91b891bf07a3ea8401c7ae4581891628f956e9541742120",
+    "prior_validation": "2e6ec6726f7947af1cd93516af979745c33827f6d9ba4d95a110e77e4c2171b6",
+    "prior_calibration": "5d86ea5aef6b0a05a95ab0aebf8bd35fc9d0056a03e5afb0358d77c9cae328cd"
+  },
+  "installed_package_SHA": "3fb1b9b435381403d8ad0eaa2d97951158801ef1",
+  "code_hashes": {
+    "dissertation_figures/figure_2_5/official_matched_20261029/00_paired_engine.R": "c8808232fce0649d073f3e23b867a78233d51a70dd76d6479176223728e7ed70",
+    "dissertation_figures/figure_2_5/official_matched_20261029/01_validate_engine.R": "498f7f34257bcc2d7cd38e48c25cb6230fcdf4c1414efeb1584336b1d70b80d3",
+    "dissertation_figures/figure_2_5/official_matched_20261029/02_run_jobs.R": "b4c86c90387e65acebb700409447a3124130e063f4e72698680a830f867f5045",
+    "dissertation_figures/figure_2_5/official_matched_20261029/03_summarize.R": "3a4c6052553fd172c26eec95defaa996ad2aa02c8d16e2fd2bb296271b2c7c94"
+  },
+  "planned_pairs": 12600,
+  "planned_datasets": 25200,
+  "planned_detector_evaluations": 50400,
+  "benchmark_seconds_per_pair": [0.011049999999999994, 0.011299999999999999],
+  "estimated_serial_seconds": 140.80499999999998,
+  "production_launched": false,
+  "real_individual_TOD_or_donor_ids_written": false,
+  "existing_paper_package_dissertation_files_modified": false
+}

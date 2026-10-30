@@ -95,12 +95,14 @@ if (!exists("add_se_bars")) {
 #' @param mc.cores   Cores used for the internal simulation runs (default 1).
 #' @return Invisibly returns list of data used per panel.
 #' @examples
-#' bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+#' bio <- scp_load_pilot("human", "GSE160521", "Caudate", "Control")
 #' bio$ngenes <- 200L
-#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5,
+#'                                design = "passive", cts = bio$cts)
 #' aopt <- CircadianAnalysisOptions(alpha = 0.05)
-#' res  <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
-#' plotSingleCohortPower(res, out_pdf = tempfile(fileext = ".pdf"))
+#' res <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
+#' plotSingleCohortPower(res, title = "Caudate control, passive design",
+#'                       out_pdf = tempfile(fileext = ".pdf"))
 #' @export
 plotSingleCohortPower <- function(res = NULL, out_pdf = NULL, title = "",
                                  panel_a_res = NULL,
