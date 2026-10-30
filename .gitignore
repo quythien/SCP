@@ -199,3 +199,6 @@ inst/shiny_demo/*
 !paper_reproduction/updated_application/
 !paper_reproduction/updated_application/**
 paper_reproduction/updated_application/generated/
+
+# Synthetic expression fixture used by the installed examples and vignettes.
+!inst/extdata/example_caudate_liver.rds
