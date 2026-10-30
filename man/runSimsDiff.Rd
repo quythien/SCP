@@ -60,16 +60,29 @@ coefficients for non-cosinor signal generation (legacy only; default
 \item{analysis.opts}{\code{CircadianAnalysisOptions}.}
 }
 \value{
-List (class \code{SCPDiffResult}) with fields:
+An unclassed list with fields:
   \code{pval_DR}, \code{fdr_DR}, \code{pval_DP}, \code{fdr_DP},
   \code{pval_DM}, \code{fdr_DM} -- arrays \code{[ngenes x n_sizes x nsims]};
-  \code{diff_type}, \code{effectsize}, \code{sample_sizes}, \code{nsims}.
-  Pass directly to \code{plotDiffPower()} or \code{npower()}.
+  \code{diff_type}, \code{ground_truth}, \code{parameter_draws},
+  \code{effectsize}, \code{sample_sizes}, \code{nsims}, \code{ngenes},
+  and \code{sim_params}. The \code{diff_type}, \code{ground_truth},
+  \code{parameter_draws}, and \code{effectsize} fields are lists with
+  one element per replicate. Truth and parameter draws are held fixed
+  across sample sizes within each replicate. See
+  \code{\link{simCircadianDiff}} for their contents. Non-identifiable
+  schedules and failed or nonfinite detector results raise an error.
+  The \code{runDifferentialPower()} wrapper adds the
+  \code{SCPDiffResult} class for plotting and power summaries.
 }
 \description{
 Preferred interface: \code{runDifferentialPower(bio.opts, design.opts, analysis.opts)}.
 This function supports both the config-object API (primary) and a legacy
 flat-argument API (retained for back-compatibility).
+Older two-group options with \code{amplitude2} but no
+\code{sigma_rhythmic2} use marginal group-2 noise and warn when
+\code{prop_DR > 0}. They do not preserve selected group-2
+amplitude/noise pairs. Two-harmonic pilot objects are rejected because
+their \code{amplitude2} field describes a second harmonic.
 }
 \seealso{
 \code{\link{runDifferentialPower}} (user-facing wrapper)

@@ -1,0 +1,27 @@
+{
+  "pair": "Caudate_Putamen",
+  "candidate_id": "f75c5e5b9148623e1a7001534c4ecba3db93bf089c7139550d39d4089b1ad707",
+  "source_archive_sha256": "06a1d41351cf5ab8b06d67f0f6cc40746d519c7aba9ce7423dffda18bfcf8087",
+  "source_pilot_sha256": "1c864d987336c666f1bea5ff92b7ad763adfb86f6de92d1618d9652352cc464f",
+  "function_manifest_sha256": "2f715478fddd795d87c698eaf99b7dff166008ce776aaa357c8cef2fb090378a",
+  "helper_sha256": "74ac5cd333de311e8f05d02aab1c7a641a7a25dfd8f58055bfc3acfc3eb7efc2",
+  "runner_sha256": "c683491a05836bf480b344012c2defc1c54e4e6c760b5eeefa8d7e3bc95408ad",
+  "G": 5000,
+  "DCP_gate": 0.20000000000000001,
+  "BH_thresholds": [0.01, 0.050000000000000003, 0.10000000000000001, 0.20000000000000001],
+  "expression_backend": "compiled",
+  "RNGkind": ["Mersenne-Twister", "Inversion", "Rejection"],
+  "primary_population": "all_assigned",
+  "secondary_DP_population": "phase_at_least2h",
+  "warning_policy": "Retain and flag every warning. No warning case accepted without review.",
+  "N_convention": "N_per_group",
+  "total_independent_individuals": "2 * N_per_group",
+  "active_replicates_per_time_per_group": "N_per_group / B",
+  "seeds": {
+    "passive_replicate_ids": [22001, 22600],
+    "active_replicate_ids": [22001, 22600],
+    "same_ids_across_cells": "Common gene truth across designs and cells. No pooling with screens.",
+    "mapped_seed": "replicate_id * 1000",
+    "expression_seed": "replicate_id * 1000 + N_per_group * (7919 + 104729)"
+  }
+}

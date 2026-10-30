@@ -28,7 +28,8 @@ simCircadianDiff(
   cts = NULL,
   cts2 = NULL,
   sim.seed = 42,
-  harmonics = NULL
+  harmonics = NULL,
+  sigma_rhythmic2 = NULL
 )
 }
 \arguments{
@@ -40,25 +41,28 @@ simCircadianDiff(
 
 \item{lBaselineExpr}{Log baseline expression. Default: rnorm(ngenes, 5, 2)}
 
-\item{lBaselineExpr2}{As \code{lBaselineExpr} but for group 2. \code{NULL}
-(default) reuses group 1's distribution.}
+\item{lBaselineExpr2}{Group-2 pilot MESOR metadata, retained for compatibility.
+Realized MESOR is shared outside DM. DM adds a signed \code{mesor_diff}
+shift to the realized group-1 MESOR.}
 
 \item{lOD}{Log residual noise: \code{log(sigma)}, the per-gene noise around
 the cosinor fit (\code{sigma = exp(lOD)}). Default: rnorm(ngenes, -1, 0.3),
 so sigma ~ LogNormal(mu=-1, sd=0.3) with median ~0.37}
 
-\item{lOD2}{As \code{lOD} but for group 2. \code{NULL} (default) shares
-group 1 values.}
+\item{lOD2}{Marginal log noise for group 2. Jointly rhythmic JR/DP/DM
+genes share the realized group-1 standard deviation, with independent errors.}
 
-\item{amplitude}{Amplitude distribution for rhythmic genes in group 1.}
+\item{amplitude}{Amplitude distribution for rhythmic genes in group 1.
+Selected amplitudes must be finite and nonnegative. Simulation raises
+values below 0.05, including zero, to 0.05.}
 
 \item{amplitude2}{As \code{amplitude} but for group 2. \code{NULL}
 (default) reuses group 1's distribution.}
 
-\item{sigma_rhythmic}{Optional numeric vector of per-gene noise values for
-rhythmic genes (same length as \code{amplitude}); when supplied,
-amplitude and sigma are drawn jointly to preserve pilot A-sigma
-correlation.}
+\item{sigma_rhythmic}{Optional selected standard deviations, matched by
+gene to \code{amplitude}. A shared source index is drawn before applying
+amplitude and noise bounds. Selected noise must be finite and positive;
+simulation raises values below 1e-6 to 1e-6.}
 
 \item{prop_rhythmic}{Overall proportion of rhythmic genes}
 
@@ -93,6 +97,11 @@ same amplitude/phase, different mean level).}
 \item{harmonics}{Numeric length-2 \code{c(alpha2, alpha3)} harmonic
 coefficients for non-cosinor signal generation (default \code{NULL},
 equivalent to \code{c(0, 0)}).}
+
+\item{sigma_rhythmic2}{Optional selected group-2 standard deviations,
+matched by gene to the group-2 DR input \code{amplitude2}. Without this
+vector, an explicit group-2 amplitude distribution uses marginal noise.
+When \code{amplitude2=NULL}, the group-1 selected pairs are reused.}
 }
 \value{
 Named list with the following elements:
@@ -106,14 +115,22 @@ Named list with the following elements:
       \code{mesor1}, \code{mesor2}, \code{amplitude1}, \code{amplitude2},
       \code{phase1}, \code{phase2}, \code{sigma}, \code{sigma2},
       \code{phase_diff}, \code{amp_ratio}, \code{is_rhythmic_g1},
-      \code{is_rhythmic_g2}.}
-    \item{\code{effectsize_DR1}}{Per-gene SNR in group 1: \eqn{A_{g,1}/\sigma_{g,1}}.}
-    \item{\code{effectsize_DR2}}{Per-gene SNR in group 2: \eqn{A_{g,2}/\sigma_{g,2}}.}
+      \code{is_rhythmic_g2}, \code{is_DR}, \code{is_DP}, and
+      \code{is_DM}. The endpoint flags compare squared signal-to-noise
+      ratios, phases in jointly rhythmic genes, and MESORs, respectively.}
+    \item{\code{parameter_draws}}{Selected source indices and raw
+      amplitude/noise values for both groups, the source of group-2 DR
+      parameters, and counts of draws raised to the bounds. These counts
+      are also stored in \code{simOptions$transform_counts}.}
+    \item{\code{effectsize_DR1}}{Per-gene signal-to-noise ratio in group 1: \eqn{A_{g,1}/\sigma_{g,1}}.}
+    \item{\code{effectsize_DR2}}{Per-gene signal-to-noise ratio in group 2: \eqn{A_{g,2}/\sigma_{g,2}}.}
     \item{\code{effectsize_phase}}{Per-gene phase-displacement effect size.}
     \item{\code{effectsize_amp}}{Per-gene amplitude-difference effect size.}
     \item{\code{effectsize_mesor}}{Per-gene mesor-difference effect size.}
     \item{\code{simOptions}}{List of simulation parameters used (ngenes, n1, n2,
-      prop_rhythmic, prop_DR, prop_DP, prop_DM, period, design).}
+      prop_rhythmic, prop_DR, prop_DP, prop_DM, period, design), MESOR
+      and noise models, pairing flags, group-2 DR parameter source,
+      parameter bounds, and transformation counts.}
   }
 }
 \description{

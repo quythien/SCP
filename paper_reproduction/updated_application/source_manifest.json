@@ -1,0 +1,646 @@
+[
+  {
+    "file": "Figure1/code/assemble_panels.R",
+    "sha256": "bc72c2623d04772a197040676bed883e501d61b9a0acd09344f19bd910befd6e",
+    "bytes": 1488,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure1/code/panels.R",
+    "sha256": "d13ff9893663c7d3e35655c30fa880937bc8b592f82164d78a7c42dbdb12d920",
+    "bytes": 2876,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure1/data/N80_summary.csv",
+    "sha256": "44574bad3378514467e7b69f382817a4280f3aeab25de2e73e09c34eceab492c",
+    "bytes": 494,
+    "source": "dissertation_figures/figure_2_1/nac_caudate_bins_20261029/N80_summary.csv",
+    "source_sha256": "44574bad3378514467e7b69f382817a4280f3aeab25de2e73e09c34eceab492c"
+  },
+  {
+    "file": "Figure1/data/calibrations.rds",
+    "sha256": "9c432fff1144abba4b055566d5d5f6c4998905c7d1db6b4fb83ef0dd70930ae3",
+    "bytes": 20809,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure1/data/discovery_panel_data.rds",
+    "sha256": "a9b390fca11b1690b9655931b309982f5e4d77bf579fba016861d534e0ce23cd",
+    "bytes": 3275,
+    "source": "records/chapter2_execution_20261029/figure_gallery_20261030/discovery_axis_starts/rendered/discovery_panel_data.rds",
+    "source_sha256": "a9b390fca11b1690b9655931b309982f5e4d77bf579fba016861d534e0ce23cd"
+  },
+  {
+    "file": "Figure1/data/panel_data.rds",
+    "sha256": "ea8331847bf50e693275cc622f3d5399bf316b47a9c0b99253a74f9e15bd3a14",
+    "bytes": 3251,
+    "source": "dissertation_figures/figure_2_1/nac_caudate_bins_20261029/panel_data.rds",
+    "source_sha256": "ea8331847bf50e693275cc622f3d5399bf316b47a9c0b99253a74f9e15bd3a14"
+  },
+  {
+    "file": "Figure1/data/pooling_checks.csv",
+    "sha256": "fad80a4df61d115e03d21d9d626e03bcb8aa8d71152fbde86ee10f43024b7ac9",
+    "bytes": 2681,
+    "source": "dissertation_figures/figure_2_1/nac_caudate_bins_20261029/pooling_checks.csv",
+    "source_sha256": "fad80a4df61d115e03d21d9d626e03bcb8aa8d71152fbde86ee10f43024b7ac9"
+  },
+  {
+    "file": "Figure1/data/power_summary.csv",
+    "sha256": "0579b72b459d030adf2e84b5e729a63a0eae2298b683068c8fdbbca996bbfba8",
+    "bytes": 13636,
+    "source": "dissertation_figures/figure_2_1/nac_caudate_bins_20261029/power_summary.csv",
+    "source_sha256": "0579b72b459d030adf2e84b5e729a63a0eae2298b683068c8fdbbca996bbfba8"
+  },
+  {
+    "file": "Figure1/data/stratified_summary.csv",
+    "sha256": "aa4708ae630a879bad22a33d72c52042941074300621da13a92f14e676de794a",
+    "bytes": 25663,
+    "source": "dissertation_figures/figure_2_1/nac_caudate_bins_20261029/stratified_summary.csv",
+    "source_sha256": "aa4708ae630a879bad22a33d72c52042941074300621da13a92f14e676de794a"
+  },
+  {
+    "file": "Figure1/final/Figure1.pdf",
+    "sha256": "8d6628b2189cba958272b4dd81d32c621cd58f461425066cd27ecf0c7451ca5c",
+    "bytes": 21488,
+    "source": "dissertation_figures/review/all_figures_20261030/assets/Figure_2_1.pdf",
+    "source_sha256": "8d6628b2189cba958272b4dd81d32c621cd58f461425066cd27ecf0c7451ca5c"
+  },
+  {
+    "file": "Figure1/redraw.R",
+    "sha256": "233d0ee3c9dab157a4ddefb8db1e821be170de19e3a8301af55e492fece24d9a",
+    "bytes": 1583,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure1/run_analysis.R",
+    "sha256": "edcdbb013c06fb67b867e22ab5a6dd7efb97d78be52dd44749bd77a9ecdb580a",
+    "bytes": 6239,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure1/summarize.R",
+    "sha256": "760cfbba9bdde7d25509e714b7e01e564c7d6f46aca38561d74fa91d614a26b8",
+    "bytes": 4751,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure2/analysis/02_production_functions.R",
+    "sha256": "74ac5cd333de311e8f05d02aab1c7a641a7a25dfd8f58055bfc3acfc3eb7efc2",
+    "bytes": 11762,
+    "source": "records/chapter2_execution_20261029/striatal_detector_replay/final_production_plan/capsule/02_production_functions.R",
+    "source_sha256": "74ac5cd333de311e8f05d02aab1c7a641a7a25dfd8f58055bfc3acfc3eb7efc2"
+  },
+  {
+    "file": "Figure2/analysis/Caudate_Putamen_pilot.rds",
+    "sha256": "1c864d987336c666f1bea5ff92b7ad763adfb86f6de92d1618d9652352cc464f",
+    "bytes": 1371496,
+    "source": "records/chapter2_execution_20261029/striatal_detector_replay/final_production_plan/capsule/Caudate_Putamen_pilot.rds",
+    "source_sha256": "1c864d987336c666f1bea5ff92b7ad763adfb86f6de92d1618d9652352cc464f"
+  },
+  {
+    "file": "Figure2/analysis/SCP_v2_source.tar.gz",
+    "sha256": "06a1d41351cf5ab8b06d67f0f6cc40746d519c7aba9ce7423dffda18bfcf8087",
+    "bytes": 132573,
+    "source": "records/chapter2_execution_20261029/striatal_detector_replay/final_production_plan/capsule/SCP_v2_source.tar.gz",
+    "source_sha256": "06a1d41351cf5ab8b06d67f0f6cc40746d519c7aba9ce7423dffda18bfcf8087"
+  },
+  {
+    "file": "Figure2/analysis/cases.csv",
+    "sha256": "18feb228a6dd02728aaac24f928e31d232bf9feb0f617a681bf0e7493b80c56a",
+    "bytes": 5158395,
+    "source": "records/chapter2_execution_20261029/striatal_detector_replay/final_production_plan/capsule/cases.csv",
+    "source_sha256": "18feb228a6dd02728aaac24f928e31d232bf9feb0f617a681bf0e7493b80c56a"
+  },
+  {
+    "file": "Figure2/analysis/cells.csv",
+    "sha256": "9f56f82a8cfa3635b4a527de9580ece8d4b1ea819528290e6305829f41b262f1",
+    "bytes": 4103,
+    "source": "records/chapter2_execution_20261029/striatal_detector_replay/final_production_plan/capsule/cells.csv",
+    "source_sha256": "9f56f82a8cfa3635b4a527de9580ece8d4b1ea819528290e6305829f41b262f1"
+  },
+  {
+    "file": "Figure2/analysis/job.json",
+    "sha256": "b618c6d286afc6fdf4ab3b91d0c63b29458b7197536326162e6dc40943e49401",
+    "bytes": 1261,
+    "source": "records/chapter2_execution_20261029/striatal_detector_replay/final_production_plan/capsule/job.json",
+    "source_sha256": "b618c6d286afc6fdf4ab3b91d0c63b29458b7197536326162e6dc40943e49401"
+  },
+  {
+    "file": "Figure2/analysis/model_contract.json",
+    "sha256": "4a0c3ba9ac842bace5be27907a44882763dc70cdda82c4838c3bc72fc60a1161",
+    "bytes": 1473,
+    "source": "records/chapter2_execution_20261029/striatal_detector_replay/final_production_plan/capsule/model_contract.json",
+    "source_sha256": "4a0c3ba9ac842bace5be27907a44882763dc70cdda82c4838c3bc72fc60a1161"
+  },
+  {
+    "file": "Figure2/analysis/v2_model_manifest.json",
+    "sha256": "2f715478fddd795d87c698eaf99b7dff166008ce776aaa357c8cef2fb090378a",
+    "bytes": 17446,
+    "source": "records/chapter2_execution_20261029/striatal_detector_replay/final_production_plan/capsule/v2_model_manifest.json",
+    "source_sha256": "2f715478fddd795d87c698eaf99b7dff166008ce776aaa357c8cef2fb090378a"
+  },
+  {
+    "file": "Figure2/data/N80_all_BH.csv",
+    "sha256": "db2bc12bb6c4006dab24d58e03bd92710bd16d8b8b589222d8246f768c2e1e20",
+    "bytes": 23430,
+    "source": "records/chapter2_execution_20261029/figure_gallery_20261030/production_summary/N80_all_BH.csv",
+    "source_sha256": "db2bc12bb6c4006dab24d58e03bd92710bd16d8b8b589222d8246f768c2e1e20"
+  },
+  {
+    "file": "Figure2/data/curves_all_BH.csv",
+    "sha256": "e3e7c3b34fd52c67757ec0a2a2d24f71d5747590511e6ea81d45ff435127077c",
+    "bytes": 210846,
+    "source": "records/chapter2_execution_20261029/figure_gallery_20261030/production_summary/curves_all_BH.csv",
+    "source_sha256": "e3e7c3b34fd52c67757ec0a2a2d24f71d5747590511e6ea81d45ff435127077c"
+  },
+  {
+    "file": "Figure2/data/paired_active_passive.csv",
+    "sha256": "9f5ac8f96b797bb9bfe8542c666c473f6211c0b6c32c403776462aeb8f66ba93",
+    "bytes": 7537,
+    "source": "records/chapter2_execution_20261029/figure_gallery_20261030/production_summary/paired_active_passive.csv",
+    "source_sha256": "9f5ac8f96b797bb9bfe8542c666c473f6211c0b6c32c403776462aeb8f66ba93"
+  },
+  {
+    "file": "Figure2/final/Figure2.pdf",
+    "sha256": "172339404e8ac9a46ee9b772cab68bcca17feeaf22f1f1ccba1fb6f5416fe061",
+    "bytes": 15103,
+    "source": "dissertation_figures/review/all_figures_20261030/assets/Figure_2_2.pdf",
+    "source_sha256": "172339404e8ac9a46ee9b772cab68bcca17feeaf22f1f1ccba1fb6f5416fe061"
+  },
+  {
+    "file": "Figure2/redraw.R",
+    "sha256": "0644200acfe84df97bbdaabbecbb4ce03797fd1de040f793b8003b8f42cf01db",
+    "bytes": 2515,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure2/run_analysis.R",
+    "sha256": "46732c9d57eb2f12d926acc22145f4fa6aeab601fe20c0347daeef39e7513644",
+    "bytes": 2223,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure2/summarize.R",
+    "sha256": "208f1047fde3439d82268b7c35a7445d1f76e8a29ab777d53f4404cfac309f3b",
+    "bytes": 2183,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure3/code/CAMO_Aging_Prep_source.R",
+    "sha256": "84c372667f01f7f5226f3bedf55d3527c183d8a11212d4a35eb060e0d2af8926",
+    "bytes": 3475,
+    "source": "R/src/Thien/CAMO_Aging_Prep.R, lines1-91",
+    "original_artifact_sha256": "2bcdf57426620b015634fd63fa3139a2a9ee758bf619da0b72198584fcdd67df",
+    "adaptation": "Selected preparation blocks with configurable input directory.",
+    "source_sha256": "6865fffa7c81fb027d62a51a64a311d4310963468588ca2e856d12097e15a5d5"
+  },
+  {
+    "file": "Figure3/code/calibrate.R",
+    "sha256": "2d5c65abe76b35d2fcdd0ea2304b1675398ffda43f42b5b3c402f811ade72512",
+    "bytes": 2844,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure3/code/panels.R",
+    "sha256": "42e18d2deaa09d2a9c70b36e25b820f9af4ade68dfc9010b6a19989d2aabdc60",
+    "bytes": 805,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure3/data/configuration.rds",
+    "sha256": "30005556e507d82f7448d6ba416c4e396401e35886e9e64bd904e55d844ec08b",
+    "bytes": 643,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure3/data/panel_values.csv",
+    "sha256": "5c0ff9a0087eab99abd8a4e47dce0b3fdcef08831532e9cb248ff0d2d099037f",
+    "bytes": 1870,
+    "source": "records/chapter2_execution_20261029/larger_full_cohort_search/ba47_confirmation/preview_100outer/panel_values.csv",
+    "source_sha256": "5c0ff9a0087eab99abd8a4e47dce0b3fdcef08831532e9cb248ff0d2d099037f"
+  },
+  {
+    "file": "Figure3/final/Figure3.pdf",
+    "sha256": "e3c08d5b88d0ee772bdd453ed8076141de6ddbb2ba2ce518b415ec1e272cc606",
+    "bytes": 7711,
+    "source": "dissertation_figures/review/all_figures_20261030/assets/Figure_2_3.pdf",
+    "source_sha256": "e3c08d5b88d0ee772bdd453ed8076141de6ddbb2ba2ce518b415ec1e272cc606"
+  },
+  {
+    "file": "Figure3/prepare_BA47.R",
+    "sha256": "2032355433bbacaa10add98c021235dea390736c49acaa6e7cd75f25db3c3a13",
+    "bytes": 4204,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure3/redraw.R",
+    "sha256": "5813881a2f7efb70a4de1f9f48c6f801e2750cce442223b0ae365345427bcccf",
+    "bytes": 1207,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure3/run_analysis.R",
+    "sha256": "e249ad508faaa2ac015536e80d0498ccbc2dc41095549213a2e37c53087b3ee9",
+    "bytes": 2441,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure3/summarize.R",
+    "sha256": "8c40c6c4c9302effb00e86318d6bb0d4f4ce2e571c7f2e2a6b40a15477726bb0",
+    "bytes": 921,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure4/code/observed_liver.R",
+    "sha256": "88030c6fd4dca6354bb43d9cd1228700ece1536b0624c655c468f3f99f744666",
+    "bytes": 10699,
+    "source": "paper_reproduction/Figure4/code/original/fig4_twoharm_demo.R",
+    "source_sha256": "88030c6fd4dca6354bb43d9cd1228700ece1536b0624c655c468f3f99f744666"
+  },
+  {
+    "file": "Figure4/data/kegg_table.csv",
+    "sha256": "098a82a0c04f63cb08d3815545d320923bf3968f380fdb6a4b6e2cf6667b75ab",
+    "bytes": 3556,
+    "source": "paper_reproduction/Figure4/data/kegg_table.csv",
+    "source_sha256": "098a82a0c04f63cb08d3815545d320923bf3968f380fdb6a4b6e2cf6667b75ab"
+  },
+  {
+    "file": "Figure4/data/kegg_table.rds",
+    "sha256": "fed92e2aca04403c4fafcacde7b36f391a13364b68058e620c3ba42880b403bb",
+    "bytes": 1696,
+    "source": "paper_reproduction/Figure4/data/kegg_table.rds",
+    "source_sha256": "fed92e2aca04403c4fafcacde7b36f391a13364b68058e620c3ba42880b403bb"
+  },
+  {
+    "file": "Figure4/data/tissue_Liver_fits.rds",
+    "sha256": "e6a8082aad079435d2b724b30a02265e0ccbcd8525c3340719a965d2aeaed407",
+    "bytes": 605124,
+    "source": "paper_reproduction/Figure4/data/tissue_Liver_fits.rds",
+    "source_sha256": "e6a8082aad079435d2b724b30a02265e0ccbcd8525c3340719a965d2aeaed407"
+  },
+  {
+    "file": "Figure4/data/tissue_Liver_venn.rds",
+    "sha256": "852229155a50e72bd4c367bed897dfcc8522e920dddf374b1a126ad066094cfd",
+    "bytes": 3576,
+    "source": "paper_reproduction/Figure4/data/tissue_Liver_venn.rds",
+    "source_sha256": "852229155a50e72bd4c367bed897dfcc8522e920dddf374b1a126ad066094cfd"
+  },
+  {
+    "file": "Figure4/final/Fig4_twoharm_demo.pdf",
+    "sha256": "2d4ec3c1c166d4f42c452d9f40bb8c842c07eab4c1c2aa0e19a432fc9a2b9543",
+    "bytes": 87590,
+    "source": "paper_reproduction/Figure4/final/Fig4_twoharm_demo.pdf",
+    "source_sha256": "2d4ec3c1c166d4f42c452d9f40bb8c842c07eab4c1c2aa0e19a432fc9a2b9543"
+  },
+  {
+    "file": "Figure4/final/Figure4.pdf",
+    "sha256": "8b22384fc2b332abd4ba0454a8e004e3881403b64224703d796d8869d4e5a516",
+    "bytes": 96004,
+    "source": "dissertation_figures/review/all_figures_20261030/assets/Figure_2_4.pdf",
+    "source_sha256": "8b22384fc2b332abd4ba0454a8e004e3881403b64224703d796d8869d4e5a516"
+  },
+  {
+    "file": "Figure4/redraw.R",
+    "sha256": "5b65c174b77a7aaa91e3aad04c4e3da3c0b7afbab6bebd81f6889b0e5d643a19",
+    "bytes": 3502,
+    "source": "paper_reproduction/Figure4/redraw.R",
+    "source_sha256": "2699a3dc399a3b20354cf3574b117eddf650bdb90bef160a6399082da1906151"
+  },
+  {
+    "file": "Figure4/run_analysis.R",
+    "sha256": "57b5c564f2920f383ebce511747d832c8188e0d9155108cad43abda3f11eac04",
+    "bytes": 998,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure5/analysis/00_exact_active_engine.R",
+    "sha256": "20ded2fdf3a067a05513bbcf66dacaca338f2a430d1e7d2c61e9c8f8c4cdeb48",
+    "bytes": 6688,
+    "source": "dissertation_figures/figure_2_5/official_panels_AB_20261029/00_exact_active_engine.R",
+    "source_sha256": "20ded2fdf3a067a05513bbcf66dacaca338f2a430d1e7d2c61e9c8f8c4cdeb48"
+  },
+  {
+    "file": "Figure5/analysis/01_validate.R",
+    "sha256": "a89703435e47341101220ced69c42c6b20a757682b66fac50ce2c528e3e80f79",
+    "bytes": 12170,
+    "source": "dissertation_figures/figure_2_5/official_panels_AB_20261029/01_validate.R",
+    "source_sha256": "a89703435e47341101220ced69c42c6b20a757682b66fac50ce2c528e3e80f79"
+  },
+  {
+    "file": "Figure5/analysis/02_run_job.R",
+    "sha256": "4093c36c04be8984b22655ade471402861bcdc0829a27c9ca29e2355e2b97186",
+    "bytes": 3204,
+    "source": "dissertation_figures/figure_2_5/official_panels_AB_20261029/02_run_job.R",
+    "source_sha256": "4093c36c04be8984b22655ade471402861bcdc0829a27c9ca29e2355e2b97186"
+  },
+  {
+    "file": "Figure5/analysis/03_summarize.R",
+    "sha256": "c27fd3aed2ff6a7b655c12c4956806b59a48c8fcb34d36ec81ccfd000a89a550",
+    "bytes": 6025,
+    "source": "dissertation_figures/figure_2_5/official_panels_AB_20261029/03_summarize.R",
+    "source_sha256": "c27fd3aed2ff6a7b655c12c4956806b59a48c8fcb34d36ec81ccfd000a89a550"
+  },
+  {
+    "file": "Figure5/analysis/04_draw_panels.R",
+    "sha256": "779555da8af40cce949a92d5a615e0a1328cc600ef24101a85a31e0dd14e9195",
+    "bytes": 3394,
+    "source": "dissertation_figures/figure_2_5/official_panels_AB_20261029/04_draw_panels.R",
+    "source_sha256": "779555da8af40cce949a92d5a615e0a1328cc600ef24101a85a31e0dd14e9195"
+  },
+  {
+    "file": "Figure5/analysis/calibrations.rds",
+    "sha256": "178677fff39c1a02ec89f10e6884d9f253eefdc7feb2a73b4005dcc7fd4cde2f",
+    "bytes": 145736,
+    "source": "dissertation_figures/figure_2_5/official_panels_AB_20261029/calibrations.rds",
+    "source_sha256": "178677fff39c1a02ec89f10e6884d9f253eefdc7feb2a73b4005dcc7fd4cde2f"
+  },
+  {
+    "file": "Figure5/analysis/independent_gate.csv",
+    "sha256": "e06655cfb430d25458048996bcdce9460a46734a3013fb43344ba613288d2ae5",
+    "bytes": 1006,
+    "source": "dissertation_figures/figure_2_5/official_panels_AB_20261029/independent_gate.csv",
+    "original_artifact_sha256": "ed5bdb3bfea3d3c35072f53158da829811babf88fa132913f30ddaaaa460ec19",
+    "adaptation": "Project-relative paths and metadata hash gate. Numerical inputs unchanged.",
+    "source_sha256": "ed5bdb3bfea3d3c35072f53158da829811babf88fa132913f30ddaaaa460ec19"
+  },
+  {
+    "file": "Figure5/analysis/job_manifest.csv",
+    "sha256": "4763ed4d63543084b101387aa19879374257f12378017cf82facc492178d1fa0",
+    "bytes": 10725,
+    "source": "dissertation_figures/figure_2_5/official_panels_AB_20261029/job_manifest.csv",
+    "source_sha256": "4763ed4d63543084b101387aa19879374257f12378017cf82facc492178d1fa0"
+  },
+  {
+    "file": "Figure5/analysis/settings.rds",
+    "sha256": "a7c05345fb34289fcc98bac8475e916c8ddf7b86f06c1f3a22c8dc37ace28b20",
+    "bytes": 764,
+    "source": "dissertation_figures/figure_2_5/official_panels_AB_20261029/settings.rds",
+    "source_sha256": "a7c05345fb34289fcc98bac8475e916c8ddf7b86f06c1f3a22c8dc37ace28b20"
+  },
+  {
+    "file": "Figure5/analysis/source_provenance.csv",
+    "sha256": "0d20e1b1b829aafa44505be4c79193388dfaec6c155d7ff0d970024f85fb761f",
+    "bytes": 1102,
+    "source": "dissertation_figures/figure_2_5/official_panels_AB_20261029/source_provenance.csv",
+    "original_artifact_sha256": "0a27e86e51608051f270d017d21f739e5b105a75a5614ff2c8a8a8a6e7f0d1bc",
+    "adaptation": "Project-relative paths and metadata hash gate. Numerical inputs unchanged.",
+    "source_sha256": "0a27e86e51608051f270d017d21f739e5b105a75a5614ff2c8a8a8a6e7f0d1bc"
+  },
+  {
+    "file": "Figure5/analysis/synthetic_expression_oracles.rds",
+    "sha256": "f3c67bb06227650e409b2d7de46bc55495dec6c4e8801885f3e1e94c47acde35",
+    "bytes": 1399576,
+    "source": "dissertation_figures/figure_2_5/official_panels_AB_20261029/synthetic_expression_oracles.rds",
+    "source_sha256": "f3c67bb06227650e409b2d7de46bc55495dec6c4e8801885f3e1e94c47acde35"
+  },
+  {
+    "file": "Figure5/analysis/validation_receipt.json",
+    "sha256": "24f4398e1fe11ed9e38e51cba529ea760acaa9e58265991198406da8cdfdf3da",
+    "bytes": 1950,
+    "source": "dissertation_figures/figure_2_5/official_panels_AB_20261029/validation_receipt.json",
+    "source_sha256": "24f4398e1fe11ed9e38e51cba529ea760acaa9e58265991198406da8cdfdf3da"
+  },
+  {
+    "file": "Figure5/data/liver_active.rds",
+    "sha256": "6f585867c53b112e819bd1fe89c7f292ebc48cbd11c39fd72c44b94031722461",
+    "bytes": 1344,
+    "source": "dissertation_figures/figure_2_5/official_panels_AB_20261029/production_20261029T051132558193Z/report/figure_2_5_AB_cache.rds",
+    "source_sha256": "6f585867c53b112e819bd1fe89c7f292ebc48cbd11c39fd72c44b94031722461"
+  },
+  {
+    "file": "Figure5/final/Figure5.pdf",
+    "sha256": "9826e21afa8ebc4c10f0c1412fb9f79fbf04a0d56de8b27417a4a39d6896ae3f",
+    "bytes": 40329,
+    "source": "dissertation_figures/review/all_figures_20261030/assets/Figure_2_5.pdf",
+    "source_sha256": "9826e21afa8ebc4c10f0c1412fb9f79fbf04a0d56de8b27417a4a39d6896ae3f"
+  },
+  {
+    "file": "Figure5/redraw.R",
+    "sha256": "79e51526d1d40b8682fd3c7ee218aac364ffb98331606181874cd9615f436bc7",
+    "bytes": 3141,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Figure5/run_analysis.R",
+    "sha256": "c390ad4e0fdb8956dc70803abb635c6136929d3655f7ddd2a53d171f8dbaae09",
+    "bytes": 794,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "README.md",
+    "sha256": "fa782c1021cf9cb6291d0a1b9786c2837913c222818ea8edfb92966343bcec5d",
+    "bytes": 6608,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts.",
+    "original_artifact_sha256": "dcbaec009a50076a47a662bd4578ad7edf2fa78858cd16c4c23bdc6e9cd447c8",
+    "adaptation": "Project-relative paths and metadata hash gate. Numerical inputs unchanged."
+  },
+  {
+    "file": "Supplement/code/simulate_framework.R",
+    "sha256": "9f5e40781b2abf805dc4b6f4b6cf95d150f9a7094d6423fb5816c8ed71084639",
+    "bytes": 1535,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Supplement/data/Interpretation.txt",
+    "sha256": "10e43bcade30426fb00817ec4c724a140892bc6069b14bf105f515a0c33ef640",
+    "bytes": 1158,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Supplement/data/N80_brackets.csv",
+    "sha256": "05d92fcf83b724b9560670ed8a1415d5c40956c9fa684d8218c0c5fd91501b6e",
+    "bytes": 2829,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Supplement/data/N80_brackets_BH05.csv",
+    "sha256": "ecad475c06cc359318b64a2032d8f72a70659b5ce35e908a7f8901676e6bb91c",
+    "bytes": 888,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Supplement/data/application_pilot_summary.csv",
+    "source": "Current analysis or summary. See accompanying scripts.",
+    "sha256": "c7a05f16d172c2ea46273829bb941269c3daf6144ead3a79a88c280d527c4266",
+    "bytes": 861
+  },
+  {
+    "file": "Supplement/data/cache_validity.csv",
+    "sha256": "9d149c84385d54114123e28234c7fc331c0610b3e30786c6272f59ddd3c9fb5a",
+    "bytes": 169,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Supplement/data/framework_calibration.rds",
+    "sha256": "7515b22fcaacfc2ee84f959373f744acc39b66fb222a09fd665b2b4f76578fea",
+    "bytes": 284483,
+    "source": "output/two_harmonic/results/pilot_2h_GTExLiver_topK300.rds",
+    "source_sha256": "1a7f2873a938e425585b3a900d49789d09b9db67eb9978e6ab2d32fef06734cb",
+    "difference": "Individual cts and cts2 removed. Simulation fields retained."
+  },
+  {
+    "file": "Supplement/data/paired_design_comparison.csv",
+    "sha256": "9e3867227fa21ea064863b33018b3a40675f734678054f01505a624650d84290",
+    "bytes": 15992,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Supplement/data/paired_marginal_replicates.csv",
+    "sha256": "fa1f3d64fe9c73813df453cbde7c9a379d70ae7fa9cfe6d99ce8ae1d5b12b534",
+    "bytes": 116224,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Supplement/data/paired_stratum_replicates.csv",
+    "sha256": "175239be95177a1fef75014992e69a5d2bd63597e0642d53779e83c76a438963",
+    "bytes": 203389,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Supplement/data/paired_stratum_summary.csv",
+    "sha256": "b1384170759c076859487264276c5c3ebd4c041e9060656076d797b2336c65d5",
+    "bytes": 972,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Supplement/data/panel_data.rds",
+    "sha256": "91ab2520c79cffa55e387f9c7638fc120beeee770bc9be5c1820dde589df69f7",
+    "bytes": 1186,
+    "source": "records/final_revision_20261030/package/supplement_revision/panel_data.rds",
+    "source_sha256": "91ab2520c79cffa55e387f9c7638fc120beeee770bc9be5c1820dde589df69f7"
+  },
+  {
+    "file": "Supplement/data/power_and_FDP_summary.csv",
+    "sha256": "a6b6e355081138d952c0269057c70f189dae87264bf7607023a0c17704ee641f",
+    "bytes": 52667,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Supplement/final/Supplementary_harmonic_framework.pdf",
+    "sha256": "a030ba5777073c1c22c525bb240b34ebe9be296746cdaa7f19e1058f78647eb7",
+    "bytes": 10691,
+    "source": "records/final_revision_20261030/package/supplement_revision/Supplementary_harmonic_framework.pdf",
+    "source_sha256": "a030ba5777073c1c22c525bb240b34ebe9be296746cdaa7f19e1058f78647eb7"
+  },
+  {
+    "file": "Supplement/matched_analysis/00_paired_engine.R",
+    "sha256": "c8808232fce0649d073f3e23b867a78233d51a70dd76d6479176223728e7ed70",
+    "bytes": 7204,
+    "source": "dissertation_figures/figure_2_5/official_matched_20261029/00_paired_engine.R",
+    "source_sha256": "c8808232fce0649d073f3e23b867a78233d51a70dd76d6479176223728e7ed70"
+  },
+  {
+    "file": "Supplement/matched_analysis/01_validate_engine.R",
+    "sha256": "498f7f34257bcc2d7cd38e48c25cb6230fcdf4c1414efeb1584336b1d70b80d3",
+    "bytes": 13220,
+    "source": "dissertation_figures/figure_2_5/official_matched_20261029/01_validate_engine.R",
+    "source_sha256": "498f7f34257bcc2d7cd38e48c25cb6230fcdf4c1414efeb1584336b1d70b80d3"
+  },
+  {
+    "file": "Supplement/matched_analysis/02_run_jobs.R",
+    "sha256": "b4c86c90387e65acebb700409447a3124130e063f4e72698680a830f867f5045",
+    "bytes": 3700,
+    "source": "dissertation_figures/figure_2_5/official_matched_20261029/02_run_jobs.R",
+    "source_sha256": "b4c86c90387e65acebb700409447a3124130e063f4e72698680a830f867f5045"
+  },
+  {
+    "file": "Supplement/matched_analysis/03_summarize.R",
+    "sha256": "3a4c6052553fd172c26eec95defaa996ad2aa02c8d16e2fd2bb296271b2c7c94",
+    "bytes": 8374,
+    "source": "dissertation_figures/figure_2_5/official_matched_20261029/03_summarize.R",
+    "source_sha256": "3a4c6052553fd172c26eec95defaa996ad2aa02c8d16e2fd2bb296271b2c7c94"
+  },
+  {
+    "file": "Supplement/matched_analysis/calibration_and_sampler.rds",
+    "sha256": "5d86ea5aef6b0a05a95ab0aebf8bd35fc9d0056a03e5afb0358d77c9cae328cd",
+    "bytes": 144900,
+    "source": "dissertation_figures/figure_2_5/official_matched_20261029/calibration_and_sampler.rds",
+    "source_sha256": "5d86ea5aef6b0a05a95ab0aebf8bd35fc9d0056a03e5afb0358d77c9cae328cd"
+  },
+  {
+    "file": "Supplement/matched_analysis/independent_gate.csv",
+    "sha256": "ad5e92d9a1269e115512168adc3709a5d6561c7b04bb5df84a31f89e1118da74",
+    "bytes": 966,
+    "source": "dissertation_figures/figure_2_5/official_matched_20261029/independent_gate.csv",
+    "original_artifact_sha256": "374b86efca24328bcb87409915ef80b2495baa6da8b835d06427c0613ba76180",
+    "adaptation": "Project-relative paths and metadata hash gate. Numerical inputs unchanged.",
+    "source_sha256": "374b86efca24328bcb87409915ef80b2495baa6da8b835d06427c0613ba76180"
+  },
+  {
+    "file": "Supplement/matched_analysis/job_manifest.csv",
+    "sha256": "c750ba6b655a5b462f59d093bfb2d5c310c7c608af209dcfcdea27bdbca36056",
+    "bytes": 3624,
+    "source": "dissertation_figures/figure_2_5/official_matched_20261029/job_manifest.csv",
+    "source_sha256": "c750ba6b655a5b462f59d093bfb2d5c310c7c608af209dcfcdea27bdbca36056"
+  },
+  {
+    "file": "Supplement/matched_analysis/settings.rds",
+    "sha256": "911d4c805e0f50042ff9d870ccb303161969139db5513a74bfe17962ca335a12",
+    "bytes": 968,
+    "source": "dissertation_figures/figure_2_5/official_matched_20261029/settings.rds",
+    "source_sha256": "911d4c805e0f50042ff9d870ccb303161969139db5513a74bfe17962ca335a12"
+  },
+  {
+    "file": "Supplement/matched_analysis/source_provenance.csv",
+    "sha256": "a01159e05e83c36143f974f5841202cd2ef28a315c2e17ebfe47c787fabaf5c7",
+    "bytes": 776,
+    "source": "dissertation_figures/figure_2_5/official_matched_20261029/source_provenance.csv",
+    "original_artifact_sha256": "654d02666c8f9a17ad34f975d99531210501bf6a626a8ab483c63b218d8ae2c6",
+    "adaptation": "Project-relative paths and metadata hash gate. Numerical inputs unchanged.",
+    "source_sha256": "654d02666c8f9a17ad34f975d99531210501bf6a626a8ab483c63b218d8ae2c6"
+  },
+  {
+    "file": "Supplement/matched_analysis/synthetic_expression_oracle_fixtures.rds",
+    "sha256": "e158a53c57f2e81986e2a9bc31b425f24b0f1abc3ad1486fc385dd164ab82d89",
+    "bytes": 483932,
+    "source": "dissertation_figures/figure_2_5/official_matched_20261029/synthetic_expression_oracle_fixtures.rds",
+    "source_sha256": "e158a53c57f2e81986e2a9bc31b425f24b0f1abc3ad1486fc385dd164ab82d89"
+  },
+  {
+    "file": "Supplement/matched_analysis/validation_receipt.json",
+    "sha256": "cc819a59735d54bcb74edd3e3a2038df2babde31922e68222df14b03be09ef67",
+    "bytes": 2589,
+    "source": "dissertation_figures/figure_2_5/official_matched_20261029/validation_receipt.json",
+    "original_artifact_sha256": "90d05087f8fe7b56d7b5ff16fb94fb957f53f6d924bce4953e8d05c728d12a39",
+    "adaptation": "Project-relative paths and metadata hash gate. Numerical inputs unchanged.",
+    "source_sha256": "90d05087f8fe7b56d7b5ff16fb94fb957f53f6d924bce4953e8d05c728d12a39"
+  },
+  {
+    "file": "Supplement/redraw.R",
+    "sha256": "67dd5b541e560adce5ed2fc1352675773993c7d17a934a686a57593d03115021",
+    "bytes": 3172,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Supplement/run_analysis.R",
+    "sha256": "18fb593262ea05b47d9ef5f359e7003168fa99cebb12c2aa4339bacd9c5c3979",
+    "bytes": 720,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "Supplement/run_framework.R",
+    "sha256": "47fa6b9ce8203be3c6b55259c294ad1d69fb2bdabae663df3377fbc8a1dd9dac",
+    "bytes": 1565,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "code/exact_F.R",
+    "sha256": "396e85e738f3953a359047a418b4e8fbdbe3940c3c8095082a076488e525ce8d",
+    "bytes": 3535,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  },
+  {
+    "file": "code/onecol_common.R",
+    "sha256": "d253a43fc4e93989ebbb4673774c4c18df5850070cf651346e58450e3ea2e635",
+    "bytes": 3763,
+    "source": "paper_reproduction/code/onecol_common.R",
+    "source_sha256": "d253a43fc4e93989ebbb4673774c4c18df5850070cf651346e58450e3ea2e635"
+  },
+  {
+    "file": "redraw_all.R",
+    "sha256": "6ad6dfb73203354ccd08facb32eedf4ba9ad8b69ae0fa2d058276d342b27cb10",
+    "bytes": 543,
+    "source": "Current portable analysis, adaptation or summary. See README and accompanying scripts."
+  }
+]

@@ -1,0 +1,6 @@
+"species","dataset","tissue","n_pilot","genes_fitted","n_selected","median_r","selection","input_time","source"
+"H. sapiens","GSE160521","NAc",59,51118,300,1.51983611543516,"raw K1 p < 0.01, top 300","corrected TOD","candidate_screen/all_pilot_parameters.rds"
+"H. sapiens","GSE160521","Caudate",59,49135,300,0.798953356641248,"raw K1 p < 0.01, top 300","corrected TOD","candidate_screen/all_pilot_parameters.rds"
+"H. sapiens","GSE160521","Putamen",59,49156,300,1.00189709119114,"raw K1 p < 0.01, top 300","corrected TOD","candidate_screen/all_pilot_parameters.rds"
+"H. sapiens","GSE71620","BA47",146,19998,300,0.474871527179699,"raw K1 p < 0.01, top 300","dawn-referenced TOD","Figure3/data/configuration.rds"
+"H. sapiens","GTEx v10","Liver",262,8917,300,0.339199194738539,"raw K1 p < 0.01, top 300","season-adjusted TOD","Figure5/analysis/calibrations.rds, A"

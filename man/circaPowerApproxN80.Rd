@@ -34,6 +34,6 @@ before running the full simulation grid.
 }
 \examples{
 # Analytical sample size for the pilot's median signal-to-noise ratio.
-bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+bio <- scp_load_pilot("human", "GSE160521", "Caudate", "Control")
 circaPowerApproxN80(bio)
 }

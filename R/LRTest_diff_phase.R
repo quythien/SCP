@@ -20,158 +20,83 @@
 #'
 #' @noRd
 LRTest_diff_phase <- function(tt1, yy1, tt2, yy2, period = 24, FN = TRUE){
-  requireNamespace("nloptr", quietly = TRUE)
-  n1 <- length(tt1)
-  stopifnot(n1 == length(yy1))
-  n2 <- length(tt2)
-  stopifnot(length(tt2) == length(yy2))
-
-  w <- 2*pi/period
-
   fit1 <- fitSinCurve(tt1, yy1, period = period)
   fit2 <- fitSinCurve(tt2, yy2, period = period)
+  n1 <- length(tt1)
+  n2 <- length(tt2)
+  n <- n1 + n2
+  if (length(FN) != 1L || is.na(FN) || !FN %in% c(TRUE, FALSE))
+    stop("FN has to be TRUE or FALSE", call. = FALSE)
+  if (n1 <= 3L || n2 <= 3L || (FN && n <= 8L) ||
+      fit1$rss <= 0 || fit2$rss <= 0)
+    stop("The phase test requires residual degrees of freedom and positive residual variance.",
+      call. = FALSE)
+  w <- 2 * pi / period
 
-  A1 <- fit1$amp
-  A2 <- fit2$amp
-  phase1 <- fit1$phase
-  phase2 <- fit2$phase
-
-  # Adjust phase for optimizer only, use local copies so originals are returned
-  phase1_opt <- phase1
-  phase2_opt <- phase2
-  if(phase2_opt - phase1_opt > period/2){
-    phase2_opt <- phase2_opt - period
-  } else if(phase1_opt - phase2_opt > period/2){
-    phase1_opt <- phase1_opt - period
+  # Center each group once for the one-dimensional common-phase profile.
+  groups <- lapply(list(list(t = tt1, y = yy1), list(t = tt2, y = yy2)), function(g) {
+    y <- g$y - mean(g$y)
+    s <- sin(w * g$t)
+    c <- cos(w * g$t)
+    s <- s - mean(s)
+    c <- c - mean(c)
+    list(n = length(y), y = y, s = s, c = c, yy = sum(y^2),
+      ss = sum(s^2), cc = sum(c^2), sc = sum(s * c),
+      ys = sum(y * s), yc = sum(y * c))
+  })
+  profile <- function(phi, direct = FALSE) {
+    cv <- cos(w * phi)
+    sv <- sin(w * phi)
+    value <- numeric(length(phi))
+    for (g in groups) {
+      q <- g$ss * cv^2 + g$cc * sv^2 + 2 * g$sc * cv * sv
+      h <- g$ys * cv + g$yc * sv
+      amplitude <- pmax(0, h / q)
+      rss <- g$yy - pmax(0, h)^2 / q
+      recalculate <- if (direct) seq_along(phi) else
+        which(rss < 128 * .Machine$double.eps * max(1, g$yy))
+      for (j in recalculate)
+        rss[j] <- sum((g$y - amplitude[j] * (cv[j] * g$s + sv[j] * g$c))^2)
+      if (any(!is.finite(rss)) || any(rss <= 0))
+        stop("The phase profile requires positive residual variance.", call. = FALSE)
+      value <- value + g$n / 2 * (1 + log(rss / g$n))
+    }
+    value
   }
 
-  basal1 <- fit1$offset
-  basal2 <- fit2$offset
+  # Search the circle and refine every detected minimum.
+  points <- 4096L
+  step <- period / points
+  grid <- seq(0, period, length.out = points + 1L)[seq_len(points)]
+  values <- profile(grid)
+  left <- values[c(points, seq_len(points - 1L))]
+  right <- values[c(2:points, 1L)]
+  minima <- which((values < left & values <= right) | (values <= left & values < right))
+  phases <- c(fit1$phase, fit2$phase)
+  boundary_phases <- vapply(groups, function(g) atan2(g$yc, g$ys) / w, numeric(1))
+  starts <- unique(c(grid[c(minima, which.min(values))], phases,
+    (boundary_phases - period / 4) %% period, (boundary_phases + period / 4) %% period))
+  refined <- vapply(starts, function(phi)
+    stats::optimize(profile, c(phi - step, phi + step), tol = period * 1e-11)$minimum,
+    numeric(1))
+  candidates <- c(starts, refined)
+  final_values <- profile(candidates, direct = TRUE)
+  best <- which.min(final_values)
+  phase_c <- candidates[best] %% period
+  l0 <- -final_values[best]
+  la <- -n1 / 2 * (1 + log(fit1$rss / n1)) - n2 / 2 * (1 + log(fit2$rss / n2))
 
-  sigma2_1 <- 1/n1 * fit1$rss
-  sigma2_2 <- 1/n2 * fit2$rss
-
-  theta1 <- 1/sigma2_1
-  theta2 <- 1/sigma2_2
-
-  p1 <- c(A1, phase1_opt, basal1, theta1)
-  p2 <- c(A2, phase2_opt, basal2, theta2)
-  x_Ha <- c(p1, p2)
-
-  # Negative log-likelihood function
-  eval_f_list <- function(x) {
-    p1 <- x[1:4]
-    p2 <- x[5:8]
-    A1 <- p1[1]
-    phase1 <- p1[2]
-    basel1 <- p1[3]
-    theta1 <- p1[4]
-
-    asin1 <- sin(w * (tt1 + phase1) )
-    acos1 <- cos(w * (tt1 + phase1) )
-    yhat1 <- A1 * asin1 + basel1
-
-    A2 <- p2[1]
-    phase2 <- p2[2]
-    basel2 <- p2[3]
-    theta2 <- p2[4]
-
-    asin2 <- sin(w * (tt2 + phase2) )
-    acos2 <- cos(w * (tt2 + phase2) )
-    yhat2 <- A2 * asin2 + basel2
-
-    ll1_a <- log(theta1)/2
-    ll1_b <- (yy1 - yhat1)^2 * theta1 / 2
-    ll1 <- ll1_a - ll1_b
-
-    ll2_a <- log(theta2)/2
-    ll2_b <- (yy2 - yhat2)^2 * theta2 / 2
-    ll2 <- ll2_a - ll2_b
-
-    partial_A1 <- - theta1 * sum((yy1 - yhat1) * asin1)
-    partial_phase1 <- - theta1 * A1 * w * sum((yy1 - yhat1) * acos1)
-    partial_C1 <- - theta1 * sum(yy1 - yhat1)
-    partial_theta1 <- sum((yy1 - yhat1)^2)/2 - n1/2/theta1
-
-    partial_A2 <- - theta2 * sum((yy2 - yhat2) * asin2)
-    partial_phase2 <- - theta2 * A2 * w * sum((yy2 - yhat2) * acos2)
-    partial_C2 <- - theta2 * sum(yy2 - yhat2)
-    partial_theta2 <- sum((yy2 - yhat2)^2)/2 - n2/2/theta2
-
-    return( list( "objective" = -sum(ll1) - sum(ll2),
-    "gradient" = c(partial_A1, partial_phase1, partial_C1, partial_theta1,
-    partial_A2, partial_phase2, partial_C2, partial_theta2)
-    )
-    )
+  # A null model cannot improve on the unrestricted least-squares fit.
+  tolerance <- 128 * .Machine$double.eps * max(1, abs(l0), abs(la))
+  if (l0 > la + tolerance)
+    stop("The common-phase likelihood exceeds the unrestricted likelihood.", call. = FALSE)
+  LR_stat <- max(0, 2 * (la - l0))
+  pvalue <- if (FN) {
+    Fstat <- expm1(LR_stat / n) * (n - 8)
+    stats::pf(Fstat, df1 = 1, df2 = n - 8, lower.tail = FALSE)
+  } else {
+    stats::pchisq(LR_stat, df = 1, lower.tail = FALSE)
   }
-
-  # Equality constraints: phase1 = phase2
-  eval_g_eq <- function(x)
-  {
-    p1 <- x[1:4]
-    p2 <- x[5:8]
-    phase1 <- p1[2]
-    phase2 <- p2[2]
-    phase1 - phase2
-  }
-
-  # Jacobian of equality constraints
-  eval_g_eq_jac <- function(x)
-  {
-    c(0, 1, 0, 0,
-    0, -1, 0, 0)
-  }
-
-  # Lower and upper bounds
-  lb <- c(0,-Inf,-Inf,1e-10, 0, -Inf,-Inf, 1e-10)
-  ub <- c(Inf,Inf,Inf,Inf,Inf,Inf,Inf,Inf)
-
-  # Initial values
-  local_opts <- list( "algorithm" = "NLOPT_LD_MMA", "xtol_rel" = 1.0e-15 )
-  opts <- list( "algorithm"= "NLOPT_LD_SLSQP",
-  "xtol_rel"= 1.0e-15,
-  "maxeval"= 160000,
-  "local_opts" = local_opts,
-  "print_level" = 0
-  )
-
-  res <- nloptr::nloptr ( x0 = x_Ha,
-  eval_f = eval_f_list,
-  lb = lb,
-  ub = ub,
-  eval_g_eq = eval_g_eq,
-  eval_jac_g_eq = eval_g_eq_jac,
-  opts = opts)
-
-  x_H0 <- res$solution
-  l0 <- - eval_f_list(x_H0)$objective
-  la <- - eval_f_list(x_Ha)$objective
-
-  LR_stat <- -2*(l0-la)
-  if (l0 > la + 1e-6)
-    warning("LR_stat < 0 (constrained optimizer may have reached a saddle); clamped to 0")
-  LR_stat <- max(0, LR_stat)
-
-  if(!FN){
-    pvalue <- pchisq(LR_stat,1,lower.tail = FALSE)
-  } else if(FN){
-    r <- 1
-    k <- 8
-    n <- n1+n2
-    Fstat <- (exp(LR_stat/n) - 1) * (n-k) / r
-    pvalue <- pf(Fstat,df1 = r, df2 = n-k, lower.tail = FALSE)
-  } else{
-    stop("FN has to be TRUE or FALSE")
-  }
-
-  phase_c <- x_H0[2]
-  phase_c2 <- x_H0[6]
-
-  res <- list(phase_1=phase1, phase_2=phase2, phase_c=phase_c,
-  l0=l0,
-  la=la,
-  stat=-2*(l0-la),
-  pvalue=pvalue)
-
-  return(res)
+  list(phase_1 = fit1$phase, phase_2 = fit2$phase, phase_c = phase_c,
+    l0 = l0, la = la, stat = LR_stat, pvalue = pvalue)
 }

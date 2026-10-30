@@ -193,3 +193,9 @@ inst/shiny_demo/*
 !inst/extdata/pilots/human/gtex_v10/
 !inst/extdata/pilots/human/gtex_v10/dip/
 !inst/extdata/pilots/human/gtex_v10/tod/
+
+# Current application reproduction code and compact plotting data.
+!paper_reproduction/
+!paper_reproduction/updated_application/
+!paper_reproduction/updated_application/**
+paper_reproduction/updated_application/generated/

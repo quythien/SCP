@@ -1,0 +1,8 @@
+"role","path","sha256"
+"K1_calibration","dissertation_figures/figure_2_1/caudate_liver_candidate/v10_comparison/calibration_and_sampler.rds","73cdd9e60acf1a63298e2539f523706207d547a470cdc5a9e3a33849a8c0bfb4"
+"K1_settings","dissertation_figures/figure_2_1/caudate_liver_candidate/v10_comparison/settings.json","c4c3094f6737a541e4086b13e099475de2752bc3b0550c1966f93584a2d950c7"
+"K1_original_input","output/gtex_v10_normalized_TOD_20261028/private/report_pilots.rds","f3e5d1cce53dfcc1cd5790d0222d40f3619b86cfb90f89cb816f8bef5c8ac634"
+"K1_helper","examples/pilots/gtex_v10/05_compare_sample_sizes.R","0a0e204d2ea0027a4d4afebf6de1d9374a1c1e312273e3762110b43e78a7e0c6"
+"K2_calibration","dissertation_figures/figure_2_5/official_matched_20261029/calibration_and_sampler.rds","5d86ea5aef6b0a05a95ab0aebf8bd35fc9d0056a03e5afb0358d77c9cae328cd"
+"K2_pilot","output/two_harmonic/results/pilot_2h_GTExLiver_topK300.rds","1a7f2873a938e425585b3a900d49789d09b9db67eb9978e6ab2d32fef06734cb"
+"original_style","examples/publication/onecol/fig6_onecol.R","ccb32f3c93eb438bc000358a9de6f58542e677c89207ea37954f0c37b4bc3894"

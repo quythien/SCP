@@ -569,7 +569,7 @@ estCircadianParam <- function(data, times, period = 24,
 #' to each gene by OLS, tests the joint rhythmicity null
 #' \eqn{H_0: a_1 = b_1 = a_2 = b_2 = 0} on 4 d.f., and returns a
 #' \code{CircadianBioOptions} object whose 5-way joint empirical distribution
-#' \eqn{F_{(\mu, A_1, \phi_1, A_2, \phi_2, \sigma)}} is preserved by gene-paired
+#' \eqn{F_{(A_1, \phi_1, A_2, \phi_2, \sigma)}} is preserved by gene-paired
 #' index draws downstream.
 #'
 #' The returned object carries the standard 1-harmonic fields
@@ -593,7 +593,7 @@ estCircadianParam <- function(data, times, period = 24,
 #'         across \eqn{(A_1, \phi_1, A_2, \phi_2, \sigma)}, preserving the
 #'         cross-parameter dependence observed in the pilot.
 #'   \item No 2nd-harmonic significance threshold is applied: ALL top-K genes
-#'         passing the joint 4-d.f. F-test contribute, even those whose
+#'         passing the K=1 2-d.f. F-test contribute, even those whose
 #'         \eqn{A_2} is essentially noise. The empirical \eqn{F_{A_2}} will
 #'         have a noise spike near zero, which is fine.
 #'   \item The K=2 extension is single-cohort only; the differential
@@ -604,11 +604,11 @@ estCircadianParam <- function(data, times, period = 24,
 #' @param times Numeric vector of sample collection times in hours,
 #'   length \code{ncol(data)}.
 #' @param period Period in the same units as \code{times} (default 24 hours).
-#' @param min_rhythm_pval P-value threshold for the joint 4-d.f. F-test
+#' @param min_rhythm_pval P-value threshold for the K=1 2-d.f. F-test
 #'   (default 0.01). Genes with p < this define the candidate set.
 #' @param top_k Cap on number of genes contributing to the joint
 #'   \eqn{(A_1, \phi_1, A_2, \phi_2, \sigma)} distribution (default 500),
-#'   ranked by F-test p-value.
+#'   ranked by K=1 F-test p-value.
 #' @param prop_DR,prop_DP,prop_DM Differential proportions (defaults 0.15,
 #'   0.10, 0.00). Forwarded unchanged to \code{CircadianBioOptions}; note the
 #'   K=2 extension itself is single-cohort only.
@@ -629,14 +629,13 @@ estCircadianParam <- function(data, times, period = 24,
 #'   \code{\link{simCircadianSingleCohort2H}} for the matching simulator.
 #'
 #' @examples
-#' # Two-harmonic pilot fit on a bundled raw pilot (first 300 genes).
-#' praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+#' # Fit K = 2 to synthetic Liver data generated under K = 1.
+#' praw <- readRDS(system.file("extdata", "example_caudate_liver.rds",
 #'                             package = "SCP"))
-#' expr <- praw$adrenal$expr[1:300, ]
-#' bio2h <- estCircadianParam2H(expr, praw$adrenal$times,
+#' expr <- praw$liver$expr[1:300, ]
+#' bio2h <- estCircadianParam2H(expr, praw$liver$times,
 #'                              top_k = 100, verbose = FALSE)
 #' bio2h$prop_rhythmic
-#'
 #' @export
 estCircadianParam2H <- function(data, times, period = 24,
                                  min_rhythm_pval = 0.01,
@@ -853,11 +852,11 @@ estCircadianParam2H <- function(data, times, period = 24,
     A1_emp           = A1_emp, A2_emp = A2_emp,
     phi1_emp         = phi1_emp, phi2_emp = phi2_emp,
     sigma_emp        = sigma_emp,
-    screen_method    = "joint_2H_F4"
+    screen_method    = "K1_F2_rank_K2_fit"
   )
 
   if (verbose) {
-    cat(sprintf("Joint 4-d.f. F-test screen: %d/%d genes pass p < %.2g\n",
+    cat(sprintf("K=1 2-d.f. F-test screen: %d/%d genes pass p < %.2g\n",
                 n_cand, ngenes, min_rhythm_pval))
     cat(sprintf("Top-K used for joint (A1, phi1, A2, phi2, sigma): %d\n",
                 K_use))
@@ -1180,18 +1179,21 @@ circular_difference <- function(phi1, phi2, period = 24) {
 #' @param prop_DM Optional target proportion of differential-MESOR genes.
 #' @param mesor_diff Optional MESOR difference for the DM component.
 #' @param dp_shift_mode Differential-phase shift model, "uniform" or "fixed".
-#' @param paired_sigma Preserve the paired (amplitude, noise) relationship across groups.
+#' @param paired_sigma Preserve selected amplitude/noise pairs within each
+#'   group. Default TRUE. Group-2 pairs are stored in \code{amplitude2} and
+#'   \code{sigma_rhythmic2} for group-2-only DR genes.
 #' @param sim.seed Random seed.
 #' @param verbose Print progress.
 #' @return A two-group \code{CircadianBioOptions} pilot summary.
 #' @examples
-#' # Two-group pilot (adrenal vs liver arms of the bundled demo pilot).
-#' praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+#' # Fit the matched synthetic Caudate/Liver arms.
+#' praw <- readRDS(system.file("extdata", "example_caudate_liver.rds",
 #'                             package = "SCP"))
-#' bio <- estCircadianParamTwoGroup(praw$adrenal$expr[1:300, ],
+#' bio <- estCircadianParamTwoGroup(praw$caudate$expr[1:300, ],
 #'                                  praw$liver$expr[1:300, ],
-#'                                  praw$adrenal$times, praw$liver$times,
-#'                                  top_k = 100, verbose = FALSE)
+#'                                  praw$caudate$times, praw$liver$times,
+#'                                  top_k = "all", paired_sigma = TRUE,
+#'                                  verbose = FALSE)
 #' bio$prop_DR
 #' @export
 estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
@@ -1202,7 +1204,7 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
                                       prop_DM = NULL,
                                       mesor_diff = NULL,
                                       dp_shift_mode = c("uniform", "fixed"),
-                                      paired_sigma = FALSE,
+                                      paired_sigma = TRUE,
                                       sim.seed = 12345,
                                       verbose = TRUE) {
 
@@ -1367,9 +1369,11 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
   sigma_rhythmic_emp <- p1$raw$sigma[estim_valid_1]
   phase_emp          <- p1$raw$phi[p1$raw$in_estim_set & !is.na(p1$raw$phi)]
 
-  # Group-2 distributions for fully symmetric two-group simulation
-  rhythmic_idx_2     <- p2$raw$is_rhythmic
-  amp_emp2           <- p2$raw$A[p2$raw$in_estim_set & !is.na(p2$raw$A) & p2$raw$A > 0]
+  # Group-2 selected amplitude and noise use the same fitted gene set.
+  estim_valid_2      <- p2$raw$in_estim_set & is.finite(p2$raw$A) & p2$raw$A > 0 &
+                        is.finite(p2$raw$sigma) & p2$raw$sigma > 0
+  amp_emp2           <- p2$raw$A[estim_valid_2]
+  sigma_rhythmic2_emp <- p2$raw$sigma[estim_valid_2]
   sigma_valid_2      <- p2$raw$sigma[!is.na(p2$raw$sigma) & p2$raw$sigma > 0]
   lOD_emp2           <- log(sigma_valid_2)
   lBaselineExpr2_emp <- p2$raw$M[!is.na(p2$raw$M)]   # group-2 mesor distribution
@@ -1431,14 +1435,15 @@ estCircadianParamTwoGroup <- function(data_1, data_2, times_1, times_2,
     prop_rhythmic   = prop_union_rhy,
     period          = period,
     lBaselineExpr   = lBaselineExpr_emp,
-    lBaselineExpr2  = lBaselineExpr2_emp,  # F_hat_M2: group-2 mesor distribution
+    lBaselineExpr2  = lBaselineExpr2_emp,  # retained group-2 pilot calibration
     lOD             = lOD_emp,
     lOD2            = lOD_emp2,            # F_hat_sigma2: group-2 noise distribution
     amplitude       = amp_emp,
     sigma_rhythmic  = sigma_rhythmic_emp,
     paired_sigma    = paired_sigma,
     cts             = times_1,             # F_hat_TOD1: group-1 sampling time distribution
-    amplitude2      = amp_emp2,            # F_hat_A2: used for g2-only DR genes
+    amplitude2      = amp_emp2,            # selected group-2 DR pairs
+    sigma_rhythmic2 = sigma_rhythmic2_emp,
     cts2            = times_2,             # F_hat_TOD2: group-2 sampling time distribution
     phase           = phase_emp,
     prop_DR         = prop_DR_emp,

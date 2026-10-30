@@ -29,7 +29,8 @@ CircadianBioOptions(
   dr_amp_scale = 1,
   dr_sigma_scale = 1,
   alpha_pilot = NULL,
-  sim.seed = 12345
+  sim.seed = 12345,
+  sigma_rhythmic2 = NULL
 )
 }
 \arguments{
@@ -46,21 +47,25 @@ for all genes), a numeric vector (resampled to \code{ngenes}), a function
 \code{f(n)} returning \code{n} values, or a character string naming a built-in
 pilot dataset stored in \code{data/}. No default, must be supplied.}
 
-\item{lBaselineExpr2}{As \code{lBaselineExpr} but for group 2 (differential
-analyses only). \code{NULL} uses the same distribution as group 1.}
+\item{lBaselineExpr2}{Optional group-2 pilot MESOR distribution, retained
+as calibration metadata. Differential simulations share the realized
+group-1 MESOR outside DM and add \code{mesor_diff} for DM genes.}
 
 \item{lOD}{Log residual noise: \code{log(sigma)}, the per-gene noise around
 the cosinor fit (\code{sigma = exp(lOD)}). Same forms accepted as
 \code{lBaselineExpr}. No default, must be supplied.}
 
-\item{lOD2}{As \code{lOD} (the residual noise) but for group 2. \code{NULL}
-shares group 1 values.}
+\item{lOD2}{As \code{lOD} but for group 2. It supplies marginal noise for
+arrhythmic and DR-only states. Jointly rhythmic non-DR states share the
+realized group-1 standard deviation and have independent errors.}
 
 \item{amplitude}{Amplitude distribution for rhythmic genes, given in any
 of the forms accepted for \code{lBaselineExpr}. This argument is
 required and has no default.}
 
-\item{amplitude2}{As \code{amplitude} but for group 2.}
+\item{amplitude2}{As \code{amplitude} but for group-2-only DR genes.
+This differential input is separate from the second-harmonic field
+attached by \code{estCircadianParam2H}.}
 
 \item{sigma_rhythmic}{Optional numeric vector of per-gene noise values for
 rhythmic genes (same length as \code{amplitude}). When provided, amplitude
@@ -68,9 +73,9 @@ and sigma are drawn jointly to preserve pilot A-sigma correlation.}
 
 \item{paired_sigma}{Logical. If \code{TRUE} and \code{sigma_rhythmic} is
 supplied, expand \code{amplitude} and \code{sigma_rhythmic} jointly by the
-same resampled gene index so their pilot-estimated pairwise correlation is
-preserved; if \code{FALSE} (default), amplitude and sigma are expanded
-independently.}
+same resampled gene index. The same rule applies separately to
+\code{amplitude2} and \code{sigma_rhythmic2}. If \code{FALSE} (default),
+the marginal distributions are expanded independently.}
 
 \item{cts}{Numeric vector of sample collection times for passive design.}
 
@@ -105,6 +110,11 @@ effect-size distribution were calibrated). Stored on the object for
 provenance and reporting; default \code{NULL}.}
 
 \item{sim.seed}{Random seed.}
+
+\item{sigma_rhythmic2}{Optional selected group-2 standard deviations,
+matched by gene index to \code{amplitude2}. With \code{paired_sigma=TRUE},
+both vectors are resampled together. Without this vector, old two-group
+objects use marginal group-2 noise and do not preserve group-2 pairing.}
 }
 \value{
 Object of class \code{"CircadianBioOptions"}.

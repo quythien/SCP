@@ -76,11 +76,11 @@ Simulation-based alternative to the closed-form \code{CircaPower} formula:
 works for any design (active or passive) and any pilot parameter distribution.
 }
 \examples{
-bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+bio <- scp_load_pilot("human", "GSE160521", "Caudate", "Control")
 bio$ngenes <- 200L
-dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5,
+                               design = "passive", cts = bio$cts)
 aopt <- CircadianAnalysisOptions(alpha = 0.05)
-res  <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
+res <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
 rowMeans(res$marginal_power)  # mean power at each N
-
 }

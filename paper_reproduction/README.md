@@ -1,4 +1,10 @@
-# Code and data for the paper figures
+# Paper figure code and data
+
+The current application figures are in [updated_application](updated_application/README.md).
+Run `Rscript paper_reproduction/updated_application/redraw_all.R` from the repository root.
+
+The folders below retain the earlier paper figure inputs and plotting code. Their
+`redraw_all.R` entrypoint continues to write the earlier figures to `generated/`.
 
 Run from this folder in a terminal:
 

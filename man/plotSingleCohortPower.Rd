@@ -158,10 +158,12 @@ computed from a companion run that spreads gene effect sizes across the full
 specifies how effect sizes are drawn.
 }
 \examples{
-bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+bio <- scp_load_pilot("human", "GSE160521", "Caudate", "Control")
 bio$ngenes <- 200L
-dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5,
+                               design = "passive", cts = bio$cts)
 aopt <- CircadianAnalysisOptions(alpha = 0.05)
-res  <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
-plotSingleCohortPower(res, out_pdf = tempfile(fileext = ".pdf"))
+res <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
+plotSingleCohortPower(res, title = "Caudate control, passive design",
+                      out_pdf = tempfile(fileext = ".pdf"))
 }

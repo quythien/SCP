@@ -3,6 +3,11 @@
 #' Preferred interface: \code{runDifferentialPower(bio.opts, design.opts, analysis.opts)}.
 #' This function supports both the config-object API (primary) and a legacy
 #' flat-argument API (retained for back-compatibility).
+#' Older two-group options with \code{amplitude2} but no
+#' \code{sigma_rhythmic2} use marginal group-2 noise and warn when
+#' \code{prop_DR > 0}. They do not preserve selected group-2
+#' amplitude/noise pairs. Two-harmonic pilot objects are rejected because
+#' their \code{amplitude2} field describes a second harmonic.
 #'
 #' @param sample_sizes \code{CircadianBioOptions} (primary) or numeric vector of
 #'   per-group sample sizes (legacy flat API).
@@ -24,11 +29,19 @@
 #' @param design.opts \code{CircadianDesignOptions} (used with legacy positional first arg).
 #' @param analysis.opts \code{CircadianAnalysisOptions}.
 #'
-#' @return List (class \code{SCPDiffResult}) with fields:
+#' @return An unclassed list with fields:
 #'   \code{pval_DR}, \code{fdr_DR}, \code{pval_DP}, \code{fdr_DP},
 #'   \code{pval_DM}, \code{fdr_DM} -- arrays \code{[ngenes x n_sizes x nsims]};
-#'   \code{diff_type}, \code{effectsize}, \code{sample_sizes}, \code{nsims}.
-#'   Pass directly to \code{plotDiffPower()} or \code{npower()}.
+#'   \code{diff_type}, \code{ground_truth}, \code{parameter_draws},
+#'   \code{effectsize}, \code{sample_sizes}, \code{nsims}, \code{ngenes},
+#'   and \code{sim_params}. The \code{diff_type}, \code{ground_truth},
+#'   \code{parameter_draws}, and \code{effectsize} fields are lists with
+#'   one element per replicate. Truth and parameter draws are held fixed
+#'   across sample sizes within each replicate. See
+#'   \code{\link{simCircadianDiff}} for their contents. Non-identifiable
+#'   schedules and failed or nonfinite detector results raise an error.
+#'   The \code{runDifferentialPower()} wrapper adds the
+#'   \code{SCPDiffResult} class for plotting and power summaries.
 #'
 #' @seealso \code{\link{runDifferentialPower}} (user-facing wrapper)
 
@@ -57,6 +70,13 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
   # --- Dual-signature: detect config objects vs legacy flat args ---
   if (inherits(sample_sizes, "CircadianBioOptions")) {
     bio.opts <- sample_sizes
+    if (isTRUE(bio.opts$paired_2h))
+      stop("A two-harmonic pilot's amplitude2 is not a group-2 DR distribution. Supply a two-group pilot.",
+           call. = FALSE)
+    if (!is.null(bio.opts$amplitude2) && is.null(bio.opts$sigma_rhythmic2) &&
+        isTRUE(bio.opts$prop_DR > 0))
+      warning("This older two-group pilot has no sigma_rhythmic2. Group-2 DR uses marginal noise, without selected amplitude/noise pairing.",
+              call. = FALSE)
     if (is.null(design.opts) || !inherits(design.opts, "CircadianDesignOptions")) {
       # Second positional arg might be design.opts
       if (inherits(nsims, "CircadianDesignOptions")) {
@@ -147,6 +167,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     fdr_DP_i  <- matrix(NA,  nrow = ngenes, ncol = length(sample_sizes))
     fdr_DM_i  <- matrix(NA,  nrow = ngenes, ncol = length(sample_sizes))
     diff_type_i  <- NULL
+    ground_truth_i <- parameter_draws_i <- NULL
     effectsize_i <- NULL
 
     for (j in seq_along(sample_sizes)) {
@@ -185,6 +206,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
         if (!is.null(bo$amplitude))      sim_args$amplitude      <- bo$amplitude  * dr_amp_scale
         if (!is.null(bo$amplitude2))     sim_args$amplitude2     <- bo$amplitude2 * dr_amp_scale
         if (!is.null(bo$sigma_rhythmic)) sim_args$sigma_rhythmic <- bo$sigma_rhythmic * dr_sigma_scale
+        if (!is.null(bo$sigma_rhythmic2)) sim_args$sigma_rhythmic2 <- bo$sigma_rhythmic2 * dr_sigma_scale
         if (!is.null(bo$cts2)) {
           cts2_raw <- bo$cts2
           sim_args$cts2 <- if (design == "active" && length(cts2_raw) != n)
@@ -193,8 +215,20 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
       }
 
       sim_data <- do.call(simCircadianDiff, sim_args)
+      for (times in list(sim_data$times1, sim_data$times2)) {
+        x <- cbind(1, cos(2 * pi * times / period), sin(2 * pi * times / period))
+        if (length(times) <= ncol(x) || any(!is.finite(x)) || qr(x)$rank < ncol(x))
+          stop(sprintf("Differential cosinor design is not identifiable for sim %d, N=%d.", i, n),
+               call. = FALSE)
+      }
+      if (!identical(dim(sim_data$expr1), c(as.integer(ngenes), as.integer(n))) ||
+          !identical(dim(sim_data$expr2), c(as.integer(ngenes), as.integer(n))) ||
+          any(!is.finite(sim_data$expr1)) || any(!is.finite(sim_data$expr2)))
+        stop(sprintf("Invalid simulated expression for sim %d, N=%d.", i, n), call. = FALSE)
 
       if (j == 1) {
+        ground_truth_i <- sim_data$ground_truth
+        parameter_draws_i <- sim_data$parameter_draws
         diff_type_i  <- sim_data$ground_truth$diff_type
         effectsize_i <- list(
           DR1   = sim_data$effectsize_DR1,
@@ -204,6 +238,10 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
           mesor = sim_data$effectsize_mesor
         )
       }
+
+      if (!identical(sim_data$ground_truth, ground_truth_i) ||
+          !identical(sim_data$parameter_draws, parameter_draws_i))
+        stop("Differential truth changed across sample sizes within a replicate.", call. = FALSE)
 
       pval_DR_g = rep(1, ngenes)
       pval_DP_g = rep(1, ngenes)
@@ -223,6 +261,12 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
             parallel.ncores = parallel.ncores
           )
 
+          if (!is.data.frame(rhythm_res$rhythm.joint) ||
+              nrow(rhythm_res$rhythm.joint) != ngenes ||
+              !"TOJR" %in% names(rhythm_res$rhythm.joint) ||
+              anyNA(rhythm_res$rhythm.joint$TOJR))
+            stop("Invalid DCP rhythmicity output.", call. = FALSE)
+
           if ("DR" %in% test_types) {
             n_testable_DR = sum(rhythm_res$rhythm.joint$TOJR != "arrhy")
             if (n_testable_DR > 0) {
@@ -231,6 +275,11 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
                 alpha = alpha, p.adjust.method = p.adjust.method,
                 parallel.ncores = parallel.ncores
               )
+              if (!is.data.frame(dr_results) || !nrow(dr_results) ||
+                  !all(c("gname", "p.R2") %in% names(dr_results)) ||
+                  anyNA(dr_results$gname) || anyDuplicated(dr_results$gname) ||
+                  any(!dr_results$gname %in% gene_names))
+                stop("Invalid DCP DR output.", call. = FALSE)
               match_idx = match(gene_names, dr_results$gname)
               pval_DR_g[!is.na(match_idx)] = dr_results$p.R2[match_idx[!is.na(match_idx)]]
             }
@@ -246,6 +295,13 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
                 alpha = alpha, p.adjust.method = p.adjust.method,
                 parallel.ncores = parallel.ncores
               )
+              required <- c("gname", if ("DP" %in% test_types) "p.delta.peak",
+                if ("DM" %in% test_types) "p.delta.M")
+              if (!is.data.frame(dp_da_results) || !nrow(dp_da_results) ||
+                  !all(required %in% names(dp_da_results)) ||
+                  anyNA(dp_da_results$gname) || anyDuplicated(dp_da_results$gname) ||
+                  any(!dp_da_results$gname %in% gene_names))
+                stop("Invalid DCP parameter output.", call. = FALSE)
               match_idx = match(gene_names, dp_da_results$gname)
               if ("DP" %in% test_types)
                 pval_DP_g[!is.na(match_idx)] = dp_da_results$p.delta.peak[match_idx[!is.na(match_idx)]]
@@ -254,7 +310,8 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
             }
           }
         }, error = function(e) {
-          warning(sprintf("DCP pipeline failed for sim %d, N=%d: %s", i, n, e$message))
+          stop(sprintf("DCP pipeline failed for sim %d, N=%d: %s", i, n, e$message),
+               call. = FALSE)
         })
 
       } else if (DCmethod == "CircaCompare") {
@@ -267,12 +324,20 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
           pval_DP_g = cc_result$pval_DP
           pval_DM_g = cc_result$pval_DM
         }, error = function(e) {
-          warning(sprintf("CircaCompare failed for sim %d, N=%d: %s", i, n, e$message))
+          stop(sprintf("CircaCompare failed for sim %d, N=%d: %s", i, n, e$message),
+               call. = FALSE)
         })
       } else {
         stop(sprintf(paste0("runSimsDiff: DCmethod '%s' is not implemented in the ",
                             "simulation engine (only \"DCP\" and \"CircaCompare\" are supported)."),
                      DCmethod))
+      }
+
+      for (endpoint in test_types) {
+        values <- switch(endpoint, DR = pval_DR_g, DP = pval_DP_g, DM = pval_DM_g)
+        if (length(values) != ngenes || any(!is.finite(values)) ||
+            any(values < 0 | values > 1))
+          stop(sprintf("Invalid %s p-values for sim %d, N=%d.", endpoint, i, n), call. = FALSE)
       }
 
       # BH adjustment over all ngenes (including untested genes with pval=1 sentinel).
@@ -290,9 +355,14 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     list(pval_DR = pval_DR_i, fdr_DR = fdr_DR_i,
          pval_DP = pval_DP_i, fdr_DP = fdr_DP_i,
          pval_DM = pval_DM_i, fdr_DM = fdr_DM_i,
-         diff_type = diff_type_i, effectsize = effectsize_i)
+         diff_type = diff_type_i, ground_truth = ground_truth_i,
+         parameter_draws = parameter_draws_i, effectsize = effectsize_i)
   }, mc.cores = mc.cores, mc.set.seed = TRUE)
 
+  failed <- which(vapply(sim_results, inherits, logical(1), what = "try-error"))
+  if (length(failed))
+    stop(sprintf("Differential simulation failed for replicate %d: %s", failed[1],
+                 as.character(sim_results[[failed[1]]])), call. = FALSE)
   if (verbose) cat(sprintf("Completed %d simulations.\n", nsims))
 
   # Combine parallel results into arrays
@@ -300,6 +370,7 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
   pval_DP = fdr_DP = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
   pval_DM = fdr_DM = array(NA, dim = c(ngenes, length(sample_sizes), nsims))
   diff_type_list  <- vector("list", nsims)
+  ground_truth_list <- parameter_draws_list <- vector("list", nsims)
   effectsize_list <- vector("list", nsims)
 
   for (i in seq_len(nsims)) {
@@ -308,6 +379,8 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     pval_DP[,,i] <- r$pval_DP; fdr_DP[,,i] <- r$fdr_DP
     pval_DM[,,i] <- r$pval_DM; fdr_DM[,,i] <- r$fdr_DM
     diff_type_list[[i]]  <- r$diff_type
+    ground_truth_list[[i]] <- r$ground_truth
+    parameter_draws_list[[i]] <- r$parameter_draws
     effectsize_list[[i]] <- r$effectsize
   }
 
@@ -319,6 +392,8 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
     pval_DM = pval_DM,
     fdr_DM = fdr_DM,
     diff_type = diff_type_list,
+    ground_truth = ground_truth_list,
+    parameter_draws = parameter_draws_list,
     effectsize = effectsize_list,
     sample_sizes = sample_sizes,
     nsims = nsims,
@@ -387,13 +462,13 @@ runSimsDiff <- function(sample_sizes = c(12, 24, 36),
 #'   \item{nsims}{Number of simulation replicates}
 #'
 #' @examples
-#' bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+#' bio <- scp_load_pilot("human", "GSE160521", "Caudate", "Control")
 #' bio$ngenes <- 200L
-#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5,
+#'                                design = "passive", cts = bio$cts)
 #' aopt <- CircadianAnalysisOptions(alpha = 0.05)
-#' res  <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
+#' res <- runSimsSingleCohort(bio, dopt, aopt, verbose = FALSE)
 #' rowMeans(res$marginal_power)  # mean power at each N
-#'
 #' @export
 runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
                                 method = "cosinor",
@@ -760,7 +835,7 @@ runSimsSingleCohort <- function(bio.opts, design.opts, analysis.opts,
 #'   that reaches \code{target_power}, or \code{NA} if none does.
 #' @examples
 #' # Analytical sample size for the pilot's median signal-to-noise ratio.
-#' bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+#' bio <- scp_load_pilot("human", "GSE160521", "Caudate", "Control")
 #' circaPowerApproxN80(bio)
 #' @export
 circaPowerApproxN80 <- function(bio.opts, alpha = 0.05, target_power = 0.80,
@@ -800,8 +875,8 @@ circaPowerApproxN80 <- function(bio.opts, alpha = 0.05, target_power = 0.80,
 #'   before rounding up to the nearest \code{bin_width} (default 0.99).
 #' @return Numeric vector of breakpoints starting at 0 and ending at Inf.
 #' @examples
-#' # Adaptive r = A/sigma strata from a bundled pilot.
-#' bio <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
+#' # Signal-to-noise ratio strata from the bundled Caudate pilot.
+#' bio <- scp_load_pilot("human", "GSE160521", "Caudate", "Control")
 #' makeAdaptiveRStrata(bio, bin_width = 0.5)
 #' @export
 makeAdaptiveRStrata <- function(bio.opts, bin_width = 0.25, r_min_pct = 0,
@@ -912,11 +987,13 @@ printMethodGuidance <- function(methods = c("DCP","JTK","RAIN","MH"),
 #'       per method.
 #'   }
 #' @examples
-#' # Analytical (CircaPower) design guidance, no simulation.
-#' bio  <- scp_load_pilot("human", "GTEx", "Adrenal", "All")
-#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48, 96), nsims = 5)
+#' # Analytical guidance for a planned balanced active design.
+#' bio <- scp_load_pilot("human", "GSE160521", "Caudate", "Control")
+#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48, 96), nsims = 5,
+#'                                design = "active", cts = seq(0, 20, by = 4),
+#'                                B_values = c(3, 6))
 #' aopt <- CircadianAnalysisOptions(alpha = 0.05)
-#' rec  <- recommendDesign(bio, dopt, aopt, methods = "DCP",
+#' rec <- recommendDesign(bio, dopt, aopt, methods = "DCP",
 #'                         run_simulation = FALSE, plot = FALSE,
 #'                         verbose = FALSE)
 #' rec$analytical_df
@@ -1431,16 +1508,20 @@ plot.SCPSingleResult <- function(x, output_file = NULL, ...) {
 #'   \code{plotDiffPower()} or to \code{npower(..., endpoint = "DR")}.
 #' @examples
 #' \donttest{
-#' praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+#' # Compact fitting and power example using synthetic Caudate/Liver data.
+#' praw <- readRDS(system.file("extdata", "example_caudate_liver.rds",
 #'                             package = "SCP"))
-#' e1 <- praw$adrenal$expr[1:300, ]; t1 <- praw$adrenal$times
-#' e2 <- praw$liver$expr[1:300, ];   t2 <- praw$liver$times
-#' bio  <- estCircadianParamTwoGroup(e1, e2, t1, t2, top_k = 100,
-#'                                   verbose = FALSE)
+#' e1 <- praw$caudate$expr[1:300, ]
+#' t1 <- praw$caudate$times
+#' e2 <- praw$liver$expr[1:300, ]
+#' t2 <- praw$liver$times
+#' bio <- estCircadianParamTwoGroup(e1, e2, t1, t2, top_k = "all",
+#'                                  paired_sigma = TRUE, verbose = FALSE)
 #' bio$ngenes <- 200L
-#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5)
+#' dopt <- CircadianDesignOptions(sample_sizes = c(24, 48), nsims = 5,
+#'                                design = "passive", cts = bio$cts)
 #' aopt <- CircadianAnalysisOptions(alpha = 0.05)
-#' res  <- runDifferentialPower(bio, dopt, aopt, test_types = "DR",
+#' res <- runDifferentialPower(bio, dopt, aopt, test_types = "DR",
 #'                              plot = FALSE, verbose = FALSE)
 #' npower(res, endpoint = "DR", fdr = 0.05)$n
 #' }

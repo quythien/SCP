@@ -16,7 +16,7 @@ estCircadianParamTwoGroup(
   prop_DM = NULL,
   mesor_diff = NULL,
   dp_shift_mode = c("uniform", "fixed"),
-  paired_sigma = FALSE,
+  paired_sigma = TRUE,
   sim.seed = 12345,
   verbose = TRUE
 )
@@ -43,7 +43,9 @@ Capped (with a warning) to a group's rhythmic-gene count if larger;
 
 \item{dp_shift_mode}{Differential-phase shift model, "uniform" or "fixed".}
 
-\item{paired_sigma}{Preserve the paired (amplitude, noise) relationship across groups.}
+\item{paired_sigma}{Preserve selected amplitude/noise pairs within each
+group. Default TRUE. Group-2 pairs are stored in \code{amplitude2} and
+\code{sigma_rhythmic2} for group-2-only DR genes.}
 
 \item{sim.seed}{Random seed.}
 
@@ -59,12 +61,13 @@ differential rhythmicity (DR), differential phase (DP), and differential
 MESOR (DM) structure.
 }
 \examples{
-# Two-group pilot (adrenal vs liver arms of the bundled demo pilot).
-praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+# Fit the matched synthetic Caudate/Liver arms.
+praw <- readRDS(system.file("extdata", "example_caudate_liver.rds",
                             package = "SCP"))
-bio <- estCircadianParamTwoGroup(praw$adrenal$expr[1:300, ],
+bio <- estCircadianParamTwoGroup(praw$caudate$expr[1:300, ],
                                  praw$liver$expr[1:300, ],
-                                 praw$adrenal$times, praw$liver$times,
-                                 top_k = 100, verbose = FALSE)
+                                 praw$caudate$times, praw$liver$times,
+                                 top_k = "all", paired_sigma = TRUE,
+                                 verbose = FALSE)
 bio$prop_DR
 }

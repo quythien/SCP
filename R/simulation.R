@@ -127,20 +127,27 @@ sampleTimesFromDist <- function(n, cts) {
 #' @param n1 Sample size for group 1
 #' @param n2 Sample size for group 2
 #' @param lBaselineExpr Log baseline expression. Default: rnorm(ngenes, 5, 2)
-#' @param lBaselineExpr2 As \code{lBaselineExpr} but for group 2. \code{NULL}
-#'   (default) reuses group 1's distribution.
+#' @param lBaselineExpr2 Group-2 pilot MESOR metadata, retained for compatibility.
+#'   Realized MESOR is shared outside DM. DM adds a signed \code{mesor_diff}
+#'   shift to the realized group-1 MESOR.
 #' @param lOD Log residual noise: \code{log(sigma)}, the per-gene noise around
 #'   the cosinor fit (\code{sigma = exp(lOD)}). Default: rnorm(ngenes, -1, 0.3),
 #'   so sigma ~ LogNormal(mu=-1, sd=0.3) with median ~0.37
-#' @param lOD2 As \code{lOD} but for group 2. \code{NULL} (default) shares
-#'   group 1 values.
+#' @param lOD2 Marginal log noise for group 2. Jointly rhythmic JR/DP/DM
+#'   genes share the realized group-1 standard deviation, with independent errors.
 #' @param amplitude Amplitude distribution for rhythmic genes in group 1.
+#'   Selected amplitudes must be finite and nonnegative. Simulation raises
+#'   values below 0.05, including zero, to 0.05.
 #' @param amplitude2 As \code{amplitude} but for group 2. \code{NULL}
 #'   (default) reuses group 1's distribution.
-#' @param sigma_rhythmic Optional numeric vector of per-gene noise values for
-#'   rhythmic genes (same length as \code{amplitude}); when supplied,
-#'   amplitude and sigma are drawn jointly to preserve pilot A-sigma
-#'   correlation.
+#' @param sigma_rhythmic Optional selected standard deviations, matched by
+#'   gene to \code{amplitude}. A shared source index is drawn before applying
+#'   amplitude and noise bounds. Selected noise must be finite and positive;
+#'   simulation raises values below 1e-6 to 1e-6.
+#' @param sigma_rhythmic2 Optional selected group-2 standard deviations,
+#'   matched by gene to the group-2 DR input \code{amplitude2}. Without this
+#'   vector, an explicit group-2 amplitude distribution uses marginal noise.
+#'   When \code{amplitude2=NULL}, the group-1 selected pairs are reused.
 #' @param prop_rhythmic Overall proportion of rhythmic genes
 #' @param prop_DR Proportion with differential rhythmicity
 #' @param prop_DP Proportion with differential phase (among rhythmic in both)
@@ -173,14 +180,22 @@ sampleTimesFromDist <- function(n, cts) {
 #'       \code{mesor1}, \code{mesor2}, \code{amplitude1}, \code{amplitude2},
 #'       \code{phase1}, \code{phase2}, \code{sigma}, \code{sigma2},
 #'       \code{phase_diff}, \code{amp_ratio}, \code{is_rhythmic_g1},
-#'       \code{is_rhythmic_g2}.}
-#'     \item{\code{effectsize_DR1}}{Per-gene SNR in group 1: \eqn{A_{g,1}/\sigma_{g,1}}.}
-#'     \item{\code{effectsize_DR2}}{Per-gene SNR in group 2: \eqn{A_{g,2}/\sigma_{g,2}}.}
+#'       \code{is_rhythmic_g2}, \code{is_DR}, \code{is_DP}, and
+#'       \code{is_DM}. The endpoint flags compare squared signal-to-noise
+#'       ratios, phases in jointly rhythmic genes, and MESORs, respectively.}
+#'     \item{\code{parameter_draws}}{Selected source indices and raw
+#'       amplitude/noise values for both groups, the source of group-2 DR
+#'       parameters, and counts of draws raised to the bounds. These counts
+#'       are also stored in \code{simOptions$transform_counts}.}
+#'     \item{\code{effectsize_DR1}}{Per-gene signal-to-noise ratio in group 1: \eqn{A_{g,1}/\sigma_{g,1}}.}
+#'     \item{\code{effectsize_DR2}}{Per-gene signal-to-noise ratio in group 2: \eqn{A_{g,2}/\sigma_{g,2}}.}
 #'     \item{\code{effectsize_phase}}{Per-gene phase-displacement effect size.}
 #'     \item{\code{effectsize_amp}}{Per-gene amplitude-difference effect size.}
 #'     \item{\code{effectsize_mesor}}{Per-gene mesor-difference effect size.}
 #'     \item{\code{simOptions}}{List of simulation parameters used (ngenes, n1, n2,
-#'       prop_rhythmic, prop_DR, prop_DP, prop_DM, period, design).}
+#'       prop_rhythmic, prop_DR, prop_DP, prop_DM, period, design), MESOR
+#'       and noise models, pairing flags, group-2 DR parameter source,
+#'       parameter bounds, and transformation counts.}
 #'   }
 
 #' @keywords internal
@@ -207,14 +222,40 @@ simCircadianDiff <- function(ngenes = 5000,
                            cts = NULL,
                            cts2 = NULL,
                            sim.seed = 42,
-                           harmonics = NULL) {
+                           harmonics = NULL,
+                           sigma_rhythmic2 = NULL) {
 
   design = match.arg(design)
   dp_shift_mode <- match.arg(dp_shift_mode)
 
-  # Save group-2 distributions BEFORE local variables shadow these parameters.
+  # An all-arrhythmic configuration can carry empty selected vectors.
+  if (!length(sigma_rhythmic)) sigma_rhythmic <- NULL
+  if (!length(sigma_rhythmic2)) sigma_rhythmic2 <- NULL
+
+  # Validate explicit selected pairs before sampling any gene parameters.
+  if (!is.null(sigma_rhythmic) &&
+      (missing(amplitude) || !is.numeric(amplitude) || !length(amplitude) ||
+       length(sigma_rhythmic) != length(amplitude) ||
+       any(!is.finite(amplitude)) || any(amplitude < 0) ||
+       !is.numeric(sigma_rhythmic) || any(!is.finite(sigma_rhythmic)) ||
+       any(sigma_rhythmic <= 0)))
+    stop("sigma_rhythmic must be positive and matched by gene to nonnegative amplitude.",
+         call. = FALSE)
+  if (!is.null(sigma_rhythmic2) &&
+      (!is.numeric(amplitude2) || !length(amplitude2) ||
+       length(sigma_rhythmic2) != length(amplitude2) ||
+       any(!is.finite(amplitude2)) || any(amplitude2 < 0) ||
+       !is.numeric(sigma_rhythmic2) || any(!is.finite(sigma_rhythmic2)) ||
+       any(sigma_rhythmic2 <= 0)))
+    stop("sigma_rhythmic2 must be positive and matched by gene to nonnegative amplitude2.",
+         call. = FALSE)
+
+  # Save the second group's distributions before local vectors reuse their names.
   amp_dist2 <- amplitude2
+  sigma_dist2 <- sigma_rhythmic2
   lod_dist2 <- lOD2
+  paired_group1 <- !is.null(sigma_rhythmic)
+  paired_group2 <- if (!is.null(amp_dist2)) !is.null(sigma_dist2) else paired_group1
 
   # IMPORTANT: Gene assignment (diff_type) must use a seed that does
   # NOT depend on sample size (n1, n2). Time sampling consumes random
@@ -243,11 +284,6 @@ simCircadianDiff <- function(ngenes = 5000,
   # Initialize parameters for both groups
   mesor = lBaselineExpr
   sigma = exp(lOD)   # group-1 noise
-  # Group-2 baseline: use lBaselineExpr2 if provided (two-group pilot), else share group-1
-  if (!is.null(lBaselineExpr2)) {
-    lBaselineExpr2 <- if (length(lBaselineExpr2) == ngenes) lBaselineExpr2
-                      else sample(lBaselineExpr2, ngenes, replace = TRUE)
-  }
   # Group-2 noise: use lOD2 if provided (two-group pilot), else share with group 1
   sigma2_vec <- if (!is.null(lod_dist2)) {
     lod2_res <- if (length(lod_dist2) == ngenes) lod_dist2
@@ -256,6 +292,10 @@ simCircadianDiff <- function(ngenes = 5000,
   } else {
     sigma
   }
+  if (any(!is.finite(mesor)) || any(!is.finite(sigma)) || any(sigma <= 0) ||
+      any(!is.finite(sigma2_vec)) || any(sigma2_vec <= 0))
+    stop("Differential simulation requires finite MESORs and positive finite noise.",
+         call. = FALSE)
   omega = 2 * pi / period
 
   # Initialize classification BEFORE time sampling (n-independent)
@@ -274,7 +314,7 @@ simCircadianDiff <- function(ngenes = 5000,
 
   # Differential Rhythmicity (DR): rhythmic in g1 only or g2 only
   if (n_DR > 0) {
-    DR_genes  = sample(gene_idx, n_DR)
+    DR_genes <- gene_idx[sample.int(length(gene_idx), n_DR)]
     split_idx = ceiling(n_DR / 2)
     DR_g1_only = DR_genes[seq_len(split_idx)]
     DR_g2_only = if (split_idx < n_DR) DR_genes[(split_idx + 1L):n_DR] else integer(0)
@@ -292,11 +332,13 @@ simCircadianDiff <- function(ngenes = 5000,
   n_rhythmic_total <- round(ngenes * prop_rhythmic)
   n_rhythmic_both  <- max(n_DP + n_DM, n_rhythmic_total - n_DR)  # must fit DP + DM
   n_rhythmic_both  <- min(n_rhythmic_both, length(remaining))
-  rhythmic_both    <- if (n_rhythmic_both > 0) sample(remaining, n_rhythmic_both) else integer(0)
+  rhythmic_both <- if (n_rhythmic_both > 0)
+    remaining[sample.int(length(remaining), n_rhythmic_both)] else integer(0)
 
   # Differential Phase (DP)
   if (n_DP > 0 && length(rhythmic_both) > 0) {
-    DP_genes = sample(setdiff(rhythmic_both, DR_genes), min(n_DP, length(rhythmic_both)))
+    DP_pool <- setdiff(rhythmic_both, DR_genes)
+    DP_genes <- DP_pool[sample.int(length(DP_pool), min(n_DP, length(DP_pool)))]
     diff_type[DP_genes] = 4
   } else {
     DP_genes = integer(0)
@@ -306,7 +348,7 @@ simCircadianDiff <- function(ngenes = 5000,
   if (n_DM > 0 && length(rhythmic_both) > 0) {
     DM_pool = setdiff(rhythmic_both, c(DR_genes, DP_genes))
     n_DM_actual = min(n_DM, length(DM_pool))
-    DM_genes = sample(DM_pool, n_DM_actual)
+    DM_genes <- DM_pool[sample.int(length(DM_pool), n_DM_actual)]
     diff_type[DM_genes] = 5L
   } else {
     DM_genes = integer(0)
@@ -321,6 +363,9 @@ simCircadianDiff <- function(ngenes = 5000,
   # Generate base parameters (group 1)
   phase1 = rep(0, ngenes)
   amplitude1 = rep(0, ngenes)
+  pair_index1 <- pair_index2 <- rep(NA_integer_, ngenes)
+  raw_amplitude1 <- raw_amplitude2 <- rep(NA_real_, ngenes)
+  raw_sigma1 <- raw_sigma2 <- rep(NA_real_, ngenes)
 
   # All rhythmic genes get base phase and amplitude
   rhythmic_idx = c(rhythmic_same, DP_genes, DM_genes, DR_g1_only)
@@ -334,8 +379,11 @@ simCircadianDiff <- function(ngenes = 5000,
       # Joint sampling: draw A and sigma from the same pilot gene to preserve
       # empirical A-sigma correlation (avoids marginal sampling bias in r = A/sigma).
       joint_idx <- sample(length(amplitude), length(rhythmic_idx), replace = TRUE)
-      amplitude1[rhythmic_idx] <- pmax(amplitude[joint_idx], 0.05)
-      sigma[rhythmic_idx]      <- pmax(sigma_rhythmic[joint_idx], 1e-6)
+      pair_index1[rhythmic_idx] <- joint_idx
+      raw_amplitude1[rhythmic_idx] <- amplitude[joint_idx]
+      raw_sigma1[rhythmic_idx] <- sigma_rhythmic[joint_idx]
+      amplitude1[rhythmic_idx] <- pmax(raw_amplitude1[rhythmic_idx], 0.05)
+      sigma[rhythmic_idx] <- pmax(raw_sigma1[rhythmic_idx], 1e-6)
     } else if (!missing(amplitude)) {
       if (!is.null(sigma_rhythmic) && length(sigma_rhythmic) != length(amplitude)) {
         warning(sprintf(
@@ -344,19 +392,24 @@ simCircadianDiff <- function(ngenes = 5000,
           "Empirical A-sigma correlation from pilot will not be preserved.",
           call. = FALSE)
       }
-      amplitude1[rhythmic_idx] = pmax(sample(amplitude, length(rhythmic_idx), replace = TRUE), 0.05)
+      raw_amplitude1[rhythmic_idx] <- sample(amplitude, length(rhythmic_idx), replace = TRUE)
+      amplitude1[rhythmic_idx] <- pmax(raw_amplitude1[rhythmic_idx], 0.05)
     } else {
       # A_g ~ max(LogNormal(mu=log(0.4), sd=0.5), 0.05)
       # median(A) = 0.4,  IQR ~ [0.24, 0.66]
       # Combined with sigma: r = A/sigma ~ LogNormal(mu~0.08, sd~0.58)
       #   => median(r) ~ 1.08, bulk of genes in r = 0.3 - 2.0
-      amplitude1[rhythmic_idx] = pmax(rlnorm(length(rhythmic_idx), log(0.4), 0.5), 0.05)
+      raw_amplitude1[rhythmic_idx] <- rlnorm(length(rhythmic_idx), log(0.4), 0.5)
+      amplitude1[rhythmic_idx] <- pmax(raw_amplitude1[rhythmic_idx], 0.05)
     }
   }
 
   # Generate group 2 parameters
   phase2 = phase1
   amplitude2 = amplitude1
+  pair_index2[rhythmic_both] <- pair_index1[rhythmic_both]
+  raw_amplitude2[rhythmic_both] <- raw_amplitude1[rhythmic_both]
+  raw_sigma2[rhythmic_both] <- raw_sigma1[rhythmic_both]
 
   # DR: g1 only - group 2 is arrhythmic
   if (length(DR_g1_only) > 0) {
@@ -371,12 +424,26 @@ simCircadianDiff <- function(ngenes = 5000,
     # fall back to group-1 distribution (amplitude) otherwise.
     amp_src2 <- if (!is.null(amp_dist2)) amp_dist2 else
                 if (!missing(amplitude)) amplitude else NULL
-    if (!is.null(amp_src2)) {
-      amplitude2[DR_g2_only] = pmax(sample(amp_src2, length(DR_g2_only), replace = TRUE), 0.05)
+    sigma_src2 <- if (!is.null(amp_dist2)) sigma_dist2 else sigma_rhythmic
+    if (!is.null(amp_src2) && !is.null(sigma_src2)) {
+      joint_idx2 <- sample.int(length(amp_src2), length(DR_g2_only), replace = TRUE)
+      pair_index2[DR_g2_only] <- joint_idx2
+      raw_amplitude2[DR_g2_only] <- amp_src2[joint_idx2]
+      raw_sigma2[DR_g2_only] <- sigma_src2[joint_idx2]
+      amplitude2[DR_g2_only] <- pmax(raw_amplitude2[DR_g2_only], 0.05)
+      sigma2_vec[DR_g2_only] <- pmax(raw_sigma2[DR_g2_only], 1e-6)
+    } else if (!is.null(amp_src2)) {
+      raw_amplitude2[DR_g2_only] <- sample(amp_src2, length(DR_g2_only), replace = TRUE)
+      amplitude2[DR_g2_only] <- pmax(raw_amplitude2[DR_g2_only], 0.05)
     } else {
-      amplitude2[DR_g2_only] = pmax(rlnorm(length(DR_g2_only), log(0.4), 0.5), 0.05)
+      raw_amplitude2[DR_g2_only] <- rlnorm(length(DR_g2_only), log(0.4), 0.5)
+      amplitude2[DR_g2_only] <- pmax(raw_amplitude2[DR_g2_only], 0.05)
     }
   }
+
+  # Non-DR rhythmic states satisfy the same A/sigma null in both groups.
+  # Their Gaussian errors are drawn independently below.
+  sigma2_vec[rhythmic_both] <- sigma[rhythmic_both]
 
   # DP: Shift phase for group 2
   if (length(DP_genes) > 0) {
@@ -389,9 +456,9 @@ simCircadianDiff <- function(ngenes = 5000,
     phase2[DP_genes] = (phase1[DP_genes] + phase_shift) %% period
   }
 
-  # DM: group-2 mesor is shifted; amplitude and phase unchanged.
-  # mesor2 starts as a copy of group-1 mesor (or two-pilot group-2 baseline).
-  mesor2 <- if (!is.null(lBaselineExpr2)) lBaselineExpr2 else mesor
+  # Non-DM genes share their realized MESOR. The second pilot's marginal
+  # MESOR distribution is calibration metadata, not an additional null draw.
+  mesor2 <- mesor
   if (length(DM_genes) > 0) {
     # Draw shift magnitude from Uniform[mesor_diff[1], mesor_diff[2]] (log-scale units).
     # Sign is random (up- or down-shift equally likely) to avoid directional bias.
@@ -466,7 +533,8 @@ simCircadianDiff <- function(ngenes = 5000,
   # Create detailed ground truth
   # Calculate phase difference with wrap-around correction
   phase_diff_calc = (phase2 - phase1) %% period
-  phase_diff_calc[phase_diff_calc > 12] = phase_diff_calc[phase_diff_calc > 12] - 24
+  phase_diff_calc[phase_diff_calc > period / 2] <-
+    phase_diff_calc[phase_diff_calc > period / 2] - period
 
   ground_truth = data.frame(
     gene = seq_len(ngenes),
@@ -481,13 +549,33 @@ simCircadianDiff <- function(ngenes = 5000,
     phase1 = phase1,
     phase2 = phase2,
     sigma = sigma,          # group-1 noise (backwards compat)
-    sigma2 = sigma2_vec,   # group-2 noise (= sigma when lOD2 not provided)
+    sigma2 = sigma2_vec,    # shared for JR/DP/DM, arm-specific for DR
     phase_diff = phase_diff_calc,
     amp_ratio = ifelse(amplitude1 > 0, amplitude2 / amplitude1, NA),
     is_rhythmic_g1 = amplitude1 > 0,
     is_rhythmic_g2 = amplitude2 > 0,
     stringsAsFactors = FALSE
   )
+
+  both_rhythmic <- ground_truth$is_rhythmic_g1 & ground_truth$is_rhythmic_g2
+  ground_truth$is_DR <- (amplitude1 / sigma)^2 != (amplitude2 / sigma2_vec)^2
+  ground_truth$is_DP <- both_rhythmic & phase_diff_calc != 0
+  ground_truth$is_DM <- mesor2 != mesor
+  if (any(ground_truth$is_DR != (diff_type %in% c(2L, 3L))) ||
+      any(ground_truth$is_DP != (diff_type == 4L)) ||
+      any(ground_truth$is_DM != (diff_type == 5L)))
+    stop("Realized differential parameters do not match the assigned endpoint truth.",
+         call. = FALSE)
+
+  transform_counts <- c(amplitude1 = sum(raw_amplitude1 < 0.05, na.rm = TRUE),
+    amplitude2 = sum(raw_amplitude2 < 0.05, na.rm = TRUE),
+    sigma1 = sum(raw_sigma1 < 1e-6, na.rm = TRUE),
+    sigma2 = sum(raw_sigma2 < 1e-6, na.rm = TRUE))
+  parameter_draws <- list(pair_index1 = pair_index1, pair_index2 = pair_index2,
+    group2_DR_source = if (is.null(amp_dist2)) "group1" else "group2",
+    raw_amplitude1 = raw_amplitude1, raw_sigma1 = raw_sigma1,
+    raw_amplitude2 = raw_amplitude2, raw_sigma2 = raw_sigma2,
+    transform_counts = transform_counts)
 
   # Effect sizes for detection (group-specific sigma when lOD2 is provided)
   effectsize_DR1 = amplitude1 / sigma        # r_{g,1} = A_{g,1} / sigma_{g,1}
@@ -505,6 +593,7 @@ simCircadianDiff <- function(ngenes = 5000,
     times1 = times1,
     times2 = times2,
     ground_truth = ground_truth,
+    parameter_draws = parameter_draws,
     effectsize_DR1 = effectsize_DR1,
     effectsize_DR2 = effectsize_DR2,
     effectsize_phase = effectsize_phase,
@@ -519,7 +608,14 @@ simCircadianDiff <- function(ngenes = 5000,
       prop_DP = prop_DP,
       prop_DM = prop_DM,
       period = period,
-      design = design
+      design = design,
+      mesor_model = "shared outside DM",
+      noise_model = "shared sigma for JR/DP/DM, independent Gaussian errors",
+      paired_group1 = paired_group1,
+      paired_group2 = paired_group2,
+      group2_DR_parameter_source = if (is.null(amp_dist2)) "group1" else "group2",
+      parameter_bounds = c(amplitude_min = 0.05, selected_sigma_min = 1e-6),
+      transform_counts = transform_counts
     )
   ))
 }
@@ -689,12 +785,13 @@ simCircadianSingleCohort <- function(bio.opts, cts, alpha2 = 0, alpha3 = 0,
 #'
 #' @seealso \code{\link{estCircadianParam2H}} for the matching pilot fit.
 #' @examples
-#' # Generate one two-harmonic dataset from a 2H pilot fit.
-#' praw <- readRDS(system.file("extdata", "example_pilot_raw.rds",
+#' # Fit K = 2 to synthetic Liver data generated under K = 1.
+#' praw <- readRDS(system.file("extdata", "example_caudate_liver.rds",
 #'                             package = "SCP"))
-#' expr <- praw$adrenal$expr[1:300, ]
-#' bio2h <- estCircadianParam2H(expr, praw$adrenal$times,
+#' expr <- praw$liver$expr[1:300, ]
+#' bio2h <- estCircadianParam2H(expr, praw$liver$times,
 #'                              top_k = 100, verbose = FALSE)
+#' # Draw a new dataset from this fitted two-harmonic model.
 #' bio2h$ngenes <- 300L
 #' cts <- rep(seq(0, 22, by = 2), 2)
 #' sim <- simCircadianSingleCohort2H(bio2h, cts, seed = 1)
